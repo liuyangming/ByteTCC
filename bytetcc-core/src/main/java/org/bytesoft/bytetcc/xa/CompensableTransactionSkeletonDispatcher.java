@@ -19,49 +19,43 @@ import javax.transaction.xa.XAException;
 import javax.transaction.xa.XAResource;
 import javax.transaction.xa.Xid;
 
-import org.bytesoft.bytetcc.CompensableTransaction;
-import org.bytesoft.bytetcc.common.TransactionConfigurator;
-import org.bytesoft.bytetcc.common.TransactionRepository;
-import org.bytesoft.transaction.TransactionContext;
-import org.bytesoft.transaction.xa.TransactionXid;
-
 public class CompensableTransactionSkeletonDispatcher implements XAResource {
 
 	private XAResource jtaTransactionSkeleton;
 	private XAResource tccTransactionSkeleton;
 
 	public void commit(Xid xid, boolean opc) throws XAException {
-		TransactionXid branchXid = (TransactionXid) xid;
-		TransactionXid globalXid = branchXid.getGlobalXid();
-		TransactionConfigurator configurator = TransactionConfigurator.getInstance();
-		TransactionRepository repository = configurator.getTransactionRepository();
-		CompensableTransaction transaction = repository.getTransaction(globalXid);
-		if (transaction == null) {
-			throw new XAException(XAException.XAER_NOTA);
-		}
-		TransactionContext transactionContext = transaction.getTransactionContext();
-		if (transactionContext.isCompensable()) {
-			this.tccTransactionSkeleton.commit(globalXid, opc);
-		} else {
-			this.jtaTransactionSkeleton.commit(globalXid, opc);
-		}
+		// TransactionXid branchXid = (TransactionXid) xid;
+		// TransactionXid globalXid = branchXid.getGlobalXid();
+		// TransactionConfigurator configurator = TransactionConfigurator.getInstance();
+		// TransactionRepository repository = configurator.getTransactionRepository();
+		// CompensableTransaction transaction = repository.getTransaction(globalXid);
+		// if (transaction == null) {
+		// throw new XAException(XAException.XAER_NOTA);
+		// }
+		// TransactionContext transactionContext = transaction.getTransactionContext();
+		// if (transactionContext.isCompensable()) {
+		// this.tccTransactionSkeleton.commit(globalXid, opc);
+		// } else {
+		// this.jtaTransactionSkeleton.commit(globalXid, opc);
+		// }
 	}
 
 	public void rollback(Xid xid) throws XAException {
-		TransactionXid branchXid = (TransactionXid) xid;
-		TransactionXid globalXid = branchXid.getGlobalXid();
-		TransactionConfigurator configurator = TransactionConfigurator.getInstance();
-		TransactionRepository repository = configurator.getTransactionRepository();
-		CompensableTransaction transaction = repository.getTransaction(globalXid);
-		if (transaction == null) {
-			throw new XAException(XAException.XAER_NOTA);
-		}
-		TransactionContext transactionContext = transaction.getTransactionContext();
-		if (transactionContext.isCompensable()) {
-			this.tccTransactionSkeleton.rollback(globalXid);
-		} else {
-			this.jtaTransactionSkeleton.rollback(globalXid);
-		}
+		// TransactionXid branchXid = (TransactionXid) xid;
+		// TransactionXid globalXid = branchXid.getGlobalXid();
+		// TransactionConfigurator configurator = TransactionConfigurator.getInstance();
+		// TransactionRepository repository = configurator.getTransactionRepository();
+		// CompensableTransaction transaction = repository.getTransaction(globalXid);
+		// if (transaction == null) {
+		// throw new XAException(XAException.XAER_NOTA);
+		// }
+		// TransactionContext transactionContext = transaction.getTransactionContext();
+		// if (transactionContext.isCompensable()) {
+		// this.tccTransactionSkeleton.rollback(globalXid);
+		// } else {
+		// this.jtaTransactionSkeleton.rollback(globalXid);
+		// }
 	}
 
 	public Xid[] recover(int flags) throws XAException {
@@ -74,20 +68,20 @@ public class CompensableTransactionSkeletonDispatcher implements XAResource {
 	}
 
 	public void forget(Xid xid) throws XAException {
-		TransactionXid branchXid = (TransactionXid) xid;
-		TransactionXid globalXid = branchXid.getGlobalXid();
-		TransactionConfigurator configurator = TransactionConfigurator.getInstance();
-		TransactionRepository repository = configurator.getTransactionRepository();
-		CompensableTransaction transaction = repository.getTransaction(globalXid);
-		// if (transaction == null) {
-		// throw new XAException(XAException.XAER_NOTA);
+		// TransactionXid branchXid = (TransactionXid) xid;
+		// TransactionXid globalXid = branchXid.getGlobalXid();
+		// TransactionConfigurator configurator = TransactionConfigurator.getInstance();
+		// TransactionRepository repository = configurator.getTransactionRepository();
+		// CompensableTransaction transaction = repository.getTransaction(globalXid);
+		// // if (transaction == null) {
+		// // throw new XAException(XAException.XAER_NOTA);
+		// // }
+		// TransactionContext transactionContext = transaction.getTransactionContext();
+		// if (transactionContext.isCompensable()) {
+		// this.tccTransactionSkeleton.forget(globalXid);
+		// } else {
+		// this.jtaTransactionSkeleton.forget(globalXid);
 		// }
-		TransactionContext transactionContext = transaction.getTransactionContext();
-		if (transactionContext.isCompensable()) {
-			this.tccTransactionSkeleton.forget(globalXid);
-		} else {
-			this.jtaTransactionSkeleton.forget(globalXid);
-		}
 	}
 
 	public int getTransactionTimeout() throws XAException {

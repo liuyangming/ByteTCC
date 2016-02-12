@@ -15,16 +15,21 @@
  */
 package org.bytesoft.bytetcc;
 
-import javax.transaction.Transaction;
+import javax.transaction.HeuristicMixedException;
+import javax.transaction.HeuristicRollbackException;
+import javax.transaction.RollbackException;
+import javax.transaction.SystemException;
 
-import org.bytesoft.bytejta.TransactionImpl;
-import org.bytesoft.bytejta.utils.CommonUtils;
-import org.bytesoft.transaction.TransactionContext;
-import org.bytesoft.transaction.TransactionListener;
+import org.bytesoft.common.utils.CommonUtils;
+import org.bytesoft.transaction.CommitRequiredException;
+import org.bytesoft.transaction.RollbackRequiredException;
+import org.bytesoft.transaction.Transaction;
+import org.bytesoft.transaction.archive.TransactionArchive;
+import org.bytesoft.transaction.supports.TransactionListener;
 import org.bytesoft.transaction.xa.TransactionXid;
 
 public abstract class CompensableTransaction implements Transaction, TransactionListener {
-	protected TransactionImpl jtaTransaction;
+	protected Transaction jtaTransaction;
 	protected TransactionContext transactionContext;
 	private CompensableInvocation compensableObject;
 
@@ -43,8 +48,45 @@ public abstract class CompensableTransaction implements Transaction, Transaction
 		}
 	}
 
+	public int getTransactionStatus() {
+		return 0;
+	}
+
+	public void setTransactionStatus(int status) {
+	}
+
+	public void suspend() throws SystemException {
+	}
+
+	public boolean isTiming() {
+		return false;
+	}
+
+	public void setTransactionTimeout(int seconds) {
+	}
+
+	public TransactionArchive getTransactionArchive() {
+		return null;
+	}
+
+	public void participantPrepare() throws RollbackRequiredException, CommitRequiredException {
+	}
+
+	public void participantCommit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException,
+			SecurityException, IllegalStateException, CommitRequiredException, SystemException {
+	}
+
+	public void recoveryForgetQuietly() {
+	}
+
+	public void recoveryRollback() throws RollbackRequiredException, SystemException {
+	}
+
+	public void recoveryCommit() throws CommitRequiredException, SystemException {
+	}
+
 	public int hashCode() {
-		TransactionXid transactionXid = this.transactionContext == null ? null : this.transactionContext.getGlobalXid();
+		TransactionXid transactionXid = this.transactionContext == null ? null : this.transactionContext.getXid();
 		int hash = transactionXid == null ? 0 : transactionXid.hashCode();
 		return hash;
 	}
@@ -58,16 +100,16 @@ public abstract class CompensableTransaction implements Transaction, Transaction
 		CompensableTransaction that = (CompensableTransaction) obj;
 		TransactionContext thisContext = this.transactionContext;
 		TransactionContext thatContext = that.transactionContext;
-		TransactionXid thisXid = thisContext == null ? null : thisContext.getGlobalXid();
-		TransactionXid thatXid = thatContext == null ? null : thatContext.getGlobalXid();
+		TransactionXid thisXid = thisContext == null ? null : thisContext.getXid();
+		TransactionXid thatXid = thatContext == null ? null : thatContext.getXid();
 		return CommonUtils.equals(thisXid, thatXid);
 	}
 
-	public TransactionImpl getJtaTransaction() {
+	public Transaction getJtaTransaction() {
 		return jtaTransaction;
 	}
 
-	public void setJtaTransaction(TransactionImpl jtaTransaction) {
+	public void setJtaTransaction(Transaction jtaTransaction) {
 		this.jtaTransaction = jtaTransaction;
 	}
 

@@ -22,33 +22,34 @@ import javax.transaction.xa.XAResource;
 import javax.transaction.xa.Xid;
 
 import org.apache.log4j.Logger;
-import org.bytesoft.bytejta.TransactionImpl;
 import org.bytesoft.bytetcc.CompensableJtaTransaction;
 import org.bytesoft.bytetcc.CompensableTccTransaction;
 import org.bytesoft.bytetcc.CompensableTransaction;
+import org.bytesoft.bytetcc.CompensableTransactionBeanFactory;
 import org.bytesoft.bytetcc.CompensableTransactionManager;
+import org.bytesoft.bytetcc.TransactionContext;
 import org.bytesoft.bytetcc.archive.CompensableArchive;
 import org.bytesoft.bytetcc.archive.CompensableTransactionArchive;
-import org.bytesoft.bytetcc.common.TransactionConfigurator;
-import org.bytesoft.bytetcc.common.TransactionRepository;
-import org.bytesoft.bytetcc.supports.CompensableTransactionLogger;
-import org.bytesoft.transaction.TransactionContext;
-import org.bytesoft.transaction.TransactionStatistic;
+import org.bytesoft.bytetcc.aware.CompensableTransactionBeanFactoryAware;
+import org.bytesoft.bytetcc.supports.logger.CompensableTransactionLogger;
+import org.bytesoft.transaction.Transaction;
+import org.bytesoft.transaction.TransactionRecovery;
+import org.bytesoft.transaction.TransactionRepository;
 import org.bytesoft.transaction.archive.TransactionArchive;
 import org.bytesoft.transaction.archive.XAResourceArchive;
-import org.bytesoft.transaction.recovery.TransactionRecovery;
+import org.bytesoft.transaction.supports.TransactionStatistic;
 import org.bytesoft.transaction.xa.TransactionXid;
 
-public class CompensableTransactionRecovery implements TransactionRecovery {
+public class CompensableTransactionRecovery implements TransactionRecovery, CompensableTransactionBeanFactoryAware {
 	static final Logger logger = Logger.getLogger(CompensableTransactionRecovery.class.getSimpleName());
 
 	private TransactionStatistic transactionStatistic;
+	private CompensableTransactionBeanFactory beanFactory;
 
 	public CompensableTransaction reconstructTransaction(CompensableTransactionArchive archive) {
 		TransactionContext transactionContext = new TransactionContext();
-		transactionContext.setCurrentXid((TransactionXid) archive.getXid());
-		transactionContext.setRecovery(true);
-		transactionContext.setOptimized(archive.isOptimized());
+		transactionContext.setXid((TransactionXid) archive.getXid());
+		transactionContext.setRecoveried(true);
 		transactionContext.setCoordinator(archive.isCoordinator());
 		transactionContext.setCompensable(archive.isCompensable());
 
@@ -87,10 +88,9 @@ public class CompensableTransactionRecovery implements TransactionRecovery {
 	/**
 	 * commit/rollback the uncompleted transactions.
 	 */
-	public synchronized void startupRecover(boolean recoverImmediately) {
-		TransactionConfigurator configurator = TransactionConfigurator.getInstance();
-		TransactionRepository transactionRepository = configurator.getTransactionRepository();
-		CompensableTransactionLogger transactionLogger = configurator.getTransactionLogger();
+	public synchronized void startRecovery() {
+		TransactionRepository transactionRepository = this.beanFactory.getTransactionRepository();
+		CompensableTransactionLogger transactionLogger = this.beanFactory.getTransactionLogger();
 		List<TransactionArchive> archives = transactionLogger.getTransactionArchiveList();
 		for (int i = 0; i < archives.size(); i++) {
 			CompensableTransaction transaction = null;
@@ -101,7 +101,7 @@ public class CompensableTransactionRecovery implements TransactionRecovery {
 				continue;
 			}
 			TransactionContext transactionContext = transaction.getTransactionContext();
-			TransactionXid globalXid = transactionContext.getGlobalXid();
+			TransactionXid globalXid = transactionContext.getXid();
 			if (CompensableTccTransaction.class.isInstance(transaction)) {
 				this.reconstructTccTransaction((CompensableTccTransaction) transaction);
 			} else {
@@ -113,62 +113,59 @@ public class CompensableTransactionRecovery implements TransactionRecovery {
 			}
 		}
 
-		if (recoverImmediately) {
-			this.timingRecover();
-		}
-
 	}
 
 	/**
 	 * TODO
 	 */
 	private void reconstructJtaTransaction(CompensableJtaTransaction transaction) {
-		org.bytesoft.bytejta.common.TransactionConfigurator jtaConfigurator = org.bytesoft.bytejta.common.TransactionConfigurator
-				.getInstance();
-		org.bytesoft.bytejta.common.TransactionRepository jtaRepository = jtaConfigurator.getTransactionRepository();
-		Xid xid = transaction.getTransactionContext().getCurrentXid();
-		TransactionXid jtaGlobalXid = jtaConfigurator.getXidFactory().createGlobalXid(xid.getGlobalTransactionId());
-		TransactionImpl jtaTransaction = jtaRepository.getErrorTransaction(jtaGlobalXid);
-		if (jtaTransaction != null) {
-			jtaTransaction.registerTransactionListener(transaction);
-		}
+		// org.bytesoft.bytejta.common.TransactionConfigurator jtaConfigurator =
+		// org.bytesoft.bytejta.common.TransactionConfigurator
+		// .getInstance();
+		// org.bytesoft.bytejta.common.TransactionRepository jtaRepository = jtaConfigurator.getTransactionRepository();
+		// Xid xid = transaction.getTransactionContext().getCurrentXid();
+		// TransactionXid jtaGlobalXid = jtaConfigurator.getXidFactory().createGlobalXid(xid.getGlobalTransactionId());
+		// TransactionImpl jtaTransaction = jtaRepository.getErrorTransaction(jtaGlobalXid);
+		// if (jtaTransaction != null) {
+		// jtaTransaction.registerTransactionListener(transaction);
+		// }
 	}
 
 	/**
 	 * TODO
 	 */
 	private void reconstructTccTransaction(CompensableTccTransaction transaction) {
-		org.bytesoft.bytejta.common.TransactionConfigurator jtaConfigurator = org.bytesoft.bytejta.common.TransactionConfigurator
-				.getInstance();
-		org.bytesoft.bytejta.common.TransactionRepository jtaRepository = jtaConfigurator.getTransactionRepository();
-		List<CompensableArchive> coordinators = transaction.getCoordinatorArchives();
-		for (int i = 0; i < coordinators.size(); i++) {
-			CompensableArchive archive = coordinators.get(i);
-			Xid xid = archive.getXid();
-			TransactionXid jtaGlobalXid = jtaConfigurator.getXidFactory().createGlobalXid(xid.getGlobalTransactionId());
-			TransactionImpl jtaTransaction = jtaRepository.getErrorTransaction(jtaGlobalXid);
-			if (jtaTransaction != null) {
-				jtaTransaction.registerTransactionListener(transaction);
-			}
-		}
-		List<CompensableArchive> participants = transaction.getParticipantArchives();
-		for (int i = 0; i < participants.size(); i++) {
-			CompensableArchive archive = participants.get(i);
-			Xid xid = archive.getXid();
-			TransactionXid jtaGlobalXid = jtaConfigurator.getXidFactory().createGlobalXid(xid.getGlobalTransactionId());
-			TransactionImpl jtaTransaction = jtaRepository.getErrorTransaction(jtaGlobalXid);
-			if (jtaTransaction != null) {
-				jtaTransaction.registerTransactionListener(transaction);
-			}
-		}
+		// org.bytesoft.bytejta.common.TransactionConfigurator jtaConfigurator =
+		// org.bytesoft.bytejta.common.TransactionConfigurator
+		// .getInstance();
+		// org.bytesoft.bytejta.common.TransactionRepository jtaRepository = jtaConfigurator.getTransactionRepository();
+		// List<CompensableArchive> coordinators = transaction.getCoordinatorArchives();
+		// for (int i = 0; i < coordinators.size(); i++) {
+		// CompensableArchive archive = coordinators.get(i);
+		// Xid xid = archive.getXid();
+		// TransactionXid jtaGlobalXid = jtaConfigurator.getXidFactory().createGlobalXid(xid.getGlobalTransactionId());
+		// TransactionImpl jtaTransaction = jtaRepository.getErrorTransaction(jtaGlobalXid);
+		// if (jtaTransaction != null) {
+		// jtaTransaction.registerTransactionListener(transaction);
+		// }
+		// }
+		// List<CompensableArchive> participants = transaction.getParticipantArchives();
+		// for (int i = 0; i < participants.size(); i++) {
+		// CompensableArchive archive = participants.get(i);
+		// Xid xid = archive.getXid();
+		// TransactionXid jtaGlobalXid = jtaConfigurator.getXidFactory().createGlobalXid(xid.getGlobalTransactionId());
+		// TransactionImpl jtaTransaction = jtaRepository.getErrorTransaction(jtaGlobalXid);
+		// if (jtaTransaction != null) {
+		// jtaTransaction.registerTransactionListener(transaction);
+		// }
+		// }
 	}
 
 	public synchronized void timingRecover() {
-		TransactionConfigurator transactionConfigurator = TransactionConfigurator.getInstance();
-		TransactionRepository transactionRepository = transactionConfigurator.getTransactionRepository();
-		List<CompensableTransaction> transactions = transactionRepository.getErrorTransactionList();
+		TransactionRepository transactionRepository = this.beanFactory.getTransactionRepository();
+		List<Transaction> transactions = transactionRepository.getErrorTransactionList();
 		for (int i = 0; i < transactions.size(); i++) {
-			CompensableTransaction transaction = transactions.get(i);
+			CompensableTransaction transaction = (CompensableTransaction) transactions.get(i);
 			if (transaction.getTransactionContext().isCoordinator()) {
 				// if (CompensableTccTransaction.class.isInstance(transaction)) {
 				this.recoverCoordinatorTransaction((CompensableTccTransaction) transaction);
@@ -182,16 +179,16 @@ public class CompensableTransactionRecovery implements TransactionRecovery {
 	}
 
 	public void recoverCoordinatorTransaction(CompensableTccTransaction transaction) {
-		TransactionConfigurator configurator = TransactionConfigurator.getInstance();
-		CompensableTransactionLogger transactionLogger = configurator.getTransactionLogger();
-		CompensableTransactionManager transactionManager = configurator.getTransactionManager();
-		TransactionRepository transactionRepository = configurator.getTransactionRepository();
+		CompensableTransactionLogger transactionLogger = this.beanFactory.getTransactionLogger();
+		CompensableTransactionManager transactionManager = (CompensableTransactionManager) this.beanFactory
+				.getCompensableTransactionManager();
+		TransactionRepository transactionRepository = this.beanFactory.getTransactionRepository();
 
 		TransactionContext transactionContext = transaction.getTransactionContext();
 		boolean coordinator = transactionContext.isCoordinator();
 		boolean coordinatorCancelFlags = false;
 
-		TransactionXid globalXid = transactionContext.getGlobalXid();
+		TransactionXid xid = transactionContext.getXid();
 		int compensableStatus = transaction.getCompensableStatus();
 		int transactionStatus = transaction.getStatus();
 		switch (transactionStatus) {
@@ -220,8 +217,8 @@ public class CompensableTransactionRecovery implements TransactionRecovery {
 
 			transaction.setTransactionStatus(Status.STATUS_COMMITTED);
 			transactionLogger.deleteTransaction(transaction.getTransactionArchive());
-			transactionRepository.removeTransaction(globalXid);
-			transactionRepository.removeErrorTransaction(globalXid);
+			transactionRepository.removeTransaction(xid);
+			transactionRepository.removeErrorTransaction(xid);
 
 			break;
 		case Status.STATUS_ACTIVE:
@@ -238,8 +235,8 @@ public class CompensableTransactionRecovery implements TransactionRecovery {
 
 			transaction.setTransactionStatus(Status.STATUS_ROLLEDBACK);
 			transactionLogger.deleteTransaction(transaction.getTransactionArchive());
-			transactionRepository.removeTransaction(globalXid);
-			transactionRepository.removeErrorTransaction(globalXid);
+			transactionRepository.removeTransaction(xid);
+			transactionRepository.removeErrorTransaction(xid);
 			break;
 		case Status.STATUS_PREPARING:
 			transaction.setTransactionStatus(Status.STATUS_ROLLING_BACK);
@@ -275,8 +272,8 @@ public class CompensableTransactionRecovery implements TransactionRecovery {
 
 			transaction.setTransactionStatus(Status.STATUS_ROLLEDBACK);
 			transactionLogger.deleteTransaction(transaction.getTransactionArchive());
-			transactionRepository.removeTransaction(globalXid);
-			transactionRepository.removeErrorTransaction(globalXid);
+			transactionRepository.removeTransaction(xid);
+			transactionRepository.removeErrorTransaction(xid);
 
 			break;
 		case Status.STATUS_COMMITTED:
@@ -294,6 +291,10 @@ public class CompensableTransactionRecovery implements TransactionRecovery {
 
 	public TransactionStatistic getTransactionStatistic() {
 		return transactionStatistic;
+	}
+
+	public void setBeanFactory(CompensableTransactionBeanFactory tbf) {
+		this.beanFactory = tbf;
 	}
 
 }

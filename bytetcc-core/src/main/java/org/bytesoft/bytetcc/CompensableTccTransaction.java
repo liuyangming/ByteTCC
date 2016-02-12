@@ -37,13 +37,11 @@ import javax.transaction.xa.Xid;
 import org.apache.log4j.Logger;
 import org.bytesoft.bytetcc.archive.CompensableArchive;
 import org.bytesoft.bytetcc.archive.CompensableTransactionArchive;
-import org.bytesoft.bytetcc.common.TransactionConfigurator;
-import org.bytesoft.bytetcc.supports.CompensableTransactionLogger;
-import org.bytesoft.transaction.TransactionContext;
-import org.bytesoft.transaction.TransactionListener;
+import org.bytesoft.bytetcc.supports.logger.CompensableTransactionLogger;
+import org.bytesoft.transaction.TransactionBeanFactory;
 import org.bytesoft.transaction.archive.XAResourceArchive;
+import org.bytesoft.transaction.supports.TransactionListener;
 import org.bytesoft.transaction.xa.TransactionXid;
-import org.bytesoft.transaction.xa.XAResourceDescriptor;
 import org.bytesoft.transaction.xa.XidFactory;
 
 public class CompensableTccTransaction extends CompensableTransaction {
@@ -73,6 +71,8 @@ public class CompensableTccTransaction extends CompensableTransaction {
 	private transient CompensableArchive confirmArchive;
 	private transient CompensableArchive cancellArchive;
 
+	private CompensableTransactionBeanFactory beanFactory;
+
 	public CompensableTccTransaction(TransactionContext transactionContext) {
 		super(transactionContext);
 	}
@@ -100,11 +100,11 @@ public class CompensableTccTransaction extends CompensableTransaction {
 	}
 
 	public synchronized void delistCompensableInvocation(CompensableInvocation compensable) {
-		TransactionConfigurator configurator = TransactionConfigurator.getInstance();
+		CompensableTransactionLogger transactionLogger = this.beanFactory.getTransactionLogger();
 
 		Object identifier = compensable.getIdentifier();
 		if (identifier == null) {
-			TransactionXid currentXid = this.transactionContext.getCurrentXid();
+			TransactionXid currentXid = this.transactionContext.getXid();
 			if (this.transactionContext.isCoordinator()) {
 				CompensableArchive archive = new CompensableArchive();
 				archive.setXid(currentXid);
@@ -112,7 +112,6 @@ public class CompensableTccTransaction extends CompensableTransaction {
 				archive.setCoordinator(true);
 				this.coordinatorArchives.add(archive);
 
-				CompensableTransactionLogger transactionLogger = configurator.getTransactionLogger();
 				transactionLogger.updateTransaction(this.getTransactionArchive());
 			} else {
 				CompensableArchive archive = new CompensableArchive();
@@ -120,7 +119,6 @@ public class CompensableTccTransaction extends CompensableTransaction {
 				archive.setCompensable(compensable);
 				this.participantArchives.add(archive);
 
-				CompensableTransactionLogger transactionLogger = configurator.getTransactionLogger();
 				transactionLogger.updateTransaction(this.getTransactionArchive());
 			}
 			compensable.setIdentifier(currentXid);
@@ -134,8 +132,9 @@ public class CompensableTccTransaction extends CompensableTransaction {
 	}
 
 	public synchronized void nativeConfirm() {
-		TransactionConfigurator configurator = TransactionConfigurator.getInstance();
-		CompensableInvocationExecutor executor = configurator.getCompensableInvocationExecutor();
+		CompensableInvocationExecutor executor = this.beanFactory.getCompensableInvocationExecutor();
+		CompensableTransactionLogger transactionLogger = this.beanFactory.getTransactionLogger();
+
 		this.compensableStatus = CompensableTccTransaction.STATUS_CONFIRMING;
 
 		if (this.transactionContext.isCoordinator()) {
@@ -181,15 +180,11 @@ public class CompensableTccTransaction extends CompensableTransaction {
 		}
 		this.compensableStatus = CompensableTccTransaction.STATUS_CONFIRMED;
 		CompensableTransactionArchive archive = this.getTransactionArchive();
-		CompensableTransactionLogger transactionLogger = configurator.getTransactionLogger();
 		transactionLogger.updateTransaction(archive);
 	}
 
 	public synchronized void remoteConfirm() throws SystemException, RemoteException {
-
-		TransactionXid globalXid = this.transactionContext.getGlobalXid();
-		TransactionConfigurator transactionConfigurator = TransactionConfigurator.getInstance();
-		CompensableTransactionLogger transactionLogger = transactionConfigurator.getTransactionLogger();
+		CompensableTransactionLogger transactionLogger = this.beanFactory.getTransactionLogger();
 
 		// boolean confirmExists = false;
 		boolean cancellExists = false;
@@ -235,7 +230,7 @@ public class CompensableTccTransaction extends CompensableTransaction {
 					}
 				}
 
-				transactionLogger.updateResource(globalXid, archive);
+				transactionLogger.updateResource(archive);
 			}
 
 		} // end-while (resourceItr.hasNext())
@@ -248,109 +243,112 @@ public class CompensableTccTransaction extends CompensableTransaction {
 
 	}
 
-	public synchronized boolean delistResource(XAResource xaRes, int flag) throws IllegalStateException, SystemException {
-		if (XAResourceDescriptor.class.isInstance(xaRes)) {
-			XAResourceDescriptor descriptor = (XAResourceDescriptor) xaRes;
-			if (descriptor.isRemote()) {
-				Set<Entry<Xid, XAResourceArchive>> entrySet = this.resourceArchives.entrySet();
-				Iterator<Map.Entry<Xid, XAResourceArchive>> itr = entrySet.iterator();
-				while (itr.hasNext()) {
-					Map.Entry<Xid, XAResourceArchive> entry = itr.next();
-					XAResourceArchive archive = entry.getValue();
-					XAResourceDescriptor resource = archive.getDescriptor();
-					if (resource.equals(descriptor)) {
-						return true;
-					}
-				}
+	public synchronized boolean delistResource(XAResource xaRes, int flag) throws IllegalStateException,
+			SystemException {
+		// if (XAResourceDescriptor.class.isInstance(xaRes)) {
+		// XAResourceDescriptor descriptor = (XAResourceDescriptor) xaRes;
+		// if (descriptor.isRemote()) {
+		// Set<Entry<Xid, XAResourceArchive>> entrySet = this.resourceArchives.entrySet();
+		// Iterator<Map.Entry<Xid, XAResourceArchive>> itr = entrySet.iterator();
+		// while (itr.hasNext()) {
+		// Map.Entry<Xid, XAResourceArchive> entry = itr.next();
+		// XAResourceArchive archive = entry.getValue();
+		// XAResourceDescriptor resource = archive.getDescriptor();
+		// if (resource.equals(descriptor)) {
+		// return true;
+		// }
+		// }
+		//
+		// Iterator<Map.Entry<Xid, XAResourceArchive>> iterator = entrySet.iterator();
+		// while (iterator.hasNext()) {
+		// Map.Entry<Xid, XAResourceArchive> entry = iterator.next();
+		// XAResourceArchive archive = entry.getValue();
+		// XAResourceDescriptor resource = archive.getDescriptor();
+		// boolean isSameRM = false;
+		// try {
+		// isSameRM = resource.isSameRM(descriptor);
+		// } catch (XAException ex) {
+		// continue;
+		// }
+		// if (isSameRM) {
+		// return true;
+		// }
+		// }
+		//
+		// XidFactory xidFactory = this.beanFactory.getCompensableXidFactory();
+		// TransactionXid globalXid = this.transactionContext.getXid();
+		// TransactionXid branchXid = xidFactory.createBranchXid(globalXid);
+		// XAResourceArchive archive = new XAResourceArchive();
+		// archive.setDescriptor(descriptor);
+		// archive.setXid(branchXid);
+		// this.resourceArchives.put(branchXid, archive);
+		//
+		// CompensableTransactionLogger transactionLogger = this.beanFactory.getTransactionLogger();
+		// transactionLogger.updateTransaction(this.getTransactionArchive());
+		//
+		// return true;
+		// } else {
+		// return this.jtaTransaction.delistResource(xaRes, flag);
+		// }
+		// } else {
+		// return this.jtaTransaction.delistResource(xaRes, flag);
+		// }
 
-				Iterator<Map.Entry<Xid, XAResourceArchive>> iterator = entrySet.iterator();
-				while (iterator.hasNext()) {
-					Map.Entry<Xid, XAResourceArchive> entry = iterator.next();
-					XAResourceArchive archive = entry.getValue();
-					XAResourceDescriptor resource = archive.getDescriptor();
-					boolean isSameRM = false;
-					try {
-						isSameRM = resource.isSameRM(descriptor);
-					} catch (XAException ex) {
-						continue;
-					}
-					if (isSameRM) {
-						return true;
-					}
-				}
-
-				TransactionConfigurator configurator = TransactionConfigurator.getInstance();
-				XidFactory xidFactory = configurator.getXidFactory();
-				TransactionXid globalXid = this.transactionContext.getGlobalXid();
-				TransactionXid branchXid = xidFactory.createBranchXid(globalXid);
-				XAResourceArchive archive = new XAResourceArchive();
-				archive.setDescriptor(descriptor);
-				archive.setXid(branchXid);
-				this.resourceArchives.put(branchXid, archive);
-
-				CompensableTransactionLogger transactionLogger = configurator.getTransactionLogger();
-				transactionLogger.updateTransaction(this.getTransactionArchive());
-
-				return true;
-			} else {
-				return this.jtaTransaction.delistResource(xaRes, flag);
-			}
-		} else {
-			return this.jtaTransaction.delistResource(xaRes, flag);
-		}
+		return false; // TODO
 	}
 
 	public synchronized boolean enlistResource(XAResource xaRes) throws RollbackException, IllegalStateException,
 			SystemException {
-		if (XAResourceDescriptor.class.isInstance(xaRes)) {
-			XAResourceDescriptor descriptor = (XAResourceDescriptor) xaRes;
-			if (descriptor.isRemote()) {
-				Set<Entry<Xid, XAResourceArchive>> entrySet = this.resourceArchives.entrySet();
-				Iterator<Map.Entry<Xid, XAResourceArchive>> itr = entrySet.iterator();
-				while (itr.hasNext()) {
-					Map.Entry<Xid, XAResourceArchive> entry = itr.next();
-					XAResourceArchive archive = entry.getValue();
-					XAResourceDescriptor resource = archive.getDescriptor();
-					if (resource.equals(descriptor)) {
-						return true;
-					}
-				}
+		// if (XAResourceDescriptor.class.isInstance(xaRes)) {
+		// XAResourceDescriptor descriptor = (XAResourceDescriptor) xaRes;
+		// if (descriptor.isRemote()) {
+		// Set<Entry<Xid, XAResourceArchive>> entrySet = this.resourceArchives.entrySet();
+		// Iterator<Map.Entry<Xid, XAResourceArchive>> itr = entrySet.iterator();
+		// while (itr.hasNext()) {
+		// Map.Entry<Xid, XAResourceArchive> entry = itr.next();
+		// XAResourceArchive archive = entry.getValue();
+		// XAResourceDescriptor resource = archive.getDescriptor();
+		// if (resource.equals(descriptor)) {
+		// return true;
+		// }
+		// }
+		//
+		// Iterator<Map.Entry<Xid, XAResourceArchive>> iterator = entrySet.iterator();
+		// while (iterator.hasNext()) {
+		// Map.Entry<Xid, XAResourceArchive> entry = iterator.next();
+		// XAResourceArchive archive = entry.getValue();
+		// XAResourceDescriptor resource = archive.getDescriptor();
+		// boolean isSameRM = false;
+		// try {
+		// isSameRM = resource.isSameRM(descriptor);
+		// } catch (XAException ex) {
+		// continue;
+		// }
+		// if (isSameRM) {
+		// return true;
+		// }
+		// }
+		//
+		// XidFactory xidFactory = this.beanFactory.getCompensableXidFactory();
+		// TransactionXid globalXid = this.transactionContext.getXid();
+		// TransactionXid branchXid = xidFactory.createBranchXid(globalXid);
+		// XAResourceArchive archive = new XAResourceArchive();
+		// archive.setDescriptor(descriptor);
+		// archive.setXid(branchXid);
+		// this.resourceArchives.put(branchXid, archive);
+		//
+		// CompensableTransactionLogger transactionLogger = this.beanFactory.getTransactionLogger();
+		// transactionLogger.updateTransaction(this.getTransactionArchive());
+		//
+		// return true;
+		// } else {
+		// return this.jtaTransaction.enlistResource(xaRes);
+		// }
+		// } else {
+		// return this.jtaTransaction.enlistResource(xaRes);
+		// }
 
-				Iterator<Map.Entry<Xid, XAResourceArchive>> iterator = entrySet.iterator();
-				while (iterator.hasNext()) {
-					Map.Entry<Xid, XAResourceArchive> entry = iterator.next();
-					XAResourceArchive archive = entry.getValue();
-					XAResourceDescriptor resource = archive.getDescriptor();
-					boolean isSameRM = false;
-					try {
-						isSameRM = resource.isSameRM(descriptor);
-					} catch (XAException ex) {
-						continue;
-					}
-					if (isSameRM) {
-						return true;
-					}
-				}
-
-				TransactionConfigurator configurator = TransactionConfigurator.getInstance();
-				XidFactory xidFactory = configurator.getXidFactory();
-				TransactionXid globalXid = this.transactionContext.getGlobalXid();
-				TransactionXid branchXid = xidFactory.createBranchXid(globalXid);
-				XAResourceArchive archive = new XAResourceArchive();
-				archive.setDescriptor(descriptor);
-				archive.setXid(branchXid);
-				this.resourceArchives.put(branchXid, archive);
-
-				CompensableTransactionLogger transactionLogger = configurator.getTransactionLogger();
-				transactionLogger.updateTransaction(this.getTransactionArchive());
-
-				return true;
-			} else {
-				return this.jtaTransaction.enlistResource(xaRes);
-			}
-		} else {
-			return this.jtaTransaction.enlistResource(xaRes);
-		}
+		return false; // TODO
 	}
 
 	public int getStatus() /* throws SystemException */{
@@ -361,8 +359,8 @@ public class CompensableTccTransaction extends CompensableTransaction {
 		this.transactionStatus = transactionStatus;
 	}
 
-	public synchronized void registerSynchronization(Synchronization sync) throws RollbackException, IllegalStateException,
-			SystemException {
+	public synchronized void registerSynchronization(Synchronization sync) throws RollbackException,
+			IllegalStateException, SystemException {
 		this.jtaTransaction.registerSynchronization(sync);
 	}
 
@@ -371,8 +369,9 @@ public class CompensableTccTransaction extends CompensableTransaction {
 	}
 
 	public synchronized void nativeCancel(boolean coordinatorCancelRequired) {
-		TransactionConfigurator configurator = TransactionConfigurator.getInstance();
-		CompensableInvocationExecutor executor = configurator.getCompensableInvocationExecutor();
+		CompensableInvocationExecutor executor = this.beanFactory.getCompensableInvocationExecutor();
+		CompensableTransactionLogger transactionLogger = this.beanFactory.getTransactionLogger();
+
 		this.compensableStatus = CompensableTccTransaction.STATUS_CANCELLING;
 
 		if (this.transactionContext.isCoordinator() && coordinatorCancelRequired) {
@@ -418,15 +417,11 @@ public class CompensableTccTransaction extends CompensableTransaction {
 		}
 		this.compensableStatus = CompensableTccTransaction.STATUS_CANCELLED;
 		CompensableTransactionArchive archive = this.getTransactionArchive();
-		CompensableTransactionLogger transactionLogger = configurator.getTransactionLogger();
 		transactionLogger.updateTransaction(archive);
 	}
 
 	public synchronized void remoteCancel() throws SystemException, RemoteException {
-
-		TransactionXid globalXid = this.transactionContext.getGlobalXid();
-		TransactionConfigurator transactionConfigurator = TransactionConfigurator.getInstance();
-		CompensableTransactionLogger transactionLogger = transactionConfigurator.getTransactionLogger();
+		CompensableTransactionLogger transactionLogger = this.beanFactory.getTransactionLogger();
 
 		boolean confirmExists = false;
 		// boolean cancellExists = false;
@@ -472,7 +467,7 @@ public class CompensableTccTransaction extends CompensableTransaction {
 					}
 				}
 
-				transactionLogger.updateResource(globalXid, archive);
+				transactionLogger.updateResource(archive);
 			}
 
 		} // end-while (resourceItr.hasNext())
@@ -487,13 +482,12 @@ public class CompensableTccTransaction extends CompensableTransaction {
 
 	public CompensableTransactionArchive getTransactionArchive() {
 
-		TransactionConfigurator configurator = TransactionConfigurator.getInstance();
-		XidFactory xidFactory = configurator.getXidFactory();
+		XidFactory xidFactory = this.beanFactory.getCompensableXidFactory();
 
 		TransactionContext transactionContext = this.getTransactionContext();
 
 		CompensableTransactionArchive transactionArchive = new CompensableTransactionArchive();
-		TransactionXid jtaGlobalXid = transactionContext.getGlobalXid();
+		TransactionXid jtaGlobalXid = transactionContext.getXid();
 		TransactionXid globalXid = xidFactory.createGlobalXid(jtaGlobalXid.getGlobalTransactionId());
 		transactionArchive.setXid(globalXid);
 
@@ -540,24 +534,21 @@ public class CompensableTccTransaction extends CompensableTransaction {
 	private void trySuccess() {
 		this.compensableStatus = CompensableTccTransaction.STATUS_TRIED;
 		CompensableTransactionArchive archive = this.getTransactionArchive();
-		TransactionConfigurator configurator = TransactionConfigurator.getInstance();
-		CompensableTransactionLogger transactionLogger = configurator.getTransactionLogger();
+		CompensableTransactionLogger transactionLogger = this.beanFactory.getTransactionLogger();
 		transactionLogger.updateTransaction(archive);
 	}
 
 	private void tryFailure() {
 		this.compensableStatus = CompensableTccTransaction.STATUS_TRY_FAILURE;
 		CompensableTransactionArchive archive = this.getTransactionArchive();
-		TransactionConfigurator configurator = TransactionConfigurator.getInstance();
-		CompensableTransactionLogger transactionLogger = configurator.getTransactionLogger();
+		CompensableTransactionLogger transactionLogger = this.beanFactory.getTransactionLogger();
 		transactionLogger.updateTransaction(archive);
 	}
 
 	private void tryMixed() {
 		this.compensableStatus = CompensableTccTransaction.STATUS_TRY_MIXED;
 		CompensableTransactionArchive archive = this.getTransactionArchive();
-		TransactionConfigurator configurator = TransactionConfigurator.getInstance();
-		CompensableTransactionLogger transactionLogger = configurator.getTransactionLogger();
+		CompensableTransactionLogger transactionLogger = this.beanFactory.getTransactionLogger();
 		transactionLogger.updateTransaction(archive);
 	}
 
@@ -565,7 +556,11 @@ public class CompensableTccTransaction extends CompensableTransaction {
 		this.markCompensableArchiveAsTxEnabledIfNeccessary();
 	}
 
-	public void prepareComplete(boolean success) {
+	public void prepareSuccess() {
+		this.markCompensableArchiveAsTxEnabledIfNeccessary();
+	}
+
+	public void prepareFailure() {
 		this.markCompensableArchiveAsTxEnabledIfNeccessary();
 	}
 
@@ -589,55 +584,39 @@ public class CompensableTccTransaction extends CompensableTransaction {
 		}
 	}
 
-	public void commitFailure(int optcode) {
+	public void commitFailure() {
 		this.markCompensableArchiveAsTxEnabledIfNeccessary();
 
 		if (this.transactionStatus == Status.STATUS_PREPARING) {
-			this.completeFailureInPreparing(optcode);
+			this.tryFailure();
 		} else if (this.transactionStatus == Status.STATUS_COMMITTING) {
-			this.completeFailureInCommitting(optcode);
+			// TODO ignore?
 		} else if (this.transactionStatus == Status.STATUS_ROLLING_BACK) {
-			this.completeFailureInRollingback(optcode);
+			// TODO ignore?
 		}
 	}
 
-	private void completeFailureInPreparing(int optcode) {
-		if (optcode == TransactionListener.OPT_HEURCOM) {
-			this.trySuccess();
-		} else if (optcode == TransactionListener.OPT_HEURRB) {
-			this.tryFailure();
-		} else if (optcode == TransactionListener.OPT_HEURMIX) {
+	public void commitHeuristicMixed() {
+		this.markCompensableArchiveAsTxEnabledIfNeccessary();
+		if (this.transactionStatus == Status.STATUS_PREPARING) {
 			this.tryMixed();
-		} else {
-			this.tryFailure();
-		}
-	}
-
-	private void completeFailureInCommitting(int optcode) {
-		if (this.confirmArchive != null) {
-			if (optcode == TransactionListener.OPT_DEFAULT) {
-				// ignore
-			} else if (optcode == TransactionListener.OPT_HEURCOM) {
-				this.confirmArchive.setConfirmed(true);
-			} else if (optcode == TransactionListener.OPT_HEURRB) {
-				// ignore
-			} else if (optcode == TransactionListener.OPT_HEURMIX) {
+		} else if (this.transactionStatus == Status.STATUS_COMMITTING) {
+			if (this.confirmArchive != null) {
 				this.confirmArchive.setTxMixed(true);
 			}
+		} else if (this.transactionStatus == Status.STATUS_ROLLING_BACK) {
+			// TODO ignore?
 		}
 	}
 
-	private void completeFailureInRollingback(int optcode) {
-		if (this.cancellArchive != null) {
-			if (optcode == TransactionListener.OPT_DEFAULT) {
-				// ignore
-			} else if (optcode == TransactionListener.OPT_HEURCOM) {
-				this.cancellArchive.setConfirmed(true);
-			} else if (optcode == TransactionListener.OPT_HEURRB) {
-				// ignore
-			} else if (optcode == TransactionListener.OPT_HEURMIX) {
-				this.cancellArchive.setTxMixed(true);
-			}
+	public void commitHeuristicRolledback() {
+		this.markCompensableArchiveAsTxEnabledIfNeccessary();
+		if (this.transactionStatus == Status.STATUS_PREPARING) {
+			this.tryFailure();
+		} else if (this.transactionStatus == Status.STATUS_COMMITTING) {
+			// TODO ignore?
+		} else if (this.transactionStatus == Status.STATUS_ROLLING_BACK) {
+			// TODO ignore?
 		}
 	}
 
@@ -657,16 +636,23 @@ public class CompensableTccTransaction extends CompensableTransaction {
 		}
 	}
 
-	public void rollbackFailure(int optcode) {
+	public void rollbackFailure() {
 		this.markCompensableArchiveAsTxEnabledIfNeccessary();
 
 		if (this.transactionStatus == Status.STATUS_PREPARING) {
-			this.completeFailureInPreparing(optcode);
+			this.tryFailure();
 		} else if (this.transactionStatus == Status.STATUS_COMMITTING) {
-			this.completeFailureInCommitting(optcode);
+			// TODO ignore?
 		} else if (this.transactionStatus == Status.STATUS_ROLLING_BACK) {
-			this.completeFailureInRollingback(optcode);
+			// TODO ignore?
 		}
+	}
+
+	public void setBeanFactory(TransactionBeanFactory beanFactory) {
+		this.beanFactory = (CompensableTransactionBeanFactory) beanFactory;
+	}
+
+	public void registerTransactionListener(TransactionListener listener) {
 	}
 
 	public int getCompensableStatus() {

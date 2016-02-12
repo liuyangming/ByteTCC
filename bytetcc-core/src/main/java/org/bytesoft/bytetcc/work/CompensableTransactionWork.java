@@ -18,7 +18,6 @@ package org.bytesoft.bytetcc.work;
 import javax.resource.spi.work.Work;
 
 import org.apache.log4j.Logger;
-import org.bytesoft.transaction.recovery.TransactionRecovery;
 
 public class CompensableTransactionWork implements Work {
 	static final Logger logger = Logger.getLogger(CompensableTransactionWork.class.getSimpleName());
@@ -30,23 +29,25 @@ public class CompensableTransactionWork implements Work {
 
 	public void run() {
 
-		org.bytesoft.bytejta.common.TransactionConfigurator jtaConfigurator = org.bytesoft.bytejta.common.TransactionConfigurator
-				.getInstance();
-		TransactionRecovery jtaRecovery = jtaConfigurator.getTransactionRecovery();
-		try {
-			jtaRecovery.startupRecover(false);
-		} catch (RuntimeException rex) {
-			logger.error(rex.getMessage(), rex);
-		}
-
-		org.bytesoft.bytetcc.common.TransactionConfigurator tccConfigurator = org.bytesoft.bytetcc.common.TransactionConfigurator
-				.getInstance();
-		TransactionRecovery tccRecovery = tccConfigurator.getTransactionRecovery();
-		try {
-			tccRecovery.startupRecover(false);
-		} catch (RuntimeException rex) {
-			logger.error(rex.getMessage(), rex);
-		}
+		// org.bytesoft.bytejta.common.TransactionConfigurator jtaConfigurator =
+		// org.bytesoft.bytejta.common.TransactionConfigurator
+		// .getInstance();
+		// TransactionRecovery jtaRecovery = jtaConfigurator.getTransactionRecovery();
+		// try {
+		// jtaRecovery.startupRecover(false);
+		// } catch (RuntimeException rex) {
+		// logger.error(rex.getMessage(), rex);
+		// }
+		//
+		// org.bytesoft.bytetcc.common.TransactionConfigurator tccConfigurator =
+		// org.bytesoft.bytetcc.common.TransactionConfigurator
+		// .getInstance();
+		// TransactionRecovery tccRecovery = tccConfigurator.getTransactionRecovery();
+		// try {
+		// tccRecovery.startupRecover(false);
+		// } catch (RuntimeException rex) {
+		// logger.error(rex.getMessage(), rex);
+		// }
 
 		// TODO
 
@@ -58,13 +59,13 @@ public class CompensableTransactionWork implements Work {
 			if (current >= nextRecoveryTime) {
 				nextRecoveryTime = current + this.recoveryInterval;
 				try {
-					jtaRecovery.timingRecover();
+					// jtaRecovery.timingRecover();
 				} catch (RuntimeException rex) {
 					logger.error(rex.getMessage(), rex);
 				}
 
 				try {
-					tccRecovery.timingRecover();
+					// tccRecovery.timingRecover();
 				} catch (RuntimeException rex) {
 					logger.error(rex.getMessage(), rex);
 				}

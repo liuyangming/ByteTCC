@@ -18,37 +18,40 @@ package org.bytesoft.bytetcc.supports.spring.rpc;
 import org.bytesoft.byterpc.RemoteInvocation;
 import org.bytesoft.byterpc.RemoteInvocationResult;
 import org.bytesoft.byterpc.supports.RemoteInterceptor;
-import org.bytesoft.bytetcc.common.TransactionConfigurator;
-import org.bytesoft.transaction.rpc.TransactionInterceptor;
+import org.bytesoft.bytetcc.CompensableTransactionBeanFactory;
+import org.bytesoft.bytetcc.aware.CompensableTransactionBeanFactoryAware;
+import org.bytesoft.transaction.supports.rpc.TransactionInterceptor;
 
-public class ByteTccRemoteInterceptor implements RemoteInterceptor {
+public class ByteTccRemoteInterceptor implements RemoteInterceptor, CompensableTransactionBeanFactoryAware {
+
+	private CompensableTransactionBeanFactory beanFactory;
 
 	public void onDeliverInvocation(RemoteInvocation invocation) {
 		ByteTccRemoteInvocation request = (ByteTccRemoteInvocation) invocation;
-		TransactionConfigurator configurator = TransactionConfigurator.getInstance();
-		TransactionInterceptor interceptor = configurator.getTransactionInterceptor();
+		TransactionInterceptor interceptor = this.beanFactory.getTransactionInterceptor();
 		interceptor.beforeSendRequest(request);
 	}
 
 	public void onReceiveInvocation(RemoteInvocation invocation) {
 		ByteTccRemoteInvocation request = (ByteTccRemoteInvocation) invocation;
-		TransactionConfigurator configurator = TransactionConfigurator.getInstance();
-		TransactionInterceptor interceptor = configurator.getTransactionInterceptor();
+		TransactionInterceptor interceptor = this.beanFactory.getTransactionInterceptor();
 		interceptor.afterReceiveRequest(request);
 	}
 
 	public void onDeliverInvocationResult(RemoteInvocationResult result) {
 		ByteTccRemoteInvocationResult response = (ByteTccRemoteInvocationResult) result;
-		TransactionConfigurator configurator = TransactionConfigurator.getInstance();
-		TransactionInterceptor interceptor = configurator.getTransactionInterceptor();
+		TransactionInterceptor interceptor = this.beanFactory.getTransactionInterceptor();
 		interceptor.beforeSendResponse(response);
 	}
 
 	public void onReceiveInvocationResult(RemoteInvocationResult result) {
 		ByteTccRemoteInvocationResult response = (ByteTccRemoteInvocationResult) result;
-		TransactionConfigurator configurator = TransactionConfigurator.getInstance();
-		TransactionInterceptor interceptor = configurator.getTransactionInterceptor();
+		TransactionInterceptor interceptor = this.beanFactory.getTransactionInterceptor();
 		interceptor.afterReceiveResponse(response);
+	}
+
+	public void setBeanFactory(CompensableTransactionBeanFactory tbf) {
+		this.beanFactory = tbf;
 	}
 
 }

@@ -23,6 +23,7 @@ import org.bytesoft.transaction.archive.TransactionArchive;
 public class CompensableTransactionArchive extends TransactionArchive {
 
 	private int compensableStatus;
+	private boolean compensable;
 	private final List<CompensableArchive> compensables = new ArrayList<CompensableArchive>();
 
 	public int getCompensableStatus() {
@@ -35,6 +36,14 @@ public class CompensableTransactionArchive extends TransactionArchive {
 
 	public List<CompensableArchive> getCompensables() {
 		return compensables;
+	}
+
+	public boolean isCompensable() {
+		return compensable;
+	}
+
+	public void setCompensable(boolean compensable) {
+		this.compensable = compensable;
 	}
 
 }

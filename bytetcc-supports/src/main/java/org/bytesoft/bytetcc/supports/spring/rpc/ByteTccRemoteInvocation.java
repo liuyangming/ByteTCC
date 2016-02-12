@@ -17,6 +17,7 @@ package org.bytesoft.bytetcc.supports.spring.rpc;
 
 import java.lang.reflect.Proxy;
 
+import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
 import org.bytesoft.byterpc.RemoteInvocation;
 import org.bytesoft.byterpc.common.RemoteDestination;
 import org.bytesoft.byterpc.remote.RemoteRequestor;
@@ -26,8 +27,7 @@ import org.bytesoft.byterpc.supports.RemoteMethodFactory;
 import org.bytesoft.byterpc.supports.RemoteMethodFactoryAware;
 import org.bytesoft.byterpc.supports.RemoteRequestorAware;
 import org.bytesoft.transaction.TransactionContext;
-import org.bytesoft.transaction.rpc.TransactionRequest;
-import org.bytesoft.transaction.rpc.TransactionResource;
+import org.bytesoft.transaction.supports.rpc.TransactionRequest;
 
 public class ByteTccRemoteInvocation extends RemoteInvocation implements RemoteDestination, RemoteRequestorAware,
 		RemoteInvocationFactoryAware, RemoteMethodFactoryAware, TransactionRequest {
@@ -55,16 +55,16 @@ public class ByteTccRemoteInvocation extends RemoteInvocation implements RemoteD
 		return this.transaction;
 	}
 
-	public TransactionResource getTransactionResource() {
+	public RemoteCoordinator getTargetTransactionCoordinator() {
 		ByteTccRemoteTransactionStub stub = new ByteTccRemoteTransactionStub();
 		stub.setRequestor(this.requestor);
 		stub.setIdentifier(String.valueOf(this.destination));
 		stub.setRemoteMethodFactory(this.remoteMethodFactory);
 		stub.setInvocationFactory(this.invocationFactory);
-		Class<?> interfaceClass = TransactionResource.class;
+		Class<?> interfaceClass = RemoteCoordinator.class;
 		ClassLoader cl = interfaceClass.getClassLoader();
 		Object proxyObject = Proxy.newProxyInstance(cl, new Class<?>[] { interfaceClass }, stub);
-		return TransactionResource.class.cast(proxyObject);
+		return RemoteCoordinator.class.cast(proxyObject);
 	}
 
 	public void setTransactionContext(TransactionContext transactionContext) {
@@ -78,4 +78,5 @@ public class ByteTccRemoteInvocation extends RemoteInvocation implements RemoteD
 	public void setRemoteMethodFactory(RemoteMethodFactory remoteMethodFactory) {
 		this.remoteMethodFactory = remoteMethodFactory;
 	}
+
 }

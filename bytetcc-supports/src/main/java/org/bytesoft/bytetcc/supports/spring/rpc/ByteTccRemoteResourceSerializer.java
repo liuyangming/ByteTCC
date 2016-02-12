@@ -16,30 +16,34 @@
 package org.bytesoft.bytetcc.supports.spring.rpc;
 
 import java.io.IOException;
-import java.lang.reflect.Proxy;
+
+import javax.transaction.xa.XAResource;
 
 import org.bytesoft.byterpc.remote.RemoteRequestor;
 import org.bytesoft.byterpc.supports.RemoteInvocationFactory;
 import org.bytesoft.byterpc.supports.RemoteMethodFactory;
-import org.bytesoft.transaction.rpc.TransactionResource;
-import org.bytesoft.transaction.supports.spring.AbstractXAResourceSerializer;
+import org.bytesoft.transaction.supports.serialize.XAResourceDeserializer;
 
-public class ByteTccRemoteResourceSerializer extends AbstractXAResourceSerializer {
+public class ByteTccRemoteResourceSerializer implements XAResourceDeserializer {
 	private RemoteRequestor requestor;
 	private RemoteInvocationFactory invocationFactory;
 	private RemoteMethodFactory remoteMethodFactory;
 
-	public TransactionResource deserializeTransactionResource(String identifier) throws IOException {
-		ByteTccRemoteTransactionStub stub = new ByteTccRemoteTransactionStub();
-		stub.setRequestor(this.requestor);
-		stub.setIdentifier(identifier);
-		stub.setRemoteMethodFactory(this.remoteMethodFactory);
-		stub.setInvocationFactory(this.invocationFactory);
-		Class<?> interfaceClass = TransactionResource.class;
-		ClassLoader cl = interfaceClass.getClassLoader();
-		Object proxyObject = Proxy.newProxyInstance(cl, new Class<?>[] { interfaceClass }, stub);
-		return TransactionResource.class.cast(proxyObject);
+	public XAResource deserialize(String arg0) throws IOException {
+		throw new RuntimeException("TODO");
 	}
+
+	// public TransactionResource deserializeTransactionResource(String identifier) throws IOException {
+	// ByteTccRemoteTransactionStub stub = new ByteTccRemoteTransactionStub();
+	// stub.setRequestor(this.requestor);
+	// stub.setIdentifier(identifier);
+	// stub.setRemoteMethodFactory(this.remoteMethodFactory);
+	// stub.setInvocationFactory(this.invocationFactory);
+	// Class<?> interfaceClass = TransactionResource.class;
+	// ClassLoader cl = interfaceClass.getClassLoader();
+	// Object proxyObject = Proxy.newProxyInstance(cl, new Class<?>[] { interfaceClass }, stub);
+	// return TransactionResource.class.cast(proxyObject);
+	// }
 
 	public RemoteRequestor getRequestor() {
 		return requestor;

@@ -16,9 +16,9 @@
 package org.bytesoft.bytetcc.supports.rpc;
 
 import org.apache.log4j.Logger;
-import org.bytesoft.transaction.rpc.TransactionInterceptor;
-import org.bytesoft.transaction.rpc.TransactionRequest;
-import org.bytesoft.transaction.rpc.TransactionResponse;
+import org.bytesoft.transaction.supports.rpc.TransactionInterceptor;
+import org.bytesoft.transaction.supports.rpc.TransactionRequest;
+import org.bytesoft.transaction.supports.rpc.TransactionResponse;
 
 @Deprecated
 public class CompensableJtaTransactionInterceptor implements TransactionInterceptor {

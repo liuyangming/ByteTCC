@@ -25,16 +25,19 @@ import javax.transaction.xa.XAException;
 import javax.transaction.xa.XAResource;
 import javax.transaction.xa.Xid;
 
-import org.bytesoft.bytejta.utils.CommonUtils;
+import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
 import org.bytesoft.byterpc.RemoteInvocationResult;
 import org.bytesoft.byterpc.common.RemoteMethodKey;
 import org.bytesoft.byterpc.remote.RemoteRequestor;
 import org.bytesoft.byterpc.supports.RemoteInvocationFactory;
 import org.bytesoft.byterpc.supports.RemoteMethodFactory;
 import org.bytesoft.bytetcc.supports.spring.beans.ByteTccSkeletonObject;
-import org.bytesoft.transaction.rpc.TransactionResource;
+import org.bytesoft.common.utils.CommonUtils;
+import org.bytesoft.transaction.Transaction;
+import org.bytesoft.transaction.TransactionContext;
+import org.bytesoft.transaction.internal.TransactionException;
 
-public class ByteTccRemoteTransactionStub implements InvocationHandler, TransactionResource {
+public class ByteTccRemoteTransactionStub implements InvocationHandler, RemoteCoordinator {
 	private String identifier;
 	private RemoteRequestor requestor;
 	private RemoteInvocationFactory invocationFactory;
@@ -57,7 +60,7 @@ public class ByteTccRemoteTransactionStub implements InvocationHandler, Transact
 			} catch (InvocationTargetException ex) {
 				throw ex.getTargetException();
 			}
-		} else if (TransactionResource.class.equals(method.getDeclaringClass())) {
+		} else if (RemoteCoordinator.class.equals(method.getDeclaringClass())) {
 			try {
 				return method.invoke(this, args);
 			} catch (IllegalAccessException ex) {
@@ -124,15 +127,14 @@ public class ByteTccRemoteTransactionStub implements InvocationHandler, Transact
 		return CommonUtils.equals(this.identifier, that.identifier);
 	}
 
-	public String toString() {
-		return String.format("ByteTccRemoteTransactionStub(identifier: %s)", this.identifier);
-	}
-
 	public void commit(Xid arg0, boolean arg1) throws XAException {
 		throw new IllegalStateException();
 	}
 
 	public void end(Xid arg0, int arg1) throws XAException {
+	}
+
+	public void end(TransactionContext transactionContext, int flags) throws TransactionException {
 	}
 
 	public void forget(Xid arg0) throws XAException {
@@ -163,6 +165,17 @@ public class ByteTccRemoteTransactionStub implements InvocationHandler, Transact
 	}
 
 	public void start(Xid arg0, int arg1) throws XAException {
+	}
+
+	public void start(TransactionContext transactionContext, int flags) throws TransactionException {
+	}
+
+	public Transaction getTransactionQuietly() {
+		return null;
+	}
+
+	public String toString() {
+		return String.format("ByteTccRemoteTransactionStub(identifier: %s)", this.identifier);
 	}
 
 	public RemoteMethodFactory getRemoteMethodFactory() {
@@ -196,4 +209,5 @@ public class ByteTccRemoteTransactionStub implements InvocationHandler, Transact
 	public void setInvocationFactory(RemoteInvocationFactory invocationFactory) {
 		this.invocationFactory = invocationFactory;
 	}
+
 }

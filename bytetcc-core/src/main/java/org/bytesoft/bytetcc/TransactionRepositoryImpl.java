@@ -13,50 +13,51 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this distribution; if not, see <http://www.gnu.org/licenses/>.
  */
-package org.bytesoft.bytetcc.common;
+package org.bytesoft.bytetcc;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.bytesoft.bytetcc.CompensableTransaction;
+import org.bytesoft.transaction.Transaction;
+import org.bytesoft.transaction.TransactionRepository;
 import org.bytesoft.transaction.xa.TransactionXid;
 
-public class TransactionRepository {
-	private final Map<TransactionXid, CompensableTransaction> xidToTxMap = new ConcurrentHashMap<TransactionXid, CompensableTransaction>();
-	private final Map<TransactionXid, CompensableTransaction> xidToErrTxMap = new ConcurrentHashMap<TransactionXid, CompensableTransaction>();
+public class TransactionRepositoryImpl implements TransactionRepository {
+	private final Map<TransactionXid, Transaction> xidToTxMap = new ConcurrentHashMap<TransactionXid, Transaction>();
+	private final Map<TransactionXid, Transaction> xidToErrTxMap = new ConcurrentHashMap<TransactionXid, Transaction>();
 
-	public void putTransaction(TransactionXid globalXid, CompensableTransaction transaction) {
+	public void putTransaction(TransactionXid globalXid, Transaction transaction) {
 		this.xidToTxMap.put(globalXid, transaction);
 	}
 
-	public CompensableTransaction getTransaction(TransactionXid globalXid) {
+	public Transaction getTransaction(TransactionXid globalXid) {
 		return this.xidToTxMap.get(globalXid);
 	}
 
-	public CompensableTransaction removeTransaction(TransactionXid globalXid) {
+	public Transaction removeTransaction(TransactionXid globalXid) {
 		return this.xidToTxMap.remove(globalXid);
 	}
 
-	public void putErrorTransaction(TransactionXid globalXid, CompensableTransaction transaction) {
+	public void putErrorTransaction(TransactionXid globalXid, Transaction transaction) {
 		this.xidToErrTxMap.put(globalXid, transaction);
 	}
 
-	public CompensableTransaction getErrorTransaction(TransactionXid globalXid) {
+	public Transaction getErrorTransaction(TransactionXid globalXid) {
 		return this.xidToErrTxMap.get(globalXid);
 	}
 
-	public CompensableTransaction removeErrorTransaction(TransactionXid globalXid) {
+	public Transaction removeErrorTransaction(TransactionXid globalXid) {
 		return this.xidToErrTxMap.remove(globalXid);
 	}
 
-	public List<CompensableTransaction> getErrorTransactionList() {
-		return new ArrayList<CompensableTransaction>(this.xidToErrTxMap.values());
+	public List<Transaction> getErrorTransactionList() {
+		return new ArrayList<Transaction>(this.xidToErrTxMap.values());
 	}
 
-	public List<CompensableTransaction> getActiveTransactionList() {
-		return new ArrayList<CompensableTransaction>(this.xidToTxMap.values());
+	public List<Transaction> getActiveTransactionList() {
+		return new ArrayList<Transaction>(this.xidToTxMap.values());
 	}
 
 }
