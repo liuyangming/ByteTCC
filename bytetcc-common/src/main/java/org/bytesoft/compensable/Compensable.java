@@ -13,12 +13,21 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this distribution; if not, see <http://www.gnu.org/licenses/>.
  */
-package org.bytesoft.bytetcc;
+package org.bytesoft.compensable;
 
-public interface CompensableInvocationExecutor {
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-	public void confirm(CompensableInvocation compensable) throws RuntimeException;
+@Retention(RetentionPolicy.RUNTIME)
+@Target({ ElementType.TYPE })
+public @interface Compensable {
 
-	public void cancel(CompensableInvocation compensable) throws RuntimeException;
+	public Class<?> interfaceClass();
+
+	public String confirmableKey() default "";
+
+	public String cancellableKey() default "";
 
 }

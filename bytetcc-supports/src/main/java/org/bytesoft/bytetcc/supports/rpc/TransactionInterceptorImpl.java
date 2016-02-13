@@ -13,7 +13,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this distribution; if not, see <http://www.gnu.org/licenses/>.
  */
-package org.bytesoft.bytetcc.supports.internal;
+package org.bytesoft.bytetcc.supports.rpc;
 
 import org.bytesoft.bytetcc.aware.CompensableBeanFactoryAware;
 import org.bytesoft.compensable.AbstractTransaction;
@@ -24,7 +24,7 @@ import org.bytesoft.transaction.supports.rpc.TransactionInterceptor;
 import org.bytesoft.transaction.supports.rpc.TransactionRequest;
 import org.bytesoft.transaction.supports.rpc.TransactionResponse;
 
-public class TransactionInterceptorDispatcher implements TransactionInterceptor, CompensableBeanFactoryAware {
+public class TransactionInterceptorImpl implements TransactionInterceptor, CompensableBeanFactoryAware {
 
 	private TransactionInterceptor jtaTransactionInterceptor;
 	private TransactionInterceptor tccTransactionInterceptor;
@@ -77,24 +77,16 @@ public class TransactionInterceptorDispatcher implements TransactionInterceptor,
 		}
 	}
 
-	public TransactionInterceptor getJtaTransactionInterceptor() {
-		return jtaTransactionInterceptor;
+	public void setBeanFactory(CompensableBeanFactory tbf) {
+		this.beanFactory = tbf;
 	}
 
 	public void setJtaTransactionInterceptor(TransactionInterceptor jtaTransactionInterceptor) {
 		this.jtaTransactionInterceptor = jtaTransactionInterceptor;
 	}
 
-	public TransactionInterceptor getTccTransactionInterceptor() {
-		return tccTransactionInterceptor;
-	}
-
 	public void setTccTransactionInterceptor(TransactionInterceptor tccTransactionInterceptor) {
 		this.tccTransactionInterceptor = tccTransactionInterceptor;
-	}
-
-	public void setBeanFactory(CompensableBeanFactory tbf) {
-		this.beanFactory = tbf;
 	}
 
 }

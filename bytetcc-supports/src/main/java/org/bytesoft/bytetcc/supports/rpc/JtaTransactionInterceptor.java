@@ -20,9 +20,8 @@ import org.bytesoft.transaction.supports.rpc.TransactionInterceptor;
 import org.bytesoft.transaction.supports.rpc.TransactionRequest;
 import org.bytesoft.transaction.supports.rpc.TransactionResponse;
 
-@Deprecated
-public class CompensableJtaTransactionInterceptor implements TransactionInterceptor {
-	static final Logger logger = Logger.getLogger(CompensableJtaTransactionInterceptor.class.getSimpleName());
+public class JtaTransactionInterceptor implements TransactionInterceptor {
+	static final Logger logger = Logger.getLogger(JtaTransactionInterceptor.class.getSimpleName());
 
 	public void beforeSendRequest(TransactionRequest request) throws IllegalStateException {
 	}

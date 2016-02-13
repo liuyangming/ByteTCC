@@ -13,25 +13,12 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this distribution; if not, see <http://www.gnu.org/licenses/>.
  */
-package org.bytesoft.bytetcc;
+package org.bytesoft.compensable;
 
-public class CommittingException extends CompensableException {
-	private static final long serialVersionUID = 1L;
+public interface CompensableInvocationExecutor {
 
-	public CommittingException() {
-		super();
-	}
+	public void confirm(CompensableInvocation compensable) throws RuntimeException;
 
-	public CommittingException(String message) {
-		super(message);
-	}
-
-	public CommittingException(String message, Throwable cause) {
-		super(message, cause);
-	}
-
-	public CommittingException(Throwable cause) {
-		super(cause);
-	}
+	public void cancel(CompensableInvocation compensable) throws RuntimeException;
 
 }

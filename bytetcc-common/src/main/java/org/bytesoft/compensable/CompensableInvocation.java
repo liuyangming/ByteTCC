@@ -13,18 +13,23 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this distribution; if not, see <http://www.gnu.org/licenses/>.
  */
-package org.bytesoft.bytetcc;
+package org.bytesoft.compensable;
 
 import java.io.Serializable;
+import java.lang.reflect.Method;
 
-public interface CompensableContext {
+public interface CompensableInvocation extends Serializable {
 
-	public Serializable getCompensableVariable() throws IllegalStateException;
+	public Method getMethod();
 
-	public void setCompensableVariable(Serializable variable) throws IllegalStateException;
+	public Object[] getArgs();
 
-	public boolean isRollbackOnly() throws IllegalStateException;
+	public String getConfirmableKey();
 
-	public void setRollbackOnly() throws IllegalStateException;
+	public String getCancellableKey();
+
+	public Object getIdentifier();
+
+	public void setIdentifier(Object identifier);
 
 }

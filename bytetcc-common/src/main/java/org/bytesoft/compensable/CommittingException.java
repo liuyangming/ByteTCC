@@ -13,38 +13,25 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this distribution; if not, see <http://www.gnu.org/licenses/>.
  */
-package org.bytesoft.bytetcc.supports;
+package org.bytesoft.compensable;
 
-import javax.transaction.xa.XAResource;
+public class CommittingException extends CompensableException {
+	private static final long serialVersionUID = 1L;
 
-public final class RecoverableXAResource {
-
-	private boolean supportXA;
-	private XAResource delegate;
-	private String recoveryURI;
-
-	public boolean isSupportXA() {
-		return supportXA;
+	public CommittingException() {
+		super();
 	}
 
-	public void setSupportXA(boolean supportXA) {
-		this.supportXA = supportXA;
+	public CommittingException(String message) {
+		super(message);
 	}
 
-	public XAResource getDelegate() {
-		return delegate;
+	public CommittingException(String message, Throwable cause) {
+		super(message, cause);
 	}
 
-	public void setDelegate(XAResource delegate) {
-		this.delegate = delegate;
-	}
-
-	public String getDelegateURI() {
-		return recoveryURI;
-	}
-
-	public void setDelegateURI(String delegateURI) {
-		this.recoveryURI = delegateURI;
+	public CommittingException(Throwable cause) {
+		super(cause);
 	}
 
 }

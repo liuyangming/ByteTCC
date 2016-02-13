@@ -17,8 +17,8 @@ package org.bytesoft.compensable.archive;
 
 import javax.transaction.xa.Xid;
 
-import org.bytesoft.bytetcc.CompensableInvocation;
 import org.bytesoft.common.utils.CommonUtils;
+import org.bytesoft.compensable.CompensableInvocation;
 
 public class CompensableArchive {
 

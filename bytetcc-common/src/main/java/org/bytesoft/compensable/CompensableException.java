@@ -13,21 +13,25 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this distribution; if not, see <http://www.gnu.org/licenses/>.
  */
-package org.bytesoft.bytetcc;
+package org.bytesoft.compensable;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+public class CompensableException extends RuntimeException {
+	private static final long serialVersionUID = 1L;
 
-@Retention(RetentionPolicy.RUNTIME)
-@Target({ ElementType.TYPE })
-public @interface Compensable {
+	public CompensableException() {
+		super();
+	}
 
-	public Class<?> interfaceClass();
+	public CompensableException(String message) {
+		super(message);
+	}
 
-	public String confirmableKey() default "";
+	public CompensableException(String message, Throwable cause) {
+		super(message, cause);
+	}
 
-	public String cancellableKey() default "";
+	public CompensableException(Throwable cause) {
+		super(cause);
+	}
 
 }

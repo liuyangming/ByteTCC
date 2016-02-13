@@ -18,8 +18,8 @@ package org.bytesoft.bytetcc.supports.spring;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
-import org.bytesoft.bytetcc.CompensableInvocation;
-import org.bytesoft.bytetcc.CompensableInvocationExecutor;
+import org.bytesoft.compensable.CompensableInvocation;
+import org.bytesoft.compensable.CompensableInvocationExecutor;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 

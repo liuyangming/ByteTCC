@@ -31,8 +31,8 @@ import org.bytesoft.transaction.supports.rpc.TransactionRequest;
 import org.bytesoft.transaction.supports.rpc.TransactionResponse;
 import org.bytesoft.transaction.xa.TransactionXid;
 
-public class CompensableTccTransactionInterceptor implements TransactionInterceptor, CompensableBeanFactoryAware {
-	static final Logger logger = Logger.getLogger(CompensableTccTransactionInterceptor.class.getSimpleName());
+public class TccTransactionInterceptor implements TransactionInterceptor, CompensableBeanFactoryAware {
+	static final Logger logger = Logger.getLogger(TccTransactionInterceptor.class.getSimpleName());
 
 	private CompensableBeanFactory beanFactory;
 

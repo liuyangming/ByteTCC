@@ -35,10 +35,10 @@ import javax.transaction.xa.XAResource;
 import javax.transaction.xa.Xid;
 
 import org.apache.log4j.Logger;
-import org.bytesoft.bytetcc.CompensableInvocation;
-import org.bytesoft.bytetcc.CompensableInvocationExecutor;
 import org.bytesoft.compensable.AbstractTransaction;
 import org.bytesoft.compensable.CompensableBeanFactory;
+import org.bytesoft.compensable.CompensableInvocation;
+import org.bytesoft.compensable.CompensableInvocationExecutor;
 import org.bytesoft.compensable.archive.CompensableArchive;
 import org.bytesoft.compensable.archive.TransactionArchive;
 import org.bytesoft.compensable.supports.logger.CompensableLogger;
