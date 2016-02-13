@@ -18,24 +18,24 @@ package org.bytesoft.compensable.supports.logger;
 import java.util.List;
 
 import org.bytesoft.compensable.archive.CompensableArchive;
-import org.bytesoft.compensable.archive.CompensableResourceArchive;
+import org.bytesoft.compensable.archive.TransactionArchive;
 import org.bytesoft.transaction.archive.XAResourceArchive;
 
 public interface CompensableLogger {
 
 	/* transaction */
-	public void createTransaction(CompensableArchive archive);
+	public void createTransaction(TransactionArchive archive);
 
-	public void updateTransaction(CompensableArchive archive);
+	public void updateTransaction(TransactionArchive archive);
 
-	public void deleteTransaction(CompensableArchive archive);
+	public void deleteTransaction(TransactionArchive archive);
 
-	public List<CompensableArchive> getTransactionArchiveList();
+	public List<TransactionArchive> getTransactionArchiveList();
 
 	/* coordinator */
 	public void updateCoordinator(XAResourceArchive archive);
 
 	/* compensable */
-	public void updateCompensable(CompensableResourceArchive archive);
+	public void updateCompensable(CompensableArchive archive);
 
 }

@@ -24,7 +24,7 @@ import org.bytesoft.transaction.Transaction;
 import org.bytesoft.transaction.TransactionRepository;
 import org.bytesoft.transaction.xa.TransactionXid;
 
-public class CompensableRepositoryImpl implements TransactionRepository {
+public class TransactionRepositoryImpl implements TransactionRepository {
 	private final Map<TransactionXid, Transaction> xidToTxMap = new ConcurrentHashMap<TransactionXid, Transaction>();
 	private final Map<TransactionXid, Transaction> xidToErrTxMap = new ConcurrentHashMap<TransactionXid, Transaction>();
 

@@ -13,7 +13,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this distribution; if not, see <http://www.gnu.org/licenses/>.
  */
-package org.bytesoft.bytetcc;
+package org.bytesoft.bytetcc.transaction;
 
 import java.rmi.RemoteException;
 import java.util.ArrayList;
@@ -35,11 +35,13 @@ import javax.transaction.xa.XAResource;
 import javax.transaction.xa.Xid;
 
 import org.apache.log4j.Logger;
+import org.bytesoft.bytetcc.CompensableInvocation;
+import org.bytesoft.bytetcc.CompensableInvocationExecutor;
+import org.bytesoft.compensable.AbstractTransaction;
 import org.bytesoft.compensable.CompensableBeanFactory;
-import org.bytesoft.compensable.CompensableTransaction;
 import org.bytesoft.compensable.TransactionContext;
 import org.bytesoft.compensable.archive.CompensableArchive;
-import org.bytesoft.compensable.archive.CompensableResourceArchive;
+import org.bytesoft.compensable.archive.TransactionArchive;
 import org.bytesoft.compensable.supports.logger.CompensableLogger;
 import org.bytesoft.transaction.TransactionBeanFactory;
 import org.bytesoft.transaction.archive.XAResourceArchive;
@@ -47,8 +49,8 @@ import org.bytesoft.transaction.supports.TransactionListener;
 import org.bytesoft.transaction.xa.TransactionXid;
 import org.bytesoft.transaction.xa.XidFactory;
 
-public class SampleCompensableImpl extends CompensableTransaction {
-	static final Logger logger = Logger.getLogger(SampleCompensableImpl.class.getSimpleName());
+public class TccTransactionImpl extends AbstractTransaction {
+	static final Logger logger = Logger.getLogger(TccTransactionImpl.class.getSimpleName());
 
 	public static int STATUS_UNKNOWN = 0;
 
@@ -66,17 +68,17 @@ public class SampleCompensableImpl extends CompensableTransaction {
 
 	private int transactionStatus;
 	private int compensableStatus;
-	private final List<CompensableResourceArchive> coordinatorResourceArchiveList = new ArrayList<CompensableResourceArchive>();
-	private final List<CompensableResourceArchive> participantResourceArchiveList = new ArrayList<CompensableResourceArchive>();
+	private final List<CompensableArchive> coordinatorResourceArchiveList = new ArrayList<CompensableArchive>();
+	private final List<CompensableArchive> participantResourceArchiveList = new ArrayList<CompensableArchive>();
 	private final Map<Xid, XAResourceArchive> resourceArchives = new ConcurrentHashMap<Xid, XAResourceArchive>();
 	private ThreadLocal<TransactionContext> transientContexts = new ThreadLocal<TransactionContext>();
 
-	private transient CompensableResourceArchive confirmArchive;
-	private transient CompensableResourceArchive cancellArchive;
+	private transient CompensableArchive confirmArchive;
+	private transient CompensableArchive cancellArchive;
 
 	private CompensableBeanFactory beanFactory;
 
-	public SampleCompensableImpl(TransactionContext transactionContext) {
+	public TccTransactionImpl(TransactionContext transactionContext) {
 		super(transactionContext);
 	}
 
@@ -109,7 +111,7 @@ public class SampleCompensableImpl extends CompensableTransaction {
 		if (identifier == null) {
 			TransactionXid currentXid = this.transactionContext.getXid();
 			if (this.transactionContext.isCoordinator()) {
-				CompensableResourceArchive archive = new CompensableResourceArchive();
+				CompensableArchive archive = new CompensableArchive();
 				archive.setXid(currentXid);
 				archive.setCompensable(compensable);
 				archive.setCoordinator(true);
@@ -117,7 +119,7 @@ public class SampleCompensableImpl extends CompensableTransaction {
 
 				transactionLogger.updateTransaction(this.getTransactionArchive());
 			} else {
-				CompensableResourceArchive archive = new CompensableResourceArchive();
+				CompensableArchive archive = new CompensableArchive();
 				archive.setXid(currentXid);
 				archive.setCompensable(compensable);
 				this.participantResourceArchiveList.add(archive);
@@ -138,12 +140,12 @@ public class SampleCompensableImpl extends CompensableTransaction {
 		CompensableInvocationExecutor executor = this.beanFactory.getCompensableInvocationExecutor();
 		CompensableLogger transactionLogger = this.beanFactory.getCompensableLogger();
 
-		this.compensableStatus = SampleCompensableImpl.STATUS_CONFIRMING;
+		this.compensableStatus = TccTransactionImpl.STATUS_CONFIRMING;
 
 		if (this.transactionContext.isCoordinator()) {
-			Iterator<CompensableResourceArchive> coordinatorItr = this.coordinatorResourceArchiveList.iterator();
+			Iterator<CompensableArchive> coordinatorItr = this.coordinatorResourceArchiveList.iterator();
 			while (coordinatorItr.hasNext()) {
-				CompensableResourceArchive archive = coordinatorItr.next();
+				CompensableArchive archive = coordinatorItr.next();
 				if (archive.isConfirmed()) {
 					continue;
 				}
@@ -162,9 +164,9 @@ public class SampleCompensableImpl extends CompensableTransaction {
 			}
 		}
 
-		Iterator<CompensableResourceArchive> participantItr = this.participantResourceArchiveList.iterator();
+		Iterator<CompensableArchive> participantItr = this.participantResourceArchiveList.iterator();
 		while (participantItr.hasNext()) {
-			CompensableResourceArchive archive = participantItr.next();
+			CompensableArchive archive = participantItr.next();
 			if (archive.isConfirmed()) {
 				continue;
 			}
@@ -181,8 +183,8 @@ public class SampleCompensableImpl extends CompensableTransaction {
 				this.confirmArchive = null;
 			}
 		}
-		this.compensableStatus = SampleCompensableImpl.STATUS_CONFIRMED;
-		CompensableArchive archive = this.getTransactionArchive();
+		this.compensableStatus = TccTransactionImpl.STATUS_CONFIRMED;
+		TransactionArchive archive = this.getTransactionArchive();
 		transactionLogger.updateTransaction(archive);
 	}
 
@@ -375,12 +377,12 @@ public class SampleCompensableImpl extends CompensableTransaction {
 		CompensableInvocationExecutor executor = this.beanFactory.getCompensableInvocationExecutor();
 		CompensableLogger transactionLogger = this.beanFactory.getCompensableLogger();
 
-		this.compensableStatus = SampleCompensableImpl.STATUS_CANCELLING;
+		this.compensableStatus = TccTransactionImpl.STATUS_CANCELLING;
 
 		if (this.transactionContext.isCoordinator() && coordinatorCancelRequired) {
-			Iterator<CompensableResourceArchive> coordinatorItr = this.coordinatorResourceArchiveList.iterator();
+			Iterator<CompensableArchive> coordinatorItr = this.coordinatorResourceArchiveList.iterator();
 			while (coordinatorItr.hasNext()) {
-				CompensableResourceArchive archive = coordinatorItr.next();
+				CompensableArchive archive = coordinatorItr.next();
 				if (archive.isCancelled()) {
 					continue;
 				}
@@ -399,9 +401,9 @@ public class SampleCompensableImpl extends CompensableTransaction {
 			}
 		}
 
-		Iterator<CompensableResourceArchive> participantItr = this.participantResourceArchiveList.iterator();
+		Iterator<CompensableArchive> participantItr = this.participantResourceArchiveList.iterator();
 		while (participantItr.hasNext()) {
-			CompensableResourceArchive archive = participantItr.next();
+			CompensableArchive archive = participantItr.next();
 			if (archive.isCancelled()) {
 				continue;
 			}
@@ -418,8 +420,8 @@ public class SampleCompensableImpl extends CompensableTransaction {
 				this.cancellArchive = null;
 			}
 		}
-		this.compensableStatus = SampleCompensableImpl.STATUS_CANCELLED;
-		CompensableArchive archive = this.getTransactionArchive();
+		this.compensableStatus = TccTransactionImpl.STATUS_CANCELLED;
+		TransactionArchive archive = this.getTransactionArchive();
 		transactionLogger.updateTransaction(archive);
 	}
 
@@ -483,13 +485,13 @@ public class SampleCompensableImpl extends CompensableTransaction {
 
 	}
 
-	public CompensableArchive getTransactionArchive() {
+	public TransactionArchive getTransactionArchive() {
 
 		XidFactory xidFactory = this.beanFactory.getCompensableXidFactory();
 
 		TransactionContext transactionContext = this.getTransactionContext();
 
-		CompensableArchive transactionArchive = new CompensableArchive();
+		TransactionArchive transactionArchive = new TransactionArchive();
 		TransactionXid jtaGlobalXid = transactionContext.getXid();
 		TransactionXid globalXid = xidFactory.createGlobalXid(jtaGlobalXid.getGlobalTransactionId());
 		transactionArchive.setXid(globalXid);
@@ -535,22 +537,22 @@ public class SampleCompensableImpl extends CompensableTransaction {
 	}
 
 	private void trySuccess() {
-		this.compensableStatus = SampleCompensableImpl.STATUS_TRIED;
-		CompensableArchive archive = this.getTransactionArchive();
+		this.compensableStatus = TccTransactionImpl.STATUS_TRIED;
+		TransactionArchive archive = this.getTransactionArchive();
 		CompensableLogger transactionLogger = this.beanFactory.getCompensableLogger();
 		transactionLogger.updateTransaction(archive);
 	}
 
 	private void tryFailure() {
-		this.compensableStatus = SampleCompensableImpl.STATUS_TRY_FAILURE;
-		CompensableArchive archive = this.getTransactionArchive();
+		this.compensableStatus = TccTransactionImpl.STATUS_TRY_FAILURE;
+		TransactionArchive archive = this.getTransactionArchive();
 		CompensableLogger transactionLogger = this.beanFactory.getCompensableLogger();
 		transactionLogger.updateTransaction(archive);
 	}
 
 	private void tryMixed() {
-		this.compensableStatus = SampleCompensableImpl.STATUS_TRY_MIXED;
-		CompensableArchive archive = this.getTransactionArchive();
+		this.compensableStatus = TccTransactionImpl.STATUS_TRY_MIXED;
+		TransactionArchive archive = this.getTransactionArchive();
 		CompensableLogger transactionLogger = this.beanFactory.getCompensableLogger();
 		transactionLogger.updateTransaction(archive);
 	}
@@ -670,11 +672,11 @@ public class SampleCompensableImpl extends CompensableTransaction {
 		return transactionStatus;
 	}
 
-	public List<CompensableResourceArchive> getCoordinatorResourceArchiveList() {
+	public List<CompensableArchive> getCoordinatorResourceArchiveList() {
 		return coordinatorResourceArchiveList;
 	}
 
-	public List<CompensableResourceArchive> getParticipantResourceArchiveList() {
+	public List<CompensableArchive> getParticipantResourceArchiveList() {
 		return participantResourceArchiveList;
 	}
 

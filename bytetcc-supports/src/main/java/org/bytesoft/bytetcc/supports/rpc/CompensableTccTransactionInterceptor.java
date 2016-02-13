@@ -21,8 +21,8 @@ import javax.transaction.SystemException;
 import org.apache.log4j.Logger;
 import org.bytesoft.bytejta.supports.resource.RemoteResourceDescriptor;
 import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
-import org.bytesoft.bytetcc.CompensableImpl;
 import org.bytesoft.bytetcc.aware.CompensableBeanFactoryAware;
+import org.bytesoft.bytetcc.transaction.TccTransactionImpl;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableManager;
 import org.bytesoft.transaction.TransactionContext;
@@ -38,7 +38,7 @@ public class CompensableTccTransactionInterceptor implements TransactionIntercep
 
 	public void beforeSendRequest(TransactionRequest request) throws IllegalStateException {
 		CompensableManager transactionManager = (CompensableManager) this.beanFactory.getCompensableManager();
-		CompensableImpl transaction = (CompensableImpl) transactionManager.getTransactionQuietly();
+		TccTransactionImpl transaction = (TccTransactionImpl) transactionManager.getTransactionQuietly();
 		if (transaction != null) {
 			TransactionContext srcTransactionContext = transaction.getTransactionContext();
 			TransactionContext transactionContext = srcTransactionContext.clone();
@@ -94,7 +94,7 @@ public class CompensableTccTransactionInterceptor implements TransactionIntercep
 
 	public void beforeSendResponse(TransactionResponse response) throws IllegalStateException {
 		CompensableManager transactionManager = this.beanFactory.getCompensableManager();
-		CompensableImpl transaction = (CompensableImpl) transactionManager.getTransactionQuietly();
+		TccTransactionImpl transaction = (TccTransactionImpl) transactionManager.getTransactionQuietly();
 		if (transaction != null) {
 			return;
 		}
@@ -123,7 +123,7 @@ public class CompensableTccTransactionInterceptor implements TransactionIntercep
 
 	public void afterReceiveResponse(TransactionResponse response) throws IllegalStateException {
 		CompensableManager transactionManager = this.beanFactory.getCompensableManager();
-		CompensableImpl transaction = (CompensableImpl) transactionManager.getTransactionQuietly();
+		TccTransactionImpl transaction = (TccTransactionImpl) transactionManager.getTransactionQuietly();
 		if (transaction != null) {
 			return;
 		}

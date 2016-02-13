@@ -29,7 +29,7 @@ import org.bytesoft.transaction.supports.logger.TransactionLogger;
 import org.bytesoft.transaction.supports.rpc.TransactionInterceptor;
 import org.bytesoft.transaction.xa.XidFactory;
 
-public final class CompensableBeanFactoryImpl implements CompensableBeanFactory {
+public final class TransactionBeanFactoryImpl implements CompensableBeanFactory {
 
 	private TransactionManager transactionManager;
 	private CompensableManager compensableManager;

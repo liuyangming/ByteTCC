@@ -24,8 +24,8 @@ import javax.transaction.SystemException;
 
 import org.bytesoft.bytetcc.CompensableContext;
 import org.bytesoft.bytetcc.CompensableInvocation;
-import org.bytesoft.bytetcc.SampleCompensableImpl;
 import org.bytesoft.bytetcc.supports.CompensableSynchronization;
+import org.bytesoft.bytetcc.transaction.TccTransactionImpl;
 import org.bytesoft.transaction.xa.TransactionXid;
 
 public class CompensableInvocationImpl extends CompensableSynchronization implements CompensableContext, CompensableInvocation {
@@ -42,7 +42,7 @@ public class CompensableInvocationImpl extends CompensableSynchronization implem
 	private String cancellableKey;
 	private Serializable variable;
 
-	private transient SampleCompensableImpl transaction;
+	private transient TccTransactionImpl transaction;
 
 	public void suspend() {
 	}
@@ -153,11 +153,11 @@ public class CompensableInvocationImpl extends CompensableSynchronization implem
 		this.cancellableKey = cancellableKey;
 	}
 
-	public SampleCompensableImpl getTransaction() {
+	public TccTransactionImpl getTransaction() {
 		return transaction;
 	}
 
-	public void setTransaction(SampleCompensableImpl transaction) {
+	public void setTransaction(TccTransactionImpl transaction) {
 		this.transaction = transaction;
 	}
 

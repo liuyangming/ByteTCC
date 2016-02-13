@@ -15,35 +15,100 @@
  */
 package org.bytesoft.compensable.archive;
 
-import java.util.ArrayList;
-import java.util.List;
+import javax.transaction.xa.Xid;
 
-import org.bytesoft.transaction.archive.TransactionArchive;
+import org.bytesoft.bytetcc.CompensableInvocation;
+import org.bytesoft.common.utils.CommonUtils;
 
-public class CompensableArchive extends TransactionArchive {
+public class CompensableArchive {
 
-	private int compensableStatus;
-	private boolean compensable;
-	private final List<CompensableResourceArchive> compensableResourceList = new ArrayList<CompensableResourceArchive>();
+	private Xid xid;
+	private CompensableInvocation compensable;
+	private boolean coordinator;
+	// private boolean coordinatorTried;
+	private boolean confirmed;
+	private boolean cancelled;
+	private transient boolean txMixed;
+	private transient boolean txEnabled;
 
-	public int getCompensableStatus() {
-		return compensableStatus;
+	public int hashCode() {
+		int hash = 23;
+		hash += 29 * (this.xid == null ? 0 : this.xid.hashCode());
+		return hash;
 	}
 
-	public void setCompensableStatus(int compensableStatus) {
-		this.compensableStatus = compensableStatus;
+	public boolean equals(Object obj) {
+		if (obj == null) {
+			return false;
+		} else if (this.getClass().equals(obj.getClass()) == false) {
+			return false;
+		}
+		CompensableArchive that = (CompensableArchive) obj;
+		return CommonUtils.equals(this.xid, that.xid);
 	}
 
-	public List<CompensableResourceArchive> getCompensableResourceList() {
-		return compensableResourceList;
+	public Xid getXid() {
+		return xid;
 	}
 
-	public boolean isCompensable() {
+	public void setXid(Xid xid) {
+		this.xid = xid;
+	}
+
+	public CompensableInvocation getCompensable() {
 		return compensable;
 	}
 
-	public void setCompensable(boolean compensable) {
+	public void setCompensable(CompensableInvocation compensable) {
 		this.compensable = compensable;
 	}
+
+	public boolean isConfirmed() {
+		return confirmed;
+	}
+
+	public void setConfirmed(boolean confirmed) {
+		this.confirmed = confirmed;
+	}
+
+	public boolean isCancelled() {
+		return cancelled;
+	}
+
+	public void setCancelled(boolean cancelled) {
+		this.cancelled = cancelled;
+	}
+
+	public boolean isCoordinator() {
+		return coordinator;
+	}
+
+	public void setCoordinator(boolean coordinator) {
+		this.coordinator = coordinator;
+	}
+
+	public boolean isTxEnabled() {
+		return txEnabled;
+	}
+
+	public void setTxEnabled(boolean txEnabled) {
+		this.txEnabled = txEnabled;
+	}
+
+	public boolean isTxMixed() {
+		return txMixed;
+	}
+
+	public void setTxMixed(boolean txMixed) {
+		this.txMixed = txMixed;
+	}
+
+	// public boolean isCoordinatorTried() {
+	// return coordinatorTried;
+	// }
+	//
+	// public void setCoordinatorTried(boolean coordinatorTried) {
+	// this.coordinatorTried = coordinatorTried;
+	// }
 
 }

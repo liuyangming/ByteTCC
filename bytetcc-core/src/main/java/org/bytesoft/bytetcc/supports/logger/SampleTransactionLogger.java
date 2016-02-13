@@ -19,29 +19,29 @@ import java.util.List;
 
 import org.apache.log4j.Logger;
 import org.bytesoft.compensable.archive.CompensableArchive;
-import org.bytesoft.compensable.archive.CompensableResourceArchive;
+import org.bytesoft.compensable.archive.TransactionArchive;
 import org.bytesoft.compensable.supports.logger.CompensableLogger;
 import org.bytesoft.transaction.archive.XAResourceArchive;
 
 public class SampleTransactionLogger implements CompensableLogger {
 	static final Logger logger = Logger.getLogger(SampleTransactionLogger.class.getSimpleName());
 
-	public void createTransaction(CompensableArchive archive) {
+	public void createTransaction(TransactionArchive archive) {
 		// TODO Auto-generated method stub
 
 	}
 
-	public void updateTransaction(CompensableArchive archive) {
+	public void updateTransaction(TransactionArchive archive) {
 		// TODO Auto-generated method stub
 
 	}
 
-	public void deleteTransaction(CompensableArchive archive) {
+	public void deleteTransaction(TransactionArchive archive) {
 		// TODO Auto-generated method stub
 
 	}
 
-	public List<CompensableArchive> getTransactionArchiveList() {
+	public List<TransactionArchive> getTransactionArchiveList() {
 		// TODO Auto-generated method stub
 		return null;
 	}
@@ -51,7 +51,7 @@ public class SampleTransactionLogger implements CompensableLogger {
 
 	}
 
-	public void updateCompensable(CompensableResourceArchive archive) {
+	public void updateCompensable(CompensableArchive archive) {
 		// TODO Auto-generated method stub
 
 	}

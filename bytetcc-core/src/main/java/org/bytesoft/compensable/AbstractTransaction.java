@@ -29,15 +29,15 @@ import org.bytesoft.transaction.archive.TransactionArchive;
 import org.bytesoft.transaction.supports.TransactionListener;
 import org.bytesoft.transaction.xa.TransactionXid;
 
-public abstract class CompensableTransaction implements Transaction, TransactionListener {
+public abstract class AbstractTransaction implements Transaction, TransactionListener {
 	protected Transaction jtaTransaction;
 	protected TransactionContext transactionContext;
 	private CompensableInvocation compensableObject;
 
-	public CompensableTransaction() {
+	public AbstractTransaction() {
 	}
 
-	public CompensableTransaction(TransactionContext txContext) {
+	public AbstractTransaction(TransactionContext txContext) {
 		this.transactionContext = txContext;
 	}
 
@@ -95,10 +95,10 @@ public abstract class CompensableTransaction implements Transaction, Transaction
 	public boolean equals(Object obj) {
 		if (obj == null) {
 			return false;
-		} else if (CompensableTransaction.class.isAssignableFrom(obj.getClass()) == false) {
+		} else if (AbstractTransaction.class.isAssignableFrom(obj.getClass()) == false) {
 			return false;
 		}
-		CompensableTransaction that = (CompensableTransaction) obj;
+		AbstractTransaction that = (AbstractTransaction) obj;
 		TransactionContext thisContext = this.transactionContext;
 		TransactionContext thatContext = that.transactionContext;
 		TransactionXid thisXid = thisContext == null ? null : thisContext.getXid();

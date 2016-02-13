@@ -25,13 +25,13 @@ import javax.transaction.xa.XAException;
 import javax.transaction.xa.XAResource;
 import javax.transaction.xa.Xid;
 
-import org.bytesoft.compensable.CompensableTransaction;
+import org.bytesoft.compensable.AbstractTransaction;
 
 public class TerminatorSkeleton implements XAResource {
 
-	private CompensableTransaction transaction;
+	private AbstractTransaction transaction;
 
-	public TerminatorSkeleton(CompensableTransaction tx) {
+	public TerminatorSkeleton(AbstractTransaction tx) {
 		this.transaction = tx;
 	}
 
@@ -310,11 +310,11 @@ public class TerminatorSkeleton implements XAResource {
 	public void start(Xid xid, int flags) throws XAException {
 	}
 
-	public CompensableTransaction getTransaction() {
+	public AbstractTransaction getTransaction() {
 		return transaction;
 	}
 
-	public void setTransaction(CompensableTransaction transaction) {
+	public void setTransaction(AbstractTransaction transaction) {
 		this.transaction = transaction;
 	}
 }

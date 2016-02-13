@@ -27,8 +27,8 @@ import org.bytesoft.transaction.Transaction;
 import org.bytesoft.transaction.TransactionManager;
 import org.bytesoft.transaction.internal.TransactionException;
 
-public class CompensableCoordinator implements RemoteCoordinator, CompensableBeanFactoryAware {
-	static final Logger logger = Logger.getLogger(CompensableCoordinator.class.getSimpleName());
+public class TransactionCoordinator implements RemoteCoordinator, CompensableBeanFactoryAware {
+	static final Logger logger = Logger.getLogger(TransactionCoordinator.class.getSimpleName());
 
 	private CompensableBeanFactory beanFactory;
 

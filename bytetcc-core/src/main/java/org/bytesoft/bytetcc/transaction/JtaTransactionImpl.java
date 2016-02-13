@@ -13,7 +13,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this distribution; if not, see <http://www.gnu.org/licenses/>.
  */
-package org.bytesoft.bytetcc;
+package org.bytesoft.bytetcc.transaction;
 
 import javax.transaction.HeuristicMixedException;
 import javax.transaction.HeuristicRollbackException;
@@ -23,18 +23,18 @@ import javax.transaction.SystemException;
 import javax.transaction.xa.XAResource;
 
 import org.bytesoft.compensable.CompensableBeanFactory;
-import org.bytesoft.compensable.CompensableTransaction;
+import org.bytesoft.compensable.AbstractTransaction;
 import org.bytesoft.compensable.TransactionContext;
 import org.bytesoft.transaction.Transaction;
 import org.bytesoft.transaction.TransactionBeanFactory;
 import org.bytesoft.transaction.supports.TransactionListener;
 
-public class SampleTransactionImpl extends CompensableTransaction {
+public class JtaTransactionImpl extends AbstractTransaction {
 
 	private CompensableBeanFactory beanFactory;
-	private SampleCompensableImpl compensableTransaction;
+	private TccTransactionImpl compensableTransaction;
 
-	public SampleTransactionImpl(TransactionContext transactionContext) {
+	public JtaTransactionImpl(TransactionContext transactionContext) {
 		super(transactionContext);
 	}
 
@@ -149,11 +149,11 @@ public class SampleTransactionImpl extends CompensableTransaction {
 		this.jtaTransaction = jtaTransaction;
 	}
 
-	public SampleCompensableImpl getCompensableTccTransaction() {
+	public TccTransactionImpl getCompensableTccTransaction() {
 		return compensableTransaction;
 	}
 
-	public void setCompensableTccTransaction(SampleCompensableImpl compensableTransaction) {
+	public void setCompensableTccTransaction(TccTransactionImpl compensableTransaction) {
 		this.compensableTransaction = compensableTransaction;
 	}
 

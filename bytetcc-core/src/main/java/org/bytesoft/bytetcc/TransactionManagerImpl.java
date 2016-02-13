@@ -33,10 +33,12 @@ import org.apache.log4j.Logger;
 import org.bytesoft.bytejta.TransactionImpl;
 import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
 import org.bytesoft.bytetcc.aware.CompensableBeanFactoryAware;
+import org.bytesoft.bytetcc.transaction.TccTransactionImpl;
+import org.bytesoft.bytetcc.transaction.JtaTransactionImpl;
 import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableManager;
-import org.bytesoft.compensable.CompensableTransaction;
+import org.bytesoft.compensable.AbstractTransaction;
 import org.bytesoft.compensable.TransactionContext;
 import org.bytesoft.compensable.supports.logger.CompensableLogger;
 import org.bytesoft.transaction.Transaction;
@@ -45,8 +47,8 @@ import org.bytesoft.transaction.internal.TransactionException;
 import org.bytesoft.transaction.xa.TransactionXid;
 import org.bytesoft.transaction.xa.XidFactory;
 
-public class CompensableManagerImpl implements CompensableManager, CompensableBeanFactoryAware {
-	static final Logger logger = Logger.getLogger(CompensableManagerImpl.class.getSimpleName());
+public class TransactionManagerImpl implements CompensableManager, CompensableBeanFactoryAware {
+	static final Logger logger = Logger.getLogger(TransactionManagerImpl.class.getSimpleName());
 
 	// private TransactionManager jtaTransactionManager;
 	private CompensableBeanFactory beanFactory;
@@ -54,8 +56,8 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 	/* it's unnecessary for compensable-transaction to do the timing, the jta-transaction will do it. */
 	private int timeoutSeconds = 5 * 60;
 	private final ThreadLocal<CompensableInvocation> invocations = new ThreadLocal<CompensableInvocation>();
-	private final ThreadLocal<SampleCompensableImpl> transients = new ThreadLocal<SampleCompensableImpl>();
-	private final Map<Thread, CompensableTransaction> associatedTxMap = new ConcurrentHashMap<Thread, CompensableTransaction>();
+	private final ThreadLocal<TccTransactionImpl> transients = new ThreadLocal<TccTransactionImpl>();
+	private final Map<Thread, AbstractTransaction> associatedTxMap = new ConcurrentHashMap<Thread, AbstractTransaction>();
 
 	public CompensableInvocation beforeCompensableExecution(CompensableInvocation lastest) {
 		CompensableInvocation original = this.invocations.get();
@@ -66,9 +68,9 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 	public void afterCompensableCompletion(CompensableInvocation original) {
 
 		try {
-			CompensableTransaction transaction = (CompensableTransaction) this.getTransactionQuietly();
-			if (SampleCompensableImpl.class.isInstance(transaction)) {
-				this.delistCompensableInvocationIfNecessary((SampleCompensableImpl) transaction);
+			AbstractTransaction transaction = (AbstractTransaction) this.getTransactionQuietly();
+			if (TccTransactionImpl.class.isInstance(transaction)) {
+				this.delistCompensableInvocationIfNecessary((TccTransactionImpl) transaction);
 			}
 		} finally {
 			this.invocations.set(original);
@@ -76,7 +78,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 
 	}
 
-	private void delistCompensableInvocationIfNecessary(SampleCompensableImpl transaction) {
+	private void delistCompensableInvocationIfNecessary(TccTransactionImpl transaction) {
 		CompensableInvocation compensable = this.invocations.get();
 		this.invocations.remove();
 		if (transaction != null) {
@@ -112,7 +114,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 		TransactionXid global = xidFactory.createGlobalXid();
 		transactionContext.setXid(global);
 
-		SampleTransactionImpl transaction = new SampleTransactionImpl(transactionContext);
+		JtaTransactionImpl transaction = new JtaTransactionImpl(transactionContext);
 		TransactionRepository transactionRepository = this.beanFactory.getTransactionRepository();
 
 		RemoteCoordinator transactionCoordinator = this.beanFactory.getTransactionCoordinator();
@@ -137,7 +139,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 		this.associateThread(transaction);
 		transactionRepository.putTransaction(global, transaction);
 
-		SampleCompensableImpl compensableTx = this.transients.get();
+		TccTransactionImpl compensableTx = this.transients.get();
 		if (compensableTx != null) {
 			transaction.setCompensableTccTransaction(compensableTx);
 			// TODO compensableTx.setCompensableJtaTransaction(transaction);
@@ -156,7 +158,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 		transactionContext.setCreatedTime(current);
 		transactionContext.setExpiredTime(current + this.timeoutSeconds);
 
-		SampleCompensableImpl transaction = new SampleCompensableImpl(transactionContext);
+		TccTransactionImpl transaction = new TccTransactionImpl(transactionContext);
 
 		XidFactory jtaXidFactory = this.beanFactory.getXidFactory();
 		XidFactory tccXidFactory = this.beanFactory.getCompensableXidFactory();
@@ -280,32 +282,32 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 
 	public void commit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException,
 			SecurityException, IllegalStateException, SystemException {
-		CompensableTransaction transaction = this.desociateThread();
+		AbstractTransaction transaction = this.desociateThread();
 		if (transaction == null) {
 			throw new IllegalStateException();
 		}
 
 		TransactionContext transactionContext = transaction.getTransactionContext();
 		if (transactionContext.isCompensable()) {
-			this.commitTccTransaction((SampleCompensableImpl) transaction);
+			this.commitTccTransaction((TccTransactionImpl) transaction);
 		} else {
-			this.commitJtaTransaction((SampleTransactionImpl) transaction);
+			this.commitJtaTransaction((JtaTransactionImpl) transaction);
 		}
 	}
 
 	public void internalCommitJtaTransaction() throws RollbackException, HeuristicMixedException,
 			HeuristicRollbackException, SecurityException, IllegalStateException, SystemException {
-		CompensableTransaction transaction = this.desociateThread();
+		AbstractTransaction transaction = this.desociateThread();
 		if (transaction == null) {
 			throw new IllegalStateException();
 		} else if (TransactionImpl.class.isInstance(transaction) == false) {
 			throw new IllegalStateException();
 		}
 
-		this.commitJtaTransaction((SampleTransactionImpl) transaction);
+		this.commitJtaTransaction((JtaTransactionImpl) transaction);
 	}
 
-	public void commitJtaTransaction(SampleTransactionImpl transaction) throws RollbackException,
+	public void commitJtaTransaction(JtaTransactionImpl transaction) throws RollbackException,
 			HeuristicMixedException, HeuristicRollbackException, SecurityException, IllegalStateException,
 			SystemException {
 		// this.jtaTransactionManager.commit();
@@ -323,7 +325,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 		}
 	}
 
-	public void commitTccTransaction(SampleCompensableImpl transaction) throws RollbackException,
+	public void commitTccTransaction(TccTransactionImpl transaction) throws RollbackException,
 			HeuristicMixedException, HeuristicRollbackException, SecurityException, IllegalStateException,
 			SystemException {
 
@@ -371,10 +373,10 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 
 		// transaction.markCoordinatorTriedSuccessfully();
 		transaction.setTransactionStatus(Status.STATUS_PREPARED);
-		transaction.setCompensableStatus(SampleCompensableImpl.STATUS_TRIED);
+		transaction.setCompensableStatus(TccTransactionImpl.STATUS_TRIED);
 
 		transaction.setTransactionStatus(Status.STATUS_COMMITTING);
-		transaction.setCompensableStatus(SampleCompensableImpl.STATUS_CONFIRMING);
+		transaction.setCompensableStatus(TccTransactionImpl.STATUS_CONFIRMING);
 
 		transactionLogger.updateTransaction(transaction.getTransactionArchive());
 
@@ -386,7 +388,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 			throw new CommittingException(ex);
 		}
 
-		transaction.setCompensableStatus(SampleCompensableImpl.STATUS_CONFIRMED);
+		transaction.setCompensableStatus(TccTransactionImpl.STATUS_CONFIRMED);
 		transactionLogger.updateTransaction(transaction.getTransactionArchive());
 
 		try {
@@ -410,7 +412,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 
 	}
 
-	public void processNativeConfirm(SampleCompensableImpl transaction) {
+	public void processNativeConfirm(TccTransactionImpl transaction) {
 		try {
 			this.transients.set(transaction);
 			transaction.nativeConfirm();
@@ -424,23 +426,23 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 		return transaction == null ? Status.STATUS_NO_TRANSACTION : transaction.getStatus();
 	}
 
-	public CompensableTransaction getTransaction() throws SystemException {
+	public AbstractTransaction getTransaction() throws SystemException {
 		return this.getTransactionQuietly();
 	}
 
-	public CompensableTransaction getTransactionQuietly() {
+	public AbstractTransaction getTransactionQuietly() {
 		return this.associatedTxMap.get(Thread.currentThread());
 	}
 
 	public void resume(javax.transaction.Transaction tobj) throws InvalidTransactionException, IllegalStateException,
 			SystemException {
-		if (CompensableTransaction.class.isInstance(tobj) == false) {
+		if (AbstractTransaction.class.isInstance(tobj) == false) {
 			throw new InvalidTransactionException();
 		} else if (this.getTransaction() != null) {
 			throw new IllegalStateException();
 		}
 
-		CompensableTransaction transaction = (CompensableTransaction) tobj;
+		AbstractTransaction transaction = (AbstractTransaction) tobj;
 		// Transaction jtaTransaction = transaction.getJtaTransaction();
 		CompensableInvocation compensableObject = transaction.getCompensableObject();
 		this.invocations.set(compensableObject);
@@ -462,31 +464,31 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 	}
 
 	public void rollback() throws IllegalStateException, SecurityException, SystemException {
-		CompensableTransaction transaction = this.desociateThread();
+		AbstractTransaction transaction = this.desociateThread();
 		if (transaction == null) {
 			throw new IllegalStateException();
 		}
 
 		TransactionContext transactionContext = transaction.getTransactionContext();
 		if (transactionContext.isCompensable()) {
-			this.rollbackTccTransaction((SampleCompensableImpl) transaction);
+			this.rollbackTccTransaction((TccTransactionImpl) transaction);
 		} else {
-			this.rollbackJtaTransaction((SampleTransactionImpl) transaction);
+			this.rollbackJtaTransaction((JtaTransactionImpl) transaction);
 		}
 	}
 
 	public void internalRollbackJtaTransaction() throws IllegalStateException, SecurityException, SystemException {
-		CompensableTransaction transaction = this.desociateThread();
+		AbstractTransaction transaction = this.desociateThread();
 		if (transaction == null) {
 			throw new IllegalStateException();
 		} else if (TransactionImpl.class.isInstance(transaction) == false) {
 			throw new IllegalStateException();
 		}
 
-		this.rollbackJtaTransaction((SampleTransactionImpl) transaction);
+		this.rollbackJtaTransaction((JtaTransactionImpl) transaction);
 	}
 
-	public void rollbackJtaTransaction(SampleTransactionImpl transaction) throws IllegalStateException,
+	public void rollbackJtaTransaction(JtaTransactionImpl transaction) throws IllegalStateException,
 			SecurityException, SystemException {
 
 		TransactionContext transactionContext = transaction.getTransactionContext();
@@ -503,7 +505,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 		}
 	}
 
-	public void rollbackTccTransaction(SampleCompensableImpl transaction) throws IllegalStateException,
+	public void rollbackTccTransaction(TccTransactionImpl transaction) throws IllegalStateException,
 			SecurityException, SystemException {
 
 		if (transaction == null) {
@@ -528,7 +530,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 		if (transactionStatus == Status.STATUS_ACTIVE //
 				|| transactionStatus == Status.STATUS_MARKED_ROLLBACK) {
 			transaction.setTransactionStatus(Status.STATUS_PREPARING);
-			transaction.setCompensableStatus(SampleCompensableImpl.STATUS_TRY_FAILURE);
+			transaction.setCompensableStatus(TccTransactionImpl.STATUS_TRY_FAILURE);
 			transactionLogger.updateTransaction(transaction.getTransactionArchive());
 
 			XidFactory jtaXidFactory = this.beanFactory.getXidFactory();
@@ -540,7 +542,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 				// this.jtaTransactionManager.rollback();
 				transactionCoordinator.rollback(jtaTransactionXid);
 				transaction.setTransactionStatus(Status.STATUS_ROLLING_BACK);
-				transaction.setCompensableStatus(SampleCompensableImpl.STATUS_TRY_FAILURE);
+				transaction.setCompensableStatus(TccTransactionImpl.STATUS_TRY_FAILURE);
 			} catch (XAException ex) {
 				// transactionRepository.putErrorTransaction(globalXid, transaction);
 				// SystemException sysEx = new SystemException();
@@ -557,7 +559,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 				throw new IllegalStateException();
 			}
 			transaction.setTransactionStatus(Status.STATUS_ROLLING_BACK);
-			transaction.setCompensableStatus(SampleCompensableImpl.STATUS_TRIED);
+			transaction.setCompensableStatus(TccTransactionImpl.STATUS_TRIED);
 		} else if (transaction.getStatus() == Status.STATUS_PREPARED) {
 			transactionRepository.putErrorTransaction(tccTransactionXid, transaction);
 			throw new CommittingException();/* never happen */
@@ -565,8 +567,8 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 
 		transaction.setTransactionStatus(Status.STATUS_ROLLING_BACK);
 
-		if (transaction.getCompensableStatus() == SampleCompensableImpl.STATUS_TRIED) {
-			transaction.setCompensableStatus(SampleCompensableImpl.STATUS_CANCELLING);
+		if (transaction.getCompensableStatus() == TccTransactionImpl.STATUS_TRIED) {
+			transaction.setCompensableStatus(TccTransactionImpl.STATUS_CANCELLING);
 			transactionLogger.updateTransaction(transaction.getTransactionArchive());
 
 			// step2: cancel
@@ -580,7 +582,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 				throw sysEx;
 			}
 
-			transaction.setCompensableStatus(SampleCompensableImpl.STATUS_CANCELLED);
+			transaction.setCompensableStatus(TccTransactionImpl.STATUS_CANCELLED);
 			transactionLogger.updateTransaction(transaction.getTransactionArchive());
 
 		} // end-if (transaction.getCompensableStatus() == CompensableTccTransaction.STATUS_TRIED)
@@ -609,11 +611,11 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 				ByteUtils.byteArrayToString(tccTransactionXid.getGlobalTransactionId())));
 	}
 
-	public void processNativeCancel(SampleCompensableImpl transaction) {
+	public void processNativeCancel(TccTransactionImpl transaction) {
 		this.processNativeCancel(transaction, false);
 	}
 
-	public void processNativeCancel(SampleCompensableImpl transaction, boolean coordinatorCancelRequired) {
+	public void processNativeCancel(TccTransactionImpl transaction, boolean coordinatorCancelRequired) {
 		try {
 			this.transients.set(transaction);
 			transaction.nativeCancel(coordinatorCancelRequired);
@@ -623,7 +625,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 	}
 
 	public void setRollbackOnly() throws IllegalStateException, SystemException {
-		CompensableTransaction transaction = this.getTransaction();
+		AbstractTransaction transaction = this.getTransaction();
 		if (transaction == null) {
 			throw new SystemException();
 		}
@@ -631,7 +633,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 	}
 
 	public void setTransactionTimeout(int seconds) throws SystemException {
-		CompensableTransaction transaction = this.getTransaction();
+		AbstractTransaction transaction = this.getTransaction();
 		if (transaction == null) {
 			throw new SystemException();
 		} else if (seconds < 0) {
@@ -647,8 +649,8 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 		}
 	}
 
-	public CompensableTransaction suspend() throws SystemException {
-		CompensableTransaction transaction = this.desociateThread();
+	public AbstractTransaction suspend() throws SystemException {
+		AbstractTransaction transaction = this.desociateThread();
 		TransactionContext transactionContext = transaction.getTransactionContext();
 		TransactionXid tccTransactionXid = transactionContext.getXid();
 		XidFactory jtaXidFactory = this.beanFactory.getXidFactory();
@@ -674,10 +676,10 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 	// public void stopTiming(Transaction tx) {}
 
 	public void associateThread(Transaction transaction) {
-		this.associatedTxMap.put(Thread.currentThread(), (CompensableTransaction) transaction);
+		this.associatedTxMap.put(Thread.currentThread(), (AbstractTransaction) transaction);
 	}
 
-	public CompensableTransaction desociateThread() {
+	public AbstractTransaction desociateThread() {
 		return this.associatedTxMap.remove(Thread.currentThread());
 	}
 

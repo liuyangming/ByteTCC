@@ -17,7 +17,7 @@ package org.bytesoft.bytetcc.supports.internal;
 
 import org.bytesoft.bytetcc.aware.CompensableBeanFactoryAware;
 import org.bytesoft.compensable.CompensableBeanFactory;
-import org.bytesoft.compensable.CompensableTransaction;
+import org.bytesoft.compensable.AbstractTransaction;
 import org.bytesoft.compensable.TransactionContext;
 import org.bytesoft.transaction.TransactionManager;
 import org.bytesoft.transaction.supports.rpc.TransactionInterceptor;
@@ -33,7 +33,7 @@ public class TransactionInterceptorDispatcher implements TransactionInterceptor,
 
 	public void beforeSendRequest(TransactionRequest request) throws IllegalStateException {
 		TransactionManager transactionManager = this.beanFactory.getCompensableManager();
-		CompensableTransaction transaction = (CompensableTransaction) transactionManager.getTransactionQuietly();
+		AbstractTransaction transaction = (AbstractTransaction) transactionManager.getTransactionQuietly();
 		if (transaction == null) {
 			return;
 		} else if (transaction.getTransactionContext().isCompensable()) {
@@ -56,7 +56,7 @@ public class TransactionInterceptorDispatcher implements TransactionInterceptor,
 
 	public void beforeSendResponse(TransactionResponse response) throws IllegalStateException {
 		TransactionManager transactionManager = this.beanFactory.getCompensableManager();
-		CompensableTransaction transaction = (CompensableTransaction) transactionManager.getTransactionQuietly();
+		AbstractTransaction transaction = (AbstractTransaction) transactionManager.getTransactionQuietly();
 		if (transaction == null) {
 			return;
 		} else if (transaction.getTransactionContext().isCompensable()) {
