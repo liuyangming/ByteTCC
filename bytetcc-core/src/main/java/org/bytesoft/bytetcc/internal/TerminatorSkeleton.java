@@ -25,7 +25,7 @@ import javax.transaction.xa.XAException;
 import javax.transaction.xa.XAResource;
 import javax.transaction.xa.Xid;
 
-import org.bytesoft.bytetcc.CompensableTransaction;
+import org.bytesoft.compensable.CompensableTransaction;
 
 public class TerminatorSkeleton implements XAResource {
 

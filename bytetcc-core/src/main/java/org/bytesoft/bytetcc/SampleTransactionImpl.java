@@ -23,17 +23,18 @@ import javax.transaction.SystemException;
 import javax.transaction.xa.XAResource;
 
 import org.bytesoft.compensable.CompensableBeanFactory;
+import org.bytesoft.compensable.CompensableTransaction;
 import org.bytesoft.compensable.TransactionContext;
 import org.bytesoft.transaction.Transaction;
 import org.bytesoft.transaction.TransactionBeanFactory;
 import org.bytesoft.transaction.supports.TransactionListener;
 
-public class CompensableJtaTransaction extends CompensableTransaction {
+public class SampleTransactionImpl extends CompensableTransaction {
 
 	private CompensableBeanFactory beanFactory;
-	private CompensableTccTransaction compensableTccTransaction;
+	private SampleCompensableImpl compensableTransaction;
 
-	public CompensableJtaTransaction(TransactionContext transactionContext) {
+	public SampleTransactionImpl(TransactionContext transactionContext) {
 		super(transactionContext);
 	}
 
@@ -64,68 +65,68 @@ public class CompensableJtaTransaction extends CompensableTransaction {
 	}
 
 	public void prepareStart() {
-		if (this.compensableTccTransaction != null) {
-			this.compensableTccTransaction.prepareStart();
+		if (this.compensableTransaction != null) {
+			this.compensableTransaction.prepareStart();
 		}
 	}
 
 	public void prepareSuccess() {
-		if (this.compensableTccTransaction != null) {
-			this.compensableTccTransaction.prepareSuccess();
+		if (this.compensableTransaction != null) {
+			this.compensableTransaction.prepareSuccess();
 		}
 	}
 
 	public void prepareFailure() {
-		if (this.compensableTccTransaction != null) {
-			this.compensableTccTransaction.prepareFailure();
+		if (this.compensableTransaction != null) {
+			this.compensableTransaction.prepareFailure();
 		}
 	}
 
 	public void commitStart() {
-		if (this.compensableTccTransaction != null) {
-			this.compensableTccTransaction.commitStart();
+		if (this.compensableTransaction != null) {
+			this.compensableTransaction.commitStart();
 		}
 	}
 
 	public void commitSuccess() {
-		if (this.compensableTccTransaction != null) {
-			this.compensableTccTransaction.commitSuccess();
+		if (this.compensableTransaction != null) {
+			this.compensableTransaction.commitSuccess();
 		}
 	}
 
 	public void commitFailure() {
-		if (this.compensableTccTransaction != null) {
-			this.compensableTccTransaction.commitFailure();
+		if (this.compensableTransaction != null) {
+			this.compensableTransaction.commitFailure();
 		}
 	}
 
 	public void commitHeuristicMixed() {
-		if (this.compensableTccTransaction != null) {
-			this.compensableTccTransaction.commitHeuristicMixed();
+		if (this.compensableTransaction != null) {
+			this.compensableTransaction.commitHeuristicMixed();
 		}
 	}
 
 	public void commitHeuristicRolledback() {
-		if (this.compensableTccTransaction != null) {
-			this.compensableTccTransaction.commitHeuristicRolledback();
+		if (this.compensableTransaction != null) {
+			this.compensableTransaction.commitHeuristicRolledback();
 		}
 	}
 
 	public void rollbackStart() {
-		if (this.compensableTccTransaction != null) {
-			this.compensableTccTransaction.rollbackStart();
+		if (this.compensableTransaction != null) {
+			this.compensableTransaction.rollbackStart();
 		}
 	}
 
 	public void rollbackSuccess() {
-		if (this.compensableTccTransaction != null) {
-			this.compensableTccTransaction.rollbackSuccess();
+		if (this.compensableTransaction != null) {
+			this.compensableTransaction.rollbackSuccess();
 		}
 	}
 
 	public void rollbackFailure() {
-		if (this.compensableTccTransaction != null) {
-			this.compensableTccTransaction.rollbackFailure();
+		if (this.compensableTransaction != null) {
+			this.compensableTransaction.rollbackFailure();
 		}
 	}
 
@@ -148,12 +149,12 @@ public class CompensableJtaTransaction extends CompensableTransaction {
 		this.jtaTransaction = jtaTransaction;
 	}
 
-	public CompensableTccTransaction getCompensableTccTransaction() {
-		return compensableTccTransaction;
+	public SampleCompensableImpl getCompensableTccTransaction() {
+		return compensableTransaction;
 	}
 
-	public void setCompensableTccTransaction(CompensableTccTransaction compensableTccTransaction) {
-		this.compensableTccTransaction = compensableTccTransaction;
+	public void setCompensableTccTransaction(SampleCompensableImpl compensableTransaction) {
+		this.compensableTransaction = compensableTransaction;
 	}
 
 	public CompensableBeanFactory getBeanFactory() {

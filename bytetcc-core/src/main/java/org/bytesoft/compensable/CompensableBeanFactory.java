@@ -10,7 +10,7 @@ public interface CompensableBeanFactory extends TransactionBeanFactory {
 
 	public XidFactory getCompensableXidFactory();
 
-	public RemoteCoordinator getCompensableTransactionCoordinator();
+	public RemoteCoordinator getCompensableCoordinator();
 
 	public CompensableManager getCompensableManager();
 

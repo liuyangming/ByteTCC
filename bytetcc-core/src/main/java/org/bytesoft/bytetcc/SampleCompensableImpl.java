@@ -36,6 +36,7 @@ import javax.transaction.xa.Xid;
 
 import org.apache.log4j.Logger;
 import org.bytesoft.compensable.CompensableBeanFactory;
+import org.bytesoft.compensable.CompensableTransaction;
 import org.bytesoft.compensable.TransactionContext;
 import org.bytesoft.compensable.archive.CompensableArchive;
 import org.bytesoft.compensable.archive.CompensableResourceArchive;
@@ -46,8 +47,8 @@ import org.bytesoft.transaction.supports.TransactionListener;
 import org.bytesoft.transaction.xa.TransactionXid;
 import org.bytesoft.transaction.xa.XidFactory;
 
-public class CompensableTccTransaction extends CompensableTransaction {
-	static final Logger logger = Logger.getLogger(CompensableTccTransaction.class.getSimpleName());
+public class SampleCompensableImpl extends CompensableTransaction {
+	static final Logger logger = Logger.getLogger(SampleCompensableImpl.class.getSimpleName());
 
 	public static int STATUS_UNKNOWN = 0;
 
@@ -75,7 +76,7 @@ public class CompensableTccTransaction extends CompensableTransaction {
 
 	private CompensableBeanFactory beanFactory;
 
-	public CompensableTccTransaction(TransactionContext transactionContext) {
+	public SampleCompensableImpl(TransactionContext transactionContext) {
 		super(transactionContext);
 	}
 
@@ -137,7 +138,7 @@ public class CompensableTccTransaction extends CompensableTransaction {
 		CompensableInvocationExecutor executor = this.beanFactory.getCompensableInvocationExecutor();
 		CompensableLogger transactionLogger = this.beanFactory.getCompensableLogger();
 
-		this.compensableStatus = CompensableTccTransaction.STATUS_CONFIRMING;
+		this.compensableStatus = SampleCompensableImpl.STATUS_CONFIRMING;
 
 		if (this.transactionContext.isCoordinator()) {
 			Iterator<CompensableResourceArchive> coordinatorItr = this.coordinatorResourceArchiveList.iterator();
@@ -180,7 +181,7 @@ public class CompensableTccTransaction extends CompensableTransaction {
 				this.confirmArchive = null;
 			}
 		}
-		this.compensableStatus = CompensableTccTransaction.STATUS_CONFIRMED;
+		this.compensableStatus = SampleCompensableImpl.STATUS_CONFIRMED;
 		CompensableArchive archive = this.getTransactionArchive();
 		transactionLogger.updateTransaction(archive);
 	}
@@ -374,7 +375,7 @@ public class CompensableTccTransaction extends CompensableTransaction {
 		CompensableInvocationExecutor executor = this.beanFactory.getCompensableInvocationExecutor();
 		CompensableLogger transactionLogger = this.beanFactory.getCompensableLogger();
 
-		this.compensableStatus = CompensableTccTransaction.STATUS_CANCELLING;
+		this.compensableStatus = SampleCompensableImpl.STATUS_CANCELLING;
 
 		if (this.transactionContext.isCoordinator() && coordinatorCancelRequired) {
 			Iterator<CompensableResourceArchive> coordinatorItr = this.coordinatorResourceArchiveList.iterator();
@@ -417,7 +418,7 @@ public class CompensableTccTransaction extends CompensableTransaction {
 				this.cancellArchive = null;
 			}
 		}
-		this.compensableStatus = CompensableTccTransaction.STATUS_CANCELLED;
+		this.compensableStatus = SampleCompensableImpl.STATUS_CANCELLED;
 		CompensableArchive archive = this.getTransactionArchive();
 		transactionLogger.updateTransaction(archive);
 	}
@@ -534,21 +535,21 @@ public class CompensableTccTransaction extends CompensableTransaction {
 	}
 
 	private void trySuccess() {
-		this.compensableStatus = CompensableTccTransaction.STATUS_TRIED;
+		this.compensableStatus = SampleCompensableImpl.STATUS_TRIED;
 		CompensableArchive archive = this.getTransactionArchive();
 		CompensableLogger transactionLogger = this.beanFactory.getCompensableLogger();
 		transactionLogger.updateTransaction(archive);
 	}
 
 	private void tryFailure() {
-		this.compensableStatus = CompensableTccTransaction.STATUS_TRY_FAILURE;
+		this.compensableStatus = SampleCompensableImpl.STATUS_TRY_FAILURE;
 		CompensableArchive archive = this.getTransactionArchive();
 		CompensableLogger transactionLogger = this.beanFactory.getCompensableLogger();
 		transactionLogger.updateTransaction(archive);
 	}
 
 	private void tryMixed() {
-		this.compensableStatus = CompensableTccTransaction.STATUS_TRY_MIXED;
+		this.compensableStatus = SampleCompensableImpl.STATUS_TRY_MIXED;
 		CompensableArchive archive = this.getTransactionArchive();
 		CompensableLogger transactionLogger = this.beanFactory.getCompensableLogger();
 		transactionLogger.updateTransaction(archive);

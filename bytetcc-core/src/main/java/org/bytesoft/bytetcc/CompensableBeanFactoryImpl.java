@@ -41,7 +41,7 @@ public final class CompensableBeanFactoryImpl implements CompensableBeanFactory 
 	private TransactionInterceptor transactionInterceptor;
 	private TransactionRecovery transactionRecovery;
 	private RemoteCoordinator transactionCoordinator;
-	private RemoteCoordinator compensableTransactionCoordinator;
+	private RemoteCoordinator compensableCoordinator;
 	private CompensableInvocationExecutor compensableInvocationExecutor;
 
 	public TransactionTimer getTransactionTimer() {
@@ -128,12 +128,12 @@ public final class CompensableBeanFactoryImpl implements CompensableBeanFactory 
 		this.transactionCoordinator = transactionCoordinator;
 	}
 
-	public RemoteCoordinator getCompensableTransactionCoordinator() {
-		return compensableTransactionCoordinator;
+	public RemoteCoordinator getCompensableCoordinator() {
+		return compensableCoordinator;
 	}
 
-	public void setCompensableTransactionCoordinator(RemoteCoordinator compensableTransactionCoordinator) {
-		this.compensableTransactionCoordinator = compensableTransactionCoordinator;
+	public void setCompensableCoordinator(RemoteCoordinator compensableCoordinator) {
+		this.compensableCoordinator = compensableCoordinator;
 	}
 
 	public CompensableInvocationExecutor getCompensableInvocationExecutor() {

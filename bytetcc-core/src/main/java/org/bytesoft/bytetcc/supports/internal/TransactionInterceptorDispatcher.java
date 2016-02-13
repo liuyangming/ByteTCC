@@ -15,9 +15,9 @@
  */
 package org.bytesoft.bytetcc.supports.internal;
 
-import org.bytesoft.bytetcc.CompensableTransaction;
 import org.bytesoft.bytetcc.aware.CompensableBeanFactoryAware;
 import org.bytesoft.compensable.CompensableBeanFactory;
+import org.bytesoft.compensable.CompensableTransaction;
 import org.bytesoft.compensable.TransactionContext;
 import org.bytesoft.transaction.TransactionManager;
 import org.bytesoft.transaction.supports.rpc.TransactionInterceptor;

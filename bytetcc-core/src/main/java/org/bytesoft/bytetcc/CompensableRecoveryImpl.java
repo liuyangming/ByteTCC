@@ -25,6 +25,7 @@ import org.apache.log4j.Logger;
 import org.bytesoft.bytetcc.aware.CompensableBeanFactoryAware;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableManager;
+import org.bytesoft.compensable.CompensableTransaction;
 import org.bytesoft.compensable.TransactionContext;
 import org.bytesoft.compensable.archive.CompensableArchive;
 import org.bytesoft.compensable.archive.CompensableResourceArchive;
@@ -51,7 +52,7 @@ public class CompensableRecoveryImpl implements TransactionRecovery, Compensable
 
 		CompensableTransaction transaction = null;
 		if (archive.isCompensable()) {
-			CompensableTccTransaction tccTransaction = new CompensableTccTransaction(transactionContext);
+			SampleCompensableImpl tccTransaction = new SampleCompensableImpl(transactionContext);
 			List<CompensableResourceArchive> compensables = archive.getCompensableResourceList();
 			for (int i = 0; i < compensables.size(); i++) {
 				CompensableResourceArchive compensable = compensables.get(i);
@@ -71,7 +72,7 @@ public class CompensableRecoveryImpl implements TransactionRecovery, Compensable
 			tccTransaction.setCompensableStatus(archive.getCompensableStatus());
 			transaction = tccTransaction;
 		} else {
-			transaction = new CompensableJtaTransaction(transactionContext);
+			transaction = new SampleTransactionImpl(transactionContext);
 		}
 
 		if (archive.getVote() == XAResource.XA_RDONLY) {
@@ -98,10 +99,10 @@ public class CompensableRecoveryImpl implements TransactionRecovery, Compensable
 			}
 			TransactionContext transactionContext = transaction.getTransactionContext();
 			TransactionXid globalXid = transactionContext.getXid();
-			if (CompensableTccTransaction.class.isInstance(transaction)) {
-				this.reconstructTccTransaction((CompensableTccTransaction) transaction);
+			if (SampleCompensableImpl.class.isInstance(transaction)) {
+				this.reconstructTccTransaction((SampleCompensableImpl) transaction);
 			} else {
-				this.reconstructJtaTransaction((CompensableJtaTransaction) transaction);
+				this.reconstructJtaTransaction((SampleTransactionImpl) transaction);
 			}
 			if (transactionRepository.getTransaction(globalXid) == null) {
 				transactionRepository.putTransaction(globalXid, transaction);
@@ -114,7 +115,7 @@ public class CompensableRecoveryImpl implements TransactionRecovery, Compensable
 	/**
 	 * TODO
 	 */
-	private void reconstructJtaTransaction(CompensableJtaTransaction transaction) {
+	private void reconstructJtaTransaction(SampleTransactionImpl transaction) {
 		// org.bytesoft.bytejta.common.TransactionConfigurator jtaConfigurator =
 		// org.bytesoft.bytejta.common.TransactionConfigurator
 		// .getInstance();
@@ -130,7 +131,7 @@ public class CompensableRecoveryImpl implements TransactionRecovery, Compensable
 	/**
 	 * TODO
 	 */
-	private void reconstructTccTransaction(CompensableTccTransaction transaction) {
+	private void reconstructTccTransaction(SampleCompensableImpl transaction) {
 		// org.bytesoft.bytejta.common.TransactionConfigurator jtaConfigurator =
 		// org.bytesoft.bytejta.common.TransactionConfigurator
 		// .getInstance();
@@ -164,7 +165,7 @@ public class CompensableRecoveryImpl implements TransactionRecovery, Compensable
 			CompensableTransaction transaction = (CompensableTransaction) transactions.get(i);
 			if (transaction.getTransactionContext().isCoordinator()) {
 				// if (CompensableTccTransaction.class.isInstance(transaction)) {
-				this.recoverCoordinatorTransaction((CompensableTccTransaction) transaction);
+				this.recoverCoordinatorTransaction((SampleCompensableImpl) transaction);
 				// } else {
 				// this.recoverTransaction((CompensableJtaTransaction) transaction);
 				// }
@@ -174,7 +175,7 @@ public class CompensableRecoveryImpl implements TransactionRecovery, Compensable
 		}
 	}
 
-	public void recoverCoordinatorTransaction(CompensableTccTransaction transaction) {
+	public void recoverCoordinatorTransaction(SampleCompensableImpl transaction) {
 		CompensableLogger transactionLogger = this.beanFactory.getCompensableLogger();
 		CompensableManager transactionManager = (CompensableManager) this.beanFactory.getCompensableManager();
 		TransactionRepository transactionRepository = this.beanFactory.getTransactionRepository();
@@ -188,18 +189,18 @@ public class CompensableRecoveryImpl implements TransactionRecovery, Compensable
 		int transactionStatus = transaction.getStatus();
 		switch (transactionStatus) {
 		case Status.STATUS_PREPARED:
-			transaction.setCompensableStatus(CompensableTccTransaction.STATUS_TRIED);
+			transaction.setCompensableStatus(SampleCompensableImpl.STATUS_TRIED);
 			transaction.setTransactionStatus(Status.STATUS_COMMITTING);
-			transaction.setCompensableStatus(CompensableTccTransaction.STATUS_CONFIRMING);
+			transaction.setCompensableStatus(SampleCompensableImpl.STATUS_CONFIRMING);
 		case Status.STATUS_COMMITTING:
-			if (compensableStatus != CompensableTccTransaction.STATUS_CONFIRMED) {
+			if (compensableStatus != SampleCompensableImpl.STATUS_CONFIRMED) {
 				try {
 					transactionManager.processNativeConfirm(transaction);
 				} catch (RuntimeException ex) {
 					logger.warn(ex.getMessage(), ex);
 					break;
 				}
-				transaction.setCompensableStatus(CompensableTccTransaction.STATUS_CONFIRMED);
+				transaction.setCompensableStatus(SampleCompensableImpl.STATUS_CONFIRMED);
 				transactionLogger.updateTransaction(transaction.getTransactionArchive());
 			}
 
@@ -219,7 +220,7 @@ public class CompensableRecoveryImpl implements TransactionRecovery, Compensable
 		case Status.STATUS_ACTIVE:
 		case Status.STATUS_MARKED_ROLLBACK:
 			transaction.setTransactionStatus(Status.STATUS_ROLLING_BACK);
-			transaction.setCompensableStatus(CompensableTccTransaction.STATUS_TRY_FAILURE);
+			transaction.setCompensableStatus(SampleCompensableImpl.STATUS_TRY_FAILURE);
 			transactionLogger.updateTransaction(transaction.getTransactionArchive());
 			try {
 				transaction.remoteCancel();
@@ -236,14 +237,14 @@ public class CompensableRecoveryImpl implements TransactionRecovery, Compensable
 		case Status.STATUS_PREPARING:
 			transaction.setTransactionStatus(Status.STATUS_ROLLING_BACK);
 			if (coordinator
-					&& (compensableStatus == CompensableTccTransaction.STATUS_TRIED || compensableStatus == CompensableTccTransaction.STATUS_TRY_MIXED)) {
+					&& (compensableStatus == SampleCompensableImpl.STATUS_TRIED || compensableStatus == SampleCompensableImpl.STATUS_TRY_MIXED)) {
 				coordinatorCancelFlags = true;
 			}
 			transaction.setTransactionStatus(Status.STATUS_ROLLING_BACK);
 			transactionLogger.updateTransaction(transaction.getTransactionArchive());
 		case Status.STATUS_ROLLING_BACK:
-			if (compensableStatus != CompensableTccTransaction.STATUS_CANCELLED
-					&& compensableStatus != CompensableTccTransaction.STATUS_CANCEL_FAILURE) {
+			if (compensableStatus != SampleCompensableImpl.STATUS_CANCELLED
+					&& compensableStatus != SampleCompensableImpl.STATUS_CANCEL_FAILURE) {
 				try {
 					if (coordinatorCancelFlags) {
 						transactionManager.processNativeCancel(transaction, true);
@@ -254,7 +255,7 @@ public class CompensableRecoveryImpl implements TransactionRecovery, Compensable
 					logger.warn(ex.getMessage(), ex);
 					break;
 				}
-				transaction.setCompensableStatus(CompensableTccTransaction.STATUS_CANCELLED);
+				transaction.setCompensableStatus(SampleCompensableImpl.STATUS_CANCELLED);
 				transactionLogger.updateTransaction(transaction.getTransactionArchive());
 			}
 

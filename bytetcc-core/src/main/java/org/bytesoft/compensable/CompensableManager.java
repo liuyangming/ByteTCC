@@ -15,15 +15,15 @@
  */
 package org.bytesoft.compensable;
 
-import org.bytesoft.bytetcc.CompensableTccTransaction;
+import org.bytesoft.bytetcc.SampleCompensableImpl;
 import org.bytesoft.transaction.TransactionManager;
 
 public interface CompensableManager extends TransactionManager {
 
-	public void processNativeConfirm(CompensableTccTransaction transaction);
+	public void processNativeConfirm(SampleCompensableImpl transaction);
 
-	public void processNativeCancel(CompensableTccTransaction transaction);
+	public void processNativeCancel(SampleCompensableImpl transaction);
 
-	public void processNativeCancel(CompensableTccTransaction transaction, boolean b);
+	public void processNativeCancel(SampleCompensableImpl transaction, boolean b);
 
 }
