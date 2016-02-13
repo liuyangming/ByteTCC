@@ -33,15 +33,15 @@ import org.apache.log4j.Logger;
 import org.bytesoft.bytejta.TransactionImpl;
 import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
 import org.bytesoft.bytetcc.aware.CompensableBeanFactoryAware;
-import org.bytesoft.bytetcc.transaction.TccTransactionImpl;
 import org.bytesoft.bytetcc.transaction.JtaTransactionImpl;
+import org.bytesoft.bytetcc.transaction.TccTransactionImpl;
 import org.bytesoft.common.utils.ByteUtils;
+import org.bytesoft.compensable.AbstractTransaction;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableManager;
-import org.bytesoft.compensable.AbstractTransaction;
-import org.bytesoft.compensable.TransactionContext;
 import org.bytesoft.compensable.supports.logger.CompensableLogger;
 import org.bytesoft.transaction.Transaction;
+import org.bytesoft.transaction.TransactionContext;
 import org.bytesoft.transaction.TransactionRepository;
 import org.bytesoft.transaction.internal.TransactionException;
 import org.bytesoft.transaction.xa.TransactionXid;
@@ -307,9 +307,8 @@ public class TransactionManagerImpl implements CompensableManager, CompensableBe
 		this.commitJtaTransaction((JtaTransactionImpl) transaction);
 	}
 
-	public void commitJtaTransaction(JtaTransactionImpl transaction) throws RollbackException,
-			HeuristicMixedException, HeuristicRollbackException, SecurityException, IllegalStateException,
-			SystemException {
+	public void commitJtaTransaction(JtaTransactionImpl transaction) throws RollbackException, HeuristicMixedException,
+			HeuristicRollbackException, SecurityException, IllegalStateException, SystemException {
 		// this.jtaTransactionManager.commit();
 
 		TransactionContext transactionContext = transaction.getTransactionContext();
@@ -325,9 +324,8 @@ public class TransactionManagerImpl implements CompensableManager, CompensableBe
 		}
 	}
 
-	public void commitTccTransaction(TccTransactionImpl transaction) throws RollbackException,
-			HeuristicMixedException, HeuristicRollbackException, SecurityException, IllegalStateException,
-			SystemException {
+	public void commitTccTransaction(TccTransactionImpl transaction) throws RollbackException, HeuristicMixedException,
+			HeuristicRollbackException, SecurityException, IllegalStateException, SystemException {
 
 		if (transaction == null) {
 			throw new IllegalStateException();
@@ -488,8 +486,8 @@ public class TransactionManagerImpl implements CompensableManager, CompensableBe
 		this.rollbackJtaTransaction((JtaTransactionImpl) transaction);
 	}
 
-	public void rollbackJtaTransaction(JtaTransactionImpl transaction) throws IllegalStateException,
-			SecurityException, SystemException {
+	public void rollbackJtaTransaction(JtaTransactionImpl transaction) throws IllegalStateException, SecurityException,
+			SystemException {
 
 		TransactionContext transactionContext = transaction.getTransactionContext();
 		TransactionXid tccTransactionXid = transactionContext.getXid();
@@ -505,8 +503,8 @@ public class TransactionManagerImpl implements CompensableManager, CompensableBe
 		}
 	}
 
-	public void rollbackTccTransaction(TccTransactionImpl transaction) throws IllegalStateException,
-			SecurityException, SystemException {
+	public void rollbackTccTransaction(TccTransactionImpl transaction) throws IllegalStateException, SecurityException,
+			SystemException {
 
 		if (transaction == null) {
 			throw new IllegalStateException();

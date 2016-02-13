@@ -22,11 +22,11 @@ import javax.transaction.Synchronization;
 import javax.transaction.SystemException;
 import javax.transaction.xa.XAResource;
 
-import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.AbstractTransaction;
-import org.bytesoft.compensable.TransactionContext;
+import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.transaction.Transaction;
 import org.bytesoft.transaction.TransactionBeanFactory;
+import org.bytesoft.transaction.TransactionContext;
 import org.bytesoft.transaction.supports.TransactionListener;
 
 public class JtaTransactionImpl extends AbstractTransaction {

@@ -24,6 +24,7 @@ import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
 import org.bytesoft.bytetcc.aware.CompensableBeanFactoryAware;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.transaction.Transaction;
+import org.bytesoft.transaction.TransactionContext;
 import org.bytesoft.transaction.TransactionManager;
 import org.bytesoft.transaction.internal.TransactionException;
 
@@ -41,12 +42,10 @@ public class TransactionCoordinator implements RemoteCoordinator, CompensableBea
 		return transactionManager.getTransactionQuietly();
 	}
 
-	public void start(org.bytesoft.transaction.TransactionContext transactionContext, int flags)
-			throws TransactionException {
+	public void start(TransactionContext transactionContext, int flags) throws TransactionException {
 	}
 
-	public void end(org.bytesoft.transaction.TransactionContext transactionContext, int flags)
-			throws TransactionException {
+	public void end(TransactionContext transactionContext, int flags) throws TransactionException {
 	}
 
 	public void start(Xid xid, int flags) throws XAException {
