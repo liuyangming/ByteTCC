@@ -16,22 +16,27 @@
 package org.bytesoft.bytetcc;
 
 import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
-import org.bytesoft.bytetcc.supports.logger.CompensableTransactionLogger;
-import org.bytesoft.bytetcc.supports.logger.EmptyCompensableTransactionLogger;
+import org.bytesoft.compensable.CompensableBeanFactory;
+import org.bytesoft.compensable.CompensableManager;
+import org.bytesoft.compensable.supports.logger.CompensableLogger;
+import org.bytesoft.compensable.supports.logger.EmptyCompensableLogger;
 import org.bytesoft.transaction.TransactionManager;
 import org.bytesoft.transaction.TransactionRecovery;
 import org.bytesoft.transaction.TransactionRepository;
 import org.bytesoft.transaction.supports.TransactionTimer;
+import org.bytesoft.transaction.supports.logger.EmptyTransactionLogger;
+import org.bytesoft.transaction.supports.logger.TransactionLogger;
 import org.bytesoft.transaction.supports.rpc.TransactionInterceptor;
 import org.bytesoft.transaction.xa.XidFactory;
 
-public final class TransactionBeanFactoryImpl implements CompensableTransactionBeanFactory {
+public final class CompensableBeanFactoryImpl implements CompensableBeanFactory {
 
 	private TransactionManager transactionManager;
-	private CompensableTransactionManager compensableTransactionManager;
+	private CompensableManager compensableManager;
 	private XidFactory xidFactory;
 	private XidFactory compensableXidFactory;
-	private CompensableTransactionLogger transactionLogger = new EmptyCompensableTransactionLogger();
+	private TransactionLogger transactionLogger = new EmptyTransactionLogger();
+	private CompensableLogger compensableLogger = new EmptyCompensableLogger();
 	private TransactionRepository transactionRepository;
 	private TransactionInterceptor transactionInterceptor;
 	private TransactionRecovery transactionRecovery;
@@ -51,12 +56,12 @@ public final class TransactionBeanFactoryImpl implements CompensableTransactionB
 		this.transactionManager = transactionManager;
 	}
 
-	public CompensableTransactionManager getCompensableTransactionManager() {
-		return compensableTransactionManager;
+	public CompensableManager getCompensableManager() {
+		return this.compensableManager;
 	}
 
-	public void setCompensableTransactionManager(CompensableTransactionManager compensableTransactionManager) {
-		this.compensableTransactionManager = compensableTransactionManager;
+	public void setCompensableManager(CompensableManager compensableManager) {
+		this.compensableManager = compensableManager;
 	}
 
 	public XidFactory getXidFactory() {
@@ -75,11 +80,19 @@ public final class TransactionBeanFactoryImpl implements CompensableTransactionB
 		this.compensableXidFactory = compensableXidFactory;
 	}
 
-	public CompensableTransactionLogger getTransactionLogger() {
+	public CompensableLogger getCompensableLogger() {
+		return compensableLogger;
+	}
+
+	public void setCompensableLogger(CompensableLogger compensableLogger) {
+		this.compensableLogger = compensableLogger;
+	}
+
+	public TransactionLogger getTransactionLogger() {
 		return transactionLogger;
 	}
 
-	public void setTransactionLogger(CompensableTransactionLogger transactionLogger) {
+	public void setTransactionLogger(TransactionLogger transactionLogger) {
 		this.transactionLogger = transactionLogger;
 	}
 

@@ -21,6 +21,7 @@ import javax.transaction.RollbackException;
 import javax.transaction.SystemException;
 
 import org.bytesoft.common.utils.CommonUtils;
+import org.bytesoft.compensable.TransactionContext;
 import org.bytesoft.transaction.CommitRequiredException;
 import org.bytesoft.transaction.RollbackRequiredException;
 import org.bytesoft.transaction.Transaction;

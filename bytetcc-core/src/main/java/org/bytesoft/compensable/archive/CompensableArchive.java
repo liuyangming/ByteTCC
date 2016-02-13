@@ -1,5 +1,5 @@
 /**
- * Copyright 2014 yangming.liu<liuyangming@gmail.com>.
+ * Copyright 2014-2016 yangming.liu<bytefox@126.com>.
  *
  * This copyrighted material is made available to anyone wishing to use, modify,
  * copy, or redistribute it subject to the terms and conditions of the GNU
@@ -13,18 +13,18 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this distribution; if not, see <http://www.gnu.org/licenses/>.
  */
-package org.bytesoft.bytetcc.archive;
+package org.bytesoft.compensable.archive;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import org.bytesoft.transaction.archive.TransactionArchive;
 
-public class CompensableTransactionArchive extends TransactionArchive {
+public class CompensableArchive extends TransactionArchive {
 
 	private int compensableStatus;
 	private boolean compensable;
-	private final List<CompensableArchive> compensables = new ArrayList<CompensableArchive>();
+	private final List<CompensableResourceArchive> compensableResourceList = new ArrayList<CompensableResourceArchive>();
 
 	public int getCompensableStatus() {
 		return compensableStatus;
@@ -34,8 +34,8 @@ public class CompensableTransactionArchive extends TransactionArchive {
 		this.compensableStatus = compensableStatus;
 	}
 
-	public List<CompensableArchive> getCompensables() {
-		return compensables;
+	public List<CompensableResourceArchive> getCompensableResourceList() {
+		return compensableResourceList;
 	}
 
 	public boolean isCompensable() {

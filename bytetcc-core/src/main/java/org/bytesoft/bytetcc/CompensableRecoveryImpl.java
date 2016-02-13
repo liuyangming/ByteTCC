@@ -1,5 +1,5 @@
 /**
- * Copyright 2014 yangming.liu<liuyangming@gmail.com>.
+ * Copyright 2014-2016 yangming.liu<bytefox@126.com>.
  *
  * This copyrighted material is made available to anyone wishing to use, modify,
  * copy, or redistribute it subject to the terms and conditions of the GNU
@@ -13,7 +13,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this distribution; if not, see <http://www.gnu.org/licenses/>.
  */
-package org.bytesoft.bytetcc.recovery;
+package org.bytesoft.bytetcc;
 
 import java.util.List;
 
@@ -22,31 +22,27 @@ import javax.transaction.xa.XAResource;
 import javax.transaction.xa.Xid;
 
 import org.apache.log4j.Logger;
-import org.bytesoft.bytetcc.CompensableJtaTransaction;
-import org.bytesoft.bytetcc.CompensableTccTransaction;
-import org.bytesoft.bytetcc.CompensableTransaction;
-import org.bytesoft.bytetcc.CompensableTransactionBeanFactory;
-import org.bytesoft.bytetcc.CompensableTransactionManager;
-import org.bytesoft.bytetcc.TransactionContext;
-import org.bytesoft.bytetcc.archive.CompensableArchive;
-import org.bytesoft.bytetcc.archive.CompensableTransactionArchive;
-import org.bytesoft.bytetcc.aware.CompensableTransactionBeanFactoryAware;
-import org.bytesoft.bytetcc.supports.logger.CompensableTransactionLogger;
+import org.bytesoft.bytetcc.aware.CompensableBeanFactoryAware;
+import org.bytesoft.compensable.CompensableBeanFactory;
+import org.bytesoft.compensable.CompensableManager;
+import org.bytesoft.compensable.TransactionContext;
+import org.bytesoft.compensable.archive.CompensableArchive;
+import org.bytesoft.compensable.archive.CompensableResourceArchive;
+import org.bytesoft.compensable.supports.logger.CompensableLogger;
 import org.bytesoft.transaction.Transaction;
 import org.bytesoft.transaction.TransactionRecovery;
 import org.bytesoft.transaction.TransactionRepository;
-import org.bytesoft.transaction.archive.TransactionArchive;
 import org.bytesoft.transaction.archive.XAResourceArchive;
 import org.bytesoft.transaction.supports.TransactionStatistic;
 import org.bytesoft.transaction.xa.TransactionXid;
 
-public class CompensableTransactionRecovery implements TransactionRecovery, CompensableTransactionBeanFactoryAware {
-	static final Logger logger = Logger.getLogger(CompensableTransactionRecovery.class.getSimpleName());
+public class CompensableRecoveryImpl implements TransactionRecovery, CompensableBeanFactoryAware {
+	static final Logger logger = Logger.getLogger(CompensableRecoveryImpl.class.getSimpleName());
 
 	private TransactionStatistic transactionStatistic;
-	private CompensableTransactionBeanFactory beanFactory;
+	private CompensableBeanFactory beanFactory;
 
-	public CompensableTransaction reconstructTransaction(CompensableTransactionArchive archive) {
+	public CompensableTransaction reconstructTransaction(CompensableArchive archive) {
 		TransactionContext transactionContext = new TransactionContext();
 		transactionContext.setXid((TransactionXid) archive.getXid());
 		transactionContext.setRecoveried(true);
@@ -56,13 +52,13 @@ public class CompensableTransactionRecovery implements TransactionRecovery, Comp
 		CompensableTransaction transaction = null;
 		if (archive.isCompensable()) {
 			CompensableTccTransaction tccTransaction = new CompensableTccTransaction(transactionContext);
-			List<CompensableArchive> compensables = archive.getCompensables();
+			List<CompensableResourceArchive> compensables = archive.getCompensableResourceList();
 			for (int i = 0; i < compensables.size(); i++) {
-				CompensableArchive compensable = compensables.get(i);
+				CompensableResourceArchive compensable = compensables.get(i);
 				if (compensable.isCoordinator()) {
-					tccTransaction.getCoordinatorArchives().add(compensable);
+					tccTransaction.getCoordinatorResourceArchiveList().add(compensable);
 				} else {
-					tccTransaction.getParticipantArchives().add(compensable);
+					tccTransaction.getParticipantResourceArchiveList().add(compensable);
 				}
 			}
 			List<XAResourceArchive> resources = archive.getRemoteResources();
@@ -90,12 +86,12 @@ public class CompensableTransactionRecovery implements TransactionRecovery, Comp
 	 */
 	public synchronized void startRecovery() {
 		TransactionRepository transactionRepository = this.beanFactory.getTransactionRepository();
-		CompensableTransactionLogger transactionLogger = this.beanFactory.getTransactionLogger();
-		List<TransactionArchive> archives = transactionLogger.getTransactionArchiveList();
+		CompensableLogger transactionLogger = this.beanFactory.getCompensableLogger();
+		List<CompensableArchive> archives = transactionLogger.getTransactionArchiveList();
 		for (int i = 0; i < archives.size(); i++) {
 			CompensableTransaction transaction = null;
 			try {
-				CompensableTransactionArchive archive = (CompensableTransactionArchive) archives.get(i);
+				CompensableArchive archive = (CompensableArchive) archives.get(i);
 				transaction = this.reconstructTransaction(archive);
 			} catch (RuntimeException rex) {
 				continue;
@@ -179,9 +175,8 @@ public class CompensableTransactionRecovery implements TransactionRecovery, Comp
 	}
 
 	public void recoverCoordinatorTransaction(CompensableTccTransaction transaction) {
-		CompensableTransactionLogger transactionLogger = this.beanFactory.getTransactionLogger();
-		CompensableTransactionManager transactionManager = (CompensableTransactionManager) this.beanFactory
-				.getCompensableTransactionManager();
+		CompensableLogger transactionLogger = this.beanFactory.getCompensableLogger();
+		CompensableManager transactionManager = (CompensableManager) this.beanFactory.getCompensableManager();
 		TransactionRepository transactionRepository = this.beanFactory.getTransactionRepository();
 
 		TransactionContext transactionContext = transaction.getTransactionContext();
@@ -293,7 +288,7 @@ public class CompensableTransactionRecovery implements TransactionRecovery, Comp
 		return transactionStatistic;
 	}
 
-	public void setBeanFactory(CompensableTransactionBeanFactory tbf) {
+	public void setBeanFactory(CompensableBeanFactory tbf) {
 		this.beanFactory = tbf;
 	}
 

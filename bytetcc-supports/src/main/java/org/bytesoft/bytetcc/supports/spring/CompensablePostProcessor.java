@@ -19,9 +19,7 @@ import javax.transaction.xa.XAResource;
 
 import org.bytesoft.byterpc.svc.ServiceFactory;
 import org.bytesoft.bytetcc.Compensable;
-import org.bytesoft.bytetcc.CompensableTransactionManager;
-import org.bytesoft.bytetcc.supports.spring.beans.ByteTccSkeletonObject;
-import org.bytesoft.bytetcc.supports.spring.beans.ByteTccStubObject;
+import org.bytesoft.compensable.CompensableManager;
 import org.springframework.aop.TargetClassAware;
 import org.springframework.aop.framework.ProxyFactoryBean;
 import org.springframework.beans.BeansException;
@@ -34,7 +32,7 @@ import org.springframework.context.ApplicationContextAware;
 public class CompensablePostProcessor implements BeanFactoryPostProcessor, BeanPostProcessor, ApplicationContextAware {
 
 	private ApplicationContext applicationContext;
-	private CompensableTransactionManager transactionManager;
+	private CompensableManager transactionManager;
 	private ServiceFactory serviceFactory;
 	private XAResource transactionSkeleton;
 
@@ -99,18 +97,18 @@ public class CompensablePostProcessor implements BeanFactoryPostProcessor, BeanP
 
 		}
 
-		if (ByteTccStubObject.class.isInstance(bean)) {
-			ByteTccStubObject stub = (ByteTccStubObject) bean;
-			Class<?> interfaceClass = stub.getInterfaceClass();
-			this.serviceFactory.putServiceObject(beanName, interfaceClass, stub);
-			return bean;
-		} else if (ByteTccSkeletonObject.class.isInstance(bean)) {
-			ByteTccSkeletonObject skeleton = (ByteTccSkeletonObject) bean;
-			Class<?> interfaceClass = skeleton.getInterfaceClass();
-			skeleton.setApplicationContext(this.applicationContext);
-			this.serviceFactory.putServiceObject(beanName, interfaceClass, skeleton);
-			return bean;
-		}
+		// if (ByteTccStubObject.class.isInstance(bean)) {
+		// ByteTccStubObject stub = (ByteTccStubObject) bean;
+		// Class<?> interfaceClass = stub.getInterfaceClass();
+		// this.serviceFactory.putServiceObject(beanName, interfaceClass, stub);
+		// return bean;
+		// } else if (ByteTccSkeletonObject.class.isInstance(bean)) {
+		// ByteTccSkeletonObject skeleton = (ByteTccSkeletonObject) bean;
+		// Class<?> interfaceClass = skeleton.getInterfaceClass();
+		// skeleton.setApplicationContext(this.applicationContext);
+		// this.serviceFactory.putServiceObject(beanName, interfaceClass, skeleton);
+		// return bean;
+		// }
 
 		return bean;
 	}
@@ -123,11 +121,11 @@ public class CompensablePostProcessor implements BeanFactoryPostProcessor, BeanP
 		this.applicationContext = applicationContext;
 	}
 
-	public CompensableTransactionManager getTransactionManager() {
+	public CompensableManager getTransactionManager() {
 		return transactionManager;
 	}
 
-	public void setTransactionManager(CompensableTransactionManager transactionManager) {
+	public void setTransactionManager(CompensableManager transactionManager) {
 		this.transactionManager = transactionManager;
 	}
 

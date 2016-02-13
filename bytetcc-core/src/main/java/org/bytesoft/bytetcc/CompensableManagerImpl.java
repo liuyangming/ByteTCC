@@ -31,21 +31,23 @@ import javax.transaction.xa.XAResource;
 
 import org.apache.log4j.Logger;
 import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
-import org.bytesoft.bytetcc.aware.CompensableTransactionBeanFactoryAware;
-import org.bytesoft.bytetcc.supports.logger.CompensableTransactionLogger;
+import org.bytesoft.bytetcc.aware.CompensableBeanFactoryAware;
 import org.bytesoft.common.utils.ByteUtils;
+import org.bytesoft.compensable.CompensableBeanFactory;
+import org.bytesoft.compensable.CompensableManager;
+import org.bytesoft.compensable.TransactionContext;
+import org.bytesoft.compensable.supports.logger.CompensableLogger;
 import org.bytesoft.transaction.Transaction;
-import org.bytesoft.transaction.TransactionManager;
 import org.bytesoft.transaction.TransactionRepository;
 import org.bytesoft.transaction.internal.TransactionException;
 import org.bytesoft.transaction.xa.TransactionXid;
 import org.bytesoft.transaction.xa.XidFactory;
 
-public class CompensableTransactionManager implements TransactionManager, CompensableTransactionBeanFactoryAware {
-	static final Logger logger = Logger.getLogger(CompensableTransactionManager.class.getSimpleName());
+public class CompensableManagerImpl implements CompensableManager, CompensableBeanFactoryAware {
+	static final Logger logger = Logger.getLogger(CompensableManagerImpl.class.getSimpleName());
 
 	// private TransactionManager jtaTransactionManager;
-	private CompensableTransactionBeanFactory beanFactory;
+	private CompensableBeanFactory beanFactory;
 
 	/* it's unnecessary for compensable-transaction to do the timing, the jta-transaction will do it. */
 	private int timeoutSeconds = 5 * 60;
@@ -186,7 +188,7 @@ public class CompensableTransactionManager implements TransactionManager, Compen
 		TransactionRepository transactionRepository = this.beanFactory.getTransactionRepository();
 		transactionRepository.putTransaction(tccTransactionXid, transaction);
 
-		CompensableTransactionLogger transactionLogger = this.beanFactory.getTransactionLogger();
+		CompensableLogger transactionLogger = this.beanFactory.getCompensableLogger();
 		transactionLogger.createTransaction(transaction.getTransactionArchive());
 
 		logger.info(String.format("<%s> begin transaction successfully.",
@@ -214,7 +216,7 @@ public class CompensableTransactionManager implements TransactionManager, Compen
 	// this.processBeginJtaTransaction(transaction, jtaTransactionContext);
 	// transactionRepository.putTransaction(globalXid, transaction);
 	//
-	// CompensableTransactionLogger transactionLogger = this.beanFactory.getTransactionLogger();
+	// CompensableTransactionLogger transactionLogger = this.beanFactory.getCompensableLogger();
 	// transactionLogger.createTransaction(transaction.getTransactionArchive());
 	//
 	// logger.info(String.format("<%s> propagate transaction branch successfully.",
@@ -260,7 +262,7 @@ public class CompensableTransactionManager implements TransactionManager, Compen
 		// transaction.propagationFinish(transactionContext);
 		// this.associateds.remove(Thread.currentThread());
 		//
-		// CompensableTransactionLogger transactionLogger = this.beanFactory.getTransactionLogger();
+		// CompensableTransactionLogger transactionLogger = this.beanFactory.getCompensableLogger();
 		// transactionLogger.createTransaction(transaction.getTransactionArchive());
 		//
 		// // this.jtaTransactionManager.commit();
@@ -339,7 +341,7 @@ public class CompensableTransactionManager implements TransactionManager, Compen
 		this.delistCompensableInvocationIfNecessary(transaction);
 
 		TransactionRepository transactionRepository = this.beanFactory.getTransactionRepository();
-		CompensableTransactionLogger transactionLogger = this.beanFactory.getTransactionLogger();
+		CompensableLogger transactionLogger = this.beanFactory.getCompensableLogger();
 
 		transaction.setTransactionStatus(Status.STATUS_PREPARING);
 		transactionLogger.updateTransaction(transaction.getTransactionArchive());
@@ -437,7 +439,7 @@ public class CompensableTransactionManager implements TransactionManager, Compen
 		}
 
 		CompensableTransaction transaction = (CompensableTransaction) tobj;
-		Transaction jtaTransaction = transaction.getJtaTransaction();
+		// Transaction jtaTransaction = transaction.getJtaTransaction();
 		CompensableInvocation compensableObject = transaction.getCompensableObject();
 		this.invocations.set(compensableObject);
 		transaction.setCompensableObject(null);
@@ -514,7 +516,7 @@ public class CompensableTransactionManager implements TransactionManager, Compen
 
 		TransactionContext transactionContext = transaction.getTransactionContext();
 		TransactionRepository transactionRepository = this.beanFactory.getTransactionRepository();
-		CompensableTransactionLogger transactionLogger = this.beanFactory.getTransactionLogger();
+		CompensableLogger transactionLogger = this.beanFactory.getCompensableLogger();
 
 		TransactionXid tccTransactionXid = transactionContext.getXid();
 
@@ -677,7 +679,7 @@ public class CompensableTransactionManager implements TransactionManager, Compen
 		return this.associatedTxMap.remove(Thread.currentThread());
 	}
 
-	public void setBeanFactory(CompensableTransactionBeanFactory tbf) {
+	public void setBeanFactory(CompensableBeanFactory tbf) {
 		this.beanFactory = tbf;
 	}
 

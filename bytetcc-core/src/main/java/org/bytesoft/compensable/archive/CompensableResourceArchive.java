@@ -1,5 +1,5 @@
 /**
- * Copyright 2014 yangming.liu<liuyangming@gmail.com>.
+ * Copyright 2014-2016 yangming.liu<bytefox@126.com>.
  *
  * This copyrighted material is made available to anyone wishing to use, modify,
  * copy, or redistribute it subject to the terms and conditions of the GNU
@@ -13,14 +13,14 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this distribution; if not, see <http://www.gnu.org/licenses/>.
  */
-package org.bytesoft.bytetcc.archive;
+package org.bytesoft.compensable.archive;
 
 import javax.transaction.xa.Xid;
 
 import org.bytesoft.bytetcc.CompensableInvocation;
 import org.bytesoft.common.utils.CommonUtils;
 
-public class CompensableArchive {
+public class CompensableResourceArchive {
 
 	private Xid xid;
 	private CompensableInvocation compensable;
@@ -43,7 +43,7 @@ public class CompensableArchive {
 		} else if (this.getClass().equals(obj.getClass()) == false) {
 			return false;
 		}
-		CompensableArchive that = (CompensableArchive) obj;
+		CompensableResourceArchive that = (CompensableResourceArchive) obj;
 		return CommonUtils.equals(this.xid, that.xid);
 	}
 

@@ -18,11 +18,10 @@ package org.bytesoft.bytetcc.supports.spring;
 import java.io.Serializable;
 import java.lang.reflect.Method;
 
-import org.bytesoft.bytetcc.CompensableInvocation;
-import org.bytesoft.bytetcc.CompensableTransactionManager;
+import org.bytesoft.compensable.CompensableManager;
 
-public class CompensableNativeHandler implements java.lang.reflect.InvocationHandler, net.sf.cglib.proxy.InvocationHandler,
-		org.springframework.cglib.proxy.InvocationHandler {
+public class CompensableNativeHandler implements java.lang.reflect.InvocationHandler,
+		net.sf.cglib.proxy.InvocationHandler, org.springframework.cglib.proxy.InvocationHandler {
 
 	private Object delegate;
 	private String beanName;
@@ -31,7 +30,7 @@ public class CompensableNativeHandler implements java.lang.reflect.InvocationHan
 	private String confirmableKey;
 	private String cancellableKey;
 
-	private transient CompensableTransactionManager transactionManager;
+	private transient CompensableManager transactionManager;
 
 	private void checkCurrentCompensable(Object proxy, Method method, Object[] args) throws IllegalAccessException {
 
@@ -76,12 +75,12 @@ public class CompensableNativeHandler implements java.lang.reflect.InvocationHan
 		invocation.setCancellableKey(this.cancellableKey);
 		invocation.setInterfaceClass(this.interfaceClass);
 
-		CompensableInvocation original = null;
+		// CompensableInvocation original = null;
 		try {
-			original = this.transactionManager.beforeCompensableExecution(invocation);
+			// original = this.transactionManager.beforeCompensableExecution(invocation);
 			return this.handleInvocation(proxy, method, args);
 		} finally {
-			this.transactionManager.afterCompensableCompletion(original);
+			// this.transactionManager.afterCompensableCompletion(original);
 		}
 
 	}
@@ -146,11 +145,11 @@ public class CompensableNativeHandler implements java.lang.reflect.InvocationHan
 		this.targetClass = targetClass;
 	}
 
-	public CompensableTransactionManager getTransactionManager() {
+	public CompensableManager getTransactionManager() {
 		return transactionManager;
 	}
 
-	public void setTransactionManager(CompensableTransactionManager transactionManager) {
+	public void setTransactionManager(CompensableManager transactionManager) {
 		this.transactionManager = transactionManager;
 	}
 

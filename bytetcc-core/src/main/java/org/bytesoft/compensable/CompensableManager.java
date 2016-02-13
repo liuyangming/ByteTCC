@@ -13,12 +13,17 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this distribution; if not, see <http://www.gnu.org/licenses/>.
  */
-package org.bytesoft.bytetcc.supports.spring.beans;
+package org.bytesoft.compensable;
 
-import org.springframework.context.ApplicationContextAware;
+import org.bytesoft.bytetcc.CompensableTccTransaction;
+import org.bytesoft.transaction.TransactionManager;
 
-public interface ByteTccSkeletonObject extends ApplicationContextAware {
+public interface CompensableManager extends TransactionManager {
 
-	public Class<?> getInterfaceClass();
+	public void processNativeConfirm(CompensableTccTransaction transaction);
+
+	public void processNativeCancel(CompensableTccTransaction transaction);
+
+	public void processNativeCancel(CompensableTccTransaction transaction, boolean b);
 
 }

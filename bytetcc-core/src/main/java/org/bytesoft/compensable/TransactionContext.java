@@ -1,4 +1,4 @@
-package org.bytesoft.bytetcc;
+package org.bytesoft.compensable;
 
 public class TransactionContext extends org.bytesoft.transaction.TransactionContext {
 	private static final long serialVersionUID = 1L;

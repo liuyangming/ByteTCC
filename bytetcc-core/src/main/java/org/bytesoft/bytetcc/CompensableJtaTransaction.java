@@ -22,13 +22,15 @@ import javax.transaction.Synchronization;
 import javax.transaction.SystemException;
 import javax.transaction.xa.XAResource;
 
+import org.bytesoft.compensable.CompensableBeanFactory;
+import org.bytesoft.compensable.TransactionContext;
 import org.bytesoft.transaction.Transaction;
 import org.bytesoft.transaction.TransactionBeanFactory;
 import org.bytesoft.transaction.supports.TransactionListener;
 
 public class CompensableJtaTransaction extends CompensableTransaction {
 
-	private CompensableTransactionBeanFactory beanFactory;
+	private CompensableBeanFactory beanFactory;
 	private CompensableTccTransaction compensableTccTransaction;
 
 	public CompensableJtaTransaction(TransactionContext transactionContext) {
@@ -132,7 +134,7 @@ public class CompensableJtaTransaction extends CompensableTransaction {
 	}
 
 	public void setBeanFactory(TransactionBeanFactory beanFactory) {
-		this.beanFactory = (CompensableTransactionBeanFactory) beanFactory;
+		this.beanFactory = (CompensableBeanFactory) beanFactory;
 	}
 
 	public void registerTransactionListener(TransactionListener listener) {
@@ -154,11 +156,11 @@ public class CompensableJtaTransaction extends CompensableTransaction {
 		this.compensableTccTransaction = compensableTccTransaction;
 	}
 
-	public CompensableTransactionBeanFactory getBeanFactory() {
+	public CompensableBeanFactory getBeanFactory() {
 		return beanFactory;
 	}
 
-	public void setBeanFactory(CompensableTransactionBeanFactory beanFactory) {
+	public void setBeanFactory(CompensableBeanFactory beanFactory) {
 		this.beanFactory = beanFactory;
 	}
 

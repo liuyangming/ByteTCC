@@ -16,23 +16,23 @@
 package org.bytesoft.bytetcc.supports.internal;
 
 import org.bytesoft.bytetcc.CompensableTransaction;
-import org.bytesoft.bytetcc.CompensableTransactionBeanFactory;
-import org.bytesoft.bytetcc.TransactionContext;
-import org.bytesoft.bytetcc.aware.CompensableTransactionBeanFactoryAware;
+import org.bytesoft.bytetcc.aware.CompensableBeanFactoryAware;
+import org.bytesoft.compensable.CompensableBeanFactory;
+import org.bytesoft.compensable.TransactionContext;
 import org.bytesoft.transaction.TransactionManager;
 import org.bytesoft.transaction.supports.rpc.TransactionInterceptor;
 import org.bytesoft.transaction.supports.rpc.TransactionRequest;
 import org.bytesoft.transaction.supports.rpc.TransactionResponse;
 
-public class TransactionInterceptorDispatcher implements TransactionInterceptor, CompensableTransactionBeanFactoryAware {
+public class TransactionInterceptorDispatcher implements TransactionInterceptor, CompensableBeanFactoryAware {
 
 	private TransactionInterceptor jtaTransactionInterceptor;
 	private TransactionInterceptor tccTransactionInterceptor;
 
-	private CompensableTransactionBeanFactory beanFactory;
+	private CompensableBeanFactory beanFactory;
 
 	public void beforeSendRequest(TransactionRequest request) throws IllegalStateException {
-		TransactionManager transactionManager = this.beanFactory.getCompensableTransactionManager();
+		TransactionManager transactionManager = this.beanFactory.getCompensableManager();
 		CompensableTransaction transaction = (CompensableTransaction) transactionManager.getTransactionQuietly();
 		if (transaction == null) {
 			return;
@@ -55,7 +55,7 @@ public class TransactionInterceptorDispatcher implements TransactionInterceptor,
 	}
 
 	public void beforeSendResponse(TransactionResponse response) throws IllegalStateException {
-		TransactionManager transactionManager = this.beanFactory.getCompensableTransactionManager();
+		TransactionManager transactionManager = this.beanFactory.getCompensableManager();
 		CompensableTransaction transaction = (CompensableTransaction) transactionManager.getTransactionQuietly();
 		if (transaction == null) {
 			return;
@@ -93,7 +93,7 @@ public class TransactionInterceptorDispatcher implements TransactionInterceptor,
 		this.tccTransactionInterceptor = tccTransactionInterceptor;
 	}
 
-	public void setBeanFactory(CompensableTransactionBeanFactory tbf) {
+	public void setBeanFactory(CompensableBeanFactory tbf) {
 		this.beanFactory = tbf;
 	}
 

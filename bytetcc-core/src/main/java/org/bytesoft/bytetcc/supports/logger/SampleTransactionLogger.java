@@ -18,39 +18,40 @@ package org.bytesoft.bytetcc.supports.logger;
 import java.util.List;
 
 import org.apache.log4j.Logger;
-import org.bytesoft.bytetcc.archive.CompensableArchive;
-import org.bytesoft.transaction.archive.TransactionArchive;
+import org.bytesoft.compensable.archive.CompensableArchive;
+import org.bytesoft.compensable.archive.CompensableResourceArchive;
+import org.bytesoft.compensable.supports.logger.CompensableLogger;
 import org.bytesoft.transaction.archive.XAResourceArchive;
 
-public class SampleTransactionLogger implements CompensableTransactionLogger {
+public class SampleTransactionLogger implements CompensableLogger {
 	static final Logger logger = Logger.getLogger(SampleTransactionLogger.class.getSimpleName());
 
-	public void createTransaction(TransactionArchive archive) {
+	public void createTransaction(CompensableArchive archive) {
 		// TODO Auto-generated method stub
 
 	}
 
-	public void updateTransaction(TransactionArchive archive) {
+	public void updateTransaction(CompensableArchive archive) {
 		// TODO Auto-generated method stub
 
 	}
 
-	public void deleteTransaction(TransactionArchive archive) {
+	public void deleteTransaction(CompensableArchive archive) {
 		// TODO Auto-generated method stub
 
 	}
 
-	public List<TransactionArchive> getTransactionArchiveList() {
+	public List<CompensableArchive> getTransactionArchiveList() {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
-	public void updateResource(XAResourceArchive archive) {
+	public void updateCoordinator(XAResourceArchive archive) {
 		// TODO Auto-generated method stub
 
 	}
 
-	public void updateCompensable(CompensableArchive archive) {
+	public void updateCompensable(CompensableResourceArchive archive) {
 		// TODO Auto-generated method stub
 
 	}
