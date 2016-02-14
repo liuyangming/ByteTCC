@@ -1,7 +1,6 @@
 package org.bytesoft.compensable;
 
 import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
-import org.bytesoft.compensable.CompensableInvocationExecutor;
 import org.bytesoft.compensable.supports.logger.CompensableLogger;
 import org.bytesoft.transaction.TransactionBeanFactory;
 import org.bytesoft.transaction.xa.XidFactory;

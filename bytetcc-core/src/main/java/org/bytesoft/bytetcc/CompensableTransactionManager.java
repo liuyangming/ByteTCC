@@ -22,45 +22,37 @@ import javax.transaction.NotSupportedException;
 import javax.transaction.RollbackException;
 import javax.transaction.SystemException;
 
-import org.apache.log4j.Logger;
 import org.bytesoft.bytetcc.aware.CompensableBeanFactoryAware;
 import org.bytesoft.compensable.CompensableBeanFactory;
-import org.bytesoft.compensable.CompensableInvocation;
-import org.bytesoft.compensable.CompensableInvocationRegistry;
+import org.bytesoft.compensable.CompensableManager;
 import org.bytesoft.transaction.Transaction;
-import org.bytesoft.transaction.TransactionContext;
 import org.bytesoft.transaction.TransactionManager;
 
-public class TransactionManagerImpl implements TransactionManager, CompensableBeanFactoryAware {
-	static final Logger logger = Logger.getLogger(TransactionManagerImpl.class.getSimpleName());
+public class CompensableTransactionManager implements TransactionManager, CompensableBeanFactoryAware {
 
 	private CompensableBeanFactory beanFactory;
 
 	public void begin() throws NotSupportedException, SystemException {
-
-		long current = System.currentTimeMillis();
-
-		TransactionContext transactionContext = new TransactionContext();
-		transactionContext.setCreatedTime(current);
-		transactionContext.setExpiredTime(current + 1000L * 60 * 5);
-		// transactionContext.setXid(xid); // TODO
-
-		CompensableInvocationRegistry registry = CompensableInvocationRegistry.getInstance();
-		CompensableInvocation invocation = registry.getCurrent();
-		if (invocation != null && invocation.isAvailable()) {
-			invocation.markUnavailable();
-
-			// TransactionContext transactionContext = new TransactionContext();
-			// transactionContext.setCompensable(true);
-			// transactionContext.setXid(xid); // TODO
+		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
+		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
+		boolean compensable = compensableManager.isCurrentCompensable();
+		if (compensable) {
+			compensableManager.begin();
+		} else {
+			transactionManager.begin();
 		}
-
 	}
 
 	public void commit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException,
 			SecurityException, IllegalStateException, SystemException {
-		// TODO Auto-generated method stub
-
+		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
+		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
+		boolean compensable = compensableManager.isCurrentCompensable();
+		if (compensable) {
+			compensableManager.commit();
+		} else {
+			transactionManager.commit();
+		}
 	}
 
 	public int getStatus() throws SystemException {
@@ -75,8 +67,14 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 	}
 
 	public void rollback() throws IllegalStateException, SecurityException, SystemException {
-		// TODO Auto-generated method stub
-
+		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
+		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
+		boolean compensable = compensableManager.isCurrentCompensable();
+		if (compensable) {
+			compensableManager.rollback();
+		} else {
+			transactionManager.rollback();
+		}
 	}
 
 	public void setRollbackOnly() throws IllegalStateException, SystemException {
@@ -127,4 +125,5 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 	public void setBeanFactory(CompensableBeanFactory tbf) {
 		this.beanFactory = tbf;
 	}
+
 }

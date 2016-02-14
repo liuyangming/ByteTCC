@@ -22,72 +22,10 @@ import javax.transaction.NotSupportedException;
 import javax.transaction.RollbackException;
 import javax.transaction.SystemException;
 
-import org.apache.log4j.Logger;
-import org.bytesoft.bytetcc.aware.CompensableBeanFactoryAware;
-import org.bytesoft.compensable.CompensableBeanFactory;
-import org.bytesoft.compensable.CompensableInvocation;
-import org.bytesoft.compensable.CompensableInvocationRegistry;
+import org.bytesoft.compensable.CompensableManager;
 import org.bytesoft.transaction.Transaction;
-import org.bytesoft.transaction.TransactionContext;
-import org.bytesoft.transaction.TransactionManager;
 
-public class TransactionManagerImpl implements TransactionManager, CompensableBeanFactoryAware {
-	static final Logger logger = Logger.getLogger(TransactionManagerImpl.class.getSimpleName());
-
-	private CompensableBeanFactory beanFactory;
-
-	public void begin() throws NotSupportedException, SystemException {
-
-		long current = System.currentTimeMillis();
-
-		TransactionContext transactionContext = new TransactionContext();
-		transactionContext.setCreatedTime(current);
-		transactionContext.setExpiredTime(current + 1000L * 60 * 5);
-		// transactionContext.setXid(xid); // TODO
-
-		CompensableInvocationRegistry registry = CompensableInvocationRegistry.getInstance();
-		CompensableInvocation invocation = registry.getCurrent();
-		if (invocation != null && invocation.isAvailable()) {
-			invocation.markUnavailable();
-
-			// TransactionContext transactionContext = new TransactionContext();
-			// transactionContext.setCompensable(true);
-			// transactionContext.setXid(xid); // TODO
-		}
-
-	}
-
-	public void commit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException,
-			SecurityException, IllegalStateException, SystemException {
-		// TODO Auto-generated method stub
-
-	}
-
-	public int getStatus() throws SystemException {
-		// TODO Auto-generated method stub
-		return 0;
-	}
-
-	public void resume(javax.transaction.Transaction tobj) throws InvalidTransactionException, IllegalStateException,
-			SystemException {
-		// TODO Auto-generated method stub
-
-	}
-
-	public void rollback() throws IllegalStateException, SecurityException, SystemException {
-		// TODO Auto-generated method stub
-
-	}
-
-	public void setRollbackOnly() throws IllegalStateException, SystemException {
-		// TODO Auto-generated method stub
-
-	}
-
-	public void setTransactionTimeout(int seconds) throws SystemException {
-		// TODO Auto-generated method stub
-
-	}
+public class CompensableManagerImpl implements CompensableManager {
 
 	public int getTimeoutSeconds() {
 		// TODO Auto-generated method stub
@@ -124,7 +62,62 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 		return null;
 	}
 
-	public void setBeanFactory(CompensableBeanFactory tbf) {
-		this.beanFactory = tbf;
+	public void begin() throws NotSupportedException, SystemException {
+		// TODO Auto-generated method stub
+
 	}
+
+	public void commit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException,
+			SecurityException, IllegalStateException, SystemException {
+		// TODO Auto-generated method stub
+
+	}
+
+	public int getStatus() throws SystemException {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	public void resume(javax.transaction.Transaction tobj) throws InvalidTransactionException, IllegalStateException,
+			SystemException {
+		// TODO Auto-generated method stub
+
+	}
+
+	public void rollback() throws IllegalStateException, SecurityException, SystemException {
+		// TODO Auto-generated method stub
+
+	}
+
+	public void setRollbackOnly() throws IllegalStateException, SystemException {
+		// TODO Auto-generated method stub
+
+	}
+
+	public void setTransactionTimeout(int seconds) throws SystemException {
+		// TODO Auto-generated method stub
+
+	}
+
+	public boolean isCurrentCompensable() {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	public void compensableBegin(Transaction transaction) throws NotSupportedException, SystemException {
+		// TODO Auto-generated method stub
+
+	}
+
+	public void compensableCommit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException,
+			SecurityException, IllegalStateException, SystemException {
+		// TODO Auto-generated method stub
+
+	}
+
+	public void compensableRollback() throws IllegalStateException, SecurityException, SystemException {
+		// TODO Auto-generated method stub
+
+	}
+
 }

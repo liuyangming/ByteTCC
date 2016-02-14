@@ -24,8 +24,8 @@ import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
 import org.bytesoft.bytetcc.aware.CompensableBeanFactoryAware;
 import org.bytesoft.bytetcc.transaction.TccTransactionImpl;
 import org.bytesoft.compensable.CompensableBeanFactory;
-import org.bytesoft.compensable.CompensableManager;
 import org.bytesoft.transaction.TransactionContext;
+import org.bytesoft.transaction.TransactionManager;
 import org.bytesoft.transaction.supports.rpc.TransactionInterceptor;
 import org.bytesoft.transaction.supports.rpc.TransactionRequest;
 import org.bytesoft.transaction.supports.rpc.TransactionResponse;
@@ -37,7 +37,7 @@ public class TccTransactionInterceptor implements TransactionInterceptor, Compen
 	private CompensableBeanFactory beanFactory;
 
 	public void beforeSendRequest(TransactionRequest request) throws IllegalStateException {
-		CompensableManager transactionManager = (CompensableManager) this.beanFactory.getCompensableManager();
+		TransactionManager transactionManager = (TransactionManager) this.beanFactory.getCompensableManager();
 		TccTransactionImpl transaction = (TccTransactionImpl) transactionManager.getTransactionQuietly();
 		if (transaction != null) {
 			TransactionContext srcTransactionContext = transaction.getTransactionContext();
@@ -93,7 +93,7 @@ public class TccTransactionInterceptor implements TransactionInterceptor, Compen
 	}
 
 	public void beforeSendResponse(TransactionResponse response) throws IllegalStateException {
-		CompensableManager transactionManager = this.beanFactory.getCompensableManager();
+		TransactionManager transactionManager = this.beanFactory.getCompensableManager();
 		TccTransactionImpl transaction = (TccTransactionImpl) transactionManager.getTransactionQuietly();
 		if (transaction != null) {
 			return;
@@ -122,7 +122,7 @@ public class TccTransactionInterceptor implements TransactionInterceptor, Compen
 	}
 
 	public void afterReceiveResponse(TransactionResponse response) throws IllegalStateException {
-		CompensableManager transactionManager = this.beanFactory.getCompensableManager();
+		TransactionManager transactionManager = this.beanFactory.getCompensableManager();
 		TccTransactionImpl transaction = (TccTransactionImpl) transactionManager.getTransactionQuietly();
 		if (transaction != null) {
 			return;

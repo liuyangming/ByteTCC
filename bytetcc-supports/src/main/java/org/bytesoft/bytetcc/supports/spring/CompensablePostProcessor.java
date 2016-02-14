@@ -15,9 +15,6 @@
  */
 package org.bytesoft.bytetcc.supports.spring;
 
-import javax.transaction.xa.XAResource;
-
-import org.bytesoft.compensable.CompensableManager;
 import org.springframework.aop.TargetClassAware;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
@@ -29,9 +26,6 @@ import org.springframework.context.ApplicationContextAware;
 public class CompensablePostProcessor implements BeanFactoryPostProcessor, BeanPostProcessor, ApplicationContextAware {
 
 	private ApplicationContext applicationContext;
-	private CompensableManager transactionManager;
-	// private ServiceFactory serviceFactory;
-	private XAResource transactionSkeleton;
 
 	public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
 		// this.serviceFactory.putServiceObject(XAResource.class.getName(), XAResource.class, this.transactionSkeleton);
@@ -116,22 +110,6 @@ public class CompensablePostProcessor implements BeanFactoryPostProcessor, BeanP
 
 	public void setApplicationContext(ApplicationContext applicationContext) {
 		this.applicationContext = applicationContext;
-	}
-
-	public CompensableManager getTransactionManager() {
-		return transactionManager;
-	}
-
-	public void setTransactionManager(CompensableManager transactionManager) {
-		this.transactionManager = transactionManager;
-	}
-
-	public XAResource getTransactionSkeleton() {
-		return transactionSkeleton;
-	}
-
-	public void setTransactionSkeleton(XAResource transactionSkeleton) {
-		this.transactionSkeleton = transactionSkeleton;
 	}
 
 }
