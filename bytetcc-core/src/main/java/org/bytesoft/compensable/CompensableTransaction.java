@@ -19,4 +19,9 @@ import org.bytesoft.transaction.Transaction;
 import org.bytesoft.transaction.supports.TransactionListener;
 
 public interface CompensableTransaction extends Transaction, TransactionListener {
+
+	public Transaction getTransaction();
+
+	public void setTransaction(Transaction transaction);
+
 }

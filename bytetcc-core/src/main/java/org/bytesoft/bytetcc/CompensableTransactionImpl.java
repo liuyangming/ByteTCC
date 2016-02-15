@@ -10,6 +10,7 @@ import javax.transaction.xa.XAResource;
 import org.bytesoft.compensable.CompensableTransaction;
 import org.bytesoft.transaction.CommitRequiredException;
 import org.bytesoft.transaction.RollbackRequiredException;
+import org.bytesoft.transaction.Transaction;
 import org.bytesoft.transaction.TransactionBeanFactory;
 import org.bytesoft.transaction.TransactionContext;
 import org.bytesoft.transaction.archive.TransactionArchive;
@@ -17,6 +18,13 @@ import org.bytesoft.transaction.supports.TransactionListener;
 import org.bytesoft.transaction.xa.TransactionXid;
 
 public class CompensableTransactionImpl implements CompensableTransaction {
+
+	private Transaction transaction;
+	private TransactionContext transactionContext;
+
+	public CompensableTransactionImpl(TransactionContext txContext) {
+		this.transactionContext = txContext;
+	}
 
 	public void setRollbackOnlyQuietly() {
 		// TODO Auto-generated method stub
@@ -29,6 +37,11 @@ public class CompensableTransactionImpl implements CompensableTransaction {
 	}
 
 	public void setTransactionStatus(int status) {
+		// TODO Auto-generated method stub
+
+	}
+
+	public void resume() throws SystemException {
 		// TODO Auto-generated method stub
 
 	}
@@ -54,8 +67,7 @@ public class CompensableTransactionImpl implements CompensableTransaction {
 	}
 
 	public TransactionContext getTransactionContext() {
-		// TODO Auto-generated method stub
-		return null;
+		return this.transactionContext;
 	}
 
 	public TransactionArchive getTransactionArchive() {
@@ -185,4 +197,13 @@ public class CompensableTransactionImpl implements CompensableTransaction {
 		// TODO Auto-generated method stub
 
 	}
+
+	public Transaction getTransaction() {
+		return transaction;
+	}
+
+	public void setTransaction(Transaction transaction) {
+		this.transaction = transaction;
+	}
+
 }

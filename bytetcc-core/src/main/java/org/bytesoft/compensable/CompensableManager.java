@@ -17,22 +17,22 @@ package org.bytesoft.compensable;
 
 import javax.transaction.HeuristicMixedException;
 import javax.transaction.HeuristicRollbackException;
-import javax.transaction.NotSupportedException;
 import javax.transaction.RollbackException;
 import javax.transaction.SystemException;
 
-import org.bytesoft.transaction.Transaction;
 import org.bytesoft.transaction.TransactionManager;
 
 public interface CompensableManager extends TransactionManager {
 
 	public boolean isCurrentCompensable();
 
-	public void compensableBegin(Transaction transaction) throws NotSupportedException, SystemException;
+	public void compensableBegin(CompensableTransaction transaction) throws SystemException;
 
-	public void compensableCommit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException,
-			SecurityException, IllegalStateException, SystemException;
+	public void compensableCommit(CompensableTransaction transaction) throws RollbackException,
+			HeuristicMixedException, HeuristicRollbackException, SecurityException, IllegalStateException,
+			SystemException;
 
-	public void compensableRollback() throws IllegalStateException, SecurityException, SystemException;
+	public void compensableRollback(CompensableTransaction transaction) throws IllegalStateException,
+			SecurityException, SystemException;
 
 }

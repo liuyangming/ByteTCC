@@ -15,21 +15,13 @@
  */
 package org.bytesoft.bytetcc.supports.rpc;
 
-import javax.transaction.RollbackException;
-import javax.transaction.SystemException;
-
 import org.apache.log4j.Logger;
-import org.bytesoft.bytejta.supports.resource.RemoteResourceDescriptor;
-import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
 import org.bytesoft.bytetcc.aware.CompensableBeanFactoryAware;
-import org.bytesoft.bytetcc.transaction.TccTransactionImpl;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.transaction.TransactionContext;
-import org.bytesoft.transaction.TransactionManager;
 import org.bytesoft.transaction.supports.rpc.TransactionInterceptor;
 import org.bytesoft.transaction.supports.rpc.TransactionRequest;
 import org.bytesoft.transaction.supports.rpc.TransactionResponse;
-import org.bytesoft.transaction.xa.TransactionXid;
 
 public class TccTransactionInterceptor implements TransactionInterceptor, CompensableBeanFactoryAware {
 	static final Logger logger = Logger.getLogger(TccTransactionInterceptor.class.getSimpleName());
@@ -37,35 +29,35 @@ public class TccTransactionInterceptor implements TransactionInterceptor, Compen
 	private CompensableBeanFactory beanFactory;
 
 	public void beforeSendRequest(TransactionRequest request) throws IllegalStateException {
-		TransactionManager transactionManager = (TransactionManager) this.beanFactory.getCompensableManager();
-		TccTransactionImpl transaction = (TccTransactionImpl) transactionManager.getTransactionQuietly();
-		if (transaction != null) {
-			TransactionContext srcTransactionContext = transaction.getTransactionContext();
-			TransactionContext transactionContext = srcTransactionContext.clone();
-			TransactionXid currentXid = srcTransactionContext.getXid();
-			TransactionXid globalXid = currentXid.getGlobalXid();
-			transactionContext.setXid(globalXid);
-			request.setTransactionContext(transactionContext);
-
-			try {
-				RemoteCoordinator resource = request.getTargetTransactionCoordinator();
-				RemoteResourceDescriptor descriptor = new RemoteResourceDescriptor();
-				descriptor.setDelegate(resource);
-				descriptor.setIdentifier(resource.getIdentifier());
-
-				transaction.enlistResource(descriptor);
-			} catch (IllegalStateException ex) {
-				logger.error("CompensableTccTransactionInterceptor.beforeSendRequest(TransactionRequest)", ex);
-				throw ex;
-			} catch (RollbackException ex) {
-				transaction.setRollbackOnlyQuietly();
-				logger.error("CompensableTccTransactionInterceptor.beforeSendRequest(TransactionRequest)", ex);
-				throw new IllegalStateException(ex);
-			} catch (SystemException ex) {
-				logger.error("CompensableTccTransactionInterceptor.beforeSendRequest(TransactionRequest)", ex);
-				throw new IllegalStateException(ex);
-			}
-		}
+		// TransactionManager transactionManager = (TransactionManager) this.beanFactory.getCompensableManager();
+		// TccTransactionImpl transaction = (TccTransactionImpl) transactionManager.getTransactionQuietly();
+		// if (transaction != null) {
+		// TransactionContext srcTransactionContext = transaction.getTransactionContext();
+		// TransactionContext transactionContext = srcTransactionContext.clone();
+		// TransactionXid currentXid = srcTransactionContext.getXid();
+		// TransactionXid globalXid = currentXid.getGlobalXid();
+		// transactionContext.setXid(globalXid);
+		// request.setTransactionContext(transactionContext);
+		//
+		// try {
+		// RemoteCoordinator resource = request.getTargetTransactionCoordinator();
+		// RemoteResourceDescriptor descriptor = new RemoteResourceDescriptor();
+		// descriptor.setDelegate(resource);
+		// descriptor.setIdentifier(resource.getIdentifier());
+		//
+		// transaction.enlistResource(descriptor);
+		// } catch (IllegalStateException ex) {
+		// logger.error("CompensableTccTransactionInterceptor.beforeSendRequest(TransactionRequest)", ex);
+		// throw ex;
+		// } catch (RollbackException ex) {
+		// transaction.setRollbackOnlyQuietly();
+		// logger.error("CompensableTccTransactionInterceptor.beforeSendRequest(TransactionRequest)", ex);
+		// throw new IllegalStateException(ex);
+		// } catch (SystemException ex) {
+		// logger.error("CompensableTccTransactionInterceptor.beforeSendRequest(TransactionRequest)", ex);
+		// throw new IllegalStateException(ex);
+		// }
+		// }
 	}
 
 	public void afterReceiveRequest(TransactionRequest request) throws IllegalStateException {
@@ -93,11 +85,11 @@ public class TccTransactionInterceptor implements TransactionInterceptor, Compen
 	}
 
 	public void beforeSendResponse(TransactionResponse response) throws IllegalStateException {
-		TransactionManager transactionManager = this.beanFactory.getCompensableManager();
-		TccTransactionImpl transaction = (TccTransactionImpl) transactionManager.getTransactionQuietly();
-		if (transaction != null) {
-			return;
-		}
+		// TransactionManager transactionManager = this.beanFactory.getCompensableManager();
+		// TccTransactionImpl transaction = (TccTransactionImpl) transactionManager.getTransactionQuietly();
+		// if (transaction != null) {
+		// return;
+		// }
 
 		// TransactionContext srcTransactionContext = transaction.getTransactionContext();
 		// TransactionContext transactionContext = srcTransactionContext.clone();
@@ -122,11 +114,11 @@ public class TccTransactionInterceptor implements TransactionInterceptor, Compen
 	}
 
 	public void afterReceiveResponse(TransactionResponse response) throws IllegalStateException {
-		TransactionManager transactionManager = this.beanFactory.getCompensableManager();
-		TccTransactionImpl transaction = (TccTransactionImpl) transactionManager.getTransactionQuietly();
-		if (transaction != null) {
-			return;
-		}
+		// TransactionManager transactionManager = this.beanFactory.getCompensableManager();
+		// TccTransactionImpl transaction = (TccTransactionImpl) transactionManager.getTransactionQuietly();
+		// if (transaction != null) {
+		// return;
+		// }
 
 		// TransactionContext nativeTransactionContext = transaction.getTransactionContext();
 		// TransactionContext remoteTransactionContext = response.getTransactionContext();

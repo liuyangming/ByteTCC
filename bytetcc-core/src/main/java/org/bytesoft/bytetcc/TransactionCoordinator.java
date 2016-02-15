@@ -42,10 +42,14 @@ public class TransactionCoordinator implements RemoteCoordinator, CompensableBea
 		return transactionManager.getTransactionQuietly();
 	}
 
-	public void start(TransactionContext transactionContext, int flags) throws TransactionException {
+	public Transaction start(TransactionContext transactionContext, int flags) throws TransactionException {
+		// TODO
+		return null;
 	}
 
-	public void end(TransactionContext transactionContext, int flags) throws TransactionException {
+	public Transaction end(TransactionContext transactionContext, int flags) throws TransactionException {
+		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
+		return transactionManager.getTransactionQuietly();
 	}
 
 	public void start(Xid xid, int flags) throws XAException {
