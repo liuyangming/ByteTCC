@@ -35,8 +35,7 @@ public class CompensableTransactionManager implements TransactionManager, Compen
 	public void begin() throws NotSupportedException, SystemException {
 		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
-		boolean compensable = compensableManager.isCurrentCompensable();
-		if (compensable) {
+		if (compensableManager.isCompensePhaseCurrently()) {
 			compensableManager.begin();
 		} else {
 			transactionManager.begin();
@@ -47,8 +46,7 @@ public class CompensableTransactionManager implements TransactionManager, Compen
 			SecurityException, IllegalStateException, SystemException {
 		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
-		boolean compensable = compensableManager.isCurrentCompensable();
-		if (compensable) {
+		if (compensableManager.isCompensePhaseCurrently()) {
 			compensableManager.commit();
 		} else {
 			transactionManager.commit();
@@ -56,20 +54,30 @@ public class CompensableTransactionManager implements TransactionManager, Compen
 	}
 
 	public int getStatus() throws SystemException {
-		// TODO Auto-generated method stub
-		return 0;
+		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
+		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
+		if (compensableManager.isCompensePhaseCurrently()) {
+			return compensableManager.getStatus();
+		} else {
+			return transactionManager.getStatus();
+		}
 	}
 
 	public void resume(javax.transaction.Transaction tobj) throws InvalidTransactionException, IllegalStateException,
 			SystemException {
-		// TODO Auto-generated method stub
-
+		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
+		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
+		if (compensableManager.isCompensePhaseCurrently()) {
+			compensableManager.resume(tobj);
+		} else {
+			transactionManager.resume(tobj);
+		}
 	}
 
 	public void rollback() throws IllegalStateException, SecurityException, SystemException {
 		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
-		boolean compensable = compensableManager.isCurrentCompensable();
+		boolean compensable = compensableManager.isCompensePhaseCurrently();
 		if (compensable) {
 			compensableManager.rollback();
 		} else {
@@ -78,48 +86,69 @@ public class CompensableTransactionManager implements TransactionManager, Compen
 	}
 
 	public void setRollbackOnly() throws IllegalStateException, SystemException {
-		// TODO Auto-generated method stub
-
+		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
+		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
+		if (compensableManager.isCompensePhaseCurrently()) {
+			compensableManager.setRollbackOnly();
+		} else {
+			transactionManager.setRollbackOnly();
+		}
 	}
 
 	public void setTransactionTimeout(int seconds) throws SystemException {
-		// TODO Auto-generated method stub
-
+		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
+		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
+		if (compensableManager.isCompensePhaseCurrently()) {
+			compensableManager.setTransactionTimeout(seconds);
+		} else {
+			transactionManager.setTransactionTimeout(seconds);
+		}
 	}
 
 	public int getTimeoutSeconds() {
-		// TODO Auto-generated method stub
-		return 0;
+		throw new IllegalStateException();
 	}
 
 	public void setTimeoutSeconds(int timeoutSeconds) {
-		// TODO Auto-generated method stub
-
+		throw new IllegalStateException();
 	}
 
 	public void associateThread(Transaction transaction) {
-		// TODO Auto-generated method stub
-
+		throw new IllegalStateException();
 	}
 
 	public Transaction desociateThread() {
-		// TODO Auto-generated method stub
-		return null;
+		throw new IllegalStateException();
 	}
 
 	public Transaction getTransactionQuietly() {
-		// TODO Auto-generated method stub
-		return null;
+		try {
+			return this.getTransaction();
+		} catch (SystemException ex) {
+			return null;
+		} catch (RuntimeException ex) {
+			return null;
+		}
 	}
 
 	public Transaction getTransaction() throws SystemException {
-		// TODO Auto-generated method stub
-		return null;
+		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
+		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
+		if (compensableManager.isCompensePhaseCurrently()) {
+			return compensableManager.getTransaction();
+		} else {
+			return transactionManager.getTransaction();
+		}
 	}
 
 	public Transaction suspend() throws SystemException {
-		// TODO Auto-generated method stub
-		return null;
+		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
+		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
+		if (compensableManager.isCompensePhaseCurrently()) {
+			return compensableManager.suspend();
+		} else {
+			return transactionManager.suspend();
+		}
 	}
 
 	public void setBeanFactory(CompensableBeanFactory tbf) {

@@ -22,6 +22,4 @@ public interface CompensableTransaction extends Transaction, TransactionListener
 
 	public Transaction getTransaction();
 
-	public void setTransaction(Transaction transaction);
-
 }

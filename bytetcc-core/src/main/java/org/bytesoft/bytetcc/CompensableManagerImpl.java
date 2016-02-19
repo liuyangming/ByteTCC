@@ -25,13 +25,20 @@ import javax.transaction.NotSupportedException;
 import javax.transaction.RollbackException;
 import javax.transaction.Status;
 import javax.transaction.SystemException;
+import javax.transaction.xa.XAException;
+import javax.transaction.xa.XAResource;
 
 import org.apache.log4j.Logger;
+import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
 import org.bytesoft.bytetcc.aware.CompensableBeanFactoryAware;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableManager;
 import org.bytesoft.compensable.CompensableTransaction;
 import org.bytesoft.transaction.Transaction;
+import org.bytesoft.transaction.TransactionContext;
+import org.bytesoft.transaction.internal.TransactionException;
+import org.bytesoft.transaction.xa.TransactionXid;
+import org.bytesoft.transaction.xa.XidFactory;
 
 public class CompensableManagerImpl implements CompensableManager, CompensableBeanFactoryAware {
 	static final Logger logger = Logger.getLogger(CompensableManagerImpl.class.getSimpleName());
@@ -43,7 +50,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 		this.transactionMap.put(Thread.currentThread(), (CompensableTransaction) transaction);
 	}
 
-	public Transaction desociateThread() {
+	public CompensableTransaction desociateThread() {
 		return this.transactionMap.get(Thread.currentThread());
 	}
 
@@ -70,60 +77,164 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 	public void resume(javax.transaction.Transaction tobj) throws InvalidTransactionException, IllegalStateException,
 			SystemException {
 		CompensableTransaction transaction = this.transactionMap.get(Thread.currentThread());
-		if (transaction != null && transaction.getTransaction() == null) {
-			Transaction jtaTransaction = (Transaction) tobj;
-			jtaTransaction.resume();
-			transaction.setTransaction(jtaTransaction);
+		if (transaction == null || transaction.getTransaction() != null) {
+			throw new IllegalStateException();
 		}
+		Transaction jtaTransaction = (Transaction) tobj;
+		Object transactionalExtra = jtaTransaction.getTransactionalExtra();
+		if (transactionalExtra == null || transactionalExtra.equals(transaction) == false) {
+			throw new IllegalStateException();
+		}
+		jtaTransaction.resume();
+		transaction.setTransactionalExtra(jtaTransaction);
 	}
 
 	public Transaction suspend() throws SystemException {
 		CompensableTransaction transaction = this.transactionMap.get(Thread.currentThread());
 		Transaction jtaTransaction = transaction == null ? null : transaction.getTransaction();
-		if (jtaTransaction != null) {
-			transaction.setTransaction(null);
-			jtaTransaction.suspend();
+		if (jtaTransaction == null) {
+			throw new SystemException();
 		}
+		transaction.setTransactionalExtra(null);
+		jtaTransaction.suspend();
 		return jtaTransaction;
 	}
 
 	public void begin() throws NotSupportedException, SystemException {
-		// TODO Auto-generated method stub
+		CompensableTransaction transaction = this.transactionMap.get(Thread.currentThread());
+		if (transaction == null) {
+			throw new NotSupportedException();
+		} else if (transaction.getTransaction() != null) {
+			throw new SystemException();
+		}
+		RemoteCoordinator jtaTransactionCoordinator = this.beanFactory.getTransactionCoordinator();
+		XidFactory jtaXidFactory = this.beanFactory.getXidFactory();
+		TransactionXid jtaTransactionXid = jtaXidFactory.createGlobalXid();
 
+		TransactionContext jtaTransactionContext = new TransactionContext();
+		long current = System.currentTimeMillis();
+		jtaTransactionContext.setCreatedTime(current);
+		jtaTransactionContext.setExpiredTime(current + 1000L * 60 * 5);
+		jtaTransactionContext.setXid(jtaTransactionXid);
+		try {
+			Transaction jtaTransaction = jtaTransactionCoordinator.start(jtaTransactionContext, XAResource.TMNOFLAGS);
+			jtaTransaction.setTransactionalExtra(transaction);
+			transaction.setTransactionalExtra(jtaTransaction);
+		} catch (TransactionException tex) {
+			try {
+				jtaTransactionCoordinator.end(jtaTransactionContext, XAResource.TMFAIL);
+			} catch (TransactionException ignore) {
+				// ignore
+			}
+			// TODO
+			throw new SystemException();
+		}
 	}
 
 	public void commit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException,
 			SecurityException, IllegalStateException, SystemException {
-		// TODO Auto-generated method stub
+		CompensableTransaction transaction = this.transactionMap.get(Thread.currentThread());
+		if (transaction == null) {
+			throw new IllegalStateException();
+		} else if (transaction.getTransaction() == null) {
+			throw new SystemException();
+		}
+
+		RemoteCoordinator jtaTransactionCoordinator = this.beanFactory.getTransactionCoordinator();
+		Transaction jtaTransaction = transaction.getTransaction();
+		TransactionContext jtaTransactionContext = jtaTransaction.getTransactionContext();
+		TransactionXid jtaTransactionXid = jtaTransactionContext.getXid();
+		boolean commitExists = false;
+		boolean rollbackExists = false;
+		boolean errorExists = false;
+		try {
+			jtaTransactionCoordinator.commit(jtaTransactionXid, false);
+			commitExists = true;
+		} catch (XAException xaex) {
+			switch (xaex.errorCode) {
+			case XAException.XA_HEURRB:
+				rollbackExists = true;
+				break;
+			case XAException.XA_HEURMIX:
+				commitExists = true;
+				rollbackExists = true;
+				break;
+			default:
+				errorExists = true;
+				break;
+			}
+		} finally {
+			if (commitExists && rollbackExists) {
+				// TODO
+			} else if (errorExists) {
+				// TODO
+			} else if (rollbackExists) {
+				// TODO
+			}
+		}
 
 	}
 
 	public void rollback() throws IllegalStateException, SecurityException, SystemException {
-		// TODO Auto-generated method stub
+		CompensableTransaction transaction = this.transactionMap.get(Thread.currentThread());
+		if (transaction == null) {
+			throw new IllegalStateException();
+		} else if (transaction.getTransaction() == null) {
+			throw new SystemException();
+		}
+
+		RemoteCoordinator jtaTransactionCoordinator = this.beanFactory.getTransactionCoordinator();
+		Transaction jtaTransaction = transaction.getTransaction();
+		TransactionContext jtaTransactionContext = jtaTransaction.getTransactionContext();
+		TransactionXid jtaTransactionXid = jtaTransactionContext.getXid();
+		// boolean failure = true;
+		try {
+			jtaTransactionCoordinator.rollback(jtaTransactionXid);
+			// failure = false;
+		} catch (XAException ex) {
+			// TODO logger
+			// failure = true;
+		} finally {
+			// TODO
+		}
 
 	}
 
-	public boolean isCurrentCompensable() {
-		// TODO Auto-generated method stub
-		return false;
+	public boolean isCompensePhaseCurrently() {
+		CompensableTransaction transaction = this.transactionMap.get(Thread.currentThread());
+		return transaction != null;
 	}
 
 	public void compensableBegin(CompensableTransaction transaction) throws SystemException {
-		// TODO Auto-generated method stub
-
+		this.associateThread(transaction);
 	}
 
 	public void compensableCommit(CompensableTransaction transaction) throws RollbackException,
 			HeuristicMixedException, HeuristicRollbackException, SecurityException, IllegalStateException,
 			SystemException {
 		// TODO Auto-generated method stub
-
 	}
 
 	public void compensableRollback(CompensableTransaction transaction) throws IllegalStateException,
 			SecurityException, SystemException {
 		// TODO Auto-generated method stub
+	}
 
+	public void compensableCommit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException,
+			SecurityException, IllegalStateException, SystemException {
+		CompensableTransaction transaction = this.desociateThread();
+		if (transaction == null) {
+			throw new IllegalStateException();
+		}
+		this.compensableCommit(transaction);
+	}
+
+	public void compensableRollback() throws IllegalStateException, SecurityException, SystemException {
+		CompensableTransaction transaction = this.desociateThread();
+		if (transaction == null) {
+			throw new IllegalStateException();
+		}
+		this.compensableRollback(transaction);
 	}
 
 	public void setRollbackOnly() throws IllegalStateException, SystemException {

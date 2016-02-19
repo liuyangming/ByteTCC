@@ -198,12 +198,16 @@ public class CompensableTransactionImpl implements CompensableTransaction {
 
 	}
 
-	public Transaction getTransaction() {
+	public Object getTransactionalExtra() {
 		return transaction;
 	}
 
-	public void setTransaction(Transaction transaction) {
-		this.transaction = transaction;
+	public void setTransactionalExtra(Object transactionalExtra) {
+		this.transaction = (Transaction) transactionalExtra;
+	}
+
+	public Transaction getTransaction() {
+		return (Transaction) this.getTransactionalExtra();
 	}
 
 }

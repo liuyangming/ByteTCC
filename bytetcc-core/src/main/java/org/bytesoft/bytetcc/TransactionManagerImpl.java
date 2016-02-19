@@ -70,7 +70,8 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 		jtaTransactionContext.setXid(jtaTransactionXid);
 		try {
 			Transaction jtaTransaction = jtaTransactionCoordinator.start(jtaTransactionContext, XAResource.TMNOFLAGS);
-			transaction.setTransaction(jtaTransaction);
+			jtaTransaction.setTransactionalExtra(transaction);
+			transaction.setTransactionalExtra(jtaTransaction);
 		} catch (TransactionException tex) {
 			try {
 				jtaTransactionCoordinator.end(jtaTransactionContext, XAResource.TMFAIL);
@@ -157,7 +158,7 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 			throw ex;
 		}
 
-		compensableManager.compensableCommit(transaction);
+		compensableManager.compensableCommit();
 	}
 
 	public void rollback() throws IllegalStateException, SecurityException, SystemException {
@@ -201,7 +202,7 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 			throw ex;
 		}
 
-		compensableManager.compensableRollback(transaction);
+		compensableManager.compensableRollback();
 	}
 
 	public int getStatus() throws SystemException {
