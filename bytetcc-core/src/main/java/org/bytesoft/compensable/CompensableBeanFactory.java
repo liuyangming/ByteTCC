@@ -17,18 +17,33 @@ package org.bytesoft.compensable;
 
 import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
 import org.bytesoft.compensable.supports.logger.CompensableLogger;
-import org.bytesoft.transaction.TransactionBeanFactory;
+import org.bytesoft.transaction.TransactionManager;
+import org.bytesoft.transaction.TransactionRecovery;
+import org.bytesoft.transaction.TransactionRepository;
+import org.bytesoft.transaction.supports.rpc.TransactionInterceptor;
 import org.bytesoft.transaction.xa.XidFactory;
 
-public interface CompensableBeanFactory extends TransactionBeanFactory {
+public interface CompensableBeanFactory {
+
+	public XidFactory getTransactionXidFactory();
 
 	public XidFactory getCompensableXidFactory();
 
-	public RemoteCoordinator getCompensableCoordinator();
+	public TransactionManager getTransactionManager();
 
 	public CompensableManager getCompensableManager();
 
+	public RemoteCoordinator getTransactionCoordinator();
+
+	public RemoteCoordinator getCompensableCoordinator();
+
 	public CompensableLogger getCompensableLogger();
+
+	public TransactionRepository getTransactionRepository();
+
+	public TransactionInterceptor getTransactionInterceptor();
+
+	public TransactionRecovery getTransactionRecovery();
 
 	public CompensableInvocationExecutor getCompensableInvocationExecutor();
 

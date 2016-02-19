@@ -53,7 +53,7 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 	public void begin() throws NotSupportedException, SystemException {
 
 		RemoteCoordinator jtaTransactionCoordinator = this.beanFactory.getTransactionCoordinator();
-		XidFactory jtaXidFactory = this.beanFactory.getXidFactory();
+		XidFactory jtaXidFactory = this.beanFactory.getTransactionXidFactory();
 		XidFactory tccXidFactory = this.beanFactory.getCompensableXidFactory();
 
 		TransactionXid tccTransactionXid = tccXidFactory.createGlobalXid();

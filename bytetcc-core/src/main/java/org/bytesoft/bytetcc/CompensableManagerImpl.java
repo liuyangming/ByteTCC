@@ -108,7 +108,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 			throw new SystemException();
 		}
 		RemoteCoordinator jtaTransactionCoordinator = this.beanFactory.getTransactionCoordinator();
-		XidFactory jtaXidFactory = this.beanFactory.getXidFactory();
+		XidFactory jtaXidFactory = this.beanFactory.getTransactionXidFactory();
 		TransactionXid jtaTransactionXid = jtaXidFactory.createGlobalXid();
 
 		TransactionContext jtaTransactionContext = new TransactionContext();

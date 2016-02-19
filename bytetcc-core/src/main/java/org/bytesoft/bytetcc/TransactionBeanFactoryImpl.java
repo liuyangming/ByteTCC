@@ -25,8 +25,6 @@ import org.bytesoft.transaction.TransactionManager;
 import org.bytesoft.transaction.TransactionRecovery;
 import org.bytesoft.transaction.TransactionRepository;
 import org.bytesoft.transaction.supports.TransactionTimer;
-import org.bytesoft.transaction.supports.logger.EmptyTransactionLogger;
-import org.bytesoft.transaction.supports.logger.TransactionLogger;
 import org.bytesoft.transaction.supports.rpc.TransactionInterceptor;
 import org.bytesoft.transaction.xa.XidFactory;
 
@@ -34,9 +32,8 @@ public final class TransactionBeanFactoryImpl implements CompensableBeanFactory 
 
 	private TransactionManager transactionManager;
 	private CompensableManager compensableManager;
-	private XidFactory xidFactory;
+	private XidFactory transactionXidFactory;
 	private XidFactory compensableXidFactory;
-	private TransactionLogger transactionLogger = new EmptyTransactionLogger();
 	private CompensableLogger compensableLogger = new EmptyCompensableLogger();
 	private TransactionRepository transactionRepository;
 	private TransactionInterceptor transactionInterceptor;
@@ -65,12 +62,12 @@ public final class TransactionBeanFactoryImpl implements CompensableBeanFactory 
 		this.compensableManager = compensableManager;
 	}
 
-	public XidFactory getXidFactory() {
-		return xidFactory;
+	public XidFactory getTransactionXidFactory() {
+		return transactionXidFactory;
 	}
 
-	public void setXidFactory(XidFactory xidFactory) {
-		this.xidFactory = xidFactory;
+	public void setTransactionXidFactory(XidFactory xidFactory) {
+		this.transactionXidFactory = xidFactory;
 	}
 
 	public XidFactory getCompensableXidFactory() {
@@ -87,14 +84,6 @@ public final class TransactionBeanFactoryImpl implements CompensableBeanFactory 
 
 	public void setCompensableLogger(CompensableLogger compensableLogger) {
 		this.compensableLogger = compensableLogger;
-	}
-
-	public TransactionLogger getTransactionLogger() {
-		return transactionLogger;
-	}
-
-	public void setTransactionLogger(TransactionLogger transactionLogger) {
-		this.transactionLogger = transactionLogger;
 	}
 
 	public TransactionRepository getTransactionRepository() {
