@@ -121,6 +121,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 			jtaTransaction.setTransactionalExtra(transaction);
 			transaction.setTransactionalExtra(jtaTransaction);
 		} catch (TransactionException tex) {
+			transaction.setTransactionalExtra(null);
 			try {
 				jtaTransactionCoordinator.end(jtaTransactionContext, XAResource.TMFAIL);
 			} catch (TransactionException ignore) {
@@ -139,6 +140,8 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 		} else if (transaction.getTransaction() == null) {
 			throw new SystemException();
 		}
+
+		transaction.setTransactionalExtra(null);
 
 		RemoteCoordinator jtaTransactionCoordinator = this.beanFactory.getTransactionCoordinator();
 		Transaction jtaTransaction = transaction.getTransaction();
@@ -182,6 +185,8 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 		} else if (transaction.getTransaction() == null) {
 			throw new SystemException();
 		}
+
+		transaction.setTransactionalExtra(null);
 
 		RemoteCoordinator jtaTransactionCoordinator = this.beanFactory.getTransactionCoordinator();
 		Transaction jtaTransaction = transaction.getTransaction();

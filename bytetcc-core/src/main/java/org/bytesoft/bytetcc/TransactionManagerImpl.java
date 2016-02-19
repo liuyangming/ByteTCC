@@ -102,6 +102,7 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 		RemoteCoordinator jtaTransactionCoordinator = this.beanFactory.getTransactionCoordinator();
 
 		CompensableTransaction transaction = this.desociateThread();
+		transaction.setTransactionalExtra(null);
 		TransactionContext transactionContext = transaction.getTransactionContext();
 
 		Transaction jtaTransaction = transaction.getTransaction();
@@ -165,6 +166,7 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 		RemoteCoordinator jtaTransactionCoordinator = this.beanFactory.getTransactionCoordinator();
 
 		CompensableTransaction transaction = this.desociateThread();
+		transaction.setTransactionalExtra(null);
 		TransactionContext transactionContext = transaction.getTransactionContext();
 
 		Transaction jtaTransaction = transaction.getTransaction();

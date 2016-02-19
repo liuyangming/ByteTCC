@@ -24,7 +24,6 @@ import org.bytesoft.compensable.supports.logger.EmptyCompensableLogger;
 import org.bytesoft.transaction.TransactionManager;
 import org.bytesoft.transaction.TransactionRecovery;
 import org.bytesoft.transaction.TransactionRepository;
-import org.bytesoft.transaction.supports.TransactionTimer;
 import org.bytesoft.transaction.supports.rpc.TransactionInterceptor;
 import org.bytesoft.transaction.xa.XidFactory;
 
@@ -41,10 +40,6 @@ public final class TransactionBeanFactoryImpl implements CompensableBeanFactory 
 	private RemoteCoordinator transactionCoordinator;
 	private RemoteCoordinator compensableCoordinator;
 	private CompensableInvocationExecutor compensableInvocationExecutor;
-
-	public TransactionTimer getTransactionTimer() {
-		throw new IllegalStateException();
-	}
 
 	public TransactionManager getTransactionManager() {
 		return transactionManager;
