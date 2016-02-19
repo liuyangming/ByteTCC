@@ -13,34 +13,47 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this distribution; if not, see <http://www.gnu.org/licenses/>.
  */
-package org.bytesoft.compensable.supports.logger;
+package org.bytesoft.bytetcc.logger;
 
-import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.log4j.Logger;
 import org.bytesoft.compensable.archive.CompensableArchive;
 import org.bytesoft.compensable.archive.TransactionArchive;
+import org.bytesoft.compensable.logger.CompensableLogger;
 import org.bytesoft.transaction.archive.XAResourceArchive;
 
-public class EmptyCompensableLogger implements CompensableLogger {
+public class SampleTransactionLogger implements CompensableLogger {
+	static final Logger logger = Logger.getLogger(SampleTransactionLogger.class.getSimpleName());
 
 	public void createTransaction(TransactionArchive archive) {
+		// TODO Auto-generated method stub
+
 	}
 
 	public void updateTransaction(TransactionArchive archive) {
+		// TODO Auto-generated method stub
+
 	}
 
 	public void deleteTransaction(TransactionArchive archive) {
+		// TODO Auto-generated method stub
+
 	}
 
 	public List<TransactionArchive> getTransactionArchiveList() {
-		return new ArrayList<TransactionArchive>();
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 	public void updateCoordinator(XAResourceArchive archive) {
+		// TODO Auto-generated method stub
+
 	}
 
 	public void updateCompensable(CompensableArchive archive) {
+		// TODO Auto-generated method stub
+
 	}
 
 }

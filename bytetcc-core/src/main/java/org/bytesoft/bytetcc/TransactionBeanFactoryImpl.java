@@ -16,11 +16,11 @@
 package org.bytesoft.bytetcc;
 
 import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
+import org.bytesoft.bytetcc.logger.EmptyCompensableLogger;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableInvocationExecutor;
 import org.bytesoft.compensable.CompensableManager;
-import org.bytesoft.compensable.supports.logger.CompensableLogger;
-import org.bytesoft.compensable.supports.logger.EmptyCompensableLogger;
+import org.bytesoft.compensable.logger.CompensableLogger;
 import org.bytesoft.transaction.TransactionManager;
 import org.bytesoft.transaction.TransactionRecovery;
 import org.bytesoft.transaction.TransactionRepository;

@@ -16,7 +16,7 @@
 package org.bytesoft.compensable;
 
 import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
-import org.bytesoft.compensable.supports.logger.CompensableLogger;
+import org.bytesoft.compensable.logger.CompensableLogger;
 import org.bytesoft.transaction.TransactionManager;
 import org.bytesoft.transaction.TransactionRecovery;
 import org.bytesoft.transaction.TransactionRepository;
