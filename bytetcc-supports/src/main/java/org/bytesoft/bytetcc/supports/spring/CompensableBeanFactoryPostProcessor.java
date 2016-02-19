@@ -18,7 +18,7 @@ package org.bytesoft.bytetcc.supports.spring;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.bytesoft.bytetcc.aware.CompensableBeanFactoryAware;
+import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 import org.bytesoft.transaction.TransactionBeanFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.FatalBeanException;

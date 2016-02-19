@@ -16,8 +16,8 @@
 package org.bytesoft.bytetcc;
 
 import org.apache.log4j.Logger;
-import org.bytesoft.bytetcc.aware.CompensableBeanFactoryAware;
 import org.bytesoft.compensable.CompensableBeanFactory;
+import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 import org.bytesoft.transaction.TransactionRecovery;
 
 public class TransactionRecoveryImpl implements TransactionRecovery, CompensableBeanFactoryAware {
