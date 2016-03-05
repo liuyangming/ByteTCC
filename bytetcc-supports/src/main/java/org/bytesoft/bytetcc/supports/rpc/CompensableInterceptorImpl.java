@@ -23,8 +23,8 @@ import org.bytesoft.transaction.supports.rpc.TransactionInterceptor;
 import org.bytesoft.transaction.supports.rpc.TransactionRequest;
 import org.bytesoft.transaction.supports.rpc.TransactionResponse;
 
-public class TccTransactionInterceptor implements TransactionInterceptor, CompensableBeanFactoryAware {
-	static final Logger logger = Logger.getLogger(TccTransactionInterceptor.class.getSimpleName());
+public class CompensableInterceptorImpl implements TransactionInterceptor, CompensableBeanFactoryAware {
+	static final Logger logger = Logger.getLogger(CompensableInterceptorImpl.class.getSimpleName());
 
 	private CompensableBeanFactory beanFactory;
 
@@ -153,6 +153,10 @@ public class TccTransactionInterceptor implements TransactionInterceptor, Compen
 
 	public void setBeanFactory(CompensableBeanFactory tbf) {
 		this.beanFactory = tbf;
+	}
+
+	public CompensableBeanFactory getBeanFactory() {
+		return beanFactory;
 	}
 
 }

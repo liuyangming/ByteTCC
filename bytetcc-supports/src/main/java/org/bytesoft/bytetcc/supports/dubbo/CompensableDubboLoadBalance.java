@@ -18,8 +18,8 @@ package org.bytesoft.bytetcc.supports.dubbo;
 import java.util.List;
 import java.util.Random;
 
-import org.bytesoft.bytetcc.supports.invoke.InvocationContext;
-import org.bytesoft.bytetcc.supports.invoke.InvocationContextRegistry;
+import org.bytesoft.bytejta.supports.invoke.InvocationContext;
+import org.bytesoft.bytejta.supports.invoke.InvocationContextRegistry;
 
 import com.alibaba.druid.util.StringUtils;
 import com.alibaba.dubbo.common.URL;
