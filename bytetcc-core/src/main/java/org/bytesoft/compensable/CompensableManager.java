@@ -24,6 +24,8 @@ import org.bytesoft.transaction.TransactionManager;
 
 public interface CompensableManager extends TransactionManager {
 
+	public CompensableTransaction getCompensableTransactionQuietly();
+
 	public boolean isCompensePhaseCurrently();
 
 	public void compensableBegin(CompensableTransaction transaction) throws SystemException;

@@ -51,7 +51,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 	}
 
 	public CompensableTransaction desociateThread() {
-		return this.transactionMap.get(Thread.currentThread());
+		return this.transactionMap.remove(Thread.currentThread());
 	}
 
 	public int getStatus() throws SystemException {
@@ -72,6 +72,10 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 	public Transaction getTransaction() throws SystemException {
 		CompensableTransaction transaction = this.transactionMap.get(Thread.currentThread());
 		return transaction == null ? null : transaction.getTransaction();
+	}
+
+	public CompensableTransaction getCompensableTransactionQuietly() {
+		return this.transactionMap.get(Thread.currentThread());
 	}
 
 	public void resume(javax.transaction.Transaction tobj) throws InvalidTransactionException, IllegalStateException,
@@ -101,7 +105,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 	}
 
 	public void begin() throws NotSupportedException, SystemException {
-		CompensableTransaction transaction = this.transactionMap.get(Thread.currentThread());
+		CompensableTransaction transaction = this.getCompensableTransactionQuietly();
 		if (transaction == null) {
 			throw new NotSupportedException();
 		} else if (transaction.getTransaction() != null) {
