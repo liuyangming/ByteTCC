@@ -18,8 +18,8 @@ package org.bytesoft.bytetcc.supports.spring;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
-import org.bytesoft.transaction.TransactionBeanFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.FatalBeanException;
 import org.springframework.beans.MutablePropertyValues;
@@ -52,11 +52,11 @@ public class CompensableBeanFactoryPostProcessor implements BeanFactoryPostProce
 				beanFactoryAwareBeanIdList.add(beanDef);
 			}
 
-			if (TransactionBeanFactory.class.isAssignableFrom(beanClass)) {
+			if (CompensableBeanFactory.class.isAssignableFrom(beanClass)) {
 				if (beanFactoryBeanId == null) {
 					beanFactoryBeanId = beanName;
 				} else {
-					throw new FatalBeanException("Duplicated transaction-bean-factory defined.");
+					throw new FatalBeanException("Duplicated compensable-bean-factory defined.");
 				}
 			}
 
