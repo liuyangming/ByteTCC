@@ -102,17 +102,17 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 		RemoteCoordinator jtaTransactionCoordinator = this.beanFactory.getTransactionCoordinator();
 
 		CompensableTransaction transaction = this.desociateThread();
-		transaction.setTransactionalExtra(null);
-		TransactionContext transactionContext = transaction.getTransactionContext();
-
 		Transaction jtaTransaction = transaction.getTransaction();
+		TransactionContext transactionContext = transaction.getTransactionContext();
 		TransactionContext jtaTransactionContext = jtaTransaction.getTransactionContext();
+		transaction.setTransactionalExtra(null);
+
 		TransactionXid jtaTransactionXid = jtaTransactionContext.getXid();
 		boolean commitExists = false;
 		boolean rollbackExists = false;
 		boolean errorExists = false;
 		try {
-			jtaTransactionCoordinator.commit(jtaTransactionXid, false);
+			jtaTransactionCoordinator.commit(jtaTransactionXid, true);
 			commitExists = true;
 		} catch (XAException xaex) {
 			switch (xaex.errorCode) {
@@ -132,6 +132,8 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 				if (commitExists && rollbackExists) {
 					this.notifyCompensableCommit(transaction); // TODO
 				} else if (errorExists) {
+					this.notifyCompensableCommit(transaction); // TODO
+				} else if (commitExists) {
 					this.notifyCompensableCommit(transaction); // TODO
 				} else if (rollbackExists) {
 					this.notifyCompensableRollback(transaction);

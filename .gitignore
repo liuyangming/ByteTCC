@@ -20,3 +20,4 @@ hs_err_pid*
 /bytetcc-supports/.classpath
 /bytetcc-supports/.gitignore
 /bytetcc-supports/.project
+target

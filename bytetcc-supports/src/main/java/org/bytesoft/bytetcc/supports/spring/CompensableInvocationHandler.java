@@ -17,6 +17,10 @@ package org.bytesoft.bytetcc.supports.spring;
 
 import java.lang.reflect.Method;
 
+import org.bytesoft.bytetcc.supports.CompensableInvocationImpl;
+import org.bytesoft.compensable.CompensableInvocationRegistry;
+import org.bytesoft.transaction.TransactionManager;
+
 public class CompensableInvocationHandler implements java.lang.reflect.InvocationHandler,
 		net.sf.cglib.proxy.InvocationHandler, org.springframework.cglib.proxy.InvocationHandler {
 
@@ -26,10 +30,20 @@ public class CompensableInvocationHandler implements java.lang.reflect.Invocatio
 	private Class<?> interfaceClass;
 	private String confirmableKey;
 	private String cancellableKey;
+	private TransactionManager transactionManager;
 
 	public Object invoke(Object object, Method method, Object[] args) throws Throwable {
+
+		CompensableInvocationRegistry registry = CompensableInvocationRegistry.getInstance();
 		try {
-			// TODO
+			CompensableInvocationImpl invocation = new CompensableInvocationImpl();
+			invocation.setMethod(method);
+			invocation.setArgs(args);
+			invocation.setCancellableKey(cancellableKey);
+			invocation.setConfirmableKey(confirmableKey);
+			invocation.setIdentifier(this.beanName);
+			registry.register(invocation);
+
 			if (java.lang.reflect.InvocationHandler.class.isInstance(this.delegate)) {
 				return ((java.lang.reflect.InvocationHandler) this.delegate).invoke(object, method, args);
 			} else if (net.sf.cglib.proxy.InvocationHandler.class.isInstance(this.delegate)) {
@@ -37,10 +51,10 @@ public class CompensableInvocationHandler implements java.lang.reflect.Invocatio
 			} else if (org.springframework.cglib.proxy.InvocationHandler.class.isInstance(this.delegate)) {
 				return ((org.springframework.cglib.proxy.InvocationHandler) this.delegate).invoke(object, method, args);
 			} else {
-				return null; // TODO
+				throw new IllegalStateException("Invalid invocation!");
 			}
 		} finally {
-			// TODO
+			registry.unegister();
 		}
 	}
 
@@ -90,6 +104,14 @@ public class CompensableInvocationHandler implements java.lang.reflect.Invocatio
 
 	public void setCancellableKey(String cancellableKey) {
 		this.cancellableKey = cancellableKey;
+	}
+
+	public TransactionManager getTransactionManager() {
+		return transactionManager;
+	}
+
+	public void setTransactionManager(TransactionManager transactionManager) {
+		this.transactionManager = transactionManager;
 	}
 
 }

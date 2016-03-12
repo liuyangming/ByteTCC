@@ -73,29 +73,35 @@ public class CompensableAnnotationValidator implements BeanFactoryPostProcessor 
 			String cancellableKey = compensable.cancellableKey();
 			if (StringUtils.isNotBlank(confirmableKey)) {
 				if (compensables.containsKey(confirmableKey)) {
-					throw new FatalBeanException("The confirm bean cannot be a compensable service!");
+					throw new FatalBeanException(String.format(
+							"The confirm bean(id= %s) cannot be a compensable service!", confirmableKey));
 				}
 				Class<?> clazz = otherServiceMap.get(confirmableKey);
-				if (clazz != null) {
-					try {
-						this.validateTransactionalAnnotation(interfaceClass, clazz);
-					} catch (IllegalStateException ex) {
-						throw new FatalBeanException(ex.getMessage(), ex);
-					}
+				if (clazz == null) {
+					throw new IllegalStateException(String.format("The confirm bean(id= %s) is not exists!",
+							confirmableKey));
+				}
+				try {
+					this.validateTransactionalAnnotation(interfaceClass, clazz);
+				} catch (IllegalStateException ex) {
+					throw new FatalBeanException(ex.getMessage(), ex);
 				}
 			}
 
 			if (StringUtils.isNotBlank(cancellableKey)) {
 				if (compensables.containsKey(cancellableKey)) {
-					throw new FatalBeanException("The cancel bean cannot be a compensable service!");
+					throw new FatalBeanException(String.format(
+							"The cancel bean(id= %s) cannot be a compensable service!", confirmableKey));
 				}
 				Class<?> clazz = otherServiceMap.get(cancellableKey);
-				if (clazz != null) {
-					try {
-						this.validateTransactionalAnnotation(interfaceClass, clazz);
-					} catch (IllegalStateException ex) {
-						throw new FatalBeanException(ex.getMessage(), ex);
-					}
+				if (clazz == null) {
+					throw new IllegalStateException(String.format("The cancel bean(id= %s) is not exists!",
+							cancellableKey));
+				}
+				try {
+					this.validateTransactionalAnnotation(interfaceClass, clazz);
+				} catch (IllegalStateException ex) {
+					throw new FatalBeanException(ex.getMessage(), ex);
 				}
 			}
 		}
