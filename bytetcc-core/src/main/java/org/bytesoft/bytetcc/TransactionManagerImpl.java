@@ -45,6 +45,11 @@ import org.bytesoft.transaction.internal.TransactionException;
 import org.bytesoft.transaction.xa.TransactionXid;
 import org.bytesoft.transaction.xa.XidFactory;
 
+/**
+ * The compensable transaction manager implementation in the try phase.
+ * 
+ * @author liuyangming
+ */
 public class TransactionManagerImpl implements TransactionManager, CompensableBeanFactoryAware {
 	static final Logger logger = Logger.getLogger(TransactionManagerImpl.class.getSimpleName());
 
@@ -62,7 +67,8 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 
 		TransactionContext transactionContext = new TransactionContext();
 		transactionContext.setXid(tccTransactionXid);
-		CompensableTransaction transaction = new CompensableTransactionImpl(transactionContext);
+		CompensableTransactionImpl transaction = new CompensableTransactionImpl(transactionContext);
+		transaction.setBeanFactory(this.beanFactory);
 
 		TransactionContext jtaTransactionContext = new TransactionContext();
 		long current = System.currentTimeMillis();
@@ -77,11 +83,9 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 			try {
 				jtaTransactionCoordinator.end(jtaTransactionContext, XAResource.TMFAIL);
 			} catch (TransactionException ignore) {
-				logger.debug(String.format("[%s] begin-transaction: error occurred while unbinding jta-transaction: %s",
-						ByteUtils.byteArrayToString(tccTransactionXid.getGlobalTransactionId()),
-						ByteUtils.byteArrayToString(jtaTransactionXid.getGlobalTransactionId())));
+				// ignore
 			}
-			logger.info(String.format("[%s] begin-transaction: error occurred while starting jta-transaction: %s",
+			logger.info(String.format("[%s] begin-transaction<try>: error occurred while starting jta-transaction: %s",
 					ByteUtils.byteArrayToString(tccTransactionXid.getGlobalTransactionId()),
 					ByteUtils.byteArrayToString(jtaTransactionXid.getGlobalTransactionId())));
 
@@ -109,15 +113,17 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 
 		CompensableTransaction transaction = this.desociateThread();
 		Transaction jtaTransaction = transaction.getTransaction();
-		TransactionContext transactionContext = transaction.getTransactionContext();
+		TransactionContext tccTransactionContext = transaction.getTransactionContext();
 		TransactionContext jtaTransactionContext = jtaTransaction.getTransactionContext();
-		transaction.setTransactionalExtra(null);
 
 		TransactionXid jtaTransactionXid = jtaTransactionContext.getXid();
+		// TransactionXid tccTransactionXid = tccTransactionContext.getXid();
+
 		boolean commitExists = false;
 		boolean rollbackExists = false;
 		boolean errorExists = false;
 		try {
+			jtaTransactionCoordinator.end(jtaTransactionContext, XAResource.TMSUCCESS);
 			jtaTransactionCoordinator.commit(jtaTransactionXid, true);
 			commitExists = true;
 		} catch (XAException xaex) {
@@ -134,26 +140,28 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 				break;
 			}
 		} finally {
-			if (transactionContext.isCompensable()) {
+			transaction.setTransactionalExtra(null);
+
+			if (tccTransactionContext.isCompensable()) {
 				boolean success = false;
 				try {
 					if (commitExists && rollbackExists) {
-						this.notifyCompensableCommit(transaction); // TODO
+						this.fireCompensableCommit(transaction); // TODO
 						success = true;
 					} else if (errorExists) {
-						this.notifyCompensableCommit(transaction); // TODO
+						this.fireCompensableCommit(transaction); // TODO
 						success = true;
 					} else if (commitExists) {
-						this.notifyCompensableCommit(transaction); // TODO
+						this.fireCompensableCommit(transaction); // TODO
 						success = true;
 					} else if (rollbackExists) {
-						this.notifyCompensableRollback(transaction);
+						this.fireCompensableRollback(transaction);
 						success = true;
 					} else {
 						success = true;
 					}
 				} finally {
-					TransactionXid xid = transactionContext.getXid();
+					TransactionXid xid = tccTransactionContext.getXid();
 					if (success) {
 						transactionRepository.removeTransaction(xid);
 					} else {
@@ -165,25 +173,21 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 
 	}
 
-	public void notifyCompensableCommit(CompensableTransaction transaction) throws RollbackException, HeuristicMixedException,
+	public void fireCompensableCommit(CompensableTransaction transaction) throws RollbackException, HeuristicMixedException,
 			HeuristicRollbackException, SecurityException, IllegalStateException, SystemException {
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 		try {
-			compensableManager.compensableBegin(transaction);
-		} catch (SystemException ex) {
-			throw ex;
-		} catch (RuntimeException ex) {
-			throw ex;
+			compensableManager.associateThread(transaction);
+			compensableManager.compensableCommit();
+		} finally {
+			compensableManager.desociateThread();
 		}
-
-		compensableManager.compensableCommit();
 	}
 
 	public void rollback() throws IllegalStateException, SecurityException, SystemException {
 		RemoteCoordinator jtaTransactionCoordinator = this.beanFactory.getTransactionCoordinator();
 
 		CompensableTransaction transaction = this.desociateThread();
-		transaction.setTransactionalExtra(null);
 		TransactionContext transactionContext = transaction.getTransactionContext();
 
 		Transaction jtaTransaction = transaction.getTransaction();
@@ -191,37 +195,35 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 		TransactionXid jtaTransactionXid = jtaTransactionContext.getXid();
 		// boolean failure = true;
 		try {
+			jtaTransactionCoordinator.end(jtaTransactionContext, XAResource.TMSUCCESS);
 			jtaTransactionCoordinator.rollback(jtaTransactionXid);
 			// failure = false;
 		} catch (XAException ex) {
 			// TODO logger
 			// failure = true;
 		} finally {
+			transaction.setTransactionalExtra(null);
+
 			if (transactionContext.isCompensable()) {
-				this.notifyCompensableRollback(transaction);
+				this.fireCompensableRollback(transaction);
 			}
 		}
 
 	}
 
-	public void notifyCompensableRollback(CompensableTransaction transaction) throws IllegalStateException, SecurityException,
+	public void fireCompensableRollback(CompensableTransaction transaction) throws IllegalStateException, SecurityException,
 			SystemException {
-		TransactionContext transactionContext = transaction.getTransactionContext();
-		TransactionXid xid = transactionContext.getXid();
+		// TransactionContext transactionContext = transaction.getTransactionContext();
+		// TransactionXid xid = transactionContext.getXid();
+		// TransactionRepository transactionRepository = this.beanFactory.getTransactionRepository();
 
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
-		TransactionRepository transactionRepository = this.beanFactory.getTransactionRepository();
 		try {
-			compensableManager.compensableBegin(transaction);
-		} catch (SystemException ex) {
-			transactionRepository.putErrorTransaction(xid, transaction);
-			throw ex;
-		} catch (RuntimeException ex) {
-			transactionRepository.putErrorTransaction(xid, transaction);
-			throw ex;
+			compensableManager.associateThread(transaction);
+			compensableManager.compensableRollback();
+		} finally {
+			compensableManager.desociateThread();
 		}
-
-		compensableManager.compensableRollback();
 	}
 
 	public int getStatus() throws SystemException {

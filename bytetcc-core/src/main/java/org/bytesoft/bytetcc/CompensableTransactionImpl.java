@@ -25,47 +25,123 @@ import javax.transaction.Synchronization;
 import javax.transaction.SystemException;
 import javax.transaction.xa.XAResource;
 
+import org.apache.log4j.Logger;
+import org.bytesoft.common.utils.ByteUtils;
+import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableInvocation;
+import org.bytesoft.compensable.CompensableInvocationExecutor;
 import org.bytesoft.compensable.CompensableTransaction;
 import org.bytesoft.compensable.archive.CompensableArchive;
 import org.bytesoft.transaction.CommitRequiredException;
 import org.bytesoft.transaction.RollbackRequiredException;
 import org.bytesoft.transaction.Transaction;
-import org.bytesoft.transaction.TransactionBeanFactory;
 import org.bytesoft.transaction.TransactionContext;
 import org.bytesoft.transaction.archive.TransactionArchive;
 import org.bytesoft.transaction.supports.TransactionListener;
 import org.bytesoft.transaction.xa.TransactionXid;
 
 public class CompensableTransactionImpl implements CompensableTransaction {
+	static final Logger logger = Logger.getLogger(CompensableTransactionImpl.class.getSimpleName());
 
-	private Transaction transaction;
-	private TransactionContext transactionContext;
+	private final TransactionContext transactionContext;
 	private final List<CompensableArchive> archiveList = new ArrayList<CompensableArchive>();
+	private Transaction transaction;
+	private CompensableBeanFactory beanFactory;
+
+	/* current comensable-archive and compense decision. */
+	private transient Boolean decision;
+	private transient CompensableArchive archive;
 
 	public CompensableTransactionImpl(TransactionContext txContext) {
 		this.transactionContext = txContext;
 	}
 
-	public void registerCompensableInvocation(CompensableInvocation invocation) {
-		CompensableArchive archive = new CompensableArchive();
-		archive.setCompensable(invocation);
-		this.archiveList.add(archive);
+	public TransactionArchive getTransactionArchive() {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
-	public void setRollbackOnlyQuietly() {
+	public void commit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException, SecurityException,
+			IllegalStateException, SystemException {
+		CompensableInvocationExecutor executor = this.beanFactory.getCompensableInvocationExecutor();
+		for (int i = 0; i < this.archiveList.size(); i++) {
+			CompensableArchive current = this.archiveList.get(i);
+			if (current.isConfirmed()) {
+				continue;
+			}
+
+			try {
+				this.decision = true;
+				this.archive = current;
+				executor.confirm(current.getCompensable());
+			} catch (RuntimeException rex) {
+				TransactionXid transactionXid = this.transactionContext.getXid();
+				logger.error(
+						String.format("[%s] commit-transaction: error occurred while confirming service: %s",
+								ByteUtils.byteArrayToString(transactionXid.getGlobalTransactionId()), this.archive), rex);
+			} finally {
+				this.archive = null;
+				this.decision = null;
+			}
+		}
+	}
+
+	public void participantPrepare() throws RollbackRequiredException, CommitRequiredException {
+		throw new RuntimeException("Not supported!");
+	}
+
+	public void participantCommit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException,
+			SecurityException, IllegalStateException, CommitRequiredException, SystemException {
+		throw new SystemException("Not supported!");
+	}
+
+	public void rollback() throws IllegalStateException, SystemException {
+		CompensableInvocationExecutor executor = this.beanFactory.getCompensableInvocationExecutor();
+		for (int i = 0; i < this.archiveList.size(); i++) {
+			CompensableArchive current = this.archiveList.get(i);
+			if (current.isCancelled()) {
+				continue;
+			}
+
+			try {
+				this.decision = false;
+				this.archive = current;
+				executor.cancel(current.getCompensable());
+			} catch (RuntimeException rex) {
+				TransactionXid transactionXid = this.transactionContext.getXid();
+				logger.error(
+						String.format("[%s] commit-transaction: error occurred while cancelling service: %s",
+								ByteUtils.byteArrayToString(transactionXid.getGlobalTransactionId()), this.archive), rex);
+			} finally {
+				this.archive = null;
+				this.decision = null;
+			}
+		}
+	}
+
+	public void recoveryCommit() throws CommitRequiredException, SystemException {
 		// TODO Auto-generated method stub
 
 	}
 
-	public int getTransactionStatus() {
+	public void recoveryRollback() throws RollbackRequiredException, SystemException {
 		// TODO Auto-generated method stub
-		return 0;
+
 	}
 
-	public void setTransactionStatus(int status) {
+	public void recoveryForgetQuietly() {
 		// TODO Auto-generated method stub
 
+	}
+
+	public boolean enlistResource(XAResource xaRes) throws RollbackException, IllegalStateException, SystemException {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	public boolean delistResource(XAResource xaRes, int flag) throws IllegalStateException, SystemException {
+		// TODO Auto-generated method stub
+		return false;
 	}
 
 	public void resume() throws SystemException {
@@ -78,70 +154,80 @@ public class CompensableTransactionImpl implements CompensableTransaction {
 
 	}
 
-	public boolean isTiming() {
-		// TODO Auto-generated method stub
-		return false;
+	public void registerCompensableInvocation(CompensableInvocation invocation) {
+		CompensableArchive archive = new CompensableArchive();
+		archive.setCompensable(invocation);
+		this.archiveList.add(archive);
 	}
 
-	public void setTransactionTimeout(int seconds) {
-		// TODO Auto-generated method stub
-
+	public void registerSynchronization(Synchronization sync) throws RollbackException, IllegalStateException, SystemException {
 	}
 
 	public void registerTransactionListener(TransactionListener listener) {
-		// TODO Auto-generated method stub
-
 	}
 
-	public TransactionContext getTransactionContext() {
-		return this.transactionContext;
+	public void onPrepareStart(TransactionXid xid) {
 	}
 
-	public TransactionArchive getTransactionArchive() {
-		// TODO Auto-generated method stub
-		return null;
+	public void onPrepareSuccess(TransactionXid xid) {
 	}
 
-	public void participantPrepare() throws RollbackRequiredException, CommitRequiredException {
-		// TODO Auto-generated method stub
-
+	public void onPrepareFailure(TransactionXid xid) {
 	}
 
-	public void participantCommit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException,
-			SecurityException, IllegalStateException, CommitRequiredException, SystemException {
-		// TODO Auto-generated method stub
-
+	public void onCommitStart(TransactionXid xid) {
+		this.archive.setXid(xid);
+		// TODO logger
 	}
 
-	public void recoveryForgetQuietly() {
-		// TODO Auto-generated method stub
-
+	public void onCommitSuccess(TransactionXid xid) {
+		if (this.decision == null) {
+			// ignore
+		} else if (this.decision) {
+			this.archive.setConfirmed(true);
+		} else {
+			this.archive.setCancelled(true);
+		}
+		// TODO logger
 	}
 
-	public void recoveryRollback() throws RollbackRequiredException, SystemException {
-		// TODO Auto-generated method stub
-
+	public void onCommitFailure(TransactionXid xid) {
+		// TODO logger
 	}
 
-	public void recoveryCommit() throws CommitRequiredException, SystemException {
-		// TODO Auto-generated method stub
-
+	public void onCommitHeuristicMixed(TransactionXid xid) {
+		if (this.decision == null) {
+			// ignore
+		} else if (this.decision) {
+			this.archive.setTxMixed(true);
+			this.archive.setConfirmed(true);
+		} else {
+			this.archive.setTxMixed(true);
+			this.archive.setCancelled(true);
+		}
+		// TODO logger
 	}
 
-	public void commit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException, SecurityException,
-			IllegalStateException, SystemException {
-		// TODO Auto-generated method stub
-
+	public void onCommitHeuristicRolledback(TransactionXid xid) {
 	}
 
-	public boolean delistResource(XAResource xaRes, int flag) throws IllegalStateException, SystemException {
-		// TODO Auto-generated method stub
-		return false;
+	public void onRollbackStart(TransactionXid xid) {
 	}
 
-	public boolean enlistResource(XAResource xaRes) throws RollbackException, IllegalStateException, SystemException {
+	public void onRollbackSuccess(TransactionXid xid) {
+	}
+
+	public void onRollbackFailure(TransactionXid xid) {
+		// TODO logger
+	}
+
+	public void setRollbackOnly() throws IllegalStateException, SystemException {
 		// TODO Auto-generated method stub
-		return false;
+	}
+
+	public void setRollbackOnlyQuietly() {
+		// TODO Auto-generated method stub
+
 	}
 
 	public int getStatus() throws SystemException {
@@ -149,79 +235,29 @@ public class CompensableTransactionImpl implements CompensableTransaction {
 		return 0;
 	}
 
-	public void registerSynchronization(Synchronization sync) throws RollbackException, IllegalStateException, SystemException {
+	public int getTransactionStatus() {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	public void setTransactionStatus(int status) {
 		// TODO Auto-generated method stub
 
 	}
 
-	public void rollback() throws IllegalStateException, SystemException {
-		// TODO Auto-generated method stub
-
+	public boolean isTiming() {
+		return false;
 	}
 
-	public void onPrepareStart(TransactionXid xid) {
-		// TODO Auto-generated method stub
-
+	public void setTransactionTimeout(int seconds) {
 	}
 
-	public void onPrepareSuccess(TransactionXid xid) {
-		// TODO Auto-generated method stub
-
+	public TransactionContext getTransactionContext() {
+		return this.transactionContext;
 	}
 
-	public void onPrepareFailure(TransactionXid xid) {
-		// TODO Auto-generated method stub
-
-	}
-
-	public void onCommitStart(TransactionXid xid) {
-		// TODO Auto-generated method stub
-
-	}
-
-	public void onCommitSuccess(TransactionXid xid) {
-		// TODO Auto-generated method stub
-
-	}
-
-	public void onCommitFailure(TransactionXid xid) {
-		// TODO Auto-generated method stub
-
-	}
-
-	public void onCommitHeuristicMixed(TransactionXid xid) {
-		// TODO Auto-generated method stub
-
-	}
-
-	public void onCommitHeuristicRolledback(TransactionXid xid) {
-		// TODO Auto-generated method stub
-
-	}
-
-	public void onRollbackStart(TransactionXid xid) {
-		// TODO Auto-generated method stub
-
-	}
-
-	public void onRollbackSuccess(TransactionXid xid) {
-		// TODO Auto-generated method stub
-
-	}
-
-	public void onRollbackFailure(TransactionXid xid) {
-		// TODO Auto-generated method stub
-
-	}
-
-	public void setRollbackOnly() throws IllegalStateException, SystemException {
-		// TODO Auto-generated method stub
-
-	}
-
-	public void setBeanFactory(TransactionBeanFactory tbf) {
-		// TODO Auto-generated method stub
-
+	public void setBeanFactory(CompensableBeanFactory tbf) {
+		this.beanFactory = tbf;
 	}
 
 	public Object getTransactionalExtra() {

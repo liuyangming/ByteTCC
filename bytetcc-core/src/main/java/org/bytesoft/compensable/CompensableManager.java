@@ -28,18 +28,9 @@ public interface CompensableManager extends TransactionManager {
 
 	public boolean isCompensePhaseCurrently();
 
-	public void compensableBegin(CompensableTransaction transaction) throws SystemException;
-
 	public void compensableCommit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException,
 			SecurityException, IllegalStateException, SystemException;
 
 	public void compensableRollback() throws IllegalStateException, SecurityException, SystemException;
-
-	public void compensableCommit(CompensableTransaction transaction) throws RollbackException,
-			HeuristicMixedException, HeuristicRollbackException, SecurityException, IllegalStateException,
-			SystemException;
-
-	public void compensableRollback(CompensableTransaction transaction) throws IllegalStateException,
-			SecurityException, SystemException;
 
 }

@@ -19,10 +19,13 @@ import java.lang.reflect.Method;
 
 import org.bytesoft.bytetcc.supports.CompensableInvocationImpl;
 import org.bytesoft.compensable.CompensableInvocationRegistry;
+import org.bytesoft.compensable.CompensableTransaction;
 import org.bytesoft.transaction.TransactionManager;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
-public class CompensableInvocationHandler implements java.lang.reflect.InvocationHandler,
-		net.sf.cglib.proxy.InvocationHandler, org.springframework.cglib.proxy.InvocationHandler {
+public class CompensableInvocationHandler implements java.lang.reflect.InvocationHandler, net.sf.cglib.proxy.InvocationHandler,
+		org.springframework.cglib.proxy.InvocationHandler {
 
 	private String beanName;
 	private Object delegate;
@@ -35,26 +38,48 @@ public class CompensableInvocationHandler implements java.lang.reflect.Invocatio
 	public Object invoke(Object object, Method method, Object[] args) throws Throwable {
 
 		CompensableInvocationRegistry registry = CompensableInvocationRegistry.getInstance();
-		try {
-			CompensableInvocationImpl invocation = new CompensableInvocationImpl();
-			invocation.setMethod(method);
-			invocation.setArgs(args);
-			invocation.setCancellableKey(cancellableKey);
-			invocation.setConfirmableKey(confirmableKey);
-			invocation.setIdentifier(this.beanName);
-			registry.register(invocation);
 
-			if (java.lang.reflect.InvocationHandler.class.isInstance(this.delegate)) {
-				return ((java.lang.reflect.InvocationHandler) this.delegate).invoke(object, method, args);
-			} else if (net.sf.cglib.proxy.InvocationHandler.class.isInstance(this.delegate)) {
-				return ((net.sf.cglib.proxy.InvocationHandler) this.delegate).invoke(object, method, args);
-			} else if (org.springframework.cglib.proxy.InvocationHandler.class.isInstance(this.delegate)) {
-				return ((org.springframework.cglib.proxy.InvocationHandler) this.delegate).invoke(object, method, args);
-			} else {
-				throw new IllegalStateException("Invalid invocation!");
+		CompensableInvocationImpl invocation = new CompensableInvocationImpl();
+		invocation.setMethod(method);
+		invocation.setArgs(args);
+		invocation.setCancellableKey(cancellableKey);
+		invocation.setConfirmableKey(confirmableKey);
+		invocation.setIdentifier(this.beanName);
+
+		Method methodImpl = this.targetClass.getMethod(method.getName(), method.getParameterTypes());
+		Transactional transactional = methodImpl.getAnnotation(Transactional.class);
+		Propagation propagation = transactional.propagation();
+
+		CompensableTransaction transaction = (CompensableTransaction) this.transactionManager.getTransactionQuietly();
+		try {
+			if (transaction == null) {
+				registry.register(invocation);
+			} else if (Propagation.REQUIRED.equals(propagation)) {
+				transaction.registerCompensableInvocation(invocation);
+			} else if (Propagation.REQUIRES_NEW.equals(propagation)) {
+				registry.register(invocation);
+			} else if (Propagation.MANDATORY.equals(propagation)) {
+				transaction.registerCompensableInvocation(invocation);
 			}
+			return this.doInvoke(object, method, args);
 		} finally {
-			registry.unegister();
+			if (transaction == null) {
+				registry.unegister();
+			} else if (Propagation.REQUIRES_NEW.equals(propagation)) {
+				registry.unegister();
+			}
+		}
+	}
+
+	private Object doInvoke(Object object, Method method, Object[] args) throws Throwable {
+		if (java.lang.reflect.InvocationHandler.class.isInstance(this.delegate)) {
+			return ((java.lang.reflect.InvocationHandler) this.delegate).invoke(object, method, args);
+		} else if (net.sf.cglib.proxy.InvocationHandler.class.isInstance(this.delegate)) {
+			return ((net.sf.cglib.proxy.InvocationHandler) this.delegate).invoke(object, method, args);
+		} else if (org.springframework.cglib.proxy.InvocationHandler.class.isInstance(this.delegate)) {
+			return ((org.springframework.cglib.proxy.InvocationHandler) this.delegate).invoke(object, method, args);
+		} else {
+			throw new IllegalStateException("Invalid invocation!");
 		}
 	}
 
