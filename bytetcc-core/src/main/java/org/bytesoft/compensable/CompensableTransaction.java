@@ -22,4 +22,6 @@ public interface CompensableTransaction extends Transaction, TransactionListener
 
 	public Transaction getTransaction();
 
+	public void registerCompensableInvocation(CompensableInvocation invocation);
+
 }

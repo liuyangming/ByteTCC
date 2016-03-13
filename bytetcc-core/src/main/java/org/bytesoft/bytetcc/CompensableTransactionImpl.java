@@ -15,6 +15,9 @@
  */
 package org.bytesoft.bytetcc;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import javax.transaction.HeuristicMixedException;
 import javax.transaction.HeuristicRollbackException;
 import javax.transaction.RollbackException;
@@ -22,7 +25,9 @@ import javax.transaction.Synchronization;
 import javax.transaction.SystemException;
 import javax.transaction.xa.XAResource;
 
+import org.bytesoft.compensable.CompensableInvocation;
 import org.bytesoft.compensable.CompensableTransaction;
+import org.bytesoft.compensable.archive.CompensableArchive;
 import org.bytesoft.transaction.CommitRequiredException;
 import org.bytesoft.transaction.RollbackRequiredException;
 import org.bytesoft.transaction.Transaction;
@@ -36,9 +41,16 @@ public class CompensableTransactionImpl implements CompensableTransaction {
 
 	private Transaction transaction;
 	private TransactionContext transactionContext;
+	private final List<CompensableArchive> archiveList = new ArrayList<CompensableArchive>();
 
 	public CompensableTransactionImpl(TransactionContext txContext) {
 		this.transactionContext = txContext;
+	}
+
+	public void registerCompensableInvocation(CompensableInvocation invocation) {
+		CompensableArchive archive = new CompensableArchive();
+		archive.setCompensable(invocation);
+		this.archiveList.add(archive);
 	}
 
 	public void setRollbackOnlyQuietly() {
@@ -116,8 +128,8 @@ public class CompensableTransactionImpl implements CompensableTransaction {
 
 	}
 
-	public void commit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException,
-			SecurityException, IllegalStateException, SystemException {
+	public void commit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException, SecurityException,
+			IllegalStateException, SystemException {
 		// TODO Auto-generated method stub
 
 	}
@@ -137,13 +149,67 @@ public class CompensableTransactionImpl implements CompensableTransaction {
 		return 0;
 	}
 
-	public void registerSynchronization(Synchronization sync) throws RollbackException, IllegalStateException,
-			SystemException {
+	public void registerSynchronization(Synchronization sync) throws RollbackException, IllegalStateException, SystemException {
 		// TODO Auto-generated method stub
 
 	}
 
 	public void rollback() throws IllegalStateException, SystemException {
+		// TODO Auto-generated method stub
+
+	}
+
+	public void onPrepareStart(TransactionXid xid) {
+		// TODO Auto-generated method stub
+
+	}
+
+	public void onPrepareSuccess(TransactionXid xid) {
+		// TODO Auto-generated method stub
+
+	}
+
+	public void onPrepareFailure(TransactionXid xid) {
+		// TODO Auto-generated method stub
+
+	}
+
+	public void onCommitStart(TransactionXid xid) {
+		// TODO Auto-generated method stub
+
+	}
+
+	public void onCommitSuccess(TransactionXid xid) {
+		// TODO Auto-generated method stub
+
+	}
+
+	public void onCommitFailure(TransactionXid xid) {
+		// TODO Auto-generated method stub
+
+	}
+
+	public void onCommitHeuristicMixed(TransactionXid xid) {
+		// TODO Auto-generated method stub
+
+	}
+
+	public void onCommitHeuristicRolledback(TransactionXid xid) {
+		// TODO Auto-generated method stub
+
+	}
+
+	public void onRollbackStart(TransactionXid xid) {
+		// TODO Auto-generated method stub
+
+	}
+
+	public void onRollbackSuccess(TransactionXid xid) {
+		// TODO Auto-generated method stub
+
+	}
+
+	public void onRollbackFailure(TransactionXid xid) {
 		// TODO Auto-generated method stub
 
 	}
@@ -154,61 +220,6 @@ public class CompensableTransactionImpl implements CompensableTransaction {
 	}
 
 	public void setBeanFactory(TransactionBeanFactory tbf) {
-		// TODO Auto-generated method stub
-
-	}
-
-	public void prepareStart(TransactionXid xid) {
-		// TODO Auto-generated method stub
-
-	}
-
-	public void prepareSuccess(TransactionXid xid) {
-		// TODO Auto-generated method stub
-
-	}
-
-	public void prepareFailure(TransactionXid xid) {
-		// TODO Auto-generated method stub
-
-	}
-
-	public void commitStart(TransactionXid xid) {
-		// TODO Auto-generated method stub
-
-	}
-
-	public void commitSuccess(TransactionXid xid) {
-		// TODO Auto-generated method stub
-
-	}
-
-	public void commitFailure(TransactionXid xid) {
-		// TODO Auto-generated method stub
-
-	}
-
-	public void commitHeuristicMixed(TransactionXid xid) {
-		// TODO Auto-generated method stub
-
-	}
-
-	public void commitHeuristicRolledback(TransactionXid xid) {
-		// TODO Auto-generated method stub
-
-	}
-
-	public void rollbackStart(TransactionXid xid) {
-		// TODO Auto-generated method stub
-
-	}
-
-	public void rollbackSuccess(TransactionXid xid) {
-		// TODO Auto-generated method stub
-
-	}
-
-	public void rollbackFailure(TransactionXid xid) {
 		// TODO Auto-generated method stub
 
 	}
