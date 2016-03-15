@@ -26,17 +26,21 @@ import javax.transaction.SystemException;
 import javax.transaction.xa.XAResource;
 
 import org.apache.log4j.Logger;
+import org.bytesoft.bytejta.supports.resource.RemoteResourceDescriptor;
 import org.bytesoft.common.utils.ByteUtils;
+import org.bytesoft.common.utils.CommonUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableInvocation;
 import org.bytesoft.compensable.CompensableInvocationExecutor;
 import org.bytesoft.compensable.CompensableTransaction;
 import org.bytesoft.compensable.archive.CompensableArchive;
+import org.bytesoft.compensable.archive.TransactionArchive;
+import org.bytesoft.compensable.logger.CompensableLogger;
 import org.bytesoft.transaction.CommitRequiredException;
 import org.bytesoft.transaction.RollbackRequiredException;
 import org.bytesoft.transaction.Transaction;
 import org.bytesoft.transaction.TransactionContext;
-import org.bytesoft.transaction.archive.TransactionArchive;
+import org.bytesoft.transaction.archive.XAResourceArchive;
 import org.bytesoft.transaction.supports.TransactionListener;
 import org.bytesoft.transaction.xa.TransactionXid;
 
@@ -45,9 +49,12 @@ public class CompensableTransactionImpl implements CompensableTransaction {
 
 	private final TransactionContext transactionContext;
 	private final List<CompensableArchive> archiveList = new ArrayList<CompensableArchive>();
+	private final List<XAResourceArchive> resourceList = new ArrayList<XAResourceArchive>();
 	private Transaction transaction;
 	private CompensableBeanFactory beanFactory;
 
+	private int transactionVote;
+	private int transactionStatus;
 	/* current comensable-archive and compense decision. */
 	private transient Boolean decision;
 	private transient CompensableArchive archive;
@@ -57,8 +64,15 @@ public class CompensableTransactionImpl implements CompensableTransaction {
 	}
 
 	public TransactionArchive getTransactionArchive() {
-		// TODO Auto-generated method stub
-		return null;
+		TransactionArchive transactionArchive = new TransactionArchive();
+		transactionArchive.setCoordinator(this.transactionContext.isCoordinator());
+		transactionArchive.setCompensable(this.transactionContext.isCompensable());
+		transactionArchive.setCompensableStatus(this.transactionStatus);
+		transactionArchive.setVote(this.transactionVote);
+		transactionArchive.setXid(this.transactionContext.getXid());
+		transactionArchive.getRemoteResources().addAll(this.resourceList);
+		transactionArchive.getCompensableResourceList().addAll(this.archiveList);
+		return transactionArchive;
 	}
 
 	public void commit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException, SecurityException,
@@ -135,23 +149,40 @@ public class CompensableTransactionImpl implements CompensableTransaction {
 	}
 
 	public boolean enlistResource(XAResource xaRes) throws RollbackException, IllegalStateException, SystemException {
-		// TODO Auto-generated method stub
-		return false;
+		if (RemoteResourceDescriptor.class.isInstance(xaRes) == false) {
+			throw new SystemException("Invalid resource!");
+		}
+		XAResourceArchive resourceArchive = null;
+		RemoteResourceDescriptor descriptor = (RemoteResourceDescriptor) xaRes;
+		String identifier = descriptor.getIdentifier();
+		for (int i = 0; i < this.resourceList.size(); i++) {
+			XAResourceArchive resource = this.resourceList.get(i);
+			String resourceKey = resource.getDescriptor().getIdentifier();
+			if (CommonUtils.equals(identifier, resourceKey)) {
+				resourceArchive = resource;
+				break;
+			}
+		}
+		if (resourceArchive == null) {
+			// resourceArchive.setXid(xid);
+			resourceArchive = new XAResourceArchive();
+			resourceArchive.setDescriptor(descriptor);
+			this.resourceList.add(resourceArchive);
+		}
+
+		return true;
 	}
 
 	public boolean delistResource(XAResource xaRes, int flag) throws IllegalStateException, SystemException {
-		// TODO Auto-generated method stub
-		return false;
+		return true;
 	}
 
 	public void resume() throws SystemException {
-		// TODO Auto-generated method stub
-
+		throw new SystemException();
 	}
 
 	public void suspend() throws SystemException {
-		// TODO Auto-generated method stub
-
+		throw new SystemException();
 	}
 
 	public void registerCompensableInvocation(CompensableInvocation invocation) {
@@ -177,7 +208,8 @@ public class CompensableTransactionImpl implements CompensableTransaction {
 
 	public void onCommitStart(TransactionXid xid) {
 		this.archive.setXid(xid);
-		// TODO logger
+		// CompensableLogger transactionLogger = this.beanFactory.getCompensableLogger();
+		// transactionLogger.updateCompensable(this.archive);
 	}
 
 	public void onCommitSuccess(TransactionXid xid) {
@@ -188,11 +220,11 @@ public class CompensableTransactionImpl implements CompensableTransaction {
 		} else {
 			this.archive.setCancelled(true);
 		}
-		// TODO logger
+		CompensableLogger transactionLogger = this.beanFactory.getCompensableLogger();
+		transactionLogger.updateCompensable(this.archive);
 	}
 
 	public void onCommitFailure(TransactionXid xid) {
-		// TODO logger
 	}
 
 	public void onCommitHeuristicMixed(TransactionXid xid) {
@@ -205,7 +237,8 @@ public class CompensableTransactionImpl implements CompensableTransaction {
 			this.archive.setTxMixed(true);
 			this.archive.setCancelled(true);
 		}
-		// TODO logger
+		CompensableLogger transactionLogger = this.beanFactory.getCompensableLogger();
+		transactionLogger.updateCompensable(this.archive);
 	}
 
 	public void onCommitHeuristicRolledback(TransactionXid xid) {
@@ -218,38 +251,34 @@ public class CompensableTransactionImpl implements CompensableTransaction {
 	}
 
 	public void onRollbackFailure(TransactionXid xid) {
-		// TODO logger
 	}
 
 	public void setRollbackOnly() throws IllegalStateException, SystemException {
-		// TODO Auto-generated method stub
+		throw new IllegalStateException();
 	}
 
 	public void setRollbackOnlyQuietly() {
-		// TODO Auto-generated method stub
-
+		throw new IllegalStateException();
 	}
 
 	public int getStatus() throws SystemException {
-		// TODO Auto-generated method stub
-		return 0;
+		return this.transactionStatus;
 	}
 
 	public int getTransactionStatus() {
-		// TODO Auto-generated method stub
-		return 0;
+		return this.transactionStatus;
 	}
 
 	public void setTransactionStatus(int status) {
-		// TODO Auto-generated method stub
-
+		this.transactionStatus = status;
 	}
 
 	public boolean isTiming() {
-		return false;
+		throw new IllegalStateException();
 	}
 
 	public void setTransactionTimeout(int seconds) {
+		throw new IllegalStateException();
 	}
 
 	public TransactionContext getTransactionContext() {
@@ -270,6 +299,14 @@ public class CompensableTransactionImpl implements CompensableTransaction {
 
 	public Transaction getTransaction() {
 		return (Transaction) this.getTransactionalExtra();
+	}
+
+	public int getTransactionVote() {
+		return transactionVote;
+	}
+
+	public void setTransactionVote(int transactionVote) {
+		this.transactionVote = transactionVote;
 	}
 
 }

@@ -42,8 +42,8 @@ public class CompensableTransactionManager implements TransactionManager, Compen
 		}
 	}
 
-	public void commit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException,
-			SecurityException, IllegalStateException, SystemException {
+	public void commit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException, SecurityException,
+			IllegalStateException, SystemException {
 		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 		if (compensableManager.isCompensePhaseCurrently()) {
@@ -122,12 +122,12 @@ public class CompensableTransactionManager implements TransactionManager, Compen
 	}
 
 	public Transaction getTransactionQuietly() {
-		try {
-			return this.getTransaction();
-		} catch (SystemException ex) {
-			return null;
-		} catch (RuntimeException ex) {
-			return null;
+		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
+		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
+		if (compensableManager.isCompensePhaseCurrently()) {
+			return compensableManager.getTransactionQuietly();
+		} else {
+			return transactionManager.getTransactionQuietly();
 		}
 	}
 
