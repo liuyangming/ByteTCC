@@ -106,8 +106,8 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 
 	}
 
-	public void commit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException, SecurityException,
-			IllegalStateException, SystemException {
+	public void commit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException,
+			SecurityException, IllegalStateException, SystemException {
 		TransactionRepository transactionRepository = this.beanFactory.getTransactionRepository();
 		RemoteCoordinator jtaTransactionCoordinator = this.beanFactory.getTransactionCoordinator();
 
@@ -142,7 +142,8 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 		} finally {
 			transaction.setTransactionalExtra(null);
 
-			if (tccTransactionContext.isCompensable()) {
+			boolean compenseRequired = tccTransactionContext.isCompensable() && tccTransactionContext.isCoordinator();
+			if (compenseRequired) {
 				boolean success = false;
 				try {
 					if (commitExists && rollbackExists) {
@@ -173,8 +174,9 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 
 	}
 
-	public void fireCompensableCommit(CompensableTransaction transaction) throws RollbackException, HeuristicMixedException,
-			HeuristicRollbackException, SecurityException, IllegalStateException, SystemException {
+	public void fireCompensableCommit(CompensableTransaction transaction) throws RollbackException,
+			HeuristicMixedException, HeuristicRollbackException, SecurityException, IllegalStateException,
+			SystemException {
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 		try {
 			compensableManager.associateThread(transaction);
@@ -204,15 +206,16 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 		} finally {
 			transaction.setTransactionalExtra(null);
 
-			if (transactionContext.isCompensable()) {
+			boolean compenseRequired = transactionContext.isCompensable() && transactionContext.isCoordinator();
+			if (compenseRequired) {
 				this.fireCompensableRollback(transaction);
 			}
 		}
 
 	}
 
-	public void fireCompensableRollback(CompensableTransaction transaction) throws IllegalStateException, SecurityException,
-			SystemException {
+	public void fireCompensableRollback(CompensableTransaction transaction) throws IllegalStateException,
+			SecurityException, SystemException {
 		// TransactionContext transactionContext = transaction.getTransactionContext();
 		// TransactionXid xid = transactionContext.getXid();
 		// TransactionRepository transactionRepository = this.beanFactory.getTransactionRepository();

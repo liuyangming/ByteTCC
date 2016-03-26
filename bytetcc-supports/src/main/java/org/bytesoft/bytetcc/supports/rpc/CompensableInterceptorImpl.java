@@ -15,13 +15,23 @@
  */
 package org.bytesoft.bytetcc.supports.rpc;
 
+import javax.transaction.RollbackException;
+import javax.transaction.SystemException;
+import javax.transaction.xa.XAResource;
+
 import org.apache.log4j.Logger;
+import org.bytesoft.bytejta.supports.resource.RemoteResourceDescriptor;
+import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
 import org.bytesoft.compensable.CompensableBeanFactory;
+import org.bytesoft.compensable.CompensableManager;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
+import org.bytesoft.transaction.Transaction;
 import org.bytesoft.transaction.TransactionContext;
+import org.bytesoft.transaction.internal.TransactionException;
 import org.bytesoft.transaction.supports.rpc.TransactionInterceptor;
 import org.bytesoft.transaction.supports.rpc.TransactionRequest;
 import org.bytesoft.transaction.supports.rpc.TransactionResponse;
+import org.bytesoft.transaction.xa.TransactionXid;
 
 public class CompensableInterceptorImpl implements TransactionInterceptor, CompensableBeanFactoryAware {
 	static final Logger logger = Logger.getLogger(CompensableInterceptorImpl.class.getSimpleName());
@@ -29,126 +39,103 @@ public class CompensableInterceptorImpl implements TransactionInterceptor, Compe
 	private CompensableBeanFactory beanFactory;
 
 	public void beforeSendRequest(TransactionRequest request) throws IllegalStateException {
-		// TransactionManager transactionManager = (TransactionManager) this.beanFactory.getCompensableManager();
-		// TccTransactionImpl transaction = (TccTransactionImpl) transactionManager.getTransactionQuietly();
-		// if (transaction != null) {
-		// TransactionContext srcTransactionContext = transaction.getTransactionContext();
-		// TransactionContext transactionContext = srcTransactionContext.clone();
-		// TransactionXid currentXid = srcTransactionContext.getXid();
-		// TransactionXid globalXid = currentXid.getGlobalXid();
-		// transactionContext.setXid(globalXid);
-		// request.setTransactionContext(transactionContext);
-		//
-		// try {
-		// RemoteCoordinator resource = request.getTargetTransactionCoordinator();
-		// RemoteResourceDescriptor descriptor = new RemoteResourceDescriptor();
-		// descriptor.setDelegate(resource);
-		// descriptor.setIdentifier(resource.getIdentifier());
-		//
-		// transaction.enlistResource(descriptor);
-		// } catch (IllegalStateException ex) {
-		// logger.error("CompensableTccTransactionInterceptor.beforeSendRequest(TransactionRequest)", ex);
-		// throw ex;
-		// } catch (RollbackException ex) {
-		// transaction.setRollbackOnlyQuietly();
-		// logger.error("CompensableTccTransactionInterceptor.beforeSendRequest(TransactionRequest)", ex);
-		// throw new IllegalStateException(ex);
-		// } catch (SystemException ex) {
-		// logger.error("CompensableTccTransactionInterceptor.beforeSendRequest(TransactionRequest)", ex);
-		// throw new IllegalStateException(ex);
-		// }
-		// }
+		CompensableManager transactionManager = (CompensableManager) this.beanFactory.getCompensableManager();
+		Transaction transaction = (Transaction) transactionManager.getTransactionQuietly();
+		if (transaction == null) {
+			return;
+		}
+
+		TransactionContext srcTransactionContext = transaction.getTransactionContext();
+		TransactionContext transactionContext = srcTransactionContext.clone();
+		TransactionXid currentXid = srcTransactionContext.getXid();
+		TransactionXid globalXid = currentXid.getGlobalXid();
+		transactionContext.setXid(globalXid);
+		request.setTransactionContext(transactionContext);
+
+		try {
+			RemoteCoordinator resource = request.getTargetTransactionCoordinator();
+			RemoteResourceDescriptor descriptor = new RemoteResourceDescriptor();
+			descriptor.setDelegate(resource);
+			descriptor.setIdentifier(resource.getIdentifier());
+
+			transaction.enlistResource(descriptor);
+		} catch (IllegalStateException ex) {
+			logger.error("CompensableInterceptorImpl.beforeSendRequest(TransactionRequest)", ex);
+			throw ex;
+		} catch (RollbackException ex) {
+			transaction.setRollbackOnlyQuietly();
+			logger.error("CompensableInterceptorImpl.beforeSendRequest(TransactionRequest)", ex);
+			throw new IllegalStateException(ex);
+		} catch (SystemException ex) {
+			logger.error("CompensableInterceptorImpl.beforeSendRequest(TransactionRequest)", ex);
+			throw new IllegalStateException(ex);
+		}
 	}
 
 	public void afterReceiveRequest(TransactionRequest request) throws IllegalStateException {
 		TransactionContext srcTransactionContext = request.getTransactionContext();
-		if (srcTransactionContext != null) {
+		if (srcTransactionContext == null) {
 			return;
 		}
 
-		// CompensableTransactionManager transactionManager = this.beanFactory.getCompensableTransactionManager();
-		// TransactionContext transactionContext = srcTransactionContext.clone();
-		// try {
-		// transactionManager.propagationBegin(transactionContext);
-		// } catch (SystemException ex) {
-		// logger.error("CompensableTccTransactionInterceptor.afterReceiveRequest(TransactionRequest)", ex);
-		// IllegalStateException exception = new IllegalStateException();
-		// exception.initCause(ex);
-		// throw exception;
-		// } catch (NotSupportedException ex) {
-		// logger.error("CompensableTccTransactionInterceptor.afterReceiveRequest(TransactionRequest)", ex);
-		// IllegalStateException exception = new IllegalStateException();
-		// exception.initCause(ex);
-		// throw exception;
-		// }
+		RemoteCoordinator compensableCoordinator = this.beanFactory.getCompensableCoordinator();
+		TransactionContext transactionContext = srcTransactionContext.clone();
+		try {
+			compensableCoordinator.start(transactionContext, XAResource.TMNOFLAGS);
+		} catch (TransactionException ex) {
+			logger.error("CompensableInterceptorImpl.afterReceiveRequest(TransactionRequest)", ex);
+			IllegalStateException exception = new IllegalStateException();
+			exception.initCause(ex);
+			throw exception;
+		}
 
 	}
 
 	public void beforeSendResponse(TransactionResponse response) throws IllegalStateException {
-		// TransactionManager transactionManager = this.beanFactory.getCompensableManager();
-		// TccTransactionImpl transaction = (TccTransactionImpl) transactionManager.getTransactionQuietly();
-		// if (transaction != null) {
-		// return;
-		// }
+		CompensableManager transactionManager = this.beanFactory.getCompensableManager();
+		Transaction transaction = (Transaction) transactionManager.getTransactionQuietly();
+		if (transaction == null) {
+			return;
+		}
 
-		// TransactionContext srcTransactionContext = transaction.getTransactionContext();
-		// TransactionContext transactionContext = srcTransactionContext.clone();
-		// response.setTransactionContext(transactionContext);
-		// try {
-		// transactionManager.propagationFinish(transactionContext);
-		// // } catch (SystemException ex) {
-		// // logger.error("CompensableTccTransactionInterceptor.beforeSendResponse(TransactionResponse)", ex);
-		// // IllegalStateException exception = new IllegalStateException();
-		// // exception.initCause(ex);
-		// // throw exception;
-		// // } catch (HeuristicMixedException ex) {
-		// // } catch (HeuristicRollbackException ex) {
-		// // } catch (RollbackException ex) {
-		// // } catch (RuntimeException ex) {
-		// } catch (Exception ex) {
-		// logger.error("CompensableTccTransactionInterceptor.beforeSendResponse(TransactionResponse)", ex);
-		// IllegalStateException exception = new IllegalStateException();
-		// exception.initCause(ex);
-		// throw exception;
-		// }
+		RemoteCoordinator compensableCoordinator = this.beanFactory.getCompensableCoordinator();
+
+		TransactionContext srcTransactionContext = transaction.getTransactionContext();
+		TransactionContext transactionContext = srcTransactionContext.clone();
+		response.setTransactionContext(transactionContext);
+		try {
+			compensableCoordinator.end(transactionContext, XAResource.TMSUCCESS);
+		} catch (TransactionException ex) {
+			logger.error("CompensableInterceptorImpl.beforeSendResponse(TransactionResponse)", ex);
+			IllegalStateException exception = new IllegalStateException();
+			exception.initCause(ex);
+			throw exception;
+		}
 	}
 
 	public void afterReceiveResponse(TransactionResponse response) throws IllegalStateException {
-		// TransactionManager transactionManager = this.beanFactory.getCompensableManager();
-		// TccTransactionImpl transaction = (TccTransactionImpl) transactionManager.getTransactionQuietly();
-		// if (transaction != null) {
-		// return;
-		// }
+		CompensableManager transactionManager = this.beanFactory.getCompensableManager();
+		TransactionContext remoteTransactionContext = response.getTransactionContext();
+		Transaction transaction = (Transaction) transactionManager.getTransactionQuietly();
+		if (transaction == null || remoteTransactionContext == null) {
+			return;
+		}
 
-		// TransactionContext nativeTransactionContext = transaction.getTransactionContext();
-		// TransactionContext remoteTransactionContext = response.getTransactionContext();
-		// if (remoteTransactionContext != null) {
-		//
-		// TransactionXid currentXid = nativeTransactionContext.getCurrentXid();
-		// byte[] bytes = currentXid.getBranchQualifier();
-		// Object nativeCredential = new TransactionCredential(bytes);
-		// Object remoteCredential = remoteTransactionContext.getPropagated();
-		//
-		// if (nativeCredential.equals(remoteCredential)) {
-		// try {
-		// TransactionResource resource = response.getTransactionResource();
-		//
-		// XAResourceDescriptor descriptor = new XAResourceDescriptor();
-		// descriptor.setDelegate(resource);
-		// descriptor.setIdentifier(resource.getIdentifier());
-		// descriptor.setRemote(true);
-		// descriptor.setSupportsXA(true);
-		//
-		// transaction.delistResource(descriptor, XAResource.TMSUCCESS);
-		// } catch (IllegalStateException ex) {
-		// logger.error("CompensableTccTransactionInterceptor.afterReceiveResponse(TransactionRequest)", ex);
-		// throw ex;
-		// } catch (SystemException ex) {
-		// logger.error("CompensableTccTransactionInterceptor.afterReceiveResponse(TransactionRequest)", ex);
-		// throw new IllegalStateException(ex);
-		// }
-		// }
-		// }
+		try {
+			RemoteCoordinator resource = response.getSourceTransactionCoordinator();
+
+			RemoteResourceDescriptor descriptor = new RemoteResourceDescriptor();
+			descriptor.setDelegate(resource);
+			descriptor.setIdentifier(resource.getIdentifier());
+
+			transaction.delistResource(descriptor, XAResource.TMSUCCESS);
+		} catch (IllegalStateException ex) {
+			logger.error("CompensableInterceptorImpl.afterReceiveResponse(TransactionRequest)", ex);
+			throw ex;
+		} catch (SystemException ex) {
+			logger.error("CompensableInterceptorImpl.afterReceiveResponse(TransactionRequest)", ex);
+			throw new IllegalStateException(ex);
+		}
 	}
 
 	public void setBeanFactory(CompensableBeanFactory tbf) {
