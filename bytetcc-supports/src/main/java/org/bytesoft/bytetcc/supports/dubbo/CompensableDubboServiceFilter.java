@@ -15,14 +15,19 @@
  */
 package org.bytesoft.bytetcc.supports.dubbo;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.lang.reflect.Proxy;
 
+import org.apache.commons.lang3.StringUtils;
 import org.bytesoft.bytejta.supports.dubbo.DubboRemoteCoordinator;
 import org.bytesoft.bytejta.supports.invoke.InvocationContext;
 import org.bytesoft.bytejta.supports.rpc.TransactionRequestImpl;
 import org.bytesoft.bytejta.supports.rpc.TransactionResponseImpl;
 import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
 import org.bytesoft.bytejta.supports.wire.RemoteCoordinatorRegistry;
+import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.transaction.Transaction;
 import org.bytesoft.transaction.TransactionContext;
@@ -36,6 +41,8 @@ import com.alibaba.dubbo.rpc.Invoker;
 import com.alibaba.dubbo.rpc.Result;
 import com.alibaba.dubbo.rpc.RpcContext;
 import com.alibaba.dubbo.rpc.RpcException;
+import com.caucho.hessian.io.HessianInput;
+import com.caucho.hessian.io.HessianOutput;
 
 public class CompensableDubboServiceFilter implements Filter {
 
@@ -55,7 +62,7 @@ public class CompensableDubboServiceFilter implements Filter {
 		TransactionInterceptor transactionInterceptor = beanFactory.getTransactionInterceptor();
 		TransactionManager transactionManager = beanFactory.getCompensableManager();
 		Transaction transaction = transactionManager.getTransactionQuietly();
-		TransactionContext transactionContext = transaction == null ? null : transaction.getTransactionContext();
+		TransactionContext nativeTransactionContext = transaction == null ? null : transaction.getTransactionContext();
 
 		URL targetUrl = invoker.getUrl();
 		String targetAddr = targetUrl.getIp();
@@ -71,27 +78,51 @@ public class CompensableDubboServiceFilter implements Filter {
 			dubboCoordinator.setInvocationContext(invocationContext);
 			dubboCoordinator.setRemoteCoordinator(consumeCoordinator);
 
-			remoteCoordinator = (RemoteCoordinator) Proxy.newProxyInstance(
-					DubboRemoteCoordinator.class.getClassLoader(), new Class[] { RemoteCoordinator.class },
-					dubboCoordinator);
+			remoteCoordinator = (RemoteCoordinator) Proxy.newProxyInstance(DubboRemoteCoordinator.class.getClassLoader(),
+					new Class[] { RemoteCoordinator.class }, dubboCoordinator);
 			remoteCoordinatorRegistry.putTransactionManagerStub(address, remoteCoordinator);
 		}
 
 		Result result = null;
+
 		TransactionRequestImpl request = new TransactionRequestImpl();
-		request.setTransactionContext(transactionContext);
 		request.setTargetTransactionCoordinator(remoteCoordinator);
+
 		TransactionResponseImpl response = new TransactionResponseImpl();
-		response.setTransactionContext(transactionContext);
+		response.setTransactionContext(nativeTransactionContext);
 		response.setSourceTransactionCoordinator(remoteCoordinator);
 		try {
+			String transactionContextContent = RpcContext.getContext().getAttachment(
+					TransactionContext.class.getCanonicalName());
+			if (StringUtils.isNotBlank(transactionContextContent)) {
+				byte[] requestByteArray = ByteUtils.stringToByteArray(transactionContextContent);
+				ByteArrayInputStream bais = new ByteArrayInputStream(requestByteArray);
+				HessianInput input = new HessianInput(bais);
+				TransactionContext remoteTransactionContext = (TransactionContext) input.readObject();
+				request.setTransactionContext(remoteTransactionContext);
+			}
 			transactionInterceptor.afterReceiveRequest(request);
+
 			result = invoker.invoke(invocation);
+
 			transactionInterceptor.beforeSendResponse(response);
+			if (StringUtils.isNotBlank(transactionContextContent)) {
+				ByteArrayOutputStream baos = new ByteArrayOutputStream();
+				HessianOutput output = new HessianOutput(baos);
+				output.writeObject(nativeTransactionContext);
+				String nativeTansactionContextContent = ByteUtils.byteArrayToString(baos.toByteArray());
+				RpcContext.getContext().setAttachment(TransactionContext.class.getCanonicalName(),
+						nativeTansactionContextContent);
+			}
+		} catch (IOException ex) {
+			// TODO
+			ex.printStackTrace();
 		} catch (RpcException rex) {
 			// TODO
+			rex.printStackTrace();
 		} catch (RuntimeException rex) {
 			// TODO
+			rex.printStackTrace();
 		}
 		return result;
 	}
@@ -104,7 +135,7 @@ public class CompensableDubboServiceFilter implements Filter {
 		TransactionInterceptor transactionInterceptor = beanFactory.getTransactionInterceptor();
 		TransactionManager transactionManager = beanFactory.getCompensableManager();
 		Transaction transaction = transactionManager.getTransactionQuietly();
-		TransactionContext transactionContext = transaction == null ? null : transaction.getTransactionContext();
+		TransactionContext nativeTransactionContext = transaction == null ? null : transaction.getTransactionContext();
 
 		URL targetUrl = invoker.getUrl();
 		String targetAddr = targetUrl.getIp();
@@ -120,27 +151,50 @@ public class CompensableDubboServiceFilter implements Filter {
 			dubboCoordinator.setInvocationContext(invocationContext);
 			dubboCoordinator.setRemoteCoordinator(consumeCoordinator);
 
-			remoteCoordinator = (RemoteCoordinator) Proxy.newProxyInstance(
-					DubboRemoteCoordinator.class.getClassLoader(), new Class[] { RemoteCoordinator.class },
-					dubboCoordinator);
+			remoteCoordinator = (RemoteCoordinator) Proxy.newProxyInstance(DubboRemoteCoordinator.class.getClassLoader(),
+					new Class[] { RemoteCoordinator.class }, dubboCoordinator);
 			remoteCoordinatorRegistry.putTransactionManagerStub(address, remoteCoordinator);
 		}
 
 		Result result = null;
+
 		TransactionRequestImpl request = new TransactionRequestImpl();
-		request.setTransactionContext(transactionContext);
+		request.setTransactionContext(nativeTransactionContext);
 		request.setTargetTransactionCoordinator(remoteCoordinator);
+
 		TransactionResponseImpl response = new TransactionResponseImpl();
-		response.setTransactionContext(transactionContext);
 		response.setSourceTransactionCoordinator(remoteCoordinator);
 		try {
 			transactionInterceptor.beforeSendRequest(request);
+			if (request.getTransactionContext() != null) {
+				ByteArrayOutputStream baos = new ByteArrayOutputStream();
+				HessianOutput output = new HessianOutput(baos);
+				output.writeObject(request.getTransactionContext());
+				String transactionContextContent = ByteUtils.byteArrayToString(baos.toByteArray());
+				RpcContext.getContext().setAttachment(TransactionContext.class.getCanonicalName(), transactionContextContent);
+			}
+
 			result = invoker.invoke(invocation);
+
+			if (request.getTransactionContext() != null) {
+				String transactionContextContent = RpcContext.getContext().getAttachment(
+						TransactionContext.class.getCanonicalName());
+				byte[] byteArray = ByteUtils.stringToByteArray(transactionContextContent);
+				ByteArrayInputStream bais = new ByteArrayInputStream(byteArray);
+				HessianInput input = new HessianInput(bais);
+				TransactionContext remoteTransactionContext = (TransactionContext) input.readObject();
+				response.setTransactionContext(remoteTransactionContext);
+			}
 			transactionInterceptor.afterReceiveResponse(response);
+		} catch (IOException ex) {
+			// TODO
+			ex.printStackTrace();
 		} catch (RpcException rex) {
 			// TODO
+			rex.printStackTrace();
 		} catch (RuntimeException rex) {
 			// TODO
+			rex.printStackTrace();
 		}
 		return result;
 	}
