@@ -32,6 +32,7 @@ import org.bytesoft.transaction.supports.rpc.TransactionInterceptor;
 import org.bytesoft.transaction.supports.rpc.TransactionRequest;
 import org.bytesoft.transaction.supports.rpc.TransactionResponse;
 import org.bytesoft.transaction.xa.TransactionXid;
+import org.bytesoft.transaction.xa.XidFactory;
 
 public class CompensableInterceptorImpl implements TransactionInterceptor, CompensableBeanFactoryAware {
 	static final Logger logger = Logger.getLogger(CompensableInterceptorImpl.class.getSimpleName());
@@ -40,6 +41,7 @@ public class CompensableInterceptorImpl implements TransactionInterceptor, Compe
 
 	public void beforeSendRequest(TransactionRequest request) throws IllegalStateException {
 		TransactionManager transactionManager = (TransactionManager) this.beanFactory.getTransactionManager();
+		XidFactory xidFactory = this.beanFactory.getCompensableXidFactory();
 		Transaction transaction = (Transaction) transactionManager.getTransactionQuietly();
 		if (transaction == null) {
 			return;
@@ -48,7 +50,7 @@ public class CompensableInterceptorImpl implements TransactionInterceptor, Compe
 		TransactionContext srcTransactionContext = transaction.getTransactionContext();
 		TransactionContext transactionContext = srcTransactionContext.clone();
 		TransactionXid currentXid = srcTransactionContext.getXid();
-		TransactionXid globalXid = currentXid.getGlobalXid();
+		TransactionXid globalXid = xidFactory.createGlobalXid(currentXid.getGlobalTransactionId());
 		transactionContext.setXid(globalXid);
 		request.setTransactionContext(transactionContext);
 

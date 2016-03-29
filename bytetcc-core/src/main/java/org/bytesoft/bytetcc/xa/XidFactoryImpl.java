@@ -20,31 +20,27 @@ import org.bytesoft.transaction.xa.XidFactory;
 
 public class XidFactoryImpl extends org.bytesoft.bytejta.xa.XidFactoryImpl implements XidFactory {
 
-	public int getFormatId() {
-		return XidFactory.TCC_FORMAT_ID;
-	}
-
 	public TransactionXid createGlobalXid() {
 		TransactionXid xid = super.createGlobalXid();
-		xid.setXidFactory(this);
+		xid.setFormatId(XidFactory.TCC_FORMAT_ID);
 		return xid;
 	}
 
 	public TransactionXid createGlobalXid(byte[] globalTransactionId) {
 		TransactionXid xid = super.createGlobalXid(globalTransactionId);
-		xid.setXidFactory(this);
+		xid.setFormatId(XidFactory.TCC_FORMAT_ID);
 		return xid;
 	}
 
 	public TransactionXid createBranchXid(TransactionXid globalXid) {
 		TransactionXid xid = super.createBranchXid(globalXid);
-		xid.setXidFactory(this);
+		xid.setFormatId(XidFactory.TCC_FORMAT_ID);
 		return xid;
 	}
 
 	public TransactionXid createBranchXid(TransactionXid globalXid, byte[] branchQualifier) {
 		TransactionXid xid = super.createBranchXid(globalXid, branchQualifier);
-		xid.setXidFactory(this);
+		xid.setFormatId(XidFactory.TCC_FORMAT_ID);
 		return xid;
 	}
 

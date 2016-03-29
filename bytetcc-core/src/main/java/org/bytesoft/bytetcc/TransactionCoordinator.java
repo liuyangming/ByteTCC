@@ -15,6 +15,10 @@
  */
 package org.bytesoft.bytetcc;
 
+import javax.transaction.HeuristicMixedException;
+import javax.transaction.HeuristicRollbackException;
+import javax.transaction.RollbackException;
+import javax.transaction.SystemException;
 import javax.transaction.xa.XAException;
 import javax.transaction.xa.XAResource;
 import javax.transaction.xa.Xid;
@@ -22,11 +26,15 @@ import javax.transaction.xa.Xid;
 import org.apache.log4j.Logger;
 import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
 import org.bytesoft.compensable.CompensableBeanFactory;
+import org.bytesoft.compensable.CompensableTransaction;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 import org.bytesoft.transaction.Transaction;
 import org.bytesoft.transaction.TransactionContext;
 import org.bytesoft.transaction.TransactionManager;
+import org.bytesoft.transaction.TransactionRepository;
 import org.bytesoft.transaction.internal.TransactionException;
+import org.bytesoft.transaction.xa.TransactionXid;
+import org.bytesoft.transaction.xa.XidFactory;
 
 public class TransactionCoordinator implements RemoteCoordinator, CompensableBeanFactoryAware {
 	static final Logger logger = Logger.getLogger(TransactionCoordinator.class.getSimpleName());
@@ -43,8 +51,21 @@ public class TransactionCoordinator implements RemoteCoordinator, CompensableBea
 	}
 
 	public Transaction start(TransactionContext transactionContext, int flags) throws TransactionException {
-		// TODO
-		return null;
+		TransactionRepository transactionRepository = this.beanFactory.getTransactionRepository();
+		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
+		if (transactionManager.getTransactionQuietly() != null) {
+			throw new TransactionException(XAException.XAER_PROTO);
+		}
+
+		TransactionXid globalXid = transactionContext.getXid();
+		Transaction transaction = transactionRepository.getTransaction(globalXid);
+		if (transaction == null) {
+			transaction = new CompensableTransactionImpl(transactionContext);
+			((CompensableTransactionImpl) transaction).setBeanFactory(this.beanFactory);
+			transactionRepository.putTransaction(globalXid, transaction);
+		}
+		transactionManager.associateThread(transaction);
+		return transaction;
 	}
 
 	public Transaction end(TransactionContext transactionContext, int flags) throws TransactionException {
@@ -59,6 +80,34 @@ public class TransactionCoordinator implements RemoteCoordinator, CompensableBea
 	}
 
 	public void commit(Xid xid, boolean onePhase) throws XAException {
+		TransactionRepository transactionRepository = this.beanFactory.getTransactionRepository();
+		XidFactory xidFactory = this.beanFactory.getCompensableXidFactory();
+		TransactionXid globalXid = xidFactory.createGlobalXid(xid.getGlobalTransactionId());
+		CompensableTransaction transaction = (CompensableTransaction) transactionRepository.getTransaction(globalXid);
+		if (transaction == null) {
+			throw new XAException(XAException.XAER_NOTA); // TODO
+		}
+		try {
+			transaction.commit();
+		} catch (SecurityException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IllegalStateException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (RollbackException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (HeuristicMixedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (HeuristicRollbackException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (SystemException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 	public void forget(Xid xid) throws XAException {
@@ -81,6 +130,22 @@ public class TransactionCoordinator implements RemoteCoordinator, CompensableBea
 	}
 
 	public void rollback(Xid xid) throws XAException {
+		TransactionRepository transactionRepository = this.beanFactory.getTransactionRepository();
+		XidFactory xidFactory = this.beanFactory.getCompensableXidFactory();
+		TransactionXid globalXid = xidFactory.createGlobalXid(xid.getGlobalTransactionId());
+		CompensableTransaction transaction = (CompensableTransaction) transactionRepository.getTransaction(globalXid);
+		if (transaction == null) {
+			throw new XAException(XAException.XAER_NOTA); // TODO
+		}
+		try {
+			transaction.rollback();
+		} catch (IllegalStateException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (SystemException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 	public boolean setTransactionTimeout(int seconds) throws XAException {

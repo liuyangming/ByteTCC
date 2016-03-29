@@ -66,9 +66,13 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 		TransactionXid jtaTransactionXid = jtaXidFactory.createGlobalXid(tccTransactionXid.getGlobalTransactionId());
 
 		TransactionContext transactionContext = new TransactionContext();
-		transactionContext.setXid(tccTransactionXid);
-		CompensableTransactionImpl transaction = new CompensableTransactionImpl(transactionContext);
-		transaction.setBeanFactory(this.beanFactory);
+		CompensableTransactionImpl transaction = (CompensableTransactionImpl) this.getTransactionQuietly();
+		if (transaction == null) {
+			transactionContext.setCoordinator(true);
+			transactionContext.setXid(tccTransactionXid);
+			transaction = new CompensableTransactionImpl(transactionContext);
+			transaction.setBeanFactory(this.beanFactory);
+		}
 
 		TransactionContext jtaTransactionContext = new TransactionContext();
 		long current = System.currentTimeMillis();
@@ -111,13 +115,19 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 		TransactionRepository transactionRepository = this.beanFactory.getTransactionRepository();
 		RemoteCoordinator jtaTransactionCoordinator = this.beanFactory.getTransactionCoordinator();
 
-		CompensableTransaction transaction = this.desociateThread();
+		CompensableTransaction transaction = this.getTransactionQuietly();
 		Transaction jtaTransaction = transaction.getTransaction();
 		TransactionContext tccTransactionContext = transaction.getTransactionContext();
 		TransactionContext jtaTransactionContext = jtaTransaction.getTransactionContext();
 
 		TransactionXid jtaTransactionXid = jtaTransactionContext.getXid();
 		// TransactionXid tccTransactionXid = tccTransactionContext.getXid();
+
+		boolean coordinator = tccTransactionContext.isCoordinator();
+		boolean compensable = tccTransactionContext.isCompensable();
+		if (coordinator) {
+			this.desociateThread();
+		}
 
 		boolean commitExists = false;
 		boolean rollbackExists = false;
@@ -142,8 +152,7 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 		} finally {
 			transaction.setTransactionalExtra(null);
 
-			boolean compenseRequired = tccTransactionContext.isCompensable() && tccTransactionContext.isCoordinator();
-			if (compenseRequired) {
+			if (compensable && coordinator) {
 				boolean success = false;
 				try {
 					if (commitExists && rollbackExists) {
@@ -263,9 +272,9 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 		return this.transactionMap.remove(Thread.currentThread());
 	}
 
-	public Transaction getTransactionQuietly() {
+	public CompensableTransaction getTransactionQuietly() {
 		try {
-			return this.getTransaction();
+			return (CompensableTransaction) this.getTransaction();
 		} catch (SystemException ex) {
 			return null;
 		} catch (RuntimeException ex) {

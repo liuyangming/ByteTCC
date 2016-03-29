@@ -23,6 +23,7 @@ import javax.transaction.HeuristicRollbackException;
 import javax.transaction.RollbackException;
 import javax.transaction.Synchronization;
 import javax.transaction.SystemException;
+import javax.transaction.xa.XAException;
 import javax.transaction.xa.XAResource;
 
 import org.apache.log4j.Logger;
@@ -43,6 +44,7 @@ import org.bytesoft.transaction.TransactionContext;
 import org.bytesoft.transaction.archive.XAResourceArchive;
 import org.bytesoft.transaction.supports.TransactionListener;
 import org.bytesoft.transaction.xa.TransactionXid;
+import org.bytesoft.transaction.xa.XidFactory;
 
 public class CompensableTransactionImpl implements CompensableTransaction {
 	static final Logger logger = Logger.getLogger(CompensableTransactionImpl.class.getSimpleName());
@@ -77,6 +79,11 @@ public class CompensableTransactionImpl implements CompensableTransaction {
 
 	public void commit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException, SecurityException,
 			IllegalStateException, SystemException {
+		this.fireCompensableInvocationConfirm();
+		this.fireRemoteCoordinatorConfirm();
+	}
+
+	private void fireCompensableInvocationConfirm() {
 		CompensableInvocationExecutor executor = this.beanFactory.getCompensableInvocationExecutor();
 		for (int i = 0; i < this.archiveList.size(); i++) {
 			CompensableArchive current = this.archiveList.get(i);
@@ -100,6 +107,35 @@ public class CompensableTransactionImpl implements CompensableTransaction {
 		}
 	}
 
+	private void fireRemoteCoordinatorConfirm() {
+		for (int i = 0; i < this.resourceList.size(); i++) {
+			XAResourceArchive current = this.resourceList.get(i);
+			if (current.isCommitted()) {
+				continue;
+			}
+
+			CompensableLogger transactionLogger = this.beanFactory.getCompensableLogger();
+			XidFactory xidFactory = this.beanFactory.getCompensableXidFactory();
+			TransactionXid branchXid = (TransactionXid) current.getXid();
+			TransactionXid globalXid = xidFactory.createGlobalXid(branchXid.getGlobalTransactionId());
+			try {
+				current.commit(globalXid, true);
+				current.setCommitted(true);
+				current.setCompleted(true);
+				transactionLogger.updateCoordinator(current);
+			} catch (XAException ex) {
+				logger.error(
+						String.format("[%s] commit-transaction: error occurred while confirming branch: %s",
+								ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()), this.archive), ex);
+			} catch (RuntimeException rex) {
+				TransactionXid transactionXid = this.transactionContext.getXid();
+				logger.error(
+						String.format("[%s] commit-transaction: error occurred while confirming service: %s",
+								ByteUtils.byteArrayToString(transactionXid.getGlobalTransactionId()), this.archive), rex);
+			}
+		}
+	}
+
 	public void participantPrepare() throws RollbackRequiredException, CommitRequiredException {
 		throw new RuntimeException("Not supported!");
 	}
@@ -110,6 +146,11 @@ public class CompensableTransactionImpl implements CompensableTransaction {
 	}
 
 	public void rollback() throws IllegalStateException, SystemException {
+		this.fireCompensableInvocationCancel();
+		this.fireRemoteCoordinatorCancel();
+	}
+
+	public void fireCompensableInvocationCancel() {
 		CompensableInvocationExecutor executor = this.beanFactory.getCompensableInvocationExecutor();
 		for (int i = 0; i < this.archiveList.size(); i++) {
 			CompensableArchive current = this.archiveList.get(i);
@@ -124,11 +165,40 @@ public class CompensableTransactionImpl implements CompensableTransaction {
 			} catch (RuntimeException rex) {
 				TransactionXid transactionXid = this.transactionContext.getXid();
 				logger.error(
-						String.format("[%s] commit-transaction: error occurred while cancelling service: %s",
+						String.format("[%s] rollback-transaction: error occurred while cancelling service: %s",
 								ByteUtils.byteArrayToString(transactionXid.getGlobalTransactionId()), this.archive), rex);
 			} finally {
 				this.archive = null;
 				this.decision = null;
+			}
+		}
+	}
+
+	private void fireRemoteCoordinatorCancel() {
+		for (int i = 0; i < this.resourceList.size(); i++) {
+			XAResourceArchive current = this.resourceList.get(i);
+			if (current.isRolledback()) {
+				continue;
+			}
+
+			CompensableLogger transactionLogger = this.beanFactory.getCompensableLogger();
+			XidFactory xidFactory = this.beanFactory.getCompensableXidFactory();
+			TransactionXid branchXid = (TransactionXid) current.getXid();
+			TransactionXid globalXid = xidFactory.createGlobalXid(branchXid.getGlobalTransactionId());
+			try {
+				current.rollback(globalXid);
+				current.setRolledback(true);
+				current.setCompleted(true);
+				transactionLogger.updateCoordinator(current);
+			} catch (XAException ex) {
+				logger.error(
+						String.format("[%s] rollback-transaction: error occurred while cancelling branch: %s",
+								ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()), this.archive), ex);
+			} catch (RuntimeException rex) {
+				TransactionXid transactionXid = this.transactionContext.getXid();
+				logger.error(
+						String.format("[%s] rollback-transaction: error occurred while cancelling service: %s",
+								ByteUtils.byteArrayToString(transactionXid.getGlobalTransactionId()), this.archive), rex);
 			}
 		}
 	}
@@ -164,8 +234,11 @@ public class CompensableTransactionImpl implements CompensableTransaction {
 			}
 		}
 		if (resourceArchive == null) {
-			// resourceArchive.setXid(xid);
+			XidFactory xidFactory = this.beanFactory.getCompensableXidFactory();
+			TransactionXid globalXid = this.transactionContext.getXid();
+			TransactionXid branchXid = xidFactory.createBranchXid(globalXid);
 			resourceArchive = new XAResourceArchive();
+			resourceArchive.setXid(branchXid);
 			resourceArchive.setDescriptor(descriptor);
 			this.resourceList.add(resourceArchive);
 		}
