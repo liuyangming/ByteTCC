@@ -85,28 +85,26 @@ public class TransactionCoordinator implements RemoteCoordinator, CompensableBea
 		TransactionXid globalXid = xidFactory.createGlobalXid(xid.getGlobalTransactionId());
 		CompensableTransaction transaction = (CompensableTransaction) transactionRepository.getTransaction(globalXid);
 		if (transaction == null) {
-			throw new XAException(XAException.XAER_NOTA); // TODO
+			throw new XAException(XAException.XAER_NOTA);
 		}
 		try {
 			transaction.commit();
-		} catch (SecurityException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IllegalStateException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (RollbackException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (HeuristicMixedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (HeuristicRollbackException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (SystemException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			transactionRepository.removeErrorTransaction(globalXid);
+			transactionRepository.removeTransaction(globalXid);
+		} catch (SecurityException ex) {
+			throw new XAException(XAException.XAER_RMERR);
+		} catch (IllegalStateException ex) {
+			throw new XAException(XAException.XAER_RMERR);
+		} catch (RollbackException ex) {
+			throw new XAException(XAException.XA_HEURRB);
+		} catch (HeuristicMixedException ex) {
+			throw new XAException(XAException.XA_HEURMIX);
+		} catch (HeuristicRollbackException ex) {
+			throw new XAException(XAException.XA_HEURRB);
+		} catch (SystemException ex) {
+			throw new XAException(XAException.XAER_RMERR);
+		} catch (RuntimeException ex) {
+			throw new XAException(XAException.XAER_RMERR);
 		}
 	}
 
@@ -135,16 +133,18 @@ public class TransactionCoordinator implements RemoteCoordinator, CompensableBea
 		TransactionXid globalXid = xidFactory.createGlobalXid(xid.getGlobalTransactionId());
 		CompensableTransaction transaction = (CompensableTransaction) transactionRepository.getTransaction(globalXid);
 		if (transaction == null) {
-			throw new XAException(XAException.XAER_NOTA); // TODO
+			throw new XAException(XAException.XAER_NOTA);
 		}
 		try {
 			transaction.rollback();
-		} catch (IllegalStateException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (SystemException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			transactionRepository.removeErrorTransaction(globalXid);
+			transactionRepository.removeTransaction(globalXid);
+		} catch (IllegalStateException ex) {
+			throw new XAException(XAException.XAER_RMERR);
+		} catch (SystemException ex) {
+			throw new XAException(XAException.XAER_RMERR);
+		} catch (RuntimeException ex) {
+			throw new XAException(XAException.XAER_RMERR);
 		}
 	}
 
