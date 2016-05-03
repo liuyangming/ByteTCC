@@ -35,11 +35,13 @@ public class CompensableTransactionManager implements TransactionManager, Compen
 	public void begin() throws NotSupportedException, SystemException {
 		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
+		boolean compensableTransaction = compensableManager.isCompensableTransaction();
+		boolean compensePhaseCurrently = compensableManager.isCompensePhaseCurrently();
 		(compensableManager.isCompensePhaseCurrently() ? compensableManager : transactionManager).begin();
 	}
 
-	public void commit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException,
-			SecurityException, IllegalStateException, SystemException {
+	public void commit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException, SecurityException,
+			IllegalStateException, SystemException {
 		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 		(compensableManager.isCompensePhaseCurrently() ? compensableManager : transactionManager).commit();
@@ -103,8 +105,7 @@ public class CompensableTransactionManager implements TransactionManager, Compen
 	public Transaction getTransaction() throws SystemException {
 		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
-		return (compensableManager.isCompensePhaseCurrently() ? compensableManager : transactionManager)
-				.getTransaction();
+		return (compensableManager.isCompensePhaseCurrently() ? compensableManager : transactionManager).getTransaction();
 	}
 
 	public Transaction suspend() throws SystemException {

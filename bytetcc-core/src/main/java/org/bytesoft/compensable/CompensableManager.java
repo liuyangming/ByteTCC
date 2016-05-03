@@ -26,6 +26,8 @@ public interface CompensableManager extends TransactionManager {
 
 	public CompensableTransaction getCompensableTransactionQuietly();
 
+	public boolean isCompensableTransaction();
+
 	public boolean isCompensePhaseCurrently();
 
 	public void compensableCommit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException,

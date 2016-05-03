@@ -230,6 +230,15 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 
 	}
 
+	public boolean isCompensableTransaction() {
+		CompensableTransaction transaction = this.transactionMap.get(Thread.currentThread());
+		if (transaction == null) {
+			return false;
+		}
+		TransactionContext transactionContext = transaction.getTransactionContext();
+		return transactionContext.isCompensable();
+	}
+
 	public boolean isCompensePhaseCurrently() {
 		CompensableTransaction transaction = this.transactionMap.get(Thread.currentThread());
 		return transaction != null;
