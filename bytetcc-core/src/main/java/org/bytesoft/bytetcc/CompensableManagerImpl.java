@@ -41,23 +41,27 @@ import org.bytesoft.transaction.internal.TransactionException;
 import org.bytesoft.transaction.xa.TransactionXid;
 import org.bytesoft.transaction.xa.XidFactory;
 
-/**
- * The compensable transaction manager implementation in the confirm/cancel phase.
- * 
- * @author liuyangming
- */
 public class CompensableManagerImpl implements CompensableManager, CompensableBeanFactoryAware {
 	static final Logger logger = Logger.getLogger(CompensableManagerImpl.class.getSimpleName());
 
 	private CompensableBeanFactory beanFactory;
-	private final Map<Thread, CompensableTransaction> transactionMap = new ConcurrentHashMap<Thread, CompensableTransaction>();
+	private final Map<Thread, Transaction> compensableMap = new ConcurrentHashMap<Thread, Transaction>();
+	private final Map<Thread, Transaction> transactionMap = new ConcurrentHashMap<Thread, Transaction>();
 
 	public void associateThread(Transaction transaction) {
 		this.transactionMap.put(Thread.currentThread(), (CompensableTransaction) transaction);
 	}
 
-	public CompensableTransaction desociateThread() {
+	public Transaction desociateThread() {
 		return this.transactionMap.remove(Thread.currentThread());
+	}
+
+	public void compensableAssociateThread(CompensableTransaction transaction) {
+		this.compensableMap.put(Thread.currentThread(), (CompensableTransaction) transaction);
+	}
+
+	public CompensableTransaction compensableDesociateThread() {
+		return (CompensableTransaction) this.compensableMap.remove(Thread.currentThread());
 	}
 
 	public int getStatus() throws SystemException {
@@ -76,17 +80,16 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 	}
 
 	public Transaction getTransaction() throws SystemException {
-		CompensableTransaction transaction = this.transactionMap.get(Thread.currentThread());
-		return transaction == null ? null : transaction.getTransaction();
+		return this.transactionMap.get(Thread.currentThread());
 	}
 
 	public CompensableTransaction getCompensableTransactionQuietly() {
-		return this.transactionMap.get(Thread.currentThread());
+		return (CompensableTransaction) this.compensableMap.get(Thread.currentThread());
 	}
 
 	public void resume(javax.transaction.Transaction tobj) throws InvalidTransactionException, IllegalStateException,
 			SystemException {
-		CompensableTransaction transaction = this.transactionMap.get(Thread.currentThread());
+		CompensableTransaction transaction = (CompensableTransaction) this.compensableMap.get(Thread.currentThread());
 		if (transaction == null || transaction.getTransaction() != null) {
 			throw new IllegalStateException();
 		}
@@ -100,7 +103,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 	}
 
 	public Transaction suspend() throws SystemException {
-		CompensableTransaction transaction = this.transactionMap.get(Thread.currentThread());
+		CompensableTransaction transaction = (CompensableTransaction) this.compensableMap.get(Thread.currentThread());
 		Transaction jtaTransaction = transaction == null ? null : transaction.getTransaction();
 		if (jtaTransaction == null) {
 			throw new SystemException();
@@ -155,7 +158,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 
 	public void commit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException, SecurityException,
 			IllegalStateException, SystemException {
-		CompensableTransaction transaction = this.transactionMap.get(Thread.currentThread());
+		CompensableTransaction transaction = (CompensableTransaction) this.compensableMap.get(Thread.currentThread());
 		if (transaction == null) {
 			throw new IllegalStateException();
 		} else if (transaction.getTransaction() == null) {
@@ -203,7 +206,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 	}
 
 	public void rollback() throws IllegalStateException, SecurityException, SystemException {
-		CompensableTransaction transaction = this.transactionMap.get(Thread.currentThread());
+		CompensableTransaction transaction = (CompensableTransaction) this.compensableMap.get(Thread.currentThread());
 		if (transaction == null) {
 			throw new IllegalStateException();
 		} else if (transaction.getTransaction() == null) {
@@ -231,7 +234,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 	}
 
 	public boolean isCompensableTransaction() {
-		CompensableTransaction transaction = this.transactionMap.get(Thread.currentThread());
+		CompensableTransaction transaction = (CompensableTransaction) this.compensableMap.get(Thread.currentThread());
 		if (transaction == null) {
 			return false;
 		}
@@ -240,8 +243,11 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 	}
 
 	public boolean isCompensePhaseCurrently() {
-		CompensableTransaction transaction = this.transactionMap.get(Thread.currentThread());
-		return transaction != null;
+		CompensableTransaction transaction = (CompensableTransaction) this.compensableMap.get(Thread.currentThread());
+		if (transaction == null) {
+			return false;
+		}
+		return transaction.getTransactionContext().isCompensating();
 	}
 
 	public void compensableCommit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException,

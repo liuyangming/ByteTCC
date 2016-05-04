@@ -23,60 +23,88 @@ import javax.transaction.RollbackException;
 import javax.transaction.SystemException;
 
 import org.bytesoft.compensable.CompensableBeanFactory;
+import org.bytesoft.compensable.CompensableInvocation;
+import org.bytesoft.compensable.CompensableInvocationRegistry;
 import org.bytesoft.compensable.CompensableManager;
+import org.bytesoft.compensable.CompensableTransaction;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 import org.bytesoft.transaction.Transaction;
+import org.bytesoft.transaction.TransactionContext;
 import org.bytesoft.transaction.TransactionManager;
 
-public class CompensableTransactionManager implements TransactionManager, CompensableBeanFactoryAware {
+public class TransactionManagerCore implements TransactionManager, CompensableBeanFactoryAware {
 
 	private CompensableBeanFactory beanFactory;
 
 	public void begin() throws NotSupportedException, SystemException {
 		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
-		boolean compensableTransaction = compensableManager.isCompensableTransaction();
-		boolean compensePhaseCurrently = compensableManager.isCompensePhaseCurrently();
-		(compensableManager.isCompensePhaseCurrently() ? compensableManager : transactionManager).begin();
+
+		CompensableInvocationRegistry registry = CompensableInvocationRegistry.getInstance();
+		CompensableInvocation invocation = registry.getCurrent();
+
+		CompensableTransaction compensableTransaction = compensableManager.getCompensableTransactionQuietly();
+
+		if (invocation != null && invocation.isAvailable()) {
+			invocation.markUnavailable();
+
+			compensableManager.begin();
+			Transaction transaction = compensableManager.getTransactionQuietly();
+			TransactionContext transactionContext = transaction.getTransactionContext();
+
+			transactionContext.setCompensable(true);
+			((CompensableTransaction) transaction).registerCompensableInvocation(invocation);
+		} else {
+			transactionManager.begin();
+			Transaction transaction = compensableManager.getTransactionQuietly();
+			transaction.setTransactionalExtra(compensableTransaction);
+			compensableTransaction.setTransactionalExtra(transaction);
+		}
+
 	}
 
 	public void commit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException, SecurityException,
 			IllegalStateException, SystemException {
 		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
-		(compensableManager.isCompensePhaseCurrently() ? compensableManager : transactionManager).commit();
+		boolean isCompensableTransaction = compensableManager.isCompensableTransaction();
+		(isCompensableTransaction ? compensableManager : transactionManager).commit();
 	}
 
 	public int getStatus() throws SystemException {
 		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
-		return (compensableManager.isCompensePhaseCurrently() ? compensableManager : transactionManager).getStatus();
+		boolean isCompensableTransaction = compensableManager.isCompensableTransaction();
+		return (isCompensableTransaction ? compensableManager : transactionManager).getStatus();
 	}
 
 	public void resume(javax.transaction.Transaction tobj) throws InvalidTransactionException, IllegalStateException,
 			SystemException {
 		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
-		(compensableManager.isCompensePhaseCurrently() ? compensableManager : transactionManager).resume(tobj);
+		boolean isCompensableTransaction = compensableManager.isCompensableTransaction();
+		(isCompensableTransaction ? compensableManager : transactionManager).resume(tobj);
 	}
 
 	public void rollback() throws IllegalStateException, SecurityException, SystemException {
 		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
-		(compensableManager.isCompensePhaseCurrently() ? compensableManager : transactionManager).rollback();
+		boolean isCompensableTransaction = compensableManager.isCompensableTransaction();
+		(isCompensableTransaction ? compensableManager : transactionManager).rollback();
 	}
 
 	public void setRollbackOnly() throws IllegalStateException, SystemException {
 		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
-		(compensableManager.isCompensePhaseCurrently() ? compensableManager : transactionManager).setRollbackOnly();
+		boolean isCompensableTransaction = compensableManager.isCompensableTransaction();
+		(isCompensableTransaction ? compensableManager : transactionManager).setRollbackOnly();
 	}
 
 	public void setTransactionTimeout(int seconds) throws SystemException {
 		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
-		(compensableManager.isCompensePhaseCurrently() ? compensableManager : transactionManager)
-				.setTransactionTimeout(seconds);
+		boolean isCompensableTransaction = compensableManager.isCompensableTransaction();
+		(isCompensableTransaction ? compensableManager : transactionManager).setTransactionTimeout(seconds);
 	}
 
 	public int getTimeoutSeconds() {
@@ -98,20 +126,22 @@ public class CompensableTransactionManager implements TransactionManager, Compen
 	public Transaction getTransactionQuietly() {
 		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
-		return (compensableManager.isCompensePhaseCurrently() ? compensableManager : transactionManager)
-				.getTransactionQuietly();
+		boolean isCompensableTransaction = compensableManager.isCompensableTransaction();
+		return (isCompensableTransaction ? compensableManager : transactionManager).getTransactionQuietly();
 	}
 
 	public Transaction getTransaction() throws SystemException {
 		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
-		return (compensableManager.isCompensePhaseCurrently() ? compensableManager : transactionManager).getTransaction();
+		boolean isCompensableTransaction = compensableManager.isCompensableTransaction();
+		return (isCompensableTransaction ? compensableManager : transactionManager).getTransaction();
 	}
 
 	public Transaction suspend() throws SystemException {
 		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
-		return (compensableManager.isCompensePhaseCurrently() ? compensableManager : transactionManager).suspend();
+		boolean isCompensableTransaction = compensableManager.isCompensableTransaction();
+		return (isCompensableTransaction ? compensableManager : transactionManager).suspend();
 	}
 
 	public void setBeanFactory(CompensableBeanFactory tbf) {

@@ -20,11 +20,16 @@ import javax.transaction.HeuristicRollbackException;
 import javax.transaction.RollbackException;
 import javax.transaction.SystemException;
 
+import org.bytesoft.transaction.Transaction;
 import org.bytesoft.transaction.TransactionManager;
 
 public interface CompensableManager extends TransactionManager {
 
 	public CompensableTransaction getCompensableTransactionQuietly();
+
+	public void compensableAssociateThread(CompensableTransaction transaction);
+
+	public CompensableTransaction compensableDesociateThread();
 
 	public boolean isCompensableTransaction();
 

@@ -32,8 +32,6 @@ import org.apache.log4j.Logger;
 import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
 import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;
-import org.bytesoft.compensable.CompensableInvocation;
-import org.bytesoft.compensable.CompensableInvocationRegistry;
 import org.bytesoft.compensable.CompensableManager;
 import org.bytesoft.compensable.CompensableTransaction;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
@@ -45,11 +43,6 @@ import org.bytesoft.transaction.internal.TransactionException;
 import org.bytesoft.transaction.xa.TransactionXid;
 import org.bytesoft.transaction.xa.XidFactory;
 
-/**
- * The compensable transaction manager implementation in the try phase.
- * 
- * @author liuyangming
- */
 public class TransactionManagerImpl implements TransactionManager, CompensableBeanFactoryAware {
 	static final Logger logger = Logger.getLogger(TransactionManagerImpl.class.getSimpleName());
 
@@ -94,14 +87,6 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 					ByteUtils.byteArrayToString(jtaTransactionXid.getGlobalTransactionId())));
 
 			throw new SystemException("Error occurred while beginning a compensable-transaction!");
-		}
-
-		CompensableInvocationRegistry registry = CompensableInvocationRegistry.getInstance();
-		CompensableInvocation invocation = registry.getCurrent();
-		if (invocation != null && invocation.isAvailable()) {
-			invocation.markUnavailable();
-			transactionContext.setCompensable(true);
-			transaction.registerCompensableInvocation(invocation);
 		}
 
 		TransactionRepository transactionRepository = this.beanFactory.getTransactionRepository();
@@ -241,10 +226,6 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 
 	public void fireCompensableRollback(CompensableTransaction transaction) throws IllegalStateException, SecurityException,
 			SystemException {
-		// TransactionContext transactionContext = transaction.getTransactionContext();
-		// TransactionXid xid = transactionContext.getXid();
-		// TransactionRepository transactionRepository = this.beanFactory.getTransactionRepository();
-
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 		try {
 			compensableManager.associateThread(transaction);
