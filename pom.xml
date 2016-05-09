@@ -2,15 +2,11 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
-	<parent>
-		<groupId>org.bytesoft</groupId>
-		<artifactId>bytetcc-parent</artifactId>
-		<version>0.2.1-SNAPSHOT</version>
-	</parent>
-	<artifactId>bytetcc-common</artifactId>
-	<packaging>jar</packaging>
-
-	<name>bytetcc-common</name>
+	<groupId>org.bytesoft</groupId>
+	<artifactId>bytetcc-parent</artifactId>
+	<version>0.2.1-SNAPSHOT</version>
+	<packaging>pom</packaging>
+	<name>bytetcc-parent</name>
 	<url>http://maven.apache.org</url>
 
 	<properties>
@@ -19,4 +15,11 @@
 
 	<dependencies>
 	</dependencies>
+
+	<modules>
+		<module>bytetcc-common</module>
+		<module>bytetcc-core</module>
+		<module>bytetcc-supports</module>
+	</modules>
+
 </project>

@@ -43,8 +43,6 @@ public class TransactionManagerCore implements TransactionManager, CompensableBe
 		CompensableInvocationRegistry registry = CompensableInvocationRegistry.getInstance();
 		CompensableInvocation invocation = registry.getCurrent();
 
-		CompensableTransaction compensableTransaction = compensableManager.getCompensableTransactionQuietly();
-
 		if (invocation != null && invocation.isAvailable()) {
 			invocation.markUnavailable();
 
@@ -55,6 +53,7 @@ public class TransactionManagerCore implements TransactionManager, CompensableBe
 			transactionContext.setCompensable(true);
 			((CompensableTransaction) transaction).registerCompensableInvocation(invocation);
 		} else {
+			CompensableTransaction compensableTransaction = compensableManager.getCompensableTransactionQuietly();
 			transactionManager.begin();
 			Transaction transaction = compensableManager.getTransactionQuietly();
 			transaction.setTransactionalExtra(compensableTransaction);
