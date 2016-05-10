@@ -16,15 +16,15 @@
 package org.bytesoft.bytetcc.supports.rpc;
 
 import org.bytesoft.compensable.CompensableBeanFactory;
+import org.bytesoft.compensable.CompensableManager;
 import org.bytesoft.compensable.CompensableTransaction;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 import org.bytesoft.transaction.TransactionContext;
-import org.bytesoft.transaction.TransactionManager;
 import org.bytesoft.transaction.supports.rpc.TransactionInterceptor;
 import org.bytesoft.transaction.supports.rpc.TransactionRequest;
 import org.bytesoft.transaction.supports.rpc.TransactionResponse;
 
-public class TransactionInterceptorManager implements TransactionInterceptor, CompensableBeanFactoryAware {
+public class TransactionInterceptorCore implements TransactionInterceptor, CompensableBeanFactoryAware {
 
 	private CompensableBeanFactory beanFactory;
 
@@ -32,8 +32,8 @@ public class TransactionInterceptorManager implements TransactionInterceptor, Co
 	private TransactionInterceptor compensableInterceptor;
 
 	public void beforeSendRequest(TransactionRequest request) throws IllegalStateException {
-		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
-		CompensableTransaction transaction = (CompensableTransaction) transactionManager.getTransactionQuietly();
+		CompensableManager transactionManager = this.beanFactory.getCompensableManager();
+		CompensableTransaction transaction = (CompensableTransaction) transactionManager.getCompensableTransactionQuietly();
 		if (transaction == null) {
 			return;
 		} else if (transaction.getTransactionContext().isCompensable()) {
@@ -55,8 +55,8 @@ public class TransactionInterceptorManager implements TransactionInterceptor, Co
 	}
 
 	public void beforeSendResponse(TransactionResponse response) throws IllegalStateException {
-		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
-		CompensableTransaction transaction = (CompensableTransaction) transactionManager.getTransactionQuietly();
+		CompensableManager transactionManager = this.beanFactory.getCompensableManager();
+		CompensableTransaction transaction = (CompensableTransaction) transactionManager.getCompensableTransactionQuietly();
 		if (transaction == null) {
 			return;
 		} else if (transaction.getTransactionContext().isCompensable()) {

@@ -28,6 +28,7 @@ import javax.transaction.xa.Xid;
 import org.apache.log4j.Logger;
 import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
 import org.bytesoft.compensable.CompensableBeanFactory;
+import org.bytesoft.compensable.CompensableManager;
 import org.bytesoft.compensable.CompensableTransaction;
 import org.bytesoft.compensable.archive.TransactionArchive;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
@@ -56,7 +57,7 @@ public class TransactionCoordinator implements RemoteCoordinator, CompensableBea
 
 	public Transaction start(TransactionContext transactionContext, int flags) throws TransactionException {
 		TransactionRepository transactionRepository = this.beanFactory.getTransactionRepository();
-		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
+		CompensableManager transactionManager = this.beanFactory.getCompensableManager();
 		if (transactionManager.getTransactionQuietly() != null) {
 			throw new TransactionException(XAException.XAER_PROTO);
 		}
@@ -68,12 +69,12 @@ public class TransactionCoordinator implements RemoteCoordinator, CompensableBea
 			((CompensableTransactionImpl) transaction).setBeanFactory(this.beanFactory);
 			transactionRepository.putTransaction(globalXid, transaction);
 		}
-		transactionManager.associateThread(transaction);
+		transactionManager.compensableAssociateThread((CompensableTransaction) transaction);
 		return transaction;
 	}
 
 	public Transaction end(TransactionContext transactionContext, int flags) throws TransactionException {
-		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
+		CompensableManager transactionManager = this.beanFactory.getCompensableManager();
 		return transactionManager.getTransactionQuietly();
 	}
 
@@ -127,8 +128,7 @@ public class TransactionCoordinator implements RemoteCoordinator, CompensableBea
 		CompensableLogger transactionLogger = this.beanFactory.getCompensableLogger();
 		XidFactory xidFactory = this.beanFactory.getCompensableXidFactory();
 		TransactionXid globalXid = xidFactory.createGlobalXid(xid.getGlobalTransactionId());
-		CompensableTransaction transaction = (CompensableTransaction) transactionRepository
-				.removeErrorTransaction(globalXid);
+		CompensableTransaction transaction = (CompensableTransaction) transactionRepository.removeErrorTransaction(globalXid);
 		if (transaction != null) {
 			TransactionArchive archive = transaction.getTransactionArchive();
 			transactionLogger.deleteTransaction(archive);

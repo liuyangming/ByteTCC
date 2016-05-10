@@ -21,7 +21,9 @@ import javax.transaction.InvalidTransactionException;
 import javax.transaction.NotSupportedException;
 import javax.transaction.RollbackException;
 import javax.transaction.SystemException;
+import javax.transaction.xa.XAResource;
 
+import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableInvocation;
 import org.bytesoft.compensable.CompensableInvocationRegistry;
@@ -31,6 +33,7 @@ import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 import org.bytesoft.transaction.Transaction;
 import org.bytesoft.transaction.TransactionContext;
 import org.bytesoft.transaction.TransactionManager;
+import org.bytesoft.transaction.internal.TransactionException;
 
 public class TransactionManagerCore implements TransactionManager, CompensableBeanFactoryAware {
 
@@ -40,20 +43,36 @@ public class TransactionManagerCore implements TransactionManager, CompensableBe
 		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 
+		RemoteCoordinator transactionCoordinator = this.beanFactory.getTransactionCoordinator();
+
 		CompensableInvocationRegistry registry = CompensableInvocationRegistry.getInstance();
 		CompensableInvocation invocation = registry.getCurrent();
 
+		CompensableTransaction compensableTransaction = compensableManager.getCompensableTransactionQuietly();
 		if (invocation != null && invocation.isAvailable()) {
 			invocation.markUnavailable();
 
-			compensableManager.begin();
-			Transaction transaction = compensableManager.getTransactionQuietly();
-			TransactionContext transactionContext = transaction.getTransactionContext();
+			if (compensableTransaction == null) {
+				compensableManager.begin();
+				compensableTransaction = compensableManager.getCompensableTransactionQuietly();
+				TransactionContext transactionContext = compensableTransaction.getTransactionContext();
+				transactionContext.setCompensable(true);
+			} else {
+				TransactionContext transactionContext = compensableTransaction.getTransactionContext();
+				// TODO
 
-			transactionContext.setCompensable(true);
-			((CompensableTransaction) transaction).registerCompensableInvocation(invocation);
+				try {
+					Transaction jtaTransaction = transactionCoordinator.start(transactionContext, XAResource.TMNOFLAGS);
+					compensableManager.associateThread(jtaTransaction);
+				} catch (TransactionException ex) {
+					// TODO Auto-generated catch block
+					ex.printStackTrace();
+				}
+
+			}
+
+			compensableTransaction.registerCompensableInvocation(invocation);
 		} else {
-			CompensableTransaction compensableTransaction = compensableManager.getCompensableTransactionQuietly();
 			transactionManager.begin();
 			Transaction transaction = compensableManager.getTransactionQuietly();
 			transaction.setTransactionalExtra(compensableTransaction);

@@ -20,7 +20,6 @@ import javax.transaction.HeuristicRollbackException;
 import javax.transaction.RollbackException;
 import javax.transaction.SystemException;
 
-import org.bytesoft.transaction.Transaction;
 import org.bytesoft.transaction.TransactionManager;
 
 public interface CompensableManager extends TransactionManager {
