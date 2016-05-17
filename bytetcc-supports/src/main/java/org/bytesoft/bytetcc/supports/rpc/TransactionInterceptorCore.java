@@ -33,7 +33,7 @@ public class TransactionInterceptorCore implements TransactionInterceptor, Compe
 
 	public void beforeSendRequest(TransactionRequest request) throws IllegalStateException {
 		CompensableManager transactionManager = this.beanFactory.getCompensableManager();
-		CompensableTransaction transaction = (CompensableTransaction) transactionManager.getCompensableTransactionQuietly();
+		CompensableTransaction transaction = transactionManager.getCompensableTransactionQuietly();
 		if (transaction == null) {
 			return;
 		} else if (transaction.getTransactionContext().isCompensable()) {
@@ -56,7 +56,7 @@ public class TransactionInterceptorCore implements TransactionInterceptor, Compe
 
 	public void beforeSendResponse(TransactionResponse response) throws IllegalStateException {
 		CompensableManager transactionManager = this.beanFactory.getCompensableManager();
-		CompensableTransaction transaction = (CompensableTransaction) transactionManager.getCompensableTransactionQuietly();
+		CompensableTransaction transaction = transactionManager.getCompensableTransactionQuietly();
 		if (transaction == null) {
 			return;
 		} else if (transaction.getTransactionContext().isCompensable()) {

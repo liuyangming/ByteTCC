@@ -26,9 +26,9 @@ public interface CompensableManager extends TransactionManager {
 
 	public CompensableTransaction getCompensableTransactionQuietly();
 
-	public void compensableAssociateThread(CompensableTransaction transaction);
+	// public void compensableAssociateThread(CompensableTransaction transaction);
 
-	public CompensableTransaction compensableDesociateThread();
+	// public CompensableTransaction compensableDesociateThread();
 
 	public boolean isCompensableTransaction();
 

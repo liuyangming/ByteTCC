@@ -29,6 +29,7 @@ import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
 import org.bytesoft.bytejta.supports.wire.RemoteCoordinatorRegistry;
 import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;
+import org.bytesoft.compensable.CompensableManager;
 import org.bytesoft.transaction.Transaction;
 import org.bytesoft.transaction.TransactionContext;
 import org.bytesoft.transaction.TransactionManager;
@@ -60,8 +61,8 @@ public class CompensableDubboServiceFilter implements Filter {
 		CompensableBeanFactory beanFactory = beanRegistry.getBeanFactory();
 		RemoteCoordinator consumeCoordinator = beanRegistry.getConsumeCoordinator();
 		TransactionInterceptor transactionInterceptor = beanFactory.getTransactionInterceptor();
-		TransactionManager transactionManager = beanFactory.getCompensableManager();
-		Transaction transaction = transactionManager.getTransactionQuietly();
+		CompensableManager transactionManager = beanFactory.getCompensableManager();
+		Transaction transaction = transactionManager.getCompensableTransactionQuietly();
 		TransactionContext nativeTransactionContext = transaction == null ? null : transaction.getTransactionContext();
 
 		URL targetUrl = invoker.getUrl();
@@ -133,8 +134,8 @@ public class CompensableDubboServiceFilter implements Filter {
 		CompensableBeanFactory beanFactory = beanRegistry.getBeanFactory();
 		RemoteCoordinator consumeCoordinator = beanRegistry.getConsumeCoordinator();
 		TransactionInterceptor transactionInterceptor = beanFactory.getTransactionInterceptor();
-		TransactionManager transactionManager = beanFactory.getCompensableManager();
-		Transaction transaction = transactionManager.getTransactionQuietly();
+		CompensableManager transactionManager = beanFactory.getCompensableManager();
+		Transaction transaction = transactionManager.getCompensableTransactionQuietly();
 		TransactionContext nativeTransactionContext = transaction == null ? null : transaction.getTransactionContext();
 
 		URL targetUrl = invoker.getUrl();

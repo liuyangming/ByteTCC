@@ -46,7 +46,7 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 	static final Logger logger = Logger.getLogger(TransactionManagerImpl.class.getSimpleName());
 
 	private CompensableBeanFactory beanFactory;
-	private final Map<Thread, CompensableTransaction> transactionMap = new ConcurrentHashMap<Thread, CompensableTransaction>();
+	private final Map<Thread, Transaction> transactionMap = new ConcurrentHashMap<Thread, Transaction>();
 
 	public void begin() throws NotSupportedException, SystemException {
 
@@ -96,7 +96,7 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 
 	public void commit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException, SecurityException,
 			IllegalStateException, SystemException {
-		TransactionRepository transactionRepository = this.beanFactory.getTransactionRepository();
+		// TransactionRepository transactionRepository = this.beanFactory.getTransactionRepository();
 		RemoteCoordinator jtaTransactionCoordinator = this.beanFactory.getTransactionCoordinator();
 
 		CompensableTransaction transaction = this.getTransactionQuietly();
@@ -178,9 +178,8 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 	}
 
 	public int getStatus() throws SystemException {
-		CompensableTransaction transaction = this.transactionMap.get(Thread.currentThread());
-		Transaction jtaTransaction = transaction == null ? null : transaction.getTransaction();
-		return jtaTransaction == null ? Status.STATUS_NO_TRANSACTION : jtaTransaction.getStatus();
+		Transaction transaction = this.transactionMap.get(Thread.currentThread());
+		return transaction == null ? Status.STATUS_NO_TRANSACTION : transaction.getStatus();
 	}
 
 	public Transaction suspend() throws SystemException {
@@ -204,10 +203,10 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 	}
 
 	public void associateThread(Transaction transaction) {
-		this.transactionMap.put(Thread.currentThread(), (CompensableTransaction) transaction);
+		this.transactionMap.put(Thread.currentThread(), transaction);
 	}
 
-	public CompensableTransaction desociateThread() {
+	public Transaction desociateThread() {
 		return this.transactionMap.remove(Thread.currentThread());
 	}
 

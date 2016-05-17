@@ -35,7 +35,6 @@ import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 import org.bytesoft.compensable.logger.CompensableLogger;
 import org.bytesoft.transaction.Transaction;
 import org.bytesoft.transaction.TransactionContext;
-import org.bytesoft.transaction.TransactionManager;
 import org.bytesoft.transaction.TransactionRepository;
 import org.bytesoft.transaction.internal.TransactionException;
 import org.bytesoft.transaction.xa.TransactionXid;
@@ -51,25 +50,24 @@ public class TransactionCoordinator implements RemoteCoordinator, CompensableBea
 	}
 
 	public Transaction getTransactionQuietly() {
-		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
+		CompensableManager transactionManager = this.beanFactory.getCompensableManager();
 		return transactionManager.getTransactionQuietly();
 	}
 
 	public Transaction start(TransactionContext transactionContext, int flags) throws TransactionException {
-		TransactionRepository transactionRepository = this.beanFactory.getTransactionRepository();
-		CompensableManager transactionManager = this.beanFactory.getCompensableManager();
-		if (transactionManager.getTransactionQuietly() != null) {
+		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
+		if (compensableManager.getTransactionQuietly() != null) {
 			throw new TransactionException(XAException.XAER_PROTO);
 		}
-
+		TransactionRepository transactionRepository = this.beanFactory.getTransactionRepository();
 		TransactionXid globalXid = transactionContext.getXid();
-		Transaction transaction = transactionRepository.getTransaction(globalXid);
-		if (transaction == null) {
-			transaction = new CompensableTransactionImpl(transactionContext);
-			((CompensableTransactionImpl) transaction).setBeanFactory(this.beanFactory);
-			transactionRepository.putTransaction(globalXid, transaction);
-		}
-		transactionManager.compensableAssociateThread((CompensableTransaction) transaction);
+		CompensableTransactionImpl transaction = new CompensableTransactionImpl(transactionContext);
+		transaction = new CompensableTransactionImpl(transactionContext);
+		transaction.setBeanFactory(this.beanFactory);
+
+		compensableManager.associateThread(transaction);
+		transactionRepository.putTransaction(globalXid, transaction);
+
 		return transaction;
 	}
 

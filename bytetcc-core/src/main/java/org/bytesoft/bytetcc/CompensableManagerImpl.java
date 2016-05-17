@@ -47,21 +47,12 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 
 	private CompensableBeanFactory beanFactory;
 	private final Map<Thread, Transaction> compensableMap = new ConcurrentHashMap<Thread, Transaction>();
-	private final Map<Thread, Transaction> transactionMap = new ConcurrentHashMap<Thread, Transaction>();
 
 	public void associateThread(Transaction transaction) {
-		this.transactionMap.put(Thread.currentThread(), transaction);
-	}
-
-	public Transaction desociateThread() {
-		return this.transactionMap.remove(Thread.currentThread());
-	}
-
-	public void compensableAssociateThread(CompensableTransaction transaction) {
 		this.compensableMap.put(Thread.currentThread(), (CompensableTransaction) transaction);
 	}
 
-	public CompensableTransaction compensableDesociateThread() {
+	public CompensableTransaction desociateThread() {
 		return (CompensableTransaction) this.compensableMap.remove(Thread.currentThread());
 	}
 
@@ -71,17 +62,13 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 	}
 
 	public Transaction getTransactionQuietly() {
-		try {
-			return this.getTransaction();
-		} catch (SystemException ex) {
-			return null;
-		} catch (RuntimeException ex) {
-			return null;
-		}
+		CompensableTransaction transaction = this.getCompensableTransactionQuietly();
+		return transaction == null ? null : transaction.getTransaction();
 	}
 
 	public Transaction getTransaction() throws SystemException {
-		return this.transactionMap.get(Thread.currentThread());
+		CompensableTransaction transaction = this.getCompensableTransactionQuietly();
+		return transaction == null ? null : transaction.getTransaction();
 	}
 
 	public CompensableTransaction getCompensableTransactionQuietly() {
@@ -163,7 +150,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 		}
 
 		TransactionRepository transactionRepository = this.beanFactory.getTransactionRepository();
-		this.compensableAssociateThread(transaction);
+		this.associateThread(transaction);
 		transactionRepository.putTransaction(tccTransactionXid, transaction);
 	}
 
@@ -211,6 +198,16 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 
 	public void commit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException, SecurityException,
 			IllegalStateException, SystemException {
+		boolean compensating = this.isCompensePhaseCurrently();
+		if (compensating) {
+			this.commitTxInCompensePhase();
+		} else {
+			this.commitTxInTryingPhase();
+		}
+	}
+
+	protected void commitTxInTryingPhase() throws RollbackException, HeuristicMixedException, HeuristicRollbackException,
+			SecurityException, IllegalStateException, SystemException {
 		CompensableTransaction transaction = (CompensableTransaction) this.compensableMap.get(Thread.currentThread());
 		if (transaction == null) {
 			throw new IllegalStateException();
@@ -228,7 +225,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 		boolean coordinator = tccTransactionContext.isCoordinator();
 		boolean compensable = tccTransactionContext.isCompensable();
 		if (coordinator) {
-			this.compensableDesociateThread();
+			this.desociateThread();
 		}
 
 		TransactionXid jtaTransactionXid = jtaTransactionContext.getXid();
@@ -290,11 +287,6 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 
 	}
 
-	protected void commitTxInTryingPhase() throws RollbackException, HeuristicMixedException, HeuristicRollbackException,
-			SecurityException, IllegalStateException, SystemException {
-		// TODO
-	}
-
 	protected void commitTxInCompensePhase() throws RollbackException, HeuristicMixedException, HeuristicRollbackException,
 			SecurityException, IllegalStateException, SystemException {
 		// TODO
@@ -304,14 +296,23 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 			HeuristicRollbackException, SecurityException, IllegalStateException, SystemException {
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 		try {
-			compensableManager.compensableAssociateThread(transaction);
+			compensableManager.associateThread(transaction);
 			compensableManager.compensableCommit();
 		} finally {
-			compensableManager.compensableDesociateThread();
+			compensableManager.desociateThread();
 		}
 	}
 
 	public void rollback() throws IllegalStateException, SecurityException, SystemException {
+		boolean compensating = this.isCompensePhaseCurrently();
+		if (compensating) {
+			this.rollbackTxInCompensePhase();
+		} else {
+			this.rollbackTxInTryingPhase();
+		}
+	}
+
+	protected void rollbackTxInTryingPhase() throws IllegalStateException, SecurityException, SystemException {
 
 		TransactionRepository transactionRepository = this.beanFactory.getTransactionRepository();
 		RemoteCoordinator jtaTransactionCoordinator = this.beanFactory.getTransactionCoordinator();
@@ -326,7 +327,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 		boolean coordinator = tccTransactionContext.isCoordinator();
 		boolean compensable = tccTransactionContext.isCompensable();
 		if (coordinator) {
-			this.compensableDesociateThread();
+			this.desociateThread();
 		}
 
 		boolean success = false;
@@ -354,10 +355,6 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 
 	}
 
-	protected void rollbackTxInTryingPhase() throws IllegalStateException, SecurityException, SystemException {
-		// TODO
-	}
-
 	protected void rollbackTxInCompensePhase() throws IllegalStateException, SecurityException, SystemException {
 		// TODO
 	}
@@ -366,10 +363,10 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 			SystemException {
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 		try {
-			compensableManager.compensableAssociateThread(transaction);
+			compensableManager.associateThread(transaction);
 			compensableManager.compensableRollback();
 		} finally {
-			compensableManager.compensableDesociateThread();
+			compensableManager.desociateThread();
 		}
 	}
 

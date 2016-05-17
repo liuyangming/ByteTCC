@@ -34,6 +34,8 @@ import org.bytesoft.transaction.Transaction;
 import org.bytesoft.transaction.TransactionContext;
 import org.bytesoft.transaction.TransactionManager;
 import org.bytesoft.transaction.internal.TransactionException;
+import org.bytesoft.transaction.xa.TransactionXid;
+import org.bytesoft.transaction.xa.XidFactory;
 
 public class TransactionManagerCore implements TransactionManager, CompensableBeanFactoryAware {
 
@@ -58,23 +60,26 @@ public class TransactionManagerCore implements TransactionManager, CompensableBe
 				TransactionContext transactionContext = compensableTransaction.getTransactionContext();
 				transactionContext.setCompensable(true);
 			} else {
-				TransactionContext transactionContext = compensableTransaction.getTransactionContext();
-				// TODO
-
+				XidFactory jtaXidFactory = this.beanFactory.getTransactionXidFactory();
+				TransactionContext tccTransactionContext = compensableTransaction.getTransactionContext();
+				TransactionXid tccTransactionXid = tccTransactionContext.getXid();
+				TransactionXid jtaTransactionXid = jtaXidFactory.createGlobalXid(tccTransactionXid.getGlobalTransactionId());
+				TransactionContext jtaTransactionContext = tccTransactionContext.clone();
+				jtaTransactionContext.setXid(jtaTransactionXid);
 				try {
-					Transaction jtaTransaction = transactionCoordinator.start(transactionContext, XAResource.TMNOFLAGS);
-					compensableManager.associateThread(jtaTransaction);
+					Transaction jtaTransaction = transactionCoordinator.start(jtaTransactionContext, XAResource.TMNOFLAGS);
+					jtaTransaction.setTransactionalExtra(compensableTransaction);
+					compensableTransaction.setTransactionalExtra(jtaTransaction);
 				} catch (TransactionException ex) {
 					// TODO Auto-generated catch block
 					ex.printStackTrace();
 				}
-
 			}
 
 			compensableTransaction.registerCompensableInvocation(invocation);
 		} else {
 			transactionManager.begin();
-			Transaction transaction = compensableManager.getTransactionQuietly();
+			Transaction transaction = compensableManager.getCompensableTransactionQuietly();
 			transaction.setTransactionalExtra(compensableTransaction);
 			compensableTransaction.setTransactionalExtra(transaction);
 		}
