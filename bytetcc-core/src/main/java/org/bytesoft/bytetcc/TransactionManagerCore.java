@@ -44,7 +44,6 @@ public class TransactionManagerCore implements TransactionManager, CompensableBe
 	public void begin() throws NotSupportedException, SystemException {
 		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
-
 		RemoteCoordinator transactionCoordinator = this.beanFactory.getTransactionCoordinator();
 
 		CompensableInvocationRegistry registry = CompensableInvocationRegistry.getInstance();
@@ -77,11 +76,25 @@ public class TransactionManagerCore implements TransactionManager, CompensableBe
 			}
 
 			compensableTransaction.registerCompensableInvocation(invocation);
+		} else if (compensableTransaction == null) {
+			transactionManager.begin(); // TODO
 		} else {
-			transactionManager.begin();
-			Transaction transaction = compensableManager.getCompensableTransactionQuietly();
-			transaction.setTransactionalExtra(compensableTransaction);
-			compensableTransaction.setTransactionalExtra(transaction);
+			XidFactory jtaXidFactory = this.beanFactory.getTransactionXidFactory();
+			TransactionContext tccTransactionContext = compensableTransaction.getTransactionContext();
+			TransactionXid tccTransactionXid = tccTransactionContext.getXid();
+			TransactionXid jtaTransactionXid = jtaXidFactory.createGlobalXid(tccTransactionXid.getGlobalTransactionId());
+			TransactionContext jtaTransactionContext = tccTransactionContext.clone();
+			jtaTransactionContext.setXid(jtaTransactionXid);
+
+			try {
+				Transaction transaction = transactionCoordinator.start(jtaTransactionContext, XAResource.TMNOFLAGS);
+				transaction.setTransactionalExtra(compensableTransaction);
+				compensableTransaction.setTransactionalExtra(transaction);
+			} catch (TransactionException ex) {
+				// TODO Auto-generated catch block
+				ex.printStackTrace();
+			}
+
 		}
 
 	}

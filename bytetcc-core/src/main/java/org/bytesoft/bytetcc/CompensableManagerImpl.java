@@ -252,6 +252,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 		} finally {
 
 			transaction.setTransactionalExtra(null);
+			tccTransactionContext.setCompensating(true);
 
 			if (compensable && coordinator) {
 				boolean success = false;

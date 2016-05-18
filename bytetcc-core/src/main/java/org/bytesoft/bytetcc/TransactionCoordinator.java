@@ -97,7 +97,13 @@ public class TransactionCoordinator implements RemoteCoordinator, CompensableBea
 		if (transaction == null) {
 			throw new XAException(XAException.XAER_NOTA);
 		}
+
+		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 		try {
+			compensableManager.associateThread(transaction);
+			TransactionContext transactionContext = transaction.getTransactionContext();
+			transactionContext.setCompensating(true);
+
 			transaction.commit();
 			transactionRepository.removeErrorTransaction(globalXid);
 			transactionRepository.removeTransaction(globalXid);
@@ -115,6 +121,8 @@ public class TransactionCoordinator implements RemoteCoordinator, CompensableBea
 			throw new XAException(XAException.XAER_RMERR);
 		} catch (RuntimeException ex) {
 			throw new XAException(XAException.XAER_RMERR);
+		} finally {
+			compensableManager.desociateThread();
 		}
 	}
 
@@ -168,7 +176,13 @@ public class TransactionCoordinator implements RemoteCoordinator, CompensableBea
 		if (transaction == null) {
 			throw new XAException(XAException.XAER_NOTA);
 		}
+
+		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 		try {
+			compensableManager.associateThread(transaction);
+			TransactionContext transactionContext = transaction.getTransactionContext();
+			transactionContext.setCompensating(true);
+
 			transaction.rollback();
 			transactionRepository.removeErrorTransaction(globalXid);
 			transactionRepository.removeTransaction(globalXid);
@@ -178,6 +192,8 @@ public class TransactionCoordinator implements RemoteCoordinator, CompensableBea
 			throw new XAException(XAException.XAER_RMERR);
 		} catch (RuntimeException ex) {
 			throw new XAException(XAException.XAER_RMERR);
+		} finally {
+			compensableManager.desociateThread();
 		}
 	}
 
