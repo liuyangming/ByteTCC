@@ -17,9 +17,10 @@ package org.bytesoft.bytetcc.supports.rpc;
 
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableManager;
-import org.bytesoft.compensable.CompensableTransaction;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
+import org.bytesoft.transaction.Transaction;
 import org.bytesoft.transaction.TransactionContext;
+import org.bytesoft.transaction.TransactionManager;
 import org.bytesoft.transaction.supports.rpc.TransactionInterceptor;
 import org.bytesoft.transaction.supports.rpc.TransactionRequest;
 import org.bytesoft.transaction.supports.rpc.TransactionResponse;
@@ -32,47 +33,46 @@ public class TransactionInterceptorCore implements TransactionInterceptor, Compe
 	private TransactionInterceptor compensableInterceptor;
 
 	public void beforeSendRequest(TransactionRequest request) throws IllegalStateException {
-		CompensableManager transactionManager = this.beanFactory.getCompensableManager();
-		CompensableTransaction transaction = transactionManager.getCompensableTransactionQuietly();
-		if (transaction == null) {
-			return;
-		} else if (transaction.getTransactionContext().isCompensable()) {
+		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
+		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
+		Transaction tccTransaction = compensableManager.getCompensableTransactionQuietly();
+		Transaction jtaTransaction = transactionManager.getTransactionQuietly();
+		if (tccTransaction != null && tccTransaction.getTransactionContext().isCompensable()) {
 			this.compensableInterceptor.beforeSendRequest(request);
-		} else {
+		} else if (jtaTransaction != null) {
 			this.transactionInterceptor.beforeSendRequest(request);
 		}
 	}
 
 	public void afterReceiveRequest(TransactionRequest request) throws IllegalStateException {
 		TransactionContext transactionContext = (TransactionContext) request.getTransactionContext();
-		if (transactionContext == null) {
-			return;
-		} else if (transactionContext.isCompensable()) {
+		if (transactionContext != null && transactionContext.isCompensable()) {
 			this.compensableInterceptor.afterReceiveRequest(request);
-		} else {
+		} else if (transactionContext != null && transactionContext.isCompensable() == false) {
 			this.transactionInterceptor.afterReceiveRequest(request);
 		}
 	}
 
 	public void beforeSendResponse(TransactionResponse response) throws IllegalStateException {
-		CompensableManager transactionManager = this.beanFactory.getCompensableManager();
-		CompensableTransaction transaction = transactionManager.getCompensableTransactionQuietly();
-		if (transaction == null) {
-			return;
-		} else if (transaction.getTransactionContext().isCompensable()) {
+		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
+		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
+		Transaction tccTransaction = compensableManager.getCompensableTransactionQuietly();
+		Transaction jtaTransaction = transactionManager.getTransactionQuietly();
+		if (tccTransaction != null && tccTransaction.getTransactionContext().isCompensable()) {
 			this.compensableInterceptor.beforeSendResponse(response);
-		} else {
+		} else if (jtaTransaction != null) {
 			this.transactionInterceptor.beforeSendResponse(response);
 		}
 	}
 
 	public void afterReceiveResponse(TransactionResponse response) throws IllegalStateException {
-		TransactionContext transactionContext = (TransactionContext) response.getTransactionContext();
-		if (transactionContext == null) {
-			return;
-		} else if (transactionContext.isCompensable()) {
+		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
+		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
+		Transaction tccTransaction = compensableManager.getCompensableTransactionQuietly();
+		Transaction jtaTransaction = transactionManager.getTransactionQuietly();
+		if (tccTransaction != null && tccTransaction.getTransactionContext().isCompensable()) {
 			this.compensableInterceptor.afterReceiveResponse(response);
-		} else {
+		} else if (jtaTransaction != null) {
 			this.transactionInterceptor.afterReceiveResponse(response);
 		}
 	}

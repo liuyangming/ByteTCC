@@ -15,7 +15,7 @@
  */
 package org.bytesoft.compensable;
 
-public interface CompensableInvocationExecutor {
+public interface ContainerContext {
 
 	public void confirm(CompensableInvocation compensable) throws RuntimeException;
 

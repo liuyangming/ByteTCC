@@ -32,8 +32,8 @@ import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.common.utils.CommonUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableInvocation;
-import org.bytesoft.compensable.CompensableInvocationExecutor;
 import org.bytesoft.compensable.CompensableTransaction;
+import org.bytesoft.compensable.ContainerContext;
 import org.bytesoft.compensable.archive.CompensableArchive;
 import org.bytesoft.compensable.archive.TransactionArchive;
 import org.bytesoft.compensable.logger.CompensableLogger;
@@ -84,7 +84,7 @@ public class CompensableTransactionImpl implements CompensableTransaction {
 	}
 
 	private void fireCompensableInvocationConfirm() {
-		CompensableInvocationExecutor executor = this.beanFactory.getCompensableInvocationExecutor();
+		ContainerContext executor = this.beanFactory.getContainerContext();
 		for (int i = 0; i < this.archiveList.size(); i++) {
 			CompensableArchive current = this.archiveList.get(i);
 			if (current.isConfirmed()) {
@@ -150,8 +150,8 @@ public class CompensableTransactionImpl implements CompensableTransaction {
 		this.fireRemoteCoordinatorCancel();
 	}
 
-	public void fireCompensableInvocationCancel() {
-		CompensableInvocationExecutor executor = this.beanFactory.getCompensableInvocationExecutor();
+	private void fireCompensableInvocationCancel() {
+		ContainerContext executor = this.beanFactory.getContainerContext();
 		for (int i = 0; i < this.archiveList.size(); i++) {
 			CompensableArchive current = this.archiveList.get(i);
 			if (current.isCancelled()) {

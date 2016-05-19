@@ -45,6 +45,6 @@ public interface CompensableBeanFactory {
 
 	public TransactionRecovery getTransactionRecovery();
 
-	public CompensableInvocationExecutor getCompensableInvocationExecutor();
+	public ContainerContext getContainerContext();
 
 }

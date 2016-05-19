@@ -19,11 +19,11 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 import org.bytesoft.compensable.CompensableInvocation;
-import org.bytesoft.compensable.CompensableInvocationExecutor;
+import org.bytesoft.compensable.ContainerContext;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 
-public class CompensableInvocationExecutorImpl implements CompensableInvocationExecutor, ApplicationContextAware {
+public class SpringContainerContextImpl implements ContainerContext, ApplicationContextAware {
 	private ApplicationContext applicationContext;
 
 	public void confirm(CompensableInvocation invocation) throws RuntimeException {

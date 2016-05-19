@@ -40,9 +40,9 @@ public class CompensableInterceptorImpl implements TransactionInterceptor, Compe
 	private CompensableBeanFactory beanFactory;
 
 	public void beforeSendRequest(TransactionRequest request) throws IllegalStateException {
-		CompensableManager transactionManager = (CompensableManager) this.beanFactory.getCompensableManager();
+		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 		XidFactory xidFactory = this.beanFactory.getCompensableXidFactory();
-		CompensableTransaction transaction = transactionManager.getCompensableTransactionQuietly();
+		CompensableTransaction transaction = compensableManager.getCompensableTransactionQuietly();
 		if (transaction == null) {
 			return;
 		}
@@ -62,14 +62,14 @@ public class CompensableInterceptorImpl implements TransactionInterceptor, Compe
 
 			transaction.enlistResource(descriptor);
 		} catch (IllegalStateException ex) {
-			logger.error("CompensableInterceptorImpl.beforeSendRequest(TransactionRequest)", ex);
+			logger.error(String.format("CompensableInterceptorImpl.beforeSendRequest(%s)", request), ex);
 			throw ex;
 		} catch (RollbackException ex) {
 			transaction.setRollbackOnlyQuietly();
-			logger.error("CompensableInterceptorImpl.beforeSendRequest(TransactionRequest)", ex);
+			logger.error(String.format("CompensableInterceptorImpl.beforeSendRequest(%s)", request), ex);
 			throw new IllegalStateException(ex);
 		} catch (SystemException ex) {
-			logger.error("CompensableInterceptorImpl.beforeSendRequest(TransactionRequest)", ex);
+			logger.error(String.format("CompensableInterceptorImpl.beforeSendRequest(%s)", request), ex);
 			throw new IllegalStateException(ex);
 		}
 	}
@@ -85,7 +85,7 @@ public class CompensableInterceptorImpl implements TransactionInterceptor, Compe
 		try {
 			compensableCoordinator.start(transactionContext, XAResource.TMNOFLAGS);
 		} catch (TransactionException ex) {
-			logger.error("CompensableInterceptorImpl.afterReceiveRequest(TransactionRequest)", ex);
+			logger.error(String.format("CompensableInterceptorImpl.afterReceiveRequest(%s)", request), ex);
 			IllegalStateException exception = new IllegalStateException();
 			exception.initCause(ex);
 			throw exception;
@@ -94,8 +94,8 @@ public class CompensableInterceptorImpl implements TransactionInterceptor, Compe
 	}
 
 	public void beforeSendResponse(TransactionResponse response) throws IllegalStateException {
-		CompensableManager transactionManager = (CompensableManager) this.beanFactory.getCompensableManager();
-		CompensableTransaction transaction = transactionManager.getCompensableTransactionQuietly();
+		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
+		CompensableTransaction transaction = compensableManager.getCompensableTransactionQuietly();
 		if (transaction == null) {
 			return;
 		}
@@ -108,7 +108,7 @@ public class CompensableInterceptorImpl implements TransactionInterceptor, Compe
 		try {
 			compensableCoordinator.end(transactionContext, XAResource.TMSUCCESS);
 		} catch (TransactionException ex) {
-			logger.error("CompensableInterceptorImpl.beforeSendResponse(TransactionResponse)", ex);
+			logger.error(String.format("CompensableInterceptorImpl.beforeSendResponse(%s)", response), ex);
 			IllegalStateException exception = new IllegalStateException();
 			exception.initCause(ex);
 			throw exception;
@@ -116,9 +116,9 @@ public class CompensableInterceptorImpl implements TransactionInterceptor, Compe
 	}
 
 	public void afterReceiveResponse(TransactionResponse response) throws IllegalStateException {
-		CompensableManager transactionManager = (CompensableManager) this.beanFactory.getCompensableManager();
+		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 		TransactionContext remoteTransactionContext = response.getTransactionContext();
-		CompensableTransaction transaction = transactionManager.getCompensableTransactionQuietly();
+		CompensableTransaction transaction = compensableManager.getCompensableTransactionQuietly();
 		if (transaction == null || remoteTransactionContext == null) {
 			return;
 		}
@@ -132,10 +132,10 @@ public class CompensableInterceptorImpl implements TransactionInterceptor, Compe
 
 			transaction.delistResource(descriptor, XAResource.TMSUCCESS);
 		} catch (IllegalStateException ex) {
-			logger.error("CompensableInterceptorImpl.afterReceiveResponse(TransactionRequest)", ex);
+			logger.error(String.format("CompensableInterceptorImpl.afterReceiveResponse(%s)", response), ex);
 			throw ex;
 		} catch (SystemException ex) {
-			logger.error("CompensableInterceptorImpl.afterReceiveResponse(TransactionRequest)", ex);
+			logger.error(String.format("CompensableInterceptorImpl.afterReceiveResponse(%s)", response), ex);
 			throw new IllegalStateException(ex);
 		}
 	}

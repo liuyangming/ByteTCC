@@ -18,8 +18,8 @@ package org.bytesoft.bytetcc;
 import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
 import org.bytesoft.bytetcc.logger.EmptyCompensableLogger;
 import org.bytesoft.compensable.CompensableBeanFactory;
-import org.bytesoft.compensable.CompensableInvocationExecutor;
 import org.bytesoft.compensable.CompensableManager;
+import org.bytesoft.compensable.ContainerContext;
 import org.bytesoft.compensable.logger.CompensableLogger;
 import org.bytesoft.transaction.TransactionManager;
 import org.bytesoft.transaction.TransactionRecovery;
@@ -39,7 +39,7 @@ public final class TransactionBeanFactoryImpl implements CompensableBeanFactory 
 	private TransactionRecovery transactionRecovery;
 	private RemoteCoordinator transactionCoordinator;
 	private RemoteCoordinator compensableCoordinator;
-	private CompensableInvocationExecutor compensableInvocationExecutor;
+	private ContainerContext containerContext;
 
 	public TransactionManager getTransactionManager() {
 		return transactionManager;
@@ -121,12 +121,12 @@ public final class TransactionBeanFactoryImpl implements CompensableBeanFactory 
 		this.compensableCoordinator = compensableCoordinator;
 	}
 
-	public CompensableInvocationExecutor getCompensableInvocationExecutor() {
-		return compensableInvocationExecutor;
+	public ContainerContext getContainerContext() {
+		return containerContext;
 	}
 
-	public void setCompensableInvocationExecutor(CompensableInvocationExecutor compensableInvocationExecutor) {
-		this.compensableInvocationExecutor = compensableInvocationExecutor;
+	public void setContainerContext(ContainerContext containerContext) {
+		this.containerContext = containerContext;
 	}
 
 }

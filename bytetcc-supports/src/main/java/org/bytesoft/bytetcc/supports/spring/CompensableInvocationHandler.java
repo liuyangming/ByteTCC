@@ -20,6 +20,8 @@ import java.lang.reflect.Method;
 import org.bytesoft.bytetcc.supports.CompensableInvocationImpl;
 import org.bytesoft.compensable.CompensableInvocationRegistry;
 import org.bytesoft.compensable.CompensableTransaction;
+import org.bytesoft.transaction.Transaction;
+import org.bytesoft.transaction.TransactionContext;
 import org.bytesoft.transaction.TransactionManager;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -49,6 +51,12 @@ public class CompensableInvocationHandler implements java.lang.reflect.Invocatio
 		Method methodImpl = this.targetClass.getMethod(method.getName(), method.getParameterTypes());
 		Transactional transactional = methodImpl.getAnnotation(Transactional.class);
 		Propagation propagation = transactional.propagation();
+
+		Transaction propagatedTx = this.transactionManager.getTransactionQuietly();
+		TransactionContext transactionContext = propagatedTx == null ? null : propagatedTx.getTransactionContext();
+		if (propagatedTx != null && transactionContext.isCompensable() == false) {
+			return this.doInvoke(object, method, args);
+		}
 
 		CompensableTransaction transaction = (CompensableTransaction) this.transactionManager.getTransactionQuietly();
 		try {
