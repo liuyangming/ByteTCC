@@ -19,10 +19,10 @@ import java.lang.reflect.Method;
 
 import org.bytesoft.bytetcc.supports.CompensableInvocationImpl;
 import org.bytesoft.compensable.CompensableInvocationRegistry;
+import org.bytesoft.compensable.CompensableManager;
 import org.bytesoft.compensable.CompensableTransaction;
 import org.bytesoft.transaction.Transaction;
 import org.bytesoft.transaction.TransactionContext;
-import org.bytesoft.transaction.TransactionManager;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,7 +35,7 @@ public class CompensableInvocationHandler implements java.lang.reflect.Invocatio
 	private Class<?> interfaceClass;
 	private String confirmableKey;
 	private String cancellableKey;
-	private TransactionManager transactionManager;
+	private CompensableManager compensableManager;
 
 	public Object invoke(Object object, Method method, Object[] args) throws Throwable {
 
@@ -52,13 +52,14 @@ public class CompensableInvocationHandler implements java.lang.reflect.Invocatio
 		Transactional transactional = methodImpl.getAnnotation(Transactional.class);
 		Propagation propagation = transactional.propagation();
 
-		Transaction propagatedTx = this.transactionManager.getTransactionQuietly();
+		Transaction propagatedTx = this.compensableManager.getTransactionQuietly();
 		TransactionContext transactionContext = propagatedTx == null ? null : propagatedTx.getTransactionContext();
 		if (propagatedTx != null && transactionContext.isCompensable() == false) {
 			return this.doInvoke(object, method, args);
 		}
 
-		CompensableTransaction transaction = (CompensableTransaction) this.transactionManager.getTransactionQuietly();
+		CompensableTransaction transaction = (CompensableTransaction) this.compensableManager
+				.getCompensableTransactionQuietly();
 		try {
 			if (transaction == null) {
 				registry.register(invocation);
@@ -139,12 +140,12 @@ public class CompensableInvocationHandler implements java.lang.reflect.Invocatio
 		this.cancellableKey = cancellableKey;
 	}
 
-	public TransactionManager getTransactionManager() {
-		return transactionManager;
+	public CompensableManager getCompensableManager() {
+		return compensableManager;
 	}
 
-	public void setTransactionManager(TransactionManager transactionManager) {
-		this.transactionManager = transactionManager;
+	public void setCompensableManager(CompensableManager compensableManager) {
+		this.compensableManager = compensableManager;
 	}
 
 }

@@ -205,9 +205,12 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 		TransactionContext transactionContext = transaction.getTransactionContext();
 		boolean coordinator = transactionContext.isCoordinator();
 		boolean compensable = transactionContext.isCompensable();
+		boolean compensating = transactionContext.isCompensating();
 
 		if (compensable == false) {
 			throw new IllegalStateException();
+		} else if (compensating) {
+			this.invokeTransactionCommit();
 		} else if (coordinator) {
 			throw new IllegalStateException();
 		} else {
@@ -223,6 +226,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 		TransactionXid xid = jtaTransactionContext.getXid();
 		RemoteCoordinator transactionCoordinator = this.beanFactory.getTransactionCoordinator();
 		try {
+			transactionCoordinator.end(jtaTransactionContext, XAResource.TMSUCCESS);
 			transactionCoordinator.commit(xid, true);
 		} catch (XAException xae) {
 			switch (xae.errorCode) {
@@ -274,6 +278,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 		TransactionXid xid = jtaTransactionContext.getXid();
 		RemoteCoordinator transactionCoordinator = this.beanFactory.getTransactionCoordinator();
 		try {
+			transactionCoordinator.end(jtaTransactionContext, XAResource.TMSUCCESS);
 			transactionCoordinator.rollback(xid);
 		} catch (XAException xae) {
 			throw new SystemException();

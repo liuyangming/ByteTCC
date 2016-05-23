@@ -17,8 +17,8 @@ package org.bytesoft.bytetcc.supports.spring;
 
 import org.bytesoft.compensable.Compensable;
 import org.bytesoft.compensable.CompensableBeanFactory;
+import org.bytesoft.compensable.CompensableManager;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
-import org.bytesoft.transaction.TransactionManager;
 import org.springframework.aop.TargetClassAware;
 import org.springframework.aop.framework.ProxyFactoryBean;
 import org.springframework.beans.BeansException;
@@ -73,13 +73,14 @@ public class CompensableAnnotationPostProcessor implements BeanPostProcessor, Ap
 			String confirmableKey = compensable.confirmableKey();
 			String cancellableKey = compensable.cancellableKey();
 
-			TransactionManager transactionManager = this.beanFactory.getTransactionManager();
+			// TransactionManager transactionManager = this.beanFactory.getTransactionManager();
+			CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 
 			handler.setTargetClass(targetClass);
 			handler.setInterfaceClass(interfaceClass);
 			handler.setConfirmableKey(confirmableKey);
 			handler.setCancellableKey(cancellableKey);
-			handler.setTransactionManager(transactionManager);
+			handler.setCompensableManager(compensableManager);
 
 			pfb.setTarget(target);
 			pfb.setInterfaces(interfaces);
