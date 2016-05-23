@@ -11,10 +11,56 @@
            http://www.springframework.org/schema/tx 
            http://www.springframework.org/schema/tx/spring-tx-3.0.xsd">
 
-	<description>The bytetcc transaction manager module</description>
+	<bean class="org.bytesoft.bytetcc.supports.dubbo.CompensableDubboConfigValidator" />
+	<bean class="org.bytesoft.bytetcc.supports.spring.CompensableBeanFactoryPostProcessor" />
+	<bean class="org.bytesoft.bytetcc.supports.spring.CompensableAnnotationValidator" />
+	<bean class="org.bytesoft.bytetcc.supports.spring.CompensableAnnotationPostProcessor" />
 
-	<import resource="classpath:bytejta.xml" />
+	<bean id="bytetccXidFactory" class="org.bytesoft.bytetcc.xa.XidFactoryImpl" />
 
+	<bean id="bytetccCompensableManager" class="org.bytesoft.bytetcc.CompensableManagerImpl" />
+	<bean id="compensableManager" class="org.bytesoft.bytetcc.TransactionManagerCore" />
 
+	<bean id="bytetccUserTransaction" class="org.bytesoft.bytejta.UserTransactionImpl">
+		<property name="transactionManager" ref="compensableManager" />
+	</bean>
+
+	<bean id="transactionManager" class="org.springframework.transaction.jta.JtaTransactionManager">
+		<property name="userTransaction" ref="bytetccUserTransaction" />
+		<property name="transactionManager" ref="compensableManager" />
+	</bean>
+
+	<bean id="bytetccTransactionLogger" class="org.bytesoft.bytetcc.logger.SampleTransactionLogger" />
+
+	<bean id="bytetccTransactionCoordinator" class="org.bytesoft.bytetcc.CompensableCoordinator" />
+	<bean id="dispatcherCoordinator" class="org.bytesoft.bytetcc.TransactionCoordinator">
+		<property name="transactionCoordinator" ref="bytejtaTransactionCoordinator" />
+		<property name="compensableCoordinator" ref="bytetccTransactionCoordinator" />
+	</bean>
+
+	<bean id="bytetccTransactionRecovery" class="org.bytesoft.bytetcc.TransactionRecoveryImpl" />
+	<bean id="bytetccTransactionRepository" class="org.bytesoft.bytejta.TransactionRepositoryImpl" />
+
+	<bean id="compensableInterceptor" class="org.bytesoft.bytetcc.supports.rpc.CompensableInterceptorImpl" />
+	<bean id="bytetccTransactionInterceptor" class="org.bytesoft.bytetcc.supports.rpc.TransactionInterceptorCore">
+		<property name="transactionInterceptor" ref="bytejtaTransactionInterceptor" />
+		<property name="compensableInterceptor" ref="compensableInterceptor" />
+	</bean>
+
+	<bean id="springContainerContext" class="org.bytesoft.bytetcc.supports.spring.SpringContainerContextImpl" />
+
+	<bean id="bytetccBeanFactory" class="org.bytesoft.bytetcc.TransactionBeanFactoryImpl">
+		<property name="transactionManager" ref="bytejtaTransactionManager" />
+		<property name="compensableManager" ref="bytetccCompensableManager" />
+		<property name="transactionXidFactory" ref="bytejtaXidFactory" />
+		<property name="compensableXidFactory" ref="bytetccXidFactory" />
+		<property name="transactionRepository" ref="bytejtaTransactionRepository" />
+		<property name="compensableRepository" ref="bytetccTransactionRepository" />
+		<property name="transactionRecovery" ref="bytetccTransactionRecovery" />
+		<property name="transactionCoordinator" ref="bytejtaTransactionCoordinator" />
+		<property name="compensableCoordinator" ref="bytetccTransactionCoordinator" />
+		<property name="containerContext" ref="springContainerContext" />
+		<property name="transactionInterceptor" ref="bytetccTransactionInterceptor" />
+	</bean>
 
 </beans>

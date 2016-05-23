@@ -24,7 +24,9 @@ import javax.transaction.Status;
 import javax.transaction.SystemException;
 import javax.transaction.xa.XAResource;
 
+import org.apache.log4j.Logger;
 import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
+import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableInvocation;
 import org.bytesoft.compensable.CompensableInvocationRegistry;
@@ -39,6 +41,7 @@ import org.bytesoft.transaction.xa.TransactionXid;
 import org.bytesoft.transaction.xa.XidFactory;
 
 public class TransactionManagerCore implements TransactionManager, CompensableBeanFactoryAware {
+	static final Logger logger = Logger.getLogger(TransactionManagerCore.class.getSimpleName());
 
 	private CompensableBeanFactory beanFactory;
 
@@ -71,8 +74,10 @@ public class TransactionManagerCore implements TransactionManager, CompensableBe
 					jtaTransaction.setTransactionalExtra(tccTransaction);
 					tccTransaction.setTransactionalExtra(jtaTransaction);
 				} catch (TransactionException ex) {
-					// TODO Auto-generated catch block
-					ex.printStackTrace();
+					logger.info(String.format("[%s] begin-transaction: error occurred while starting jta-transaction: %s",
+							ByteUtils.byteArrayToString(tccTransactionXid.getGlobalTransactionId()),
+							ByteUtils.byteArrayToString(jtaTransactionXid.getGlobalTransactionId())));
+					throw new SystemException("Error occurred while beginning a jta-transaction!");
 				}
 			}
 
@@ -92,8 +97,10 @@ public class TransactionManagerCore implements TransactionManager, CompensableBe
 				transaction.setTransactionalExtra(tccTransaction);
 				tccTransaction.setTransactionalExtra(transaction);
 			} catch (TransactionException ex) {
-				// TODO Auto-generated catch block
-				ex.printStackTrace();
+				logger.info(String.format("[%s] begin-transaction: error occurred while starting jta-transaction: %s",
+						ByteUtils.byteArrayToString(tccTransactionXid.getGlobalTransactionId()),
+						ByteUtils.byteArrayToString(jtaTransactionXid.getGlobalTransactionId())));
+				throw new SystemException("Error occurred while beginning a jta-transaction!");
 			}
 
 		}

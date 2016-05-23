@@ -137,16 +137,17 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 			jtaTransaction.setTransactionalExtra(transaction);
 			transaction.setTransactionalExtra(jtaTransaction);
 		} catch (TransactionException tex) {
-			try {
-				jtaTransactionCoordinator.end(jtaTransactionContext, XAResource.TMFAIL);
-			} catch (TransactionException ignore) {
-				// ignore
-			}
 			logger.info(String.format("[%s] begin-transaction: error occurred while starting jta-transaction: %s",
 					ByteUtils.byteArrayToString(tccTransactionXid.getGlobalTransactionId()),
 					ByteUtils.byteArrayToString(jtaTransactionXid.getGlobalTransactionId())));
 
-			throw new SystemException("Error occurred while beginning a compensable-transaction!");
+			try {
+				jtaTransactionCoordinator.end(jtaTransactionContext, XAResource.TMFAIL);
+				throw new SystemException("Error occurred while beginning a compensable-transaction!");
+			} catch (TransactionException ignore) {
+				throw new SystemException("Error occurred while beginning a compensable-transaction!");
+			}
+
 		}
 
 		TransactionRepository compensableRepository = this.beanFactory.getCompensableRepository();
