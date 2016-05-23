@@ -59,14 +59,14 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 		if (compensableManager.getTransactionQuietly() != null) {
 			throw new TransactionException(XAException.XAER_PROTO);
 		}
-		TransactionRepository transactionRepository = this.beanFactory.getTransactionRepository();
+		TransactionRepository compensableRepository = this.beanFactory.getCompensableRepository();
 		TransactionXid globalXid = transactionContext.getXid();
 		CompensableTransactionImpl transaction = new CompensableTransactionImpl(transactionContext);
 		transaction = new CompensableTransactionImpl(transactionContext);
 		transaction.setBeanFactory(this.beanFactory);
 
 		compensableManager.associateThread(transaction);
-		transactionRepository.putTransaction(globalXid, transaction);
+		compensableRepository.putTransaction(globalXid, transaction);
 
 		return transaction;
 	}
@@ -90,10 +90,10 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 		} else if (onePhase == false) {
 			throw new XAException(XAException.XAER_RMERR);
 		}
-		TransactionRepository transactionRepository = this.beanFactory.getTransactionRepository();
+		TransactionRepository compensableRepository = this.beanFactory.getCompensableRepository();
 		XidFactory xidFactory = this.beanFactory.getCompensableXidFactory();
 		TransactionXid globalXid = xidFactory.createGlobalXid(xid.getGlobalTransactionId());
-		CompensableTransaction transaction = (CompensableTransaction) transactionRepository.getTransaction(globalXid);
+		CompensableTransaction transaction = (CompensableTransaction) compensableRepository.getTransaction(globalXid);
 		if (transaction == null) {
 			throw new XAException(XAException.XAER_NOTA);
 		}
@@ -105,8 +105,8 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 			transactionContext.setCompensating(true);
 
 			transaction.commit();
-			transactionRepository.removeErrorTransaction(globalXid);
-			transactionRepository.removeTransaction(globalXid);
+			compensableRepository.removeErrorTransaction(globalXid);
+			compensableRepository.removeTransaction(globalXid);
 		} catch (SecurityException ex) {
 			throw new XAException(XAException.XAER_RMERR);
 		} catch (IllegalStateException ex) {
@@ -130,11 +130,11 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 		if (xid == null) {
 			throw new XAException(XAException.XAER_INVAL);
 		}
-		TransactionRepository transactionRepository = this.beanFactory.getTransactionRepository();
+		TransactionRepository compensableRepository = this.beanFactory.getCompensableRepository();
 		CompensableLogger transactionLogger = this.beanFactory.getCompensableLogger();
 		XidFactory xidFactory = this.beanFactory.getCompensableXidFactory();
 		TransactionXid globalXid = xidFactory.createGlobalXid(xid.getGlobalTransactionId());
-		CompensableTransaction transaction = (CompensableTransaction) transactionRepository.removeErrorTransaction(globalXid);
+		CompensableTransaction transaction = (CompensableTransaction) compensableRepository.removeErrorTransaction(globalXid);
 		if (transaction != null) {
 			TransactionArchive archive = transaction.getTransactionArchive();
 			transactionLogger.deleteTransaction(archive);
@@ -154,8 +154,8 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 	}
 
 	public Xid[] recover(int flag) throws XAException {
-		TransactionRepository transactionRepository = this.beanFactory.getTransactionRepository();
-		List<Transaction> transactionList = transactionRepository.getErrorTransactionList();
+		TransactionRepository compensableRepository = this.beanFactory.getCompensableRepository();
+		List<Transaction> transactionList = compensableRepository.getErrorTransactionList();
 		Xid[] xidArray = new Xid[transactionList == null ? 0 : transactionList.size()];
 		for (int i = 0; i < xidArray.length; i++) {
 			Transaction transaction = transactionList.get(i);
@@ -169,10 +169,10 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 		if (xid == null) {
 			throw new XAException(XAException.XAER_INVAL);
 		}
-		TransactionRepository transactionRepository = this.beanFactory.getTransactionRepository();
+		TransactionRepository compensableRepository = this.beanFactory.getCompensableRepository();
 		XidFactory xidFactory = this.beanFactory.getCompensableXidFactory();
 		TransactionXid globalXid = xidFactory.createGlobalXid(xid.getGlobalTransactionId());
-		CompensableTransaction transaction = (CompensableTransaction) transactionRepository.getTransaction(globalXid);
+		CompensableTransaction transaction = (CompensableTransaction) compensableRepository.getTransaction(globalXid);
 		if (transaction == null) {
 			throw new XAException(XAException.XAER_NOTA);
 		}
@@ -184,8 +184,8 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 			transactionContext.setCompensating(true);
 
 			transaction.rollback();
-			transactionRepository.removeErrorTransaction(globalXid);
-			transactionRepository.removeTransaction(globalXid);
+			compensableRepository.removeErrorTransaction(globalXid);
+			compensableRepository.removeTransaction(globalXid);
 		} catch (IllegalStateException ex) {
 			throw new XAException(XAException.XAER_RMERR);
 		} catch (SystemException ex) {

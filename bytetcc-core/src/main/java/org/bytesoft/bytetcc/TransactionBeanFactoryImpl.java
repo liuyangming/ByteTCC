@@ -35,6 +35,7 @@ public final class TransactionBeanFactoryImpl implements CompensableBeanFactory 
 	private XidFactory compensableXidFactory;
 	private CompensableLogger compensableLogger = new EmptyCompensableLogger();
 	private TransactionRepository transactionRepository;
+	private TransactionRepository compensableRepository;
 	private TransactionInterceptor transactionInterceptor;
 	private TransactionRecovery transactionRecovery;
 	private RemoteCoordinator transactionCoordinator;
@@ -50,7 +51,7 @@ public final class TransactionBeanFactoryImpl implements CompensableBeanFactory 
 	}
 
 	public CompensableManager getCompensableManager() {
-		return this.compensableManager;
+		return compensableManager;
 	}
 
 	public void setCompensableManager(CompensableManager compensableManager) {
@@ -61,8 +62,8 @@ public final class TransactionBeanFactoryImpl implements CompensableBeanFactory 
 		return transactionXidFactory;
 	}
 
-	public void setTransactionXidFactory(XidFactory xidFactory) {
-		this.transactionXidFactory = xidFactory;
+	public void setTransactionXidFactory(XidFactory transactionXidFactory) {
+		this.transactionXidFactory = transactionXidFactory;
 	}
 
 	public XidFactory getCompensableXidFactory() {
@@ -87,6 +88,14 @@ public final class TransactionBeanFactoryImpl implements CompensableBeanFactory 
 
 	public void setTransactionRepository(TransactionRepository transactionRepository) {
 		this.transactionRepository = transactionRepository;
+	}
+
+	public TransactionRepository getCompensableRepository() {
+		return compensableRepository;
+	}
+
+	public void setCompensableRepository(TransactionRepository compensableRepository) {
+		this.compensableRepository = compensableRepository;
 	}
 
 	public TransactionInterceptor getTransactionInterceptor() {

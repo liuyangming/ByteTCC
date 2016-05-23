@@ -30,48 +30,6 @@ public class TransactionCoordinator implements RemoteCoordinator {
 	private RemoteCoordinator compensableCoordinator;
 	private RemoteCoordinator transactionCoordinator;
 
-	public void commit(Xid xid, boolean onePhase) throws XAException {
-		int formatId = xid.getFormatId();
-		if (XidFactory.JTA_FORMAT_ID == formatId) {
-			this.transactionCoordinator.commit(xid, onePhase);
-		} else if (XidFactory.TCC_FORMAT_ID == formatId) {
-			this.compensableCoordinator.commit(xid, onePhase);
-		} else {
-			throw new XAException(XAException.XAER_INVAL);
-		}
-	}
-
-	public void end(Xid xid, int flags) throws XAException {
-		int formatId = xid.getFormatId();
-		if (XidFactory.JTA_FORMAT_ID == formatId) {
-			this.transactionCoordinator.end(xid, flags);
-		} else if (XidFactory.TCC_FORMAT_ID == formatId) {
-			this.compensableCoordinator.end(xid, flags);
-		} else {
-			throw new XAException(XAException.XAER_INVAL);
-		}
-	}
-
-	public void forget(Xid xid) throws XAException {
-		int formatId = xid.getFormatId();
-		if (XidFactory.JTA_FORMAT_ID == formatId) {
-			this.transactionCoordinator.forget(xid);
-		} else if (XidFactory.TCC_FORMAT_ID == formatId) {
-			this.compensableCoordinator.forget(xid);
-		} else {
-			throw new XAException(XAException.XAER_INVAL);
-		}
-	}
-
-	public int getTransactionTimeout() throws XAException {
-		return 0;
-	}
-
-	public boolean isSameRM(XAResource xares) throws XAException {
-		// TODO Auto-generated method stub
-		return false;
-	}
-
 	public int prepare(Xid xid) throws XAException {
 		int formatId = xid.getFormatId();
 		if (XidFactory.JTA_FORMAT_ID == formatId) {
@@ -83,9 +41,15 @@ public class TransactionCoordinator implements RemoteCoordinator {
 		}
 	}
 
-	public Xid[] recover(int flags) throws XAException {
-		// TODO Auto-generated method stub
-		return null;
+	public void commit(Xid xid, boolean onePhase) throws XAException {
+		int formatId = xid.getFormatId();
+		if (XidFactory.JTA_FORMAT_ID == formatId) {
+			this.transactionCoordinator.commit(xid, onePhase);
+		} else if (XidFactory.TCC_FORMAT_ID == formatId) {
+			this.compensableCoordinator.commit(xid, onePhase);
+		} else {
+			throw new XAException(XAException.XAER_INVAL);
+		}
 	}
 
 	public void rollback(Xid xid) throws XAException {
@@ -99,17 +63,33 @@ public class TransactionCoordinator implements RemoteCoordinator {
 		}
 	}
 
-	public boolean setTransactionTimeout(int arg0) throws XAException {
-		// TODO Auto-generated method stub
-		return false;
+	public Xid[] recover(int flags) throws XAException {
+		Xid[] jtaXidArray = null;
+		try {
+			jtaXidArray = this.transactionCoordinator.recover(flags);
+		} catch (Exception ex) {
+			jtaXidArray = new Xid[0];
+		}
+
+		Xid[] tccXidArray = null;
+		try {
+			tccXidArray = this.compensableCoordinator.recover(flags);
+		} catch (Exception ex) {
+			tccXidArray = new Xid[0];
+		}
+
+		Xid[] resultArray = new Xid[jtaXidArray.length + tccXidArray.length];
+		System.arraycopy(jtaXidArray, 0, resultArray, 0, jtaXidArray.length);
+		System.arraycopy(tccXidArray, 0, resultArray, jtaXidArray.length, tccXidArray.length);
+		return resultArray;
 	}
 
-	public void start(Xid xid, int flags) throws XAException {
+	public void forget(Xid xid) throws XAException {
 		int formatId = xid.getFormatId();
 		if (XidFactory.JTA_FORMAT_ID == formatId) {
-			this.transactionCoordinator.start(xid, flags);
+			this.transactionCoordinator.forget(xid);
 		} else if (XidFactory.TCC_FORMAT_ID == formatId) {
-			this.compensableCoordinator.start(xid, flags);
+			this.compensableCoordinator.forget(xid);
 		} else {
 			throw new XAException(XAException.XAER_INVAL);
 		}
@@ -119,20 +99,32 @@ public class TransactionCoordinator implements RemoteCoordinator {
 		throw new IllegalStateException();
 	}
 
+	public void start(Xid xid, int flags) throws XAException {
+		throw new TransactionException(XAException.XAER_RMERR);
+	}
+
+	public void end(Xid xid, int flags) throws XAException {
+		throw new TransactionException(XAException.XAER_RMERR);
+	}
+
 	public Transaction start(TransactionContext transactionContext, int flags) throws TransactionException {
-		if (transactionContext.isCompensable()) {
-			return this.compensableCoordinator.start(transactionContext, flags);
-		} else {
-			return this.transactionCoordinator.start(transactionContext, flags);
-		}
+		throw new TransactionException(XAException.XAER_RMERR);
 	}
 
 	public Transaction end(TransactionContext transactionContext, int flags) throws TransactionException {
-		if (transactionContext.isCompensable()) {
-			return this.compensableCoordinator.end(transactionContext, flags);
-		} else {
-			return this.transactionCoordinator.end(transactionContext, flags);
-		}
+		throw new TransactionException(XAException.XAER_RMERR);
+	}
+
+	public boolean isSameRM(XAResource xares) throws XAException {
+		throw new XAException(XAException.XAER_RMERR);
+	}
+
+	public boolean setTransactionTimeout(int arg0) throws XAException {
+		throw new XAException(XAException.XAER_RMERR);
+	}
+
+	public int getTransactionTimeout() throws XAException {
+		throw new XAException(XAException.XAER_RMERR);
 	}
 
 	public RemoteCoordinator getCompensableCoordinator() {

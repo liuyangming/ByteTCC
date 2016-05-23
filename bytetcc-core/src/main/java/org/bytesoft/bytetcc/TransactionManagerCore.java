@@ -78,7 +78,7 @@ public class TransactionManagerCore implements TransactionManager, CompensableBe
 
 			tccTransaction.registerCompensableInvocation(invocation);
 		} else if (tccTransaction == null) {
-			transactionManager.begin(); // TODO
+			transactionManager.begin();
 		} else {
 			XidFactory jtaXidFactory = this.beanFactory.getTransactionXidFactory();
 			TransactionContext tccTransactionContext = tccTransaction.getTransactionContext();
@@ -105,18 +105,68 @@ public class TransactionManagerCore implements TransactionManager, CompensableBe
 		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 
-		Transaction transaction = this.getTransaction();
-		if (transaction == null) {
+		TransactionContext transactionContext = null;
+		Transaction jtaTransaction = transactionManager.getTransactionQuietly();
+		Transaction tccTransaction = compensableManager.getCompensableTransactionQuietly();
+		if (jtaTransaction == null && tccTransaction == null) {
 			throw new IllegalStateException();
+		} else if (tccTransaction == null) {
+			transactionContext = jtaTransaction.getTransactionContext();
+		} else {
+			transactionContext = tccTransaction.getTransactionContext();
 		}
-		TransactionContext transactionContext = transaction.getTransactionContext();
-		boolean isCompensableTransaction = transactionContext.isCompensable();
-		(isCompensableTransaction ? compensableManager : transactionManager).commit();
+		if (transactionContext.isCompensable() == false) {
+			transactionManager.commit();
+		} else if (transactionContext.isCompensating()) {
+			compensableManager.commit();
+		} else if (transactionContext.isCoordinator()) {
+			compensableManager.compensableCommit();
+		} else {
+			compensableManager.commit();
+		}
 	}
 
-	public int getStatus() throws SystemException {
-		Transaction transaction = this.getTransaction();
-		return transaction == null ? Status.STATUS_NO_TRANSACTION : transaction.getTransactionStatus();
+	public void rollback() throws IllegalStateException, SecurityException, SystemException {
+		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
+		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
+
+		TransactionContext transactionContext = null;
+		Transaction jtaTransaction = transactionManager.getTransactionQuietly();
+		Transaction tccTransaction = compensableManager.getCompensableTransactionQuietly();
+		if (jtaTransaction == null && tccTransaction == null) {
+			throw new IllegalStateException();
+		} else if (tccTransaction == null) {
+			transactionContext = jtaTransaction.getTransactionContext();
+		} else {
+			transactionContext = tccTransaction.getTransactionContext();
+		}
+
+		if (transactionContext.isCompensable() == false) {
+			transactionManager.rollback();
+		} else if (transactionContext.isCoordinator()) {
+			compensableManager.compensableRollback();
+		} else {
+			compensableManager.rollback();
+		}
+
+	}
+
+	public Transaction suspend() throws SystemException {
+		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
+		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
+
+		TransactionContext transactionContext = null;
+		Transaction jtaTransaction = transactionManager.getTransactionQuietly();
+		Transaction tccTransaction = compensableManager.getCompensableTransactionQuietly();
+		if (jtaTransaction == null && tccTransaction == null) {
+			throw new SystemException();
+		} else if (tccTransaction == null) {
+			transactionContext = jtaTransaction.getTransactionContext();
+		} else {
+			transactionContext = tccTransaction.getTransactionContext();
+		}
+		boolean isCompensableTransaction = transactionContext.isCompensable();
+		return (isCompensableTransaction ? compensableManager : transactionManager).suspend();
 	}
 
 	public void resume(javax.transaction.Transaction tobj) throws InvalidTransactionException, IllegalStateException,
@@ -124,37 +174,25 @@ public class TransactionManagerCore implements TransactionManager, CompensableBe
 		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 
-		Transaction transaction = this.getTransaction();
-		if (transaction == null) {
-			throw new IllegalStateException();
-		}
-		TransactionContext transactionContext = transaction.getTransactionContext();
+		TransactionContext transactionContext = ((Transaction) tobj).getTransactionContext();
 		boolean isCompensableTransaction = transactionContext.isCompensable();
 		(isCompensableTransaction ? compensableManager : transactionManager).resume(tobj);
-	}
-
-	public void rollback() throws IllegalStateException, SecurityException, SystemException {
-		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
-		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
-
-		Transaction transaction = this.getTransaction();
-		if (transaction == null) {
-			throw new IllegalStateException();
-		}
-		TransactionContext transactionContext = transaction.getTransactionContext();
-		boolean isCompensableTransaction = transactionContext.isCompensable();
-		(isCompensableTransaction ? compensableManager : transactionManager).rollback();
 	}
 
 	public void setRollbackOnly() throws IllegalStateException, SystemException {
 		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 
-		Transaction transaction = this.getTransaction();
-		if (transaction == null) {
+		TransactionContext transactionContext = null;
+		Transaction jtaTransaction = transactionManager.getTransactionQuietly();
+		Transaction tccTransaction = compensableManager.getCompensableTransactionQuietly();
+		if (jtaTransaction == null && tccTransaction == null) {
 			throw new IllegalStateException();
+		} else if (tccTransaction == null) {
+			transactionContext = jtaTransaction.getTransactionContext();
+		} else {
+			transactionContext = tccTransaction.getTransactionContext();
 		}
-		TransactionContext transactionContext = transaction.getTransactionContext();
 		boolean isCompensableTransaction = transactionContext.isCompensable();
 		(isCompensableTransaction ? compensableManager : transactionManager).setRollbackOnly();
 	}
@@ -163,37 +201,18 @@ public class TransactionManagerCore implements TransactionManager, CompensableBe
 		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 
-		Transaction transaction = this.getTransaction();
-		if (transaction == null) {
-			throw new SystemException();
+		TransactionContext transactionContext = null;
+		Transaction jtaTransaction = transactionManager.getTransactionQuietly();
+		Transaction tccTransaction = compensableManager.getCompensableTransactionQuietly();
+		if (jtaTransaction == null && tccTransaction == null) {
+			throw new IllegalStateException();
+		} else if (tccTransaction == null) {
+			transactionContext = jtaTransaction.getTransactionContext();
+		} else {
+			transactionContext = tccTransaction.getTransactionContext();
 		}
-		TransactionContext transactionContext = transaction.getTransactionContext();
 		boolean isCompensableTransaction = transactionContext.isCompensable();
 		(isCompensableTransaction ? compensableManager : transactionManager).setTransactionTimeout(seconds);
-	}
-
-	public int getTimeoutSeconds() {
-		throw new IllegalStateException();
-	}
-
-	public void setTimeoutSeconds(int timeoutSeconds) {
-		throw new IllegalStateException();
-	}
-
-	public void associateThread(Transaction transaction) {
-		throw new IllegalStateException();
-	}
-
-	public Transaction desociateThread() {
-		throw new IllegalStateException();
-	}
-
-	public Transaction getTransactionQuietly() {
-		try {
-			return this.getTransaction();
-		} catch (Exception ex) {
-			return null;
-		}
 	}
 
 	public Transaction getTransaction() throws SystemException {
@@ -210,21 +229,36 @@ public class TransactionManagerCore implements TransactionManager, CompensableBe
 		}
 	}
 
-	public Transaction suspend() throws SystemException {
-		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
-		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
-
-		Transaction transaction = this.getTransaction();
-		if (transaction == null) {
-			throw new IllegalStateException();
+	public Transaction getTransactionQuietly() {
+		try {
+			return this.getTransaction();
+		} catch (Exception ex) {
+			return null;
 		}
-		TransactionContext transactionContext = transaction.getTransactionContext();
-		boolean isCompensableTransaction = transactionContext.isCompensable();
-		return (isCompensableTransaction ? compensableManager : transactionManager).suspend();
+	}
+
+	public int getStatus() throws SystemException {
+		Transaction transaction = this.getTransaction();
+		return transaction == null ? Status.STATUS_NO_TRANSACTION : transaction.getTransactionStatus();
 	}
 
 	public void setBeanFactory(CompensableBeanFactory tbf) {
 		this.beanFactory = tbf;
 	}
 
+	public void associateThread(Transaction transaction) {
+		throw new IllegalStateException();
+	}
+
+	public Transaction desociateThread() {
+		throw new IllegalStateException();
+	}
+
+	public int getTimeoutSeconds() {
+		throw new IllegalStateException();
+	}
+
+	public void setTimeoutSeconds(int timeoutSeconds) {
+		throw new IllegalStateException();
+	}
 }

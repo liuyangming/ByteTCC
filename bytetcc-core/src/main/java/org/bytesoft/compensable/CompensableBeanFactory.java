@@ -39,6 +39,8 @@ public interface CompensableBeanFactory {
 
 	public CompensableLogger getCompensableLogger();
 
+	public TransactionRepository getCompensableRepository();
+
 	public TransactionRepository getTransactionRepository();
 
 	public TransactionInterceptor getTransactionInterceptor();
