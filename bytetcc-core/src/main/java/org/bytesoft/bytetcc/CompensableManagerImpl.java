@@ -243,8 +243,11 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 
 	public void fireCompensableCommit(CompensableTransaction transaction) throws RollbackException, HeuristicMixedException,
 			HeuristicRollbackException, SecurityException, IllegalStateException, SystemException {
+		TransactionContext transactionContext = transaction.getTransactionContext();
 		try {
 			this.associateThread(transaction);
+
+			transactionContext.setCompensating(true);
 			transaction.commit();
 		} finally {
 			this.desociateThread();
@@ -287,8 +290,11 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 
 	public void fireCompensableRollback(CompensableTransaction transaction) throws IllegalStateException, SecurityException,
 			SystemException {
+		TransactionContext transactionContext = transaction.getTransactionContext();
 		try {
 			this.associateThread(transaction);
+
+			transactionContext.setCompensating(true);
 			transaction.rollback();
 		} finally {
 			this.desociateThread();
@@ -377,7 +383,6 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 			}
 		} finally {
 			transaction.setTransactionalExtra(null);
-			tccTransactionContext.setCompensating(true);
 
 			boolean success = false;
 			try {
