@@ -181,18 +181,17 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 			jtaTransaction.registerTransactionListener(transaction);
 		} catch (TransactionException tex) {
 			transaction.setTransactionalExtra(null);
-			try {
-				jtaTransactionCoordinator.end(jtaTransactionContext, XAResource.TMFAIL);
-			} catch (TransactionException ignore) {
-				logger.debug(String.format("[%s] begin-transaction: error occurred while unbinding jta-transaction: %s",
-						ByteUtils.byteArrayToString(tccTransactionXid.getGlobalTransactionId()),
-						ByteUtils.byteArrayToString(jtaTransactionXid.getGlobalTransactionId())));
-			}
+
 			logger.info(String.format("[%s] begin-transaction: error occurred while starting jta-transaction: %s",
 					ByteUtils.byteArrayToString(tccTransactionXid.getGlobalTransactionId()),
 					ByteUtils.byteArrayToString(jtaTransactionXid.getGlobalTransactionId())));
+			try {
+				jtaTransactionCoordinator.end(jtaTransactionContext, XAResource.TMFAIL);
+				throw new SystemException("Error occurred while beginning a compensable-transaction!");
+			} catch (TransactionException ignore) {
+				throw new SystemException("Error occurred while beginning a compensable-transaction!");
+			}
 
-			throw new SystemException("Error occurred while beginning a compensable-transaction!");
 		}
 	}
 
@@ -300,23 +299,6 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 		} finally {
 			this.desociateThread();
 		}
-	}
-
-	public boolean isCompensableTransaction() {
-		CompensableTransaction transaction = (CompensableTransaction) this.compensableMap.get(Thread.currentThread());
-		if (transaction == null) {
-			return false;
-		}
-		TransactionContext transactionContext = transaction.getTransactionContext();
-		return transactionContext.isCompensable();
-	}
-
-	public boolean isCompensePhaseCurrently() {
-		CompensableTransaction transaction = (CompensableTransaction) this.compensableMap.get(Thread.currentThread());
-		if (transaction == null) {
-			return false;
-		}
-		return transaction.getTransactionContext().isCompensating();
 	}
 
 	public void compensableCommit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException,
