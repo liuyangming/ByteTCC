@@ -8,7 +8,7 @@ ByteTCC将TCC事务从逻辑上分为两个部分：TRY阶段、CC阶段（Confi
 * 2、均通过@Transactional注解来声明事务，在事务传播(propagation)、异常回滚等方面，二者均使用相同的语义；
 
 #### 不同之处
-* 1、使用TCC事务时，需要为service标注@Compensable注解，并指定confirm/calcel的service（非必须，如果没有补偿逻辑，也可不指定）；
+* 1、使用TCC事务时，需要为service标注@Compensable注解，并指定confirm/cancel的service（非必须，如果没有补偿逻辑，也可不指定）；
 
 ## 二、关于幂等性
 ByteTCC不要求service的实现逻辑具有幂等性。ByteTCC在补偿TCC事务时，虽然也可能会多次调用confirm/cancel方法，但是ByteTCC可以确保每个confirm/cancel方法仅被"执行并提交"一次，因此，使用ByteTCC时可以仅关注业务逻辑，而不必考虑事务相关的细节。
