@@ -27,7 +27,6 @@ ByteTCC不要求service的实现逻辑具有幂等性。ByteTCC在补偿TCC事�
 ## 五、已发布的历史版本
 ##### 0.1.2
 * 地址：http://code.google.com/p/bytetcc
-* 文档：无
 
 ##### 0.2.0-alpha
 * 地址：http://code.taobao.org/p/openjtcc
