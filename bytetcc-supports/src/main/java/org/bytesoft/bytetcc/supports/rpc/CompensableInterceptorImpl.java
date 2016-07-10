@@ -19,7 +19,6 @@ import javax.transaction.RollbackException;
 import javax.transaction.SystemException;
 import javax.transaction.xa.XAResource;
 
-import org.apache.log4j.Logger;
 import org.bytesoft.bytejta.supports.resource.RemoteResourceDescriptor;
 import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
 import org.bytesoft.compensable.CompensableBeanFactory;
@@ -33,9 +32,11 @@ import org.bytesoft.transaction.supports.rpc.TransactionRequest;
 import org.bytesoft.transaction.supports.rpc.TransactionResponse;
 import org.bytesoft.transaction.xa.TransactionXid;
 import org.bytesoft.transaction.xa.XidFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class CompensableInterceptorImpl implements TransactionInterceptor, CompensableBeanFactoryAware {
-	static final Logger logger = Logger.getLogger(CompensableInterceptorImpl.class.getSimpleName());
+	static final Logger logger = LoggerFactory.getLogger(CompensableInterceptorImpl.class.getSimpleName());
 
 	private CompensableBeanFactory beanFactory;
 
@@ -62,14 +63,14 @@ public class CompensableInterceptorImpl implements TransactionInterceptor, Compe
 
 			transaction.enlistResource(descriptor);
 		} catch (IllegalStateException ex) {
-			logger.error(String.format("CompensableInterceptorImpl.beforeSendRequest(%s)", request), ex);
+			logger.error("CompensableInterceptorImpl.beforeSendRequest({})", request, ex);
 			throw ex;
 		} catch (RollbackException ex) {
 			transaction.setRollbackOnlyQuietly();
-			logger.error(String.format("CompensableInterceptorImpl.beforeSendRequest(%s)", request), ex);
+			logger.error("CompensableInterceptorImpl.beforeSendRequest({})", request, ex);
 			throw new IllegalStateException(ex);
 		} catch (SystemException ex) {
-			logger.error(String.format("CompensableInterceptorImpl.beforeSendRequest(%s)", request), ex);
+			logger.error("CompensableInterceptorImpl.beforeSendRequest({})", request, ex);
 			throw new IllegalStateException(ex);
 		}
 	}
@@ -85,7 +86,7 @@ public class CompensableInterceptorImpl implements TransactionInterceptor, Compe
 		try {
 			compensableCoordinator.start(transactionContext, XAResource.TMNOFLAGS);
 		} catch (TransactionException ex) {
-			logger.error(String.format("CompensableInterceptorImpl.afterReceiveRequest(%s)", request), ex);
+			logger.error("CompensableInterceptorImpl.afterReceiveRequest({})", request, ex);
 			IllegalStateException exception = new IllegalStateException();
 			exception.initCause(ex);
 			throw exception;
@@ -108,7 +109,7 @@ public class CompensableInterceptorImpl implements TransactionInterceptor, Compe
 		try {
 			compensableCoordinator.end(transactionContext, XAResource.TMSUCCESS);
 		} catch (TransactionException ex) {
-			logger.error(String.format("CompensableInterceptorImpl.beforeSendResponse(%s)", response), ex);
+			logger.error("CompensableInterceptorImpl.beforeSendResponse({})", response, ex);
 			IllegalStateException exception = new IllegalStateException();
 			exception.initCause(ex);
 			throw exception;
@@ -132,10 +133,10 @@ public class CompensableInterceptorImpl implements TransactionInterceptor, Compe
 
 			transaction.delistResource(descriptor, XAResource.TMSUCCESS);
 		} catch (IllegalStateException ex) {
-			logger.error(String.format("CompensableInterceptorImpl.afterReceiveResponse(%s)", response), ex);
+			logger.error("CompensableInterceptorImpl.afterReceiveResponse({})", response, ex);
 			throw ex;
 		} catch (SystemException ex) {
-			logger.error(String.format("CompensableInterceptorImpl.afterReceiveResponse(%s)", response), ex);
+			logger.error("CompensableInterceptorImpl.afterReceiveResponse({})", response, ex);
 			throw new IllegalStateException(ex);
 		}
 	}

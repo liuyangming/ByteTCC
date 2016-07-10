@@ -24,7 +24,6 @@ import javax.transaction.Status;
 import javax.transaction.SystemException;
 import javax.transaction.xa.XAResource;
 
-import org.apache.log4j.Logger;
 import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
 import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;
@@ -39,9 +38,11 @@ import org.bytesoft.transaction.TransactionManager;
 import org.bytesoft.transaction.internal.TransactionException;
 import org.bytesoft.transaction.xa.TransactionXid;
 import org.bytesoft.transaction.xa.XidFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TransactionManagerCore implements TransactionManager, CompensableBeanFactoryAware {
-	static final Logger logger = Logger.getLogger(TransactionManagerCore.class.getSimpleName());
+	static final Logger logger = LoggerFactory.getLogger(TransactionManagerCore.class.getSimpleName());
 
 	private CompensableBeanFactory beanFactory;
 
@@ -66,17 +67,19 @@ public class TransactionManagerCore implements TransactionManager, CompensableBe
 				XidFactory jtaXidFactory = this.beanFactory.getTransactionXidFactory();
 				TransactionContext tccTransactionContext = tccTransaction.getTransactionContext();
 				TransactionXid tccTransactionXid = tccTransactionContext.getXid();
-				TransactionXid jtaTransactionXid = jtaXidFactory.createGlobalXid(tccTransactionXid.getGlobalTransactionId());
+				TransactionXid jtaTransactionXid = jtaXidFactory.createGlobalXid(tccTransactionXid
+						.getGlobalTransactionId());
 				TransactionContext jtaTransactionContext = tccTransactionContext.clone();
 				jtaTransactionContext.setXid(jtaTransactionXid);
 				try {
-					Transaction jtaTransaction = transactionCoordinator.start(jtaTransactionContext, XAResource.TMNOFLAGS);
+					Transaction jtaTransaction = transactionCoordinator.start(jtaTransactionContext,
+							XAResource.TMNOFLAGS);
 					jtaTransaction.setTransactionalExtra(tccTransaction);
 					tccTransaction.setTransactionalExtra(jtaTransaction);
 				} catch (TransactionException ex) {
-					logger.info(String.format("[%s] begin-transaction: error occurred while starting jta-transaction: %s",
+					logger.info("[{}] begin-transaction: error occurred while starting jta-transaction: {}",
 							ByteUtils.byteArrayToString(tccTransactionXid.getGlobalTransactionId()),
-							ByteUtils.byteArrayToString(jtaTransactionXid.getGlobalTransactionId())));
+							ByteUtils.byteArrayToString(jtaTransactionXid.getGlobalTransactionId()));
 					throw new SystemException("Error occurred while beginning a jta-transaction!");
 				}
 			}
@@ -88,7 +91,8 @@ public class TransactionManagerCore implements TransactionManager, CompensableBe
 			XidFactory jtaXidFactory = this.beanFactory.getTransactionXidFactory();
 			TransactionContext tccTransactionContext = tccTransaction.getTransactionContext();
 			TransactionXid tccTransactionXid = tccTransactionContext.getXid();
-			TransactionXid jtaTransactionXid = jtaXidFactory.createGlobalXid(tccTransactionXid.getGlobalTransactionId());
+			TransactionXid jtaTransactionXid = jtaXidFactory
+					.createGlobalXid(tccTransactionXid.getGlobalTransactionId());
 			TransactionContext jtaTransactionContext = tccTransactionContext.clone();
 			jtaTransactionContext.setXid(jtaTransactionXid);
 
@@ -97,9 +101,9 @@ public class TransactionManagerCore implements TransactionManager, CompensableBe
 				transaction.setTransactionalExtra(tccTransaction);
 				tccTransaction.setTransactionalExtra(transaction);
 			} catch (TransactionException ex) {
-				logger.info(String.format("[%s] begin-transaction: error occurred while starting jta-transaction: %s",
+				logger.info("[{}] begin-transaction: error occurred while starting jta-transaction: {}",
 						ByteUtils.byteArrayToString(tccTransactionXid.getGlobalTransactionId()),
-						ByteUtils.byteArrayToString(jtaTransactionXid.getGlobalTransactionId())));
+						ByteUtils.byteArrayToString(jtaTransactionXid.getGlobalTransactionId()));
 				throw new SystemException("Error occurred while beginning a jta-transaction!");
 			}
 
@@ -107,8 +111,8 @@ public class TransactionManagerCore implements TransactionManager, CompensableBe
 
 	}
 
-	public void commit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException, SecurityException,
-			IllegalStateException, SystemException {
+	public void commit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException,
+			SecurityException, IllegalStateException, SystemException {
 		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 

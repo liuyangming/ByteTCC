@@ -26,7 +26,6 @@ import javax.transaction.SystemException;
 import javax.transaction.xa.XAException;
 import javax.transaction.xa.XAResource;
 
-import org.apache.log4j.Logger;
 import org.bytesoft.bytejta.supports.resource.RemoteResourceDescriptor;
 import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.common.utils.CommonUtils;
@@ -45,9 +44,11 @@ import org.bytesoft.transaction.archive.XAResourceArchive;
 import org.bytesoft.transaction.supports.TransactionListener;
 import org.bytesoft.transaction.xa.TransactionXid;
 import org.bytesoft.transaction.xa.XidFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class CompensableTransactionImpl implements CompensableTransaction {
-	static final Logger logger = Logger.getLogger(CompensableTransactionImpl.class.getSimpleName());
+	static final Logger logger = LoggerFactory.getLogger(CompensableTransactionImpl.class.getSimpleName());
 
 	private final TransactionContext transactionContext;
 	private final List<CompensableArchive> archiveList = new ArrayList<CompensableArchive>();
@@ -77,8 +78,8 @@ public class CompensableTransactionImpl implements CompensableTransaction {
 		return transactionArchive;
 	}
 
-	public void commit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException, SecurityException,
-			IllegalStateException, SystemException {
+	public void commit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException,
+			SecurityException, IllegalStateException, SystemException {
 		this.fireCompensableInvocationConfirm();
 		this.fireRemoteCoordinatorConfirm();
 	}
@@ -97,9 +98,8 @@ public class CompensableTransactionImpl implements CompensableTransaction {
 				executor.confirm(current.getCompensable());
 			} catch (RuntimeException rex) {
 				TransactionXid transactionXid = this.transactionContext.getXid();
-				logger.error(
-						String.format("[%s] commit-transaction: error occurred while confirming service: %s",
-								ByteUtils.byteArrayToString(transactionXid.getGlobalTransactionId()), this.archive), rex);
+				logger.error("[{}] commit-transaction: error occurred while confirming service: {}",
+						ByteUtils.byteArrayToString(transactionXid.getGlobalTransactionId()), this.archive, rex);
 			} finally {
 				this.archive = null;
 				this.decision = null;
@@ -124,14 +124,12 @@ public class CompensableTransactionImpl implements CompensableTransaction {
 				current.setCompleted(true);
 				transactionLogger.updateCoordinator(current);
 			} catch (XAException ex) {
-				logger.error(
-						String.format("[%s] commit-transaction: error occurred while confirming branch: %s",
-								ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()), this.archive), ex);
+				logger.error("[{}] commit-transaction: error occurred while confirming branch: {}",
+						ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()), this.archive, ex);
 			} catch (RuntimeException rex) {
 				TransactionXid transactionXid = this.transactionContext.getXid();
-				logger.error(
-						String.format("[%s] commit-transaction: error occurred while confirming service: %s",
-								ByteUtils.byteArrayToString(transactionXid.getGlobalTransactionId()), this.archive), rex);
+				logger.error("[{}] commit-transaction: error occurred while confirming service: {}",
+						ByteUtils.byteArrayToString(transactionXid.getGlobalTransactionId()), this.archive, rex);
 			}
 		}
 	}
@@ -164,9 +162,8 @@ public class CompensableTransactionImpl implements CompensableTransaction {
 				executor.cancel(current.getCompensable());
 			} catch (RuntimeException rex) {
 				TransactionXid transactionXid = this.transactionContext.getXid();
-				logger.error(
-						String.format("[%s] rollback-transaction: error occurred while cancelling service: %s",
-								ByteUtils.byteArrayToString(transactionXid.getGlobalTransactionId()), this.archive), rex);
+				logger.error("[{}] rollback-transaction: error occurred while cancelling service: {}",
+						ByteUtils.byteArrayToString(transactionXid.getGlobalTransactionId()), this.archive, rex);
 			} finally {
 				this.archive = null;
 				this.decision = null;
@@ -191,14 +188,12 @@ public class CompensableTransactionImpl implements CompensableTransaction {
 				current.setCompleted(true);
 				transactionLogger.updateCoordinator(current);
 			} catch (XAException ex) {
-				logger.error(
-						String.format("[%s] rollback-transaction: error occurred while cancelling branch: %s",
-								ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()), this.archive), ex);
+				logger.error("[{}] rollback-transaction: error occurred while cancelling branch: {}",
+						ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()), this.archive, ex);
 			} catch (RuntimeException rex) {
 				TransactionXid transactionXid = this.transactionContext.getXid();
-				logger.error(
-						String.format("[%s] rollback-transaction: error occurred while cancelling service: %s",
-								ByteUtils.byteArrayToString(transactionXid.getGlobalTransactionId()), this.archive), rex);
+				logger.error("[{}] rollback-transaction: error occurred while cancelling service: {}",
+						ByteUtils.byteArrayToString(transactionXid.getGlobalTransactionId()), this.archive, rex);
 			}
 		}
 	}
@@ -264,7 +259,8 @@ public class CompensableTransactionImpl implements CompensableTransaction {
 		this.archiveList.add(archive);
 	}
 
-	public void registerSynchronization(Synchronization sync) throws RollbackException, IllegalStateException, SystemException {
+	public void registerSynchronization(Synchronization sync) throws RollbackException, IllegalStateException,
+			SystemException {
 	}
 
 	public void registerTransactionListener(TransactionListener listener) {

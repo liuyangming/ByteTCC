@@ -19,8 +19,9 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-import org.apache.log4j.Logger;
 import org.bytesoft.compensable.Compensable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.FatalBeanException;
 import org.springframework.beans.MutablePropertyValues;
@@ -31,7 +32,7 @@ import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.config.RuntimeBeanReference;
 
 public class CompensableDubboConfigValidator implements BeanFactoryPostProcessor {
-	static final Logger logger = Logger.getLogger(CompensableDubboConfigValidator.class.getSimpleName());
+	static final Logger logger = LoggerFactory.getLogger(CompensableDubboConfigValidator.class.getSimpleName());
 
 	static final String KEY_TIMEOUT = "timeout";
 	static final String KEY_FILTER_COMPENSABLE = "compensable";
@@ -74,7 +75,8 @@ public class CompensableDubboConfigValidator implements BeanFactoryPostProcessor
 			PropertyValue ref = mpv.getPropertyValue("ref");
 			PropertyValue filter = mpv.getPropertyValue("filter");
 			PropertyValue group = mpv.getPropertyValue("group");
-			if (ref == null || ref.getValue() == null || RuntimeBeanReference.class.equals(ref.getValue().getClass()) == false) {
+			if (ref == null || ref.getValue() == null
+					|| RuntimeBeanReference.class.equals(ref.getValue().getClass()) == false) {
 				continue;
 			}
 			RuntimeBeanReference beanRef = (RuntimeBeanReference) ref.getValue();
@@ -84,10 +86,11 @@ public class CompensableDubboConfigValidator implements BeanFactoryPostProcessor
 			}
 
 			if (group == null || group.getValue() == null || KEY_GROUP_COMPENSABLE.equals(group.getValue()) == false) {
-				logger.warn(String.format("The value of attr 'group'(beanId= %s) should be 'org.bytesoft.bytetcc'.", beanKey));
+				logger.warn("The value of attr 'group'(beanId= {}) should be 'org.bytesoft.bytetcc'.", beanKey);
 				continue;
-			} else if (filter == null || filter.getValue() == null || KEY_FILTER_COMPENSABLE.equals(filter.getValue()) == false) {
-				logger.warn(String.format("The value of attr 'filter'(beanId= %s) should be 'compensable'.", beanKey));
+			} else if (filter == null || filter.getValue() == null
+					|| KEY_FILTER_COMPENSABLE.equals(filter.getValue()) == false) {
+				logger.warn("The value of attr 'filter'(beanId= {}) should be 'compensable'.", beanKey);
 				continue;
 			}
 
@@ -108,10 +111,11 @@ public class CompensableDubboConfigValidator implements BeanFactoryPostProcessor
 			PropertyValue group = mpv.getPropertyValue("group");
 
 			if (group == null || group.getValue() == null || KEY_GROUP_COMPENSABLE.equals(group.getValue()) == false) {
-				logger.warn(String.format("The value of attr 'group'(beanId= %s) should be 'org.bytesoft.bytetcc'.", beanKey));
+				logger.warn("The value of attr 'group'(beanId= {}) should be 'org.bytesoft.bytetcc'.", beanKey);
 				continue;
-			} else if (filter == null || filter.getValue() == null || KEY_FILTER_COMPENSABLE.equals(filter.getValue()) == false) {
-				logger.warn(String.format("The value of attr 'filter'(beanId= %s) should be 'compensable'.", beanKey));
+			} else if (filter == null || filter.getValue() == null
+					|| KEY_FILTER_COMPENSABLE.equals(filter.getValue()) == false) {
+				logger.warn("The value of attr 'filter'(beanId= {}) should be 'compensable'.", beanKey);
 				continue;
 			}
 

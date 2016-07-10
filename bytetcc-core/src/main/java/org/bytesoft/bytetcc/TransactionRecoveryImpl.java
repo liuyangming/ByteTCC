@@ -15,13 +15,14 @@
  */
 package org.bytesoft.bytetcc;
 
-import org.apache.log4j.Logger;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 import org.bytesoft.transaction.TransactionRecovery;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TransactionRecoveryImpl implements TransactionRecovery, CompensableBeanFactoryAware {
-	static final Logger logger = Logger.getLogger(TransactionRecoveryImpl.class.getSimpleName());
+	static final Logger logger = LoggerFactory.getLogger(TransactionRecoveryImpl.class.getSimpleName());
 
 	// private TransactionStatistic transactionStatistic;
 	private CompensableBeanFactory beanFactory;

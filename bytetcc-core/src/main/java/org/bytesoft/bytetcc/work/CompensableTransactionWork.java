@@ -17,10 +17,12 @@ package org.bytesoft.bytetcc.work;
 
 import javax.resource.spi.work.Work;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 public class CompensableTransactionWork implements Work {
-	static final Logger logger = Logger.getLogger(CompensableTransactionWork.class.getSimpleName());
+	static final Logger logger = LoggerFactory.getLogger(CompensableTransactionWork.class.getSimpleName());
 
 	static final long SECOND_MILLIS = 1000L;
 	private long stopTimeMillis = -1;

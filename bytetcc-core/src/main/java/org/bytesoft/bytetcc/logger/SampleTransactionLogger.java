@@ -17,14 +17,15 @@ package org.bytesoft.bytetcc.logger;
 
 import java.util.List;
 
-import org.apache.log4j.Logger;
 import org.bytesoft.compensable.archive.CompensableArchive;
 import org.bytesoft.compensable.archive.TransactionArchive;
 import org.bytesoft.compensable.logger.CompensableLogger;
 import org.bytesoft.transaction.archive.XAResourceArchive;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class SampleTransactionLogger implements CompensableLogger {
-	static final Logger logger = Logger.getLogger(SampleTransactionLogger.class.getSimpleName());
+	static final Logger logger = LoggerFactory.getLogger(SampleTransactionLogger.class.getSimpleName());
 
 	public void createTransaction(TransactionArchive archive) {
 		// TODO Auto-generated method stub

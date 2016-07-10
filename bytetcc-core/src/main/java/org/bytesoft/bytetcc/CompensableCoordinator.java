@@ -25,7 +25,6 @@ import javax.transaction.xa.XAException;
 import javax.transaction.xa.XAResource;
 import javax.transaction.xa.Xid;
 
-import org.apache.log4j.Logger;
 import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableManager;
@@ -39,9 +38,11 @@ import org.bytesoft.transaction.TransactionRepository;
 import org.bytesoft.transaction.internal.TransactionException;
 import org.bytesoft.transaction.xa.TransactionXid;
 import org.bytesoft.transaction.xa.XidFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class CompensableCoordinator implements RemoteCoordinator, CompensableBeanFactoryAware {
-	static final Logger logger = Logger.getLogger(CompensableCoordinator.class.getSimpleName());
+	static final Logger logger = LoggerFactory.getLogger(CompensableCoordinator.class.getSimpleName());
 
 	private CompensableBeanFactory beanFactory;
 
