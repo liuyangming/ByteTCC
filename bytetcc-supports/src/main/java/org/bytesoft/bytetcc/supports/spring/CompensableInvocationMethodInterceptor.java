@@ -13,27 +13,18 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this distribution; if not, see <http://www.gnu.org/licenses/>.
  */
-package org.bytesoft.compensable;
+package org.bytesoft.bytetcc.supports.spring;
 
-import java.io.Serializable;
 import java.lang.reflect.Method;
 
-public interface CompensableInvocation extends Serializable {
+import org.springframework.cglib.proxy.MethodInterceptor;
+import org.springframework.cglib.proxy.MethodProxy;
 
-	public Method getMethod();
+public class CompensableInvocationMethodInterceptor implements MethodInterceptor {
 
-	public Object[] getArgs();
-
-	public String getConfirmableKey();
-
-	public String getCancellableKey();
-
-	// public boolean isAvailable();
-
-	// public void markUnavailable();
-
-	public Object getIdentifier();
-
-	public void setIdentifier(Object identifier);
+	public Object intercept(Object obj, Method method, Object[] args, MethodProxy mp) throws Throwable {
+		// TODO Auto-generated method stub
+		return null;
+	}
 
 }

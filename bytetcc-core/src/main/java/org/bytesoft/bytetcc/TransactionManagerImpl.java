@@ -41,8 +41,8 @@ import org.bytesoft.transaction.xa.XidFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class TransactionManagerCore implements TransactionManager, CompensableBeanFactoryAware {
-	static final Logger logger = LoggerFactory.getLogger(TransactionManagerCore.class.getSimpleName());
+public class TransactionManagerImpl implements TransactionManager, CompensableBeanFactoryAware {
+	static final Logger logger = LoggerFactory.getLogger(TransactionManagerImpl.class.getSimpleName());
 
 	private CompensableBeanFactory beanFactory;
 
@@ -55,8 +55,8 @@ public class TransactionManagerCore implements TransactionManager, CompensableBe
 		CompensableInvocation invocation = registry.getCurrent();
 
 		CompensableTransaction tccTransaction = compensableManager.getCompensableTransactionQuietly();
-		if (invocation != null && invocation.isAvailable()) {
-			invocation.markUnavailable();
+		if (invocation != null) /* && invocation.isAvailable() */{
+			// invocation.markUnavailable(); // @see CompensableInvocationMethodInterceptor
 
 			if (tccTransaction == null) {
 				compensableManager.begin();

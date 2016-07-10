@@ -21,7 +21,7 @@
 	<bean id="bytetccXidFactory" class="org.bytesoft.bytetcc.xa.XidFactoryImpl" />
 
 	<bean id="bytetccCompensableManager" class="org.bytesoft.bytetcc.CompensableManagerImpl" />
-	<bean id="compensableManager" class="org.bytesoft.bytetcc.TransactionManagerCore" />
+	<bean id="compensableManager" class="org.bytesoft.bytetcc.TransactionManagerImpl" />
 
 	<bean id="bytetccTransactionLogger" class="org.bytesoft.bytetcc.logger.SampleTransactionLogger" />
 
@@ -32,7 +32,7 @@
 	<bean id="bytetccTransactionRepository" class="org.bytesoft.bytejta.TransactionRepositoryImpl" />
 
 	<bean id="bytetccTransactionInterceptor" class="org.bytesoft.bytetcc.supports.rpc.CompensableInterceptorImpl" />
-	<bean id="compensableInterceptor" class="org.bytesoft.bytetcc.supports.rpc.TransactionInterceptorCore">
+	<bean id="compensableInterceptor" class="org.bytesoft.bytetcc.supports.rpc.TransactionInterceptorImpl">
 		<property name="transactionInterceptor" ref="bytejtaTransactionInterceptor" />
 		<property name="compensableInterceptor" ref="bytetccTransactionInterceptor" />
 	</bean>
