@@ -11,7 +11,7 @@ ByteTCC将TCC事务从逻辑上分为两个部分：TRY阶段、CC阶段（Confi
 * 1、使用TCC事务时，需要为service标注@Compensable注解，并指定confirm/cancel逻辑的service实现（非必须，如果没有补偿逻辑，也可不指定）；
 
 ## 二、关于幂等性
-ByteTCC不要求service的实现逻辑具有幂等性。ByteTCC在补偿TCC事务时，虽然也可能会多次调用confirm/cancel方法，但是ByteTCC可以确保每个confirm/cancel方法仅被"执行并提交"一次，因此，使用ByteTCC时可以仅关注业务逻辑，而不必考虑事务相关的细节。
+ByteTCC不要求service的实现逻辑具有幂等性。ByteTCC在补偿TCC事务时，虽然也可能会多次调用confirm/cancel方法，但是ByteTCC可以确保每个confirm/cancel方法仅被"执行并提交"一次（cancel操作只有在try操作执行成功并且事务提交的情况下才会被调用，try操作被回滚时cancel不被调用），因此，使用ByteTCC时可以仅关注业务逻辑，而不必考虑事务相关的细节。
 
 ## 三、ByteTCC特性
 * 1、支持Spring容器的声明式事务管理；
