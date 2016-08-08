@@ -55,8 +55,7 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 		CompensableInvocation invocation = registry.getCurrent();
 
 		CompensableTransaction tccTransaction = compensableManager.getCompensableTransactionQuietly();
-		if (invocation != null) /* && invocation.isAvailable() */{
-			// invocation.markUnavailable(); // @see CompensableInvocationMethodInterceptor
+		if (invocation != null) {
 
 			if (tccTransaction == null) {
 				compensableManager.begin();
@@ -67,8 +66,12 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 				XidFactory jtaXidFactory = this.beanFactory.getTransactionXidFactory();
 				TransactionContext tccTransactionContext = tccTransaction.getTransactionContext();
 				TransactionXid tccTransactionXid = tccTransactionContext.getXid();
-				TransactionXid jtaTransactionXid = jtaXidFactory.createGlobalXid(tccTransactionXid
-						.getGlobalTransactionId());
+				TransactionXid jtaTransactionXid = null;
+				if (tccTransactionContext.isCompensating()) {
+					jtaTransactionXid = jtaXidFactory.createGlobalXid();
+				} else {
+					jtaTransactionXid = jtaXidFactory.createGlobalXid(tccTransactionXid.getGlobalTransactionId());
+				}
 				TransactionContext jtaTransactionContext = tccTransactionContext.clone();
 				jtaTransactionContext.setXid(jtaTransactionXid);
 				try {
@@ -84,15 +87,22 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 				}
 			}
 
-			tccTransaction.registerCompensableInvocation(invocation);
+			if (tccTransaction.getTransactionContext().isCompensating() == false) {
+				tccTransaction.registerCompensableInvocation(invocation);
+			}
 		} else if (tccTransaction == null) {
 			transactionManager.begin();
 		} else {
 			XidFactory jtaXidFactory = this.beanFactory.getTransactionXidFactory();
 			TransactionContext tccTransactionContext = tccTransaction.getTransactionContext();
 			TransactionXid tccTransactionXid = tccTransactionContext.getXid();
-			TransactionXid jtaTransactionXid = jtaXidFactory
-					.createGlobalXid(tccTransactionXid.getGlobalTransactionId());
+			TransactionXid jtaTransactionXid = null;
+			if (tccTransactionContext.isCompensating()) {
+				jtaTransactionXid = jtaXidFactory.createGlobalXid();
+			} else {
+				jtaTransactionXid = jtaXidFactory.createGlobalXid(tccTransactionXid.getGlobalTransactionId());
+			}
+
 			TransactionContext jtaTransactionContext = tccTransactionContext.clone();
 			jtaTransactionContext.setXid(jtaTransactionXid);
 
@@ -180,8 +190,8 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 		return (isCompensableTransaction ? compensableManager : transactionManager).suspend();
 	}
 
-	public void resume(javax.transaction.Transaction tobj) throws InvalidTransactionException, IllegalStateException,
-			SystemException {
+	public void resume(javax.transaction.Transaction tobj)
+			throws InvalidTransactionException, IllegalStateException, SystemException {
 		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 

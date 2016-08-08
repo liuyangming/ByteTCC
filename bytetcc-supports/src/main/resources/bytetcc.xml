@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xmlns:context="http://www.springframework.org/schema/context" xmlns:aop="http://www.springframework.org/schema/aop"
-	xmlns:tx="http://www.springframework.org/schema/tx"
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:aop="http://www.springframework.org/schema/aop" xmlns:tx="http://www.springframework.org/schema/tx"
 	xsi:schemaLocation="http://www.springframework.org/schema/beans    
            http://www.springframework.org/schema/beans/spring-beans-3.0.xsd    
            http://www.springframework.org/schema/context    
@@ -13,10 +13,12 @@
 
 	<description>The bytetcc transaction manager module</description>
 
-	<bean class="org.bytesoft.bytetcc.supports.dubbo.CompensableDubboConfigValidator" />
-	<bean class="org.bytesoft.bytetcc.supports.spring.CompensableBeanFactoryPostProcessor" />
-	<bean class="org.bytesoft.bytetcc.supports.spring.CompensableAnnotationValidator" />
-	<bean class="org.bytesoft.bytetcc.supports.spring.CompensableAnnotationPostProcessor" />
+	<bean
+		class="org.bytesoft.bytetcc.supports.dubbo.CompensableDubboConfigValidator" />
+	<bean
+		class="org.bytesoft.bytetcc.supports.spring.CompensableBeanFactoryPostProcessor" />
+	<bean
+		class="org.bytesoft.bytetcc.supports.spring.CompensableAnnotationValidator" />
 
 	<bean id="bytetccXidFactory" class="org.bytesoft.bytetcc.xa.XidFactoryImpl" />
 
@@ -31,13 +33,16 @@
 	<bean id="bytetccTransactionRecovery" class="org.bytesoft.bytetcc.TransactionRecoveryImpl" />
 	<bean id="bytetccTransactionRepository" class="org.bytesoft.bytejta.TransactionRepositoryImpl" />
 
-	<bean id="bytetccTransactionInterceptor" class="org.bytesoft.bytetcc.supports.rpc.CompensableInterceptorImpl" />
-	<bean id="compensableInterceptor" class="org.bytesoft.bytetcc.supports.rpc.TransactionInterceptorImpl">
+	<bean id="bytetccTransactionInterceptor"
+		class="org.bytesoft.bytetcc.supports.rpc.CompensableInterceptorImpl" />
+	<bean id="compensableInterceptor"
+		class="org.bytesoft.bytetcc.supports.rpc.TransactionInterceptorImpl">
 		<property name="transactionInterceptor" ref="bytejtaTransactionInterceptor" />
 		<property name="compensableInterceptor" ref="bytetccTransactionInterceptor" />
 	</bean>
 
-	<bean id="springContainerContext" class="org.bytesoft.bytetcc.supports.spring.SpringContainerContextImpl" />
+	<bean id="springContainerContext"
+		class="org.bytesoft.bytetcc.supports.spring.SpringContainerContextImpl" />
 
 	<bean id="bytetccBeanFactory" class="org.bytesoft.bytetcc.TransactionBeanFactoryImpl">
 		<property name="transactionManager" ref="bytejtaTransactionManager" />
@@ -52,5 +57,15 @@
 		<property name="containerContext" ref="springContainerContext" />
 		<property name="transactionInterceptor" ref="compensableInterceptor" />
 	</bean>
+
+	<bean id="bytetccMethodInterceptor"
+		class="org.bytesoft.bytetcc.supports.spring.CompensableMethodInterceptor" />
+
+	<aop:config proxy-target-class="true">
+		<aop:pointcut id="bytetccMethodPointcut"
+			expression="@within(org.bytesoft.compensable.Compensable)" />
+		<aop:advisor advice-ref="bytetccMethodInterceptor"
+			pointcut-ref="bytetccMethodPointcut" />
+	</aop:config>
 
 </beans>

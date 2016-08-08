@@ -26,12 +26,7 @@ public class CompensableInvocationImpl implements CompensableInvocation {
 	private Object[] args;
 	private String confirmableKey;
 	private String cancellableKey;
-	private boolean available = true;
 	private Object identifier;
-
-	public void markUnavailable() {
-		this.available = false;
-	}
 
 	public Method getMethod() {
 		return method;
@@ -63,14 +58,6 @@ public class CompensableInvocationImpl implements CompensableInvocation {
 
 	public void setCancellableKey(String cancellableKey) {
 		this.cancellableKey = cancellableKey;
-	}
-
-	public boolean isAvailable() {
-		return available;
-	}
-
-	public void setAvailable(boolean available) {
-		this.available = available;
 	}
 
 	public Object getIdentifier() {

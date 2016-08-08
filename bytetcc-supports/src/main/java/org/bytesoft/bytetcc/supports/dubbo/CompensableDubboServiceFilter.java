@@ -61,8 +61,6 @@ public class CompensableDubboServiceFilter implements Filter {
 		RemoteCoordinator consumeCoordinator = beanRegistry.getConsumeCoordinator();
 		TransactionInterceptor transactionInterceptor = beanFactory.getTransactionInterceptor();
 		CompensableManager transactionManager = beanFactory.getCompensableManager();
-		Transaction transaction = transactionManager.getCompensableTransactionQuietly();
-		TransactionContext nativeTransactionContext = transaction == null ? null : transaction.getTransactionContext();
 
 		URL targetUrl = invoker.getUrl();
 		String targetAddr = targetUrl.getIp();
@@ -89,11 +87,11 @@ public class CompensableDubboServiceFilter implements Filter {
 		request.setTargetTransactionCoordinator(remoteCoordinator);
 
 		TransactionResponseImpl response = new TransactionResponseImpl();
-		response.setTransactionContext(nativeTransactionContext);
 		response.setSourceTransactionCoordinator(remoteCoordinator);
 		try {
-			String transactionContextContent = RpcContext.getContext().getAttachment(
-					TransactionContext.class.getCanonicalName());
+			// String transactionContextContent = RpcContext.getContext()
+			// .getAttachment(TransactionContext.class.getCanonicalName());
+			String transactionContextContent = invocation.getAttachment(TransactionContext.class.getCanonicalName());
 			if (StringUtils.isNotBlank(transactionContextContent)) {
 				byte[] requestByteArray = ByteUtils.stringToByteArray(transactionContextContent);
 				ByteArrayInputStream bais = new ByteArrayInputStream(requestByteArray);
@@ -105,14 +103,20 @@ public class CompensableDubboServiceFilter implements Filter {
 
 			result = invoker.invoke(invocation);
 
+			Transaction transaction = transactionManager.getCompensableTransactionQuietly();
+			TransactionContext nativeTransactionContext = transaction == null ? null : transaction.getTransactionContext();
+
+			response.setTransactionContext(nativeTransactionContext);
+
 			transactionInterceptor.beforeSendResponse(response);
 			if (StringUtils.isNotBlank(transactionContextContent)) {
 				ByteArrayOutputStream baos = new ByteArrayOutputStream();
 				HessianOutput output = new HessianOutput(baos);
 				output.writeObject(nativeTransactionContext);
 				String nativeTansactionContextContent = ByteUtils.byteArrayToString(baos.toByteArray());
-				RpcContext.getContext().setAttachment(TransactionContext.class.getCanonicalName(),
-						nativeTansactionContextContent);
+				// RpcContext.getContext().setAttachment(TransactionContext.class.getCanonicalName(),
+				// nativeTansactionContextContent);
+				invocation.getAttachments().put(TransactionContext.class.getCanonicalName(), nativeTansactionContextContent);
 			}
 		} catch (IOException ex) {
 			// TODO
@@ -171,14 +175,17 @@ public class CompensableDubboServiceFilter implements Filter {
 				HessianOutput output = new HessianOutput(baos);
 				output.writeObject(request.getTransactionContext());
 				String transactionContextContent = ByteUtils.byteArrayToString(baos.toByteArray());
-				RpcContext.getContext().setAttachment(TransactionContext.class.getCanonicalName(), transactionContextContent);
+				// RpcContext.getContext().setAttachment(TransactionContext.class.getCanonicalName(),
+				// transactionContextContent);
+				invocation.getAttachments().put(TransactionContext.class.getCanonicalName(), transactionContextContent);
 			}
 
 			result = invoker.invoke(invocation);
 
 			if (request.getTransactionContext() != null) {
-				String transactionContextContent = RpcContext.getContext().getAttachment(
-						TransactionContext.class.getCanonicalName());
+				// String transactionContextContent = RpcContext.getContext()
+				// .getAttachment(TransactionContext.class.getCanonicalName());
+				String transactionContextContent = invocation.getAttachment(TransactionContext.class.getCanonicalName());
 				byte[] byteArray = ByteUtils.stringToByteArray(transactionContextContent);
 				ByteArrayInputStream bais = new ByteArrayInputStream(byteArray);
 				HessianInput input = new HessianInput(bais);
