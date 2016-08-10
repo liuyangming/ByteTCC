@@ -22,7 +22,7 @@ import org.bytesoft.transaction.supports.TransactionListener;
 public interface CompensableTransaction extends Transaction, TransactionListener {
 
 	public Transaction getTransaction();
-	
+
 	public TransactionArchive getTransactionArchive();
 
 	public void registerCompensableInvocation(CompensableInvocation invocation);

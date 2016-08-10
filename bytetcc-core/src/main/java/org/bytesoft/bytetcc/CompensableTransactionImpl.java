@@ -56,10 +56,15 @@ public class CompensableTransactionImpl implements CompensableTransaction {
 	private Transaction transaction;
 	private CompensableBeanFactory beanFactory;
 
+	private boolean coordinatorTried;
 	private int transactionVote;
 	private int transactionStatus;
-	/* current comensable-archive and compense decision. */
+	/* current comensable-decision. */
 	private transient Boolean decision;
+	/*
+	 * current compense-archive. only for participant in try phase; for both coordinator and participant in confirm/cancel
+	 * phase.
+	 */
 	private transient CompensableArchive archive;
 
 	public CompensableTransactionImpl(TransactionContext txContext) {
@@ -78,8 +83,8 @@ public class CompensableTransactionImpl implements CompensableTransaction {
 		return transactionArchive;
 	}
 
-	public void commit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException,
-			SecurityException, IllegalStateException, SystemException {
+	public void commit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException, SecurityException,
+			IllegalStateException, SystemException {
 		this.fireCompensableInvocationConfirm();
 		this.fireRemoteCoordinatorConfirm();
 	}
@@ -144,8 +149,13 @@ public class CompensableTransactionImpl implements CompensableTransaction {
 	}
 
 	public void rollback() throws IllegalStateException, SystemException {
-		this.fireCompensableInvocationCancel();
-		this.fireRemoteCoordinatorCancel();
+		boolean coordinator = this.transactionContext.isCoordinator();
+		if (coordinator && this.coordinatorTried == false) {
+			this.fireRemoteCoordinatorCancel();
+		} else {
+			this.fireCompensableInvocationCancel();
+			this.fireRemoteCoordinatorCancel();
+		}
 	}
 
 	private void fireCompensableInvocationCancel() {
@@ -256,11 +266,13 @@ public class CompensableTransactionImpl implements CompensableTransaction {
 	public void registerCompensableInvocation(CompensableInvocation invocation) {
 		CompensableArchive archive = new CompensableArchive();
 		archive.setCompensable(invocation);
+		if (this.transactionContext.isCoordinator() == false) {
+			this.archive = archive;
+		}
 		this.archiveList.add(archive);
 	}
 
-	public void registerSynchronization(Synchronization sync) throws RollbackException, IllegalStateException,
-			SystemException {
+	public void registerSynchronization(Synchronization sync) throws RollbackException, IllegalStateException, SystemException {
 	}
 
 	public void registerTransactionListener(TransactionListener listener) {
@@ -276,38 +288,56 @@ public class CompensableTransactionImpl implements CompensableTransaction {
 	}
 
 	public void onCommitStart(TransactionXid xid) {
-		this.archive.setXid(xid);
-		// CompensableLogger transactionLogger = this.beanFactory.getCompensableLogger();
-		// transactionLogger.updateCompensable(this.archive);
+		if (this.transactionContext.isCompensating()) {
+			this.archive.setXid(xid);
+			// CompensableLogger transactionLogger = this.beanFactory.getCompensableLogger();
+			// transactionLogger.updateCompensable(this.archive);
+		}
 	}
 
 	public void onCommitSuccess(TransactionXid xid) {
-		if (this.decision == null) {
-			// ignore
-		} else if (this.decision) {
-			this.archive.setConfirmed(true);
-		} else {
-			this.archive.setCancelled(true);
+		if (this.transactionContext.isCompensating()) {
+			if (this.decision == null) {
+				// ignore
+			} else if (this.decision) {
+				this.archive.setConfirmed(true);
+			} else {
+				this.archive.setCancelled(true);
+			}
+			CompensableLogger transactionLogger = this.beanFactory.getCompensableLogger();
+			transactionLogger.updateCompensable(this.archive);
+		} else /* try-phase */ {
+			if (this.transactionContext.isCoordinator()) {
+				this.coordinatorTried = true;
+			} else {
+				this.archive.setParticipantTried(true);
+			}
 		}
-		CompensableLogger transactionLogger = this.beanFactory.getCompensableLogger();
-		transactionLogger.updateCompensable(this.archive);
 	}
 
 	public void onCommitFailure(TransactionXid xid) {
 	}
 
 	public void onCommitHeuristicMixed(TransactionXid xid) {
-		if (this.decision == null) {
-			// ignore
-		} else if (this.decision) {
-			this.archive.setTxMixed(true);
-			this.archive.setConfirmed(true);
-		} else {
-			this.archive.setTxMixed(true);
-			this.archive.setCancelled(true);
+		if (this.transactionContext.isCompensating()) {
+			if (this.decision == null) {
+				// ignore
+			} else if (this.decision) {
+				this.archive.setTxMixed(true);
+				this.archive.setConfirmed(true);
+			} else {
+				this.archive.setTxMixed(true);
+				this.archive.setCancelled(true);
+			}
+			CompensableLogger transactionLogger = this.beanFactory.getCompensableLogger();
+			transactionLogger.updateCompensable(this.archive);
+		} else /* try-phase */ {
+			if (this.transactionContext.isCoordinator()) {
+				this.coordinatorTried = true;
+			} else {
+				this.archive.setParticipantTried(true);
+			}
 		}
-		CompensableLogger transactionLogger = this.beanFactory.getCompensableLogger();
-		transactionLogger.updateCompensable(this.archive);
 	}
 
 	public void onCommitHeuristicRolledback(TransactionXid xid) {
@@ -340,6 +370,14 @@ public class CompensableTransactionImpl implements CompensableTransaction {
 
 	public void setTransactionStatus(int status) {
 		this.transactionStatus = status;
+	}
+
+	public CompensableArchive getCurrentArchive() {
+		return this.archive;
+	}
+
+	public void setCurrentArchive(CompensableArchive archive) {
+		this.archive = archive;
 	}
 
 	public boolean isTiming() {

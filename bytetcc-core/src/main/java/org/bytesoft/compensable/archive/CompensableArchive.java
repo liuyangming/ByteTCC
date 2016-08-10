@@ -24,6 +24,11 @@ public class CompensableArchive {
 
 	private Xid xid;
 	private CompensableInvocation compensable;
+
+	/* try-phase. */
+	private boolean participantTried;
+
+	/* confirm/cancel phase. */
 	private boolean confirmed;
 	private boolean cancelled;
 	private boolean txMixed;
@@ -59,6 +64,14 @@ public class CompensableArchive {
 
 	public void setCompensable(CompensableInvocation compensable) {
 		this.compensable = compensable;
+	}
+
+	public boolean isParticipantTried() {
+		return participantTried;
+	}
+
+	public void setParticipantTried(boolean participantTried) {
+		this.participantTried = participantTried;
 	}
 
 	public boolean isConfirmed() {

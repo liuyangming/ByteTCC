@@ -77,6 +77,7 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 				try {
 					Transaction jtaTransaction = transactionCoordinator.start(jtaTransactionContext,
 							XAResource.TMNOFLAGS);
+					jtaTransaction.registerTransactionListener(tccTransaction);
 					jtaTransaction.setTransactionalExtra(tccTransaction);
 					tccTransaction.setTransactionalExtra(jtaTransaction);
 				} catch (TransactionException ex) {
@@ -108,6 +109,7 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 
 			try {
 				Transaction transaction = transactionCoordinator.start(jtaTransactionContext, XAResource.TMNOFLAGS);
+				transaction.registerTransactionListener(tccTransaction);
 				transaction.setTransactionalExtra(tccTransaction);
 				tccTransaction.setTransactionalExtra(transaction);
 			} catch (TransactionException ex) {

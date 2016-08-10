@@ -74,7 +74,9 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 
 	public Transaction end(TransactionContext transactionContext, int flags) throws TransactionException {
 		CompensableManager transactionManager = this.beanFactory.getCompensableManager();
-		return transactionManager.getTransactionQuietly();
+		CompensableTransaction transaction = transactionManager.getCompensableTransactionQuietly();
+		((CompensableTransactionImpl) transaction).setCurrentArchive(null);
+		return transaction == null ? null : transaction.getTransaction();
 	}
 
 	public void start(Xid xid, int flags) throws XAException {

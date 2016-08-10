@@ -353,6 +353,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 			TransactionXid jtaTransactionXid = jtaTransactionContext.getXid();
 			jtaTransactionCoordinator.end(jtaTransactionContext, XAResource.TMSUCCESS);
 			jtaTransactionCoordinator.commit(jtaTransactionXid, true);
+			// ((CompensableTransactionImpl) transaction).setCoordinatorTried(true);
 			commitExists = true;
 		} catch (XAException xaex) {
 			switch (xaex.errorCode) {
@@ -440,6 +441,8 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 			success = true;
 		} finally {
 			transaction.setTransactionalExtra(null);
+
+			this.fireCompensableRollback(transaction);
 
 			TransactionXid xid = tccTransactionContext.getXid();
 			if (success) {
