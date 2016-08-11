@@ -42,12 +42,13 @@ import org.bytesoft.transaction.Transaction;
 import org.bytesoft.transaction.TransactionContext;
 import org.bytesoft.transaction.archive.XAResourceArchive;
 import org.bytesoft.transaction.supports.TransactionListener;
+import org.bytesoft.transaction.supports.TransactionListenerAdapter;
 import org.bytesoft.transaction.xa.TransactionXid;
 import org.bytesoft.transaction.xa.XidFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class CompensableTransactionImpl implements CompensableTransaction {
+public class CompensableTransactionImpl extends TransactionListenerAdapter implements CompensableTransaction {
 	static final Logger logger = LoggerFactory.getLogger(CompensableTransactionImpl.class.getSimpleName());
 
 	private final TransactionContext transactionContext;
@@ -61,9 +62,10 @@ public class CompensableTransactionImpl implements CompensableTransaction {
 	private int transactionStatus;
 	/* current comensable-decision. */
 	private transient Boolean decision;
-	/*
-	 * current compense-archive. only for participant in try phase; for both coordinator and participant in confirm/cancel
-	 * phase.
+	/**
+	 * current compense-archive. <br />
+	 * only for participant in try phase; <br />
+	 * for both coordinator and participant in confirm/cancel phase.
 	 */
 	private transient CompensableArchive archive;
 
@@ -278,14 +280,9 @@ public class CompensableTransactionImpl implements CompensableTransaction {
 	public void registerTransactionListener(TransactionListener listener) {
 	}
 
-	public void onPrepareStart(TransactionXid xid) {
-	}
-
-	public void onPrepareSuccess(TransactionXid xid) {
-	}
-
-	public void onPrepareFailure(TransactionXid xid) {
-	}
+	// public void onPrepareStart(TransactionXid xid) {}
+	// public void onPrepareSuccess(TransactionXid xid) {}
+	// public void onPrepareFailure(TransactionXid xid) {}
 
 	public void onCommitStart(TransactionXid xid) {
 		if (this.transactionContext.isCompensating()) {
@@ -315,8 +312,7 @@ public class CompensableTransactionImpl implements CompensableTransaction {
 		}
 	}
 
-	public void onCommitFailure(TransactionXid xid) {
-	}
+	// public void onCommitFailure(TransactionXid xid) {}
 
 	public void onCommitHeuristicMixed(TransactionXid xid) {
 		if (this.transactionContext.isCompensating()) {
@@ -340,17 +336,10 @@ public class CompensableTransactionImpl implements CompensableTransaction {
 		}
 	}
 
-	public void onCommitHeuristicRolledback(TransactionXid xid) {
-	}
-
-	public void onRollbackStart(TransactionXid xid) {
-	}
-
-	public void onRollbackSuccess(TransactionXid xid) {
-	}
-
-	public void onRollbackFailure(TransactionXid xid) {
-	}
+	// public void onCommitHeuristicRolledback(TransactionXid xid) {}
+	// public void onRollbackStart(TransactionXid xid) {}
+	// public void onRollbackSuccess(TransactionXid xid) {}
+	// public void onRollbackFailure(TransactionXid xid) {}
 
 	public void setRollbackOnly() throws IllegalStateException, SystemException {
 		throw new IllegalStateException();

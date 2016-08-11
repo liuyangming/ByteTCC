@@ -75,8 +75,7 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 				TransactionContext jtaTransactionContext = tccTransactionContext.clone();
 				jtaTransactionContext.setXid(jtaTransactionXid);
 				try {
-					Transaction jtaTransaction = transactionCoordinator.start(jtaTransactionContext,
-							XAResource.TMNOFLAGS);
+					Transaction jtaTransaction = transactionCoordinator.start(jtaTransactionContext, XAResource.TMNOFLAGS);
 					jtaTransaction.registerTransactionListener(tccTransaction);
 					jtaTransaction.setTransactionalExtra(tccTransaction);
 					tccTransaction.setTransactionalExtra(jtaTransaction);
@@ -123,8 +122,8 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 
 	}
 
-	public void commit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException,
-			SecurityException, IllegalStateException, SystemException {
+	public void commit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException, SecurityException,
+			IllegalStateException, SystemException {
 		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 
