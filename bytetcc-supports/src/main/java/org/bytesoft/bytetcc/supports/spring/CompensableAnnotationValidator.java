@@ -186,7 +186,6 @@ public class CompensableAnnotationValidator implements BeanFactoryPostProcessor 
 						errorType.getCanonicalName()));
 			}
 		}
-		transactional.rollbackFor();
 	}
 
 }
