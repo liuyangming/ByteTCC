@@ -181,8 +181,9 @@ public class CompensableAnnotationValidator implements BeanFactoryPostProcessor 
 			}
 
 			if (matched == false) {
-				throw new IllegalStateException(
-						String.format("Method(%s) should rollback for: %s!", method, errorType.getCanonicalName()));
+				throw new IllegalStateException(String.format(
+						"The value of Transactional.rollbackFor annotated on method(%s) must includes %s!", method,
+						errorType.getCanonicalName()));
 			}
 		}
 		transactional.rollbackFor();
