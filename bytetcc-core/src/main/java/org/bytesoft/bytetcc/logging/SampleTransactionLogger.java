@@ -30,7 +30,7 @@ public class SampleTransactionLogger extends VirtualLoggingSystemImpl
 		implements CompensableLogger, CompensableBeanFactoryAware {
 	static final Logger logger = LoggerFactory.getLogger(SampleTransactionLogger.class.getSimpleName());
 
-	private CompensableBeanFactory beanFactory;
+	// private CompensableBeanFactory beanFactory;
 
 	public void createTransaction(TransactionArchive archive) {
 		// TODO Auto-generated method stub
@@ -47,7 +47,7 @@ public class SampleTransactionLogger extends VirtualLoggingSystemImpl
 
 	}
 
-		public void updateCoordinator(XAResourceArchive archive) {
+	public void updateCoordinator(XAResourceArchive archive) {
 		// TODO Auto-generated method stub
 
 	}
@@ -62,12 +62,16 @@ public class SampleTransactionLogger extends VirtualLoggingSystemImpl
 
 	}
 
+	public String getLoggingFilePrefix() {
+		return "bytetcc-";
+	}
+
 	public String getLoggingIdentifier() {
 		return "org.bytesoft.bytetcc.logging.sample";
 	}
 
 	public void setBeanFactory(CompensableBeanFactory tbf) {
-		this.beanFactory = tbf;
+		// this.beanFactory = tbf;
 	}
 
 }
