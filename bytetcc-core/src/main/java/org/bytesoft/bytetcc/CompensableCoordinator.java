@@ -31,7 +31,7 @@ import org.bytesoft.compensable.CompensableManager;
 import org.bytesoft.compensable.CompensableTransaction;
 import org.bytesoft.compensable.archive.TransactionArchive;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
-import org.bytesoft.compensable.logger.CompensableLogger;
+import org.bytesoft.compensable.logging.CompensableLogger;
 import org.bytesoft.transaction.Transaction;
 import org.bytesoft.transaction.TransactionContext;
 import org.bytesoft.transaction.TransactionRepository;

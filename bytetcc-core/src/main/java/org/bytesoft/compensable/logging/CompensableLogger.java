@@ -13,35 +13,29 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this distribution; if not, see <http://www.gnu.org/licenses/>.
  */
-package org.bytesoft.bytetcc.logger;
-
-import java.util.ArrayList;
-import java.util.List;
+package org.bytesoft.compensable.logging;
 
 import org.bytesoft.compensable.archive.CompensableArchive;
 import org.bytesoft.compensable.archive.TransactionArchive;
-import org.bytesoft.compensable.logger.CompensableLogger;
 import org.bytesoft.transaction.archive.XAResourceArchive;
+import org.bytesoft.transaction.recovery.TransactionRecoveryCallback;
 
-public class EmptyCompensableLogger implements CompensableLogger {
+public interface CompensableLogger {
 
-	public void createTransaction(TransactionArchive archive) {
-	}
+	/* transaction */
+	public void createTransaction(TransactionArchive archive);
 
-	public void updateTransaction(TransactionArchive archive) {
-	}
+	public void updateTransaction(TransactionArchive archive);
 
-	public void deleteTransaction(TransactionArchive archive) {
-	}
+	public void deleteTransaction(TransactionArchive archive);
 
-	public List<TransactionArchive> getTransactionArchiveList() {
-		return new ArrayList<TransactionArchive>();
-	}
+	/* coordinator */
+	public void updateCoordinator(XAResourceArchive archive);
 
-	public void updateCoordinator(XAResourceArchive archive) {
-	}
+	/* compensable */
+	public void updateCompensable(CompensableArchive archive);
 
-	public void updateCompensable(CompensableArchive archive) {
-	}
+	/* recovery */
+	public void recover(TransactionRecoveryCallback callback);
 
 }

@@ -35,7 +35,7 @@ import org.bytesoft.compensable.CompensableTransaction;
 import org.bytesoft.compensable.ContainerContext;
 import org.bytesoft.compensable.archive.CompensableArchive;
 import org.bytesoft.compensable.archive.TransactionArchive;
-import org.bytesoft.compensable.logger.CompensableLogger;
+import org.bytesoft.compensable.logging.CompensableLogger;
 import org.bytesoft.transaction.CommitRequiredException;
 import org.bytesoft.transaction.RollbackRequiredException;
 import org.bytesoft.transaction.Transaction;
