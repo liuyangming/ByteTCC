@@ -16,7 +16,6 @@
 package org.bytesoft.bytetcc;
 
 import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
-import org.bytesoft.bytetcc.logging.EmptyCompensableLogger;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableManager;
 import org.bytesoft.compensable.ContainerContext;
@@ -24,6 +23,7 @@ import org.bytesoft.compensable.logging.CompensableLogger;
 import org.bytesoft.transaction.TransactionManager;
 import org.bytesoft.transaction.TransactionRecovery;
 import org.bytesoft.transaction.TransactionRepository;
+import org.bytesoft.transaction.logging.ArchiveDeserializer;
 import org.bytesoft.transaction.supports.rpc.TransactionInterceptor;
 import org.bytesoft.transaction.xa.XidFactory;
 
@@ -33,7 +33,7 @@ public final class TransactionBeanFactoryImpl implements CompensableBeanFactory 
 	private CompensableManager compensableManager;
 	private XidFactory transactionXidFactory;
 	private XidFactory compensableXidFactory;
-	private CompensableLogger compensableLogger = new EmptyCompensableLogger();
+	private CompensableLogger compensableLogger;
 	private TransactionRepository transactionRepository;
 	private TransactionRepository compensableRepository;
 	private TransactionInterceptor transactionInterceptor;
@@ -41,6 +41,7 @@ public final class TransactionBeanFactoryImpl implements CompensableBeanFactory 
 	private RemoteCoordinator transactionCoordinator;
 	private RemoteCoordinator compensableCoordinator;
 	private ContainerContext containerContext;
+	private ArchiveDeserializer archiveDeserializer;
 
 	public TransactionManager getTransactionManager() {
 		return transactionManager;
@@ -136,6 +137,14 @@ public final class TransactionBeanFactoryImpl implements CompensableBeanFactory 
 
 	public void setContainerContext(ContainerContext containerContext) {
 		this.containerContext = containerContext;
+	}
+
+	public ArchiveDeserializer getArchiveDeserializer() {
+		return archiveDeserializer;
+	}
+
+	public void setArchiveDeserializer(ArchiveDeserializer archiveDeserializer) {
+		this.archiveDeserializer = archiveDeserializer;
 	}
 
 }
