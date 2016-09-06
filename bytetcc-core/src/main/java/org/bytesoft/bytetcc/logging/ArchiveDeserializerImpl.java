@@ -41,7 +41,7 @@ public class ArchiveDeserializerImpl implements ArchiveDeserializer {
 		} else if (XAResourceArchive.class.isInstance(archive)) {
 			byte[] array = this.xaResourceArchiveDeserializer.serialize(xid, archive);
 			byte[] byteArray = new byte[array.length + 1];
-			byteArray[0] = TYPE_TRANSACTION;
+			byteArray[0] = TYPE_XA_RESOURCE;
 			System.arraycopy(array, 0, byteArray, 1, array.length);
 			return byteArray;
 		} else if (CompensableArchive.class.isInstance(archive)) {
