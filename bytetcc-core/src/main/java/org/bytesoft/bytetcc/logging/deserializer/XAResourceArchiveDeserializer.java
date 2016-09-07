@@ -41,28 +41,18 @@ public class XAResourceArchiveDeserializer implements ArchiveDeserializer, Compe
 	public byte[] serialize(TransactionXid xid, Object obj) {
 		XAResourceArchive archive = (XAResourceArchive) obj;
 
-		ByteBuffer buffer = ByteBuffer.allocate(8192);
-
 		Xid branchXid = archive.getXid();
 		byte[] branchQualifier = branchXid.getBranchQualifier();
-		buffer.put(branchQualifier);
 
 		XAResourceDescriptor descriptor = archive.getDescriptor();
+		byte[] identifierByteArray = new byte[0];
+		byte typeByte = 0x0;
 		if (CommonResourceDescriptor.class.isInstance(descriptor)) {
-			String identifier = descriptor.getIdentifier();
-			byte[] identifierByteArray = identifier.getBytes();
-			buffer.put((byte) 0x1);
-			buffer.put((byte) identifierByteArray.length);
-			buffer.put(identifierByteArray);
+			typeByte = (byte) 0x1;
+			identifierByteArray = descriptor.getIdentifier().getBytes();
 		} else if (RemoteResourceDescriptor.class.isInstance(descriptor)) {
-			String identifier = descriptor.getIdentifier();
-			byte[] identifierByteArray = identifier.getBytes();
-			buffer.put((byte) 0x2);
-			buffer.put((byte) identifierByteArray.length);
-			buffer.put(identifierByteArray);
-		} else {
-			buffer.put((byte) 0x0);
-			buffer.put((byte) 0x0);
+			typeByte = (byte) 0x2;
+			identifierByteArray = descriptor.getIdentifier().getBytes();
 		}
 
 		byte branchVote = (byte) archive.getVote();
@@ -72,17 +62,22 @@ public class XAResourceArchiveDeserializer implements ArchiveDeserializer, Compe
 		byte completed = archive.isCompleted() ? (byte) 1 : (byte) 0;
 		byte heuristic = archive.isHeuristic() ? (byte) 1 : (byte) 0;
 
-		buffer.put(branchVote);
-		buffer.put(readonly);
-		buffer.put(committed);
-		buffer.put(rolledback);
-		buffer.put(completed);
-		buffer.put(heuristic);
+		byte[] byteArray = new byte[XidFactory.BRANCH_QUALIFIER_LENGTH + 2 + identifierByteArray.length + 6];
+		System.arraycopy(branchQualifier, 0, byteArray, 0, branchQualifier.length);
 
-		int position = buffer.position();
-		byte[] byteArray = new byte[position];
-		buffer.flip();
-		buffer.get(byteArray);
+		byteArray[XidFactory.BRANCH_QUALIFIER_LENGTH] = typeByte;
+		byteArray[XidFactory.BRANCH_QUALIFIER_LENGTH + 1] = (byte) identifierByteArray.length;
+		if (identifierByteArray.length > 0) {
+			System.arraycopy(identifierByteArray, 0, byteArray, XidFactory.BRANCH_QUALIFIER_LENGTH + 2,
+					identifierByteArray.length);
+		}
+
+		byteArray[XidFactory.BRANCH_QUALIFIER_LENGTH + 2 + identifierByteArray.length] = branchVote;
+		byteArray[XidFactory.BRANCH_QUALIFIER_LENGTH + 2 + identifierByteArray.length + 1] = readonly;
+		byteArray[XidFactory.BRANCH_QUALIFIER_LENGTH + 2 + identifierByteArray.length + 2] = committed;
+		byteArray[XidFactory.BRANCH_QUALIFIER_LENGTH + 2 + identifierByteArray.length + 3] = rolledback;
+		byteArray[XidFactory.BRANCH_QUALIFIER_LENGTH + 2 + identifierByteArray.length + 4] = completed;
+		byteArray[XidFactory.BRANCH_QUALIFIER_LENGTH + 2 + identifierByteArray.length + 5] = heuristic;
 
 		return byteArray;
 	}

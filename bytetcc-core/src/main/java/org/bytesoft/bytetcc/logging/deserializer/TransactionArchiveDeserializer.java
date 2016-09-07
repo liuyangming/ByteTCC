@@ -18,6 +18,7 @@ package org.bytesoft.bytetcc.logging.deserializer;
 import java.nio.ByteBuffer;
 import java.util.List;
 
+import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.compensable.archive.CompensableArchive;
 import org.bytesoft.compensable.archive.TransactionArchive;
 import org.bytesoft.transaction.archive.XAResourceArchive;
@@ -33,48 +34,66 @@ public class TransactionArchiveDeserializer extends
 	public byte[] serialize(TransactionXid xid, Object obj) {
 		TransactionArchive archive = (TransactionArchive) obj;
 
-		ByteBuffer buffer = ByteBuffer.allocate(8192);
-		int status = archive.getStatus();
-		buffer.put((byte) status);
-		int vote = archive.getVote();
-		buffer.put((byte) vote);
-		byte coordinator = archive.isCoordinator() ? (byte) 0x1 : (byte) 0x0;
-		buffer.put((byte) coordinator);
-		byte compensable = archive.isCompensable() ? (byte) 0x1 : (byte) 0x0;
-		buffer.put((byte) compensable);
-		int compensableStatus = archive.getCompensableStatus();
-		buffer.put((byte) compensableStatus);
-
 		List<CompensableArchive> nativeArchiveList = archive.getCompensableResourceList();
 		List<XAResourceArchive> remoteArchiveList = archive.getRemoteResources();
 
-		int nativeNumber = nativeArchiveList.size();
-		int remoteNumber = remoteArchiveList.size();
-		buffer.put((byte) nativeNumber);
-		buffer.put((byte) remoteNumber);
+		int nativeArchiveNumber = nativeArchiveList.size();
+		int remoteArchiveNumber = remoteArchiveList.size();
 
-		for (int i = 0; i < nativeNumber; i++) {
+		int length = 5 + 2;
+		byte[][] nativeByteArray = new byte[nativeArchiveNumber][];
+		for (int i = 0; i < nativeArchiveNumber; i++) {
 			CompensableArchive compensableArchive = nativeArchiveList.get(i);
 
 			byte[] compensableByteArray = this.compensableArchiveDeserializer.serialize(xid, compensableArchive);
+			byte[] lengthByteArray = ByteUtils.shortToByteArray((short) compensableByteArray.length);
 
-			buffer.put((byte) compensableByteArray.length);
-			buffer.put(compensableByteArray);
+			byte[] elementByteArray = new byte[compensableByteArray.length + 2];
+			System.arraycopy(lengthByteArray, 0, elementByteArray, 0, lengthByteArray.length);
+			System.arraycopy(compensableByteArray, 0, elementByteArray, 2, compensableByteArray.length);
+
+			nativeByteArray[i] = elementByteArray;
+			length = length + elementByteArray.length;
 		}
 
-		for (int i = 0; i < remoteNumber; i++) {
+		byte[][] remoteByteArray = new byte[nativeArchiveNumber][];
+		for (int i = 0; i < remoteArchiveNumber; i++) {
 			XAResourceArchive resourceArchive = remoteArchiveList.get(i);
 
 			byte[] resourceByteArray = this.resourceArchiveDeserializer.serialize(xid, resourceArchive);
+			byte[] lengthByteArray = ByteUtils.shortToByteArray((short) resourceByteArray.length);
 
-			buffer.put((byte) resourceByteArray.length);
-			buffer.put(resourceByteArray);
+			byte[] elementByteArray = new byte[resourceByteArray.length + 2];
+			System.arraycopy(lengthByteArray, 0, elementByteArray, 0, lengthByteArray.length);
+			System.arraycopy(resourceByteArray, 0, elementByteArray, 2, resourceByteArray.length);
+
+			remoteByteArray[i] = elementByteArray;
+			length = length + elementByteArray.length;
 		}
 
-		int pos = buffer.position();
-		byte[] byteArray = new byte[pos];
-		buffer.flip();
-		buffer.get(byteArray);
+		int position = 0;
+
+		byte[] byteArray = new byte[length];
+		byteArray[position++] = (byte) archive.getStatus();
+		byteArray[position++] = (byte) archive.getVote();
+		byteArray[position++] = archive.isCoordinator() ? (byte) 0x1 : (byte) 0x0;
+		byteArray[position++] = archive.isCompensable() ? (byte) 0x1 : (byte) 0x0;
+		byteArray[position++] = (byte) archive.getCompensableStatus();
+
+		byteArray[position++] = (byte) nativeArchiveNumber;
+		byteArray[position++] = (byte) remoteArchiveNumber;
+
+		for (int i = 0; i < nativeArchiveNumber; i++) {
+			byte[] elementByteArray = nativeByteArray[i];
+			System.arraycopy(elementByteArray, 0, byteArray, position, elementByteArray.length);
+			position = position + elementByteArray.length;
+		}
+
+		for (int i = 0; i < remoteArchiveNumber; i++) {
+			byte[] elementByteArray = remoteByteArray[i];
+			System.arraycopy(elementByteArray, 0, byteArray, position, elementByteArray.length);
+			position = position + elementByteArray.length;
+		}
 
 		return byteArray;
 	}
@@ -101,7 +120,7 @@ public class TransactionArchiveDeserializer extends
 		int nativeArchiveNumber = buffer.get();
 		int remoteArchiveNumber = buffer.get();
 		for (int i = 0; i < nativeArchiveNumber; i++) {
-			int length = buffer.get();
+			int length = buffer.getShort();
 			byte[] compensableByteArray = new byte[length];
 			buffer.get(compensableByteArray);
 
@@ -112,7 +131,7 @@ public class TransactionArchiveDeserializer extends
 		}
 
 		for (int i = 0; i < remoteArchiveNumber; i++) {
-			int length = buffer.get();
+			int length = buffer.getShort();
 			byte[] resourceByteArray = new byte[length];
 			buffer.get(resourceByteArray);
 
