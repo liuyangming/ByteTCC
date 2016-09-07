@@ -37,11 +37,10 @@ public class CompensableArchiveDeserializer implements ArchiveDeserializer, Comp
 		CompensableArchive archive = (CompensableArchive) obj;
 
 		CompensableInvocation compensable = archive.getCompensable();
-		byte[] byteArray = null;
+		byte[] byteArray = new byte[0];
 		try {
 			byteArray = CommonUtils.serializeObject(compensable);
 		} catch (Exception ex) {
-			byteArray = new byte[0];
 			logger.error("Error occurred while serializing object: {}", compensable);
 		}
 
@@ -87,7 +86,6 @@ public class CompensableArchiveDeserializer implements ArchiveDeserializer, Comp
 		try {
 			compensable = (CompensableInvocation) CommonUtils.deserializeObject(byteArray);
 		} catch (Exception ex) {
-			compensable = null;
 			logger.error("Error occurred while deserializing object: {}", byteArray);
 		}
 
