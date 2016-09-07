@@ -15,13 +15,15 @@
  */
 package org.bytesoft.bytetcc.logging.deserializer;
 
+import org.bytesoft.compensable.archive.TransactionArchive;
 import org.bytesoft.transaction.logging.ArchiveDeserializer;
 import org.bytesoft.transaction.xa.TransactionXid;
 
 public class TransactionArchiveDeserializer implements ArchiveDeserializer {
 
-	public byte[] serialize(TransactionXid xid, Object archive) {
-		// TODO Auto-generated method stub
+	public byte[] serialize(TransactionXid xid, Object obj) {
+		TransactionArchive archive = (TransactionArchive) obj;
+
 		return null;
 	}
 
