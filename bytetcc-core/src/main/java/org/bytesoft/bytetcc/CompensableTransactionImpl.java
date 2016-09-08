@@ -347,11 +347,17 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 	// public void onPrepareFailure(TransactionXid xid) {}
 
 	public void onCommitStart(TransactionXid xid) {
+		CompensableLogger transactionLogger = this.beanFactory.getCompensableLogger();
+		XidFactory xidFactory = this.beanFactory.getCompensableXidFactory();
 		if (this.transactionContext.isCompensating()) {
-			this.archive.setXid(xid);
-			// CompensableLogger transactionLogger =
-			// this.beanFactory.getCompensableLogger();
-			// transactionLogger.updateCompensable(this.archive);
+			Transaction jtaTransaction = (Transaction) this.getTransactionalExtra();
+			TransactionContext jtaTransactionContext = jtaTransaction.getTransactionContext();
+			TransactionXid jtaXid = jtaTransactionContext.getXid();
+			TransactionXid branchXid = xidFactory.createBranchXid(xid, jtaXid.getGlobalTransactionId());
+
+			this.archive.setXid(branchXid);
+
+			transactionLogger.updateCompensable(this.archive);
 		}
 	}
 

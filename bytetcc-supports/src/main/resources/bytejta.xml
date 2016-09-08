@@ -22,16 +22,14 @@
 
 	<bean id="bytejtaResourceDeserializer" class="org.bytesoft.bytejta.supports.serialize.XAResourceDeserializerImpl" />
 
-	<bean id="bytejtaTransactionLogger" class="org.bytesoft.bytejta.logger.SampleTransactionLogger" init-method="initialize">
-		<property name="deserializer" ref="bytejtaResourceDeserializer" />
-		<property name="storage" value="bytejta.log" />
+	<bean id="bytejtaTransactionLogger" class="org.bytesoft.bytejta.logging.SampleTransactionLogger" init-method="construct">
+		<property name="directory" value="bytejta" />
 	</bean>
 
 	<bean id="bytejtaTransactionCoordinator" class="org.bytesoft.bytejta.TransactionCoordinator" />
 	<bean id="bytejtaTransactionRecovery" class="org.bytesoft.bytejta.TransactionRecoveryImpl" />
 	<bean id="bytejtaTransactionRepository" class="org.bytesoft.bytejta.TransactionRepositoryImpl" />
 	<bean id="bytejtaTransactionInterceptor" class="org.bytesoft.bytejta.supports.rpc.TransactionInterceptorImpl" />
-
 	<bean id="bytejtaBeanFactory" class="org.bytesoft.bytejta.TransactionBeanFactoryImpl">
 		<property name="transactionManager" ref="bytejtaTransactionManager" />
 		<property name="xidFactory" ref="bytejtaXidFactory" />

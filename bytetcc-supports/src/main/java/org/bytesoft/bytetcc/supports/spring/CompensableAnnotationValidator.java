@@ -42,8 +42,15 @@ public class CompensableAnnotationValidator implements BeanFactoryPostProcessor 
 			String beanName = beanNameArray[i];
 			BeanDefinition beanDef = beanFactory.getBeanDefinition(beanName);
 			String className = beanDef.getBeanClassName();
+			Class<?> clazz = null;
+
 			try {
-				Class<?> clazz = cl.loadClass(className);
+				clazz = cl.loadClass(className);
+			} catch (ClassNotFoundException ex) {
+				continue;
+			}
+
+			try {
 				Compensable compensable = clazz.getAnnotation(Compensable.class);
 				if (compensable == null) {
 					otherServiceMap.put(beanName, clazz);
@@ -62,8 +69,6 @@ public class CompensableAnnotationValidator implements BeanFactoryPostProcessor 
 					Method method = clazz.getMethod(interfaceMethod.getName(), interfaceMethod.getParameterTypes());
 					this.validateTransactionalPropagation(method, clazz);
 				}
-			} catch (ClassNotFoundException ex) {
-				throw new FatalBeanException(ex.getMessage(), ex);
 			} catch (IllegalStateException ex) {
 				throw new FatalBeanException(ex.getMessage(), ex);
 			} catch (NoSuchMethodException ex) {

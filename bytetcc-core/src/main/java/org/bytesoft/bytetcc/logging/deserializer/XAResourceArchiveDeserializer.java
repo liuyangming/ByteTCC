@@ -139,4 +139,12 @@ public class XAResourceArchiveDeserializer implements ArchiveDeserializer, Compe
 		this.beanFactory = tbf;
 	}
 
+	public XAResourceDeserializer getDeserializer() {
+		return deserializer;
+	}
+
+	public void setDeserializer(XAResourceDeserializer deserializer) {
+		this.deserializer = deserializer;
+	}
+
 }
