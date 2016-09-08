@@ -17,38 +17,73 @@ package org.bytesoft.bytetcc.supports;
 
 import java.io.ObjectStreamException;
 import java.lang.reflect.Method;
+import java.util.Arrays;
 
 import org.bytesoft.compensable.CompensableInvocation;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class CompensableInvocationImpl implements CompensableInvocation {
+	private static final long serialVersionUID = 1L;
+	static final Logger logger = LoggerFactory.getLogger(CompensableInvocationImpl.class);
 
-	private Method method;
+	private transient Method method;
+	private String declaringClass;
+	private String methodName;
+	private String[] parameterTypeArray;
+
 	private Object[] args;
 	private String confirmableKey;
 	private String cancellableKey;
 	private Object identifier;
 
-	protected Object writeReplace() throws ObjectStreamException {
-		CompensableInvocationInfo that = new CompensableInvocationInfo();
-
-		that.setArgs(this.args);
-		that.setConfirmableKey(this.confirmableKey);
-		that.setCancellableKey(this.cancellableKey);
-		that.setIdentifier(this.identifier);
-
-		that.setDeclaringClass(this.method.getDeclaringClass().getCanonicalName());
-		that.setMethodName(this.method.getName());
-
-		Class<?>[] parameterTypes = this.method.getParameterTypes();
-		String[] parameterTypeArray = new String[parameterTypes.length];
-		for (int i = 0; i < parameterTypes.length; i++) {
-			Class<?> parameterType = parameterTypes[i];
-			parameterTypeArray[i] = parameterType.getCanonicalName();
+	protected Object readResolve() throws ObjectStreamException {
+		Class<?> clazz = null;
+		ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+		try {
+			clazz = classLoader.loadClass(this.declaringClass);
+		} catch (ClassNotFoundException ex) {
+			logger.error("Error occurred while loading class: {}", this.declaringClass, ex);
+			return this;
 		}
 
-		that.setParameterTypeArray(parameterTypeArray);
+		Class<?>[] parameterTypes = new Class<?>[this.parameterTypeArray == null ? 0 : this.parameterTypeArray.length];
+		for (int i = 0; this.parameterTypeArray != null && i < this.parameterTypeArray.length; i++) {
+			String className = this.parameterTypeArray[i];
+			try {
+				parameterTypes[i] = classLoader.loadClass(className);
+			} catch (ClassNotFoundException ex) {
+				logger.error("Error occurred while loading class: {}", className, ex);
+				return this;
+			}
+		}
 
-		return that;
+		try {
+			this.setMethod(clazz.getDeclaredMethod(this.methodName, parameterTypes));
+		} catch (NoSuchMethodException ex) {
+			logger.error("Error occurred: class= {}, method= {}, parameters= {}" //
+					, this.declaringClass, this.methodName, Arrays.toString(this.parameterTypeArray), ex);
+		} catch (SecurityException ex) {
+			logger.error("Error occurred: class= {}, method= {}, parameters= {}" //
+					, this.declaringClass, this.methodName, Arrays.toString(this.parameterTypeArray), ex);
+		}
+
+		return this;
+	}
+
+	protected Object writeReplace() throws ObjectStreamException {
+
+		this.declaringClass = this.method.getDeclaringClass().getCanonicalName();
+		this.methodName = this.method.getName();
+
+		Class<?>[] parameterTypes = this.method.getParameterTypes();
+		this.parameterTypeArray = new String[parameterTypes.length];
+		for (int i = 0; i < parameterTypes.length; i++) {
+			Class<?> parameterType = parameterTypes[i];
+			this.parameterTypeArray[i] = parameterType.getCanonicalName();
+		}
+
+		return this;
 	}
 
 	public Method getMethod() {

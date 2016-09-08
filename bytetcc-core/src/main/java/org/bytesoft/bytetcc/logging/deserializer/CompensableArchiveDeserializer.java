@@ -41,7 +41,11 @@ public class CompensableArchiveDeserializer implements ArchiveDeserializer, Comp
 		try {
 			byteArray = CommonUtils.serializeObject(compensable);
 		} catch (Exception ex) {
-			logger.error("Error occurred while serializing object: {}", compensable);
+			if (compensable == null) {
+				logger.error("Error occurred while serializing compensable: {}", compensable);
+			} else {
+				logger.error("Error occurred while serializing args: {}", compensable.getArgs());
+			}
 		}
 
 		byte[] resultArray = new byte[XidFactory.BRANCH_QUALIFIER_LENGTH + 1 + byteArray.length];
