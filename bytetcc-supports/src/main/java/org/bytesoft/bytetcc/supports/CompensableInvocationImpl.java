@@ -36,14 +36,14 @@ public class CompensableInvocationImpl implements CompensableInvocation {
 		that.setCancellableKey(this.cancellableKey);
 		that.setIdentifier(this.identifier);
 
-		that.setDeclaringClass(this.method.getDeclaringClass().getCanonicalName());
+		that.setDeclaringClass(this.method.getDeclaringClass().getName());
 		that.setMethodName(this.method.getName());
 
 		Class<?>[] parameterTypes = this.method.getParameterTypes();
 		String[] parameterTypeArray = new String[parameterTypes.length];
 		for (int i = 0; i < parameterTypes.length; i++) {
 			Class<?> parameterType = parameterTypes[i];
-			parameterTypeArray[i] = parameterType.getCanonicalName();
+			parameterTypeArray[i] = parameterType.getName();
 		}
 
 		that.setParameterTypeArray(parameterTypeArray);

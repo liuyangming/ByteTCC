@@ -90,8 +90,8 @@ public class CompensableDubboServiceFilter implements Filter {
 		response.setSourceTransactionCoordinator(remoteCoordinator);
 		try {
 			// String transactionContextContent = RpcContext.getContext()
-			// .getAttachment(TransactionContext.class.getCanonicalName());
-			String transactionContextContent = invocation.getAttachment(TransactionContext.class.getCanonicalName());
+			// .getAttachment(TransactionContext.class.getName());
+			String transactionContextContent = invocation.getAttachment(TransactionContext.class.getName());
 			if (StringUtils.isNotBlank(transactionContextContent)) {
 				byte[] requestByteArray = ByteUtils.stringToByteArray(transactionContextContent);
 				ByteArrayInputStream bais = new ByteArrayInputStream(requestByteArray);
@@ -114,9 +114,9 @@ public class CompensableDubboServiceFilter implements Filter {
 				HessianOutput output = new HessianOutput(baos);
 				output.writeObject(nativeTransactionContext);
 				String nativeTansactionContextContent = ByteUtils.byteArrayToString(baos.toByteArray());
-				// RpcContext.getContext().setAttachment(TransactionContext.class.getCanonicalName(),
+				// RpcContext.getContext().setAttachment(TransactionContext.class.getName(),
 				// nativeTansactionContextContent);
-				invocation.getAttachments().put(TransactionContext.class.getCanonicalName(), nativeTansactionContextContent);
+				invocation.getAttachments().put(TransactionContext.class.getName(), nativeTansactionContextContent);
 			}
 		} catch (IOException ex) {
 			// TODO
@@ -175,17 +175,17 @@ public class CompensableDubboServiceFilter implements Filter {
 				HessianOutput output = new HessianOutput(baos);
 				output.writeObject(request.getTransactionContext());
 				String transactionContextContent = ByteUtils.byteArrayToString(baos.toByteArray());
-				// RpcContext.getContext().setAttachment(TransactionContext.class.getCanonicalName(),
+				// RpcContext.getContext().setAttachment(TransactionContext.class.getName(),
 				// transactionContextContent);
-				invocation.getAttachments().put(TransactionContext.class.getCanonicalName(), transactionContextContent);
+				invocation.getAttachments().put(TransactionContext.class.getName(), transactionContextContent);
 			}
 
 			result = invoker.invoke(invocation);
 
 			if (request.getTransactionContext() != null) {
 				// String transactionContextContent = RpcContext.getContext()
-				// .getAttachment(TransactionContext.class.getCanonicalName());
-				String transactionContextContent = invocation.getAttachment(TransactionContext.class.getCanonicalName());
+				// .getAttachment(TransactionContext.class.getName());
+				String transactionContextContent = invocation.getAttachment(TransactionContext.class.getName());
 				byte[] byteArray = ByteUtils.stringToByteArray(transactionContextContent);
 				ByteArrayInputStream bais = new ByteArrayInputStream(byteArray);
 				HessianInput input = new HessianInput(bais);
