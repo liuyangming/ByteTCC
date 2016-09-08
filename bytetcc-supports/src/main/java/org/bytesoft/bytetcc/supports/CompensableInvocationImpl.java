@@ -51,9 +51,6 @@ public class CompensableInvocationImpl implements CompensableInvocation {
 		return that;
 	}
 
-	protected static class X {
-	}
-
 	public Method getMethod() {
 		return method;
 	}
