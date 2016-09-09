@@ -84,10 +84,13 @@ public class SampleTransactionLogger extends VirtualLoggingSystemImpl
 
 	public void updateCompensable(CompensableArchive archive) {
 		ArchiveDeserializer deserializer = this.beanFactory.getArchiveDeserializer();
+		XidFactory xidFactory = this.beanFactory.getCompensableXidFactory();
 
 		try {
-			byte[] byteArray = deserializer.serialize((TransactionXid) archive.getXid(), archive);
-			this.modify(archive.getXid(), byteArray);
+			Xid xid = archive.getTransactionXid();
+			TransactionXid globalXid = xidFactory.createGlobalXid(xid.getGlobalTransactionId());
+			byte[] byteArray = deserializer.serialize(globalXid, archive);
+			this.modify(globalXid, byteArray);
 		} catch (RuntimeException rex) {
 			logger.error("Error occurred while modifying compensable-archive.", rex);
 		}

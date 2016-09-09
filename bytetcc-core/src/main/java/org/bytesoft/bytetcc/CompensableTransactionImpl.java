@@ -85,8 +85,8 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 		return transactionArchive;
 	}
 
-	public void commit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException,
-			SecurityException, IllegalStateException, SystemException {
+	public void commit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException, SecurityException,
+			IllegalStateException, SystemException {
 		boolean nativeSuccess = this.fireCompensableInvocationConfirm();
 		boolean remoteSuccess = this.fireRemoteCoordinatorConfirm();
 		if (nativeSuccess == false || remoteSuccess == false) {
@@ -113,11 +113,10 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 					success = false;
 
 					byte[] globalTransactionId = transactionXid.getGlobalTransactionId();
-					byte[] branchQualifier = current.getXid().getBranchQualifier();
+					byte[] branchQualifier = current.getTransactionXid().getBranchQualifier();
 					logger.error(
 							"[{}] commit-transaction: error occurred while confirming branch: {}, please check whether the params of method(compensable-service) supports serialization.",
-							ByteUtils.byteArrayToString(globalTransactionId),
-							ByteUtils.byteArrayToString(branchQualifier));
+							ByteUtils.byteArrayToString(globalTransactionId), ByteUtils.byteArrayToString(branchQualifier));
 				} else {
 					executor.confirm(invocation);
 				}
@@ -214,11 +213,10 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 					success = false;
 
 					byte[] globalTransactionId = transactionXid.getGlobalTransactionId();
-					byte[] branchQualifier = current.getXid().getBranchQualifier();
+					byte[] branchQualifier = current.getTransactionXid().getBranchQualifier();
 					logger.error(
 							"[{}] rollback-transaction: error occurred while cancelling branch: {}, please check whether the params of method(compensable-service) supports serialization.",
-							ByteUtils.byteArrayToString(globalTransactionId),
-							ByteUtils.byteArrayToString(branchQualifier));
+							ByteUtils.byteArrayToString(globalTransactionId), ByteUtils.byteArrayToString(branchQualifier));
 				} else {
 					executor.cancel(invocation);
 				}
@@ -335,8 +333,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 		this.archiveList.add(archive);
 	}
 
-	public void registerSynchronization(Synchronization sync)
-			throws RollbackException, IllegalStateException, SystemException {
+	public void registerSynchronization(Synchronization sync) throws RollbackException, IllegalStateException, SystemException {
 	}
 
 	public void registerTransactionListener(TransactionListener listener) {
@@ -349,16 +346,21 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 	public void onCommitStart(TransactionXid xid) {
 		CompensableLogger transactionLogger = this.beanFactory.getCompensableLogger();
 		XidFactory xidFactory = this.beanFactory.getCompensableXidFactory();
+
+		Transaction jtaTransaction = (Transaction) this.getTransactionalExtra();
+		TransactionContext jtaTransactionContext = jtaTransaction.getTransactionContext();
+		TransactionXid jtaXid = jtaTransactionContext.getXid();
+		TransactionXid branchXid = xidFactory.createBranchXid(xid, jtaXid.getGlobalTransactionId());
+
 		if (this.transactionContext.isCompensating()) {
-			Transaction jtaTransaction = (Transaction) this.getTransactionalExtra();
-			TransactionContext jtaTransactionContext = jtaTransaction.getTransactionContext();
-			TransactionXid jtaXid = jtaTransactionContext.getXid();
-			TransactionXid branchXid = xidFactory.createBranchXid(xid, jtaXid.getGlobalTransactionId());
+			this.archive.setCompensableXid(branchXid);
 
-			this.archive.setXid(branchXid);
-
-			transactionLogger.updateCompensable(this.archive);
+		} else {
+			this.archive.setTransactionXid(branchXid);
 		}
+
+		transactionLogger.updateCompensable(this.archive);
+
 	}
 
 	public void onCommitSuccess(TransactionXid xid) {
@@ -415,6 +417,10 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 	}
 
 	public void setRollbackOnlyQuietly() {
+		throw new IllegalStateException();
+	}
+
+	public boolean isLocalTransaction() {
 		throw new IllegalStateException();
 	}
 

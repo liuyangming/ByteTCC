@@ -48,7 +48,7 @@ public class CompensableInvocationInfo implements Serializable {
 			clazz = classLoader.loadClass(this.declaringClass);
 		} catch (ClassNotFoundException ex) {
 			logger.error("Error occurred while loading class: {}", this.declaringClass, ex);
-			return null;
+			return that;
 		}
 
 		Class<?>[] parameterTypes = new Class<?>[this.parameterTypeArray == null ? 0 : this.parameterTypeArray.length];
@@ -58,7 +58,7 @@ public class CompensableInvocationInfo implements Serializable {
 				parameterTypes[i] = classLoader.loadClass(className);
 			} catch (ClassNotFoundException ex) {
 				logger.error("Error occurred while loading class: {}", className, ex);
-				return null;
+				return that;
 			}
 		}
 

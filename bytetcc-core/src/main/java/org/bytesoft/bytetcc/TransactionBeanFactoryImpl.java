@@ -38,6 +38,7 @@ public final class TransactionBeanFactoryImpl implements CompensableBeanFactory 
 	private TransactionRepository compensableRepository;
 	private TransactionInterceptor transactionInterceptor;
 	private TransactionRecovery transactionRecovery;
+	private TransactionRecovery compensableRecovery;
 	private RemoteCoordinator transactionCoordinator;
 	private RemoteCoordinator compensableCoordinator;
 	private ContainerContext containerContext;
@@ -105,6 +106,14 @@ public final class TransactionBeanFactoryImpl implements CompensableBeanFactory 
 
 	public void setTransactionInterceptor(TransactionInterceptor transactionInterceptor) {
 		this.transactionInterceptor = transactionInterceptor;
+	}
+
+	public TransactionRecovery getCompensableRecovery() {
+		return compensableRecovery;
+	}
+
+	public void setCompensableRecovery(TransactionRecovery compensableRecovery) {
+		this.compensableRecovery = compensableRecovery;
 	}
 
 	public TransactionRecovery getTransactionRecovery() {

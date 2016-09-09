@@ -20,7 +20,7 @@ import java.util.List;
 
 public class TransactionArchive extends org.bytesoft.transaction.archive.TransactionArchive {
 
-	private int compensableStatus;
+	private int compensableStatus; // active, committing, committed, rollingback, rolledback
 	private boolean compensable;
 	private final List<CompensableArchive> compensableResourceList = new ArrayList<CompensableArchive>();
 

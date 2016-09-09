@@ -349,38 +349,46 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 		boolean commitExists = false;
 		boolean rollbackExists = false;
 		boolean errorExists = false;
+
+		TransactionXid jtaTransactionXid = jtaTransactionContext.getXid();
+		boolean isLocalTransaction = jtaTransaction.isLocalTransaction();
 		try {
-			TransactionXid jtaTransactionXid = jtaTransactionContext.getXid();
-			jtaTransactionCoordinator.end(jtaTransactionContext, XAResource.TMSUCCESS);
-			jtaTransactionCoordinator.commit(jtaTransactionXid, true);
-			// ((CompensableTransactionImpl) transaction).setCoordinatorTried(true);
-			commitExists = true;
-		} catch (XAException xaex) {
-			switch (xaex.errorCode) {
-			case XAException.XA_HEURRB:
-				rollbackExists = true;
-				break;
-			case XAException.XA_HEURMIX:
+			if (isLocalTransaction) /* jta-transaction in try-phase cannot be xa transaction. */ {
+				jtaTransactionCoordinator.end(jtaTransactionContext, XAResource.TMSUCCESS);
+				jtaTransactionCoordinator.commit(jtaTransactionXid, true);
+				// ((CompensableTransactionImpl) transaction).setCoordinatorTried(true);
 				commitExists = true;
+			} else {
+				jtaTransactionCoordinator.rollback(jtaTransactionXid);
 				rollbackExists = true;
-				break;
-			default:
+			}
+		} catch (XAException xaex) {
+			if (isLocalTransaction) {
+				switch (xaex.errorCode) {
+				case XAException.XA_HEURCOM:
+					commitExists = true;
+					break;
+				case XAException.XA_HEURRB:
+					rollbackExists = true;
+					break;
+				default:
+					errorExists = true;
+				}
+			} else {
 				errorExists = true;
-				break;
 			}
 		} finally {
 			transaction.setTransactionalExtra(null);
 
 			boolean success = false;
 			try {
-				if (commitExists && rollbackExists) {
-					this.fireCompensableRollback(transaction);
-				} else if (errorExists) {
+				if (errorExists) {
 					this.fireCompensableRollback(transaction);
 				} else if (commitExists) {
 					this.fireCompensableCommit(transaction);
 				} else if (rollbackExists) {
 					this.fireCompensableRollback(transaction);
+					throw new HeuristicRollbackException();
 				}
 				success = true;
 			} finally {

@@ -48,6 +48,8 @@ public interface CompensableBeanFactory {
 
 	public TransactionRecovery getTransactionRecovery();
 
+	public TransactionRecovery getCompensableRecovery();
+
 	public ContainerContext getContainerContext();
 
 	public ArchiveDeserializer getArchiveDeserializer();

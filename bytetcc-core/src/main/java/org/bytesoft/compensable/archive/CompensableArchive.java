@@ -22,13 +22,14 @@ import org.bytesoft.compensable.CompensableInvocation;
 
 public class CompensableArchive {
 
-	private Xid xid;
 	private CompensableInvocation compensable;
 
 	/* try-phase. */
+	private Xid transactionXid;
 	private boolean participantTried;
 
 	/* confirm/cancel phase. */
+	private Xid compensableXid;
 	private boolean confirmed;
 	private boolean cancelled;
 	private boolean txMixed;
@@ -36,7 +37,8 @@ public class CompensableArchive {
 
 	public int hashCode() {
 		int hash = 23;
-		hash += 29 * (this.xid == null ? 0 : this.xid.hashCode());
+		hash += 29 * (this.transactionXid == null ? 0 : this.transactionXid.hashCode());
+		hash += 31 * (this.compensableXid == null ? 0 : this.compensableXid.hashCode());
 		return hash;
 	}
 
@@ -47,15 +49,25 @@ public class CompensableArchive {
 			return false;
 		}
 		CompensableArchive that = (CompensableArchive) obj;
-		return CommonUtils.equals(this.xid, that.xid);
+		boolean transactionXidEquals = CommonUtils.equals(this.transactionXid, that.transactionXid);
+		boolean compensableXidEquals = CommonUtils.equals(this.compensableXid, that.compensableXid);
+		return transactionXidEquals && compensableXidEquals;
 	}
 
-	public Xid getXid() {
-		return xid;
+	public Xid getTransactionXid() {
+		return transactionXid;
 	}
 
-	public void setXid(Xid xid) {
-		this.xid = xid;
+	public void setTransactionXid(Xid transactionXid) {
+		this.transactionXid = transactionXid;
+	}
+
+	public Xid getCompensableXid() {
+		return compensableXid;
+	}
+
+	public void setCompensableXid(Xid compensableXid) {
+		this.compensableXid = compensableXid;
 	}
 
 	public CompensableInvocation getCompensable() {

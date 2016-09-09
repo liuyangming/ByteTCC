@@ -48,11 +48,15 @@ public class CompensableArchiveDeserializer implements ArchiveDeserializer, Comp
 			}
 		}
 
-		byte[] resultArray = new byte[XidFactory.BRANCH_QUALIFIER_LENGTH + 1 + byteArray.length];
+		byte[] resultArray = new byte[XidFactory.BRANCH_QUALIFIER_LENGTH * 2 + 1 + byteArray.length];
 
-		Xid branch = archive.getXid();
-		byte[] branchQualifier = branch.getBranchQualifier();
-		System.arraycopy(branchQualifier, 0, resultArray, 0, XidFactory.BRANCH_QUALIFIER_LENGTH);
+		Xid transactionXid = archive.getTransactionXid();
+		Xid compensableXid = archive.getCompensableXid();
+		byte[] transactionBranchQualifier = transactionXid.getBranchQualifier();
+		byte[] compensableBranchQualifier = compensableXid.getBranchQualifier();
+		System.arraycopy(transactionBranchQualifier, 0, resultArray, 0, XidFactory.BRANCH_QUALIFIER_LENGTH);
+		System.arraycopy(compensableBranchQualifier, 0, resultArray, XidFactory.BRANCH_QUALIFIER_LENGTH,
+				XidFactory.BRANCH_QUALIFIER_LENGTH);
 
 		int value = archive.isCoordinator() ? 0x1 : 0x0;
 		int triedValue = archive.isParticipantTried() ? 0x1 : 0x0;
@@ -64,18 +68,21 @@ public class CompensableArchiveDeserializer implements ArchiveDeserializer, Comp
 		value = value | (confirmValue << 2);
 		value = value | (cancelValue << 3);
 		value = value | (mixedValue << 4);
-		resultArray[XidFactory.BRANCH_QUALIFIER_LENGTH] = (byte) value;
+		resultArray[XidFactory.BRANCH_QUALIFIER_LENGTH * 2] = (byte) value;
 
-		System.arraycopy(byteArray, 0, resultArray, XidFactory.BRANCH_QUALIFIER_LENGTH + 1, byteArray.length);
+		System.arraycopy(byteArray, 0, resultArray, XidFactory.BRANCH_QUALIFIER_LENGTH * 2 + 1, byteArray.length);
 
 		return resultArray;
 	}
 
 	public Object deserialize(TransactionXid xid, byte[] array) {
-		byte[] branchQualifier = new byte[XidFactory.BRANCH_QUALIFIER_LENGTH];
-		System.arraycopy(array, 0, branchQualifier, 0, branchQualifier.length);
+		byte[] transactionBranchQualifier = new byte[XidFactory.BRANCH_QUALIFIER_LENGTH];
+		byte[] compensableBranchQualifier = new byte[XidFactory.BRANCH_QUALIFIER_LENGTH];
+		System.arraycopy(array, 0, transactionBranchQualifier, 0, transactionBranchQualifier.length);
+		System.arraycopy(array, 0, compensableBranchQualifier, XidFactory.BRANCH_QUALIFIER_LENGTH,
+				compensableBranchQualifier.length);
 
-		int value = array[XidFactory.BRANCH_QUALIFIER_LENGTH];
+		int value = array[XidFactory.BRANCH_QUALIFIER_LENGTH * 2];
 
 		boolean coordinator = (value & 0x1) == 0x1;
 		boolean tried = ((value >>> 1) & 0x1) == 0x1;
@@ -83,8 +90,8 @@ public class CompensableArchiveDeserializer implements ArchiveDeserializer, Comp
 		boolean cancelled = ((value >>> 3) & 0x1) == 0x1;
 		boolean mixed = ((value >>> 4) & 0x1) == 0x1;
 
-		byte[] byteArray = new byte[array.length - XidFactory.BRANCH_QUALIFIER_LENGTH - 1];
-		System.arraycopy(array, XidFactory.BRANCH_QUALIFIER_LENGTH + 1, byteArray, 0, byteArray.length);
+		byte[] byteArray = new byte[array.length - XidFactory.BRANCH_QUALIFIER_LENGTH * 2 - 1];
+		System.arraycopy(array, XidFactory.BRANCH_QUALIFIER_LENGTH * 2 + 1, byteArray, 0, byteArray.length);
 
 		CompensableInvocation compensable = null;
 		try {
@@ -94,16 +101,18 @@ public class CompensableArchiveDeserializer implements ArchiveDeserializer, Comp
 		}
 
 		XidFactory xidFactory = this.beanFactory.getCompensableXidFactory();
-		Xid branch = xidFactory.createBranchXid(xid, branchQualifier);
+		Xid transactionXid = xidFactory.createBranchXid(xid, transactionBranchQualifier);
+		Xid compensableXid = xidFactory.createBranchXid(xid, compensableBranchQualifier);
 
 		CompensableArchive archive = new CompensableArchive();
-		archive.setXid(branch);
 		archive.setCoordinator(coordinator);
 		archive.setParticipantTried(tried);
 		archive.setConfirmed(confirmed);
 		archive.setCancelled(cancelled);
 		archive.setTxMixed(mixed);
 		archive.setCompensable(compensable);
+		archive.setTransactionXid(transactionXid);
+		archive.setCompensableXid(compensableXid);
 
 		return archive;
 	}
