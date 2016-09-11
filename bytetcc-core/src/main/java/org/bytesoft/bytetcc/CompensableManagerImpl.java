@@ -274,7 +274,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 			transactionCoordinator.end(jtaTransactionContext, XAResource.TMSUCCESS);
 
 			TransactionContext transactionContext = transaction.getTransactionContext();
-			logger.error("[{}] jta-transaction in compensating-phase cannot be xa transaction.",
+			logger.error("[{}] jta-transaction in try-phase cannot be xa transaction.",
 					ByteUtils.byteArrayToString(transactionContext.getXid().getGlobalTransactionId()));
 
 			transactionCoordinator.rollback(xid);
