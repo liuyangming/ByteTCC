@@ -85,8 +85,8 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 		return transactionArchive;
 	}
 
-	public void commit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException, SecurityException,
-			IllegalStateException, SystemException {
+	public void commit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException,
+			SecurityException, IllegalStateException, SystemException {
 		boolean nativeSuccess = this.fireCompensableInvocationConfirm();
 		boolean remoteSuccess = this.fireRemoteCoordinatorConfirm();
 		if (nativeSuccess == false || remoteSuccess == false) {
@@ -98,7 +98,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 		boolean success = true;
 
 		ContainerContext executor = this.beanFactory.getContainerContext();
-		for (int i = 0; i < this.archiveList.size(); i++) {
+		for (int i = this.archiveList.size() - 1; i >= 0; i--) {
 			CompensableArchive current = this.archiveList.get(i);
 			if (current.isConfirmed()) {
 				continue;
@@ -116,7 +116,8 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 					byte[] branchQualifier = current.getTransactionXid().getBranchQualifier();
 					logger.error(
 							"[{}] commit-transaction: error occurred while confirming branch: {}, please check whether the params of method(compensable-service) supports serialization.",
-							ByteUtils.byteArrayToString(globalTransactionId), ByteUtils.byteArrayToString(branchQualifier));
+							ByteUtils.byteArrayToString(globalTransactionId),
+							ByteUtils.byteArrayToString(branchQualifier));
 				} else {
 					executor.confirm(invocation);
 				}
@@ -198,7 +199,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 		boolean success = true;
 
 		ContainerContext executor = this.beanFactory.getContainerContext();
-		for (int i = 0; i < this.archiveList.size(); i++) {
+		for (int i = this.archiveList.size() - 1; i >= 0; i--) {
 			CompensableArchive current = this.archiveList.get(i);
 			if (current.isCancelled()) {
 				continue;
@@ -216,7 +217,8 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 					byte[] branchQualifier = current.getTransactionXid().getBranchQualifier();
 					logger.error(
 							"[{}] rollback-transaction: error occurred while cancelling branch: {}, please check whether the params of method(compensable-service) supports serialization.",
-							ByteUtils.byteArrayToString(globalTransactionId), ByteUtils.byteArrayToString(branchQualifier));
+							ByteUtils.byteArrayToString(globalTransactionId),
+							ByteUtils.byteArrayToString(branchQualifier));
 				} else {
 					executor.cancel(invocation);
 				}
@@ -333,7 +335,8 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 		this.archiveList.add(archive);
 	}
 
-	public void registerSynchronization(Synchronization sync) throws RollbackException, IllegalStateException, SystemException {
+	public void registerSynchronization(Synchronization sync) throws RollbackException, IllegalStateException,
+			SystemException {
 	}
 
 	public void registerTransactionListener(TransactionListener listener) {
@@ -374,7 +377,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 			}
 			CompensableLogger transactionLogger = this.beanFactory.getCompensableLogger();
 			transactionLogger.updateCompensable(this.archive);
-		} else /* try-phase */ {
+		} else /* try-phase */{
 			if (this.transactionContext.isCoordinator()) {
 				this.coordinatorTried = true;
 			} else {
@@ -398,7 +401,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 			}
 			CompensableLogger transactionLogger = this.beanFactory.getCompensableLogger();
 			transactionLogger.updateCompensable(this.archive);
-		} else /* try-phase */ {
+		} else /* try-phase */{
 			if (this.transactionContext.isCoordinator()) {
 				this.coordinatorTried = true;
 			} else {
