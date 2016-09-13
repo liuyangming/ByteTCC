@@ -53,7 +53,12 @@ public class CompensableArchiveDeserializer implements ArchiveDeserializer, Comp
 		Xid transactionXid = archive.getTransactionXid();
 		Xid compensableXid = archive.getCompensableXid();
 		byte[] transactionBranchQualifier = transactionXid.getBranchQualifier();
-		byte[] compensableBranchQualifier = compensableXid.getBranchQualifier();
+		byte[] compensableBranchQualifier = null;
+		if (compensableXid == null) {
+			compensableBranchQualifier = new byte[XidFactory.BRANCH_QUALIFIER_LENGTH];
+		} else {
+			compensableBranchQualifier = compensableXid.getBranchQualifier();
+		}
 		System.arraycopy(transactionBranchQualifier, 0, resultArray, 0, XidFactory.BRANCH_QUALIFIER_LENGTH);
 		System.arraycopy(compensableBranchQualifier, 0, resultArray, XidFactory.BRANCH_QUALIFIER_LENGTH,
 				XidFactory.BRANCH_QUALIFIER_LENGTH);

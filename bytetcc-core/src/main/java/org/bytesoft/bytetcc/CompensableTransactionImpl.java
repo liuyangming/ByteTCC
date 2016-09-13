@@ -25,6 +25,7 @@ import javax.transaction.Synchronization;
 import javax.transaction.SystemException;
 import javax.transaction.xa.XAException;
 import javax.transaction.xa.XAResource;
+import javax.transaction.xa.Xid;
 
 import org.bytesoft.bytejta.supports.resource.RemoteResourceDescriptor;
 import org.bytesoft.common.utils.ByteUtils;
@@ -326,17 +327,23 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 		throw new SystemException();
 	}
 
-	public void registerCompensableInvocation(CompensableInvocation invocation) {
+	public void registerCompensable(TransactionXid xid, CompensableInvocation invocation) {
 		CompensableArchive archive = new CompensableArchive();
-		archive.setCompensable(invocation);
+
+		XidFactory xidFactory = this.beanFactory.getCompensableXidFactory();
+		TransactionXid branchXid = xidFactory.createBranchXid(xid);
+
 		if (this.transactionContext.isCoordinator() == false) {
 			this.archive = archive;
 		}
+		archive.setCompensable(invocation);
+		archive.setTransactionXid(branchXid);
+
 		this.archiveList.add(archive);
 	}
 
-	public void registerSynchronization(Synchronization sync) throws RollbackException, IllegalStateException,
-			SystemException {
+	public void registerSynchronization(Synchronization sync)
+			throws RollbackException, IllegalStateException, SystemException {
 	}
 
 	public void registerTransactionListener(TransactionListener listener) {
@@ -357,12 +364,11 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 
 		if (this.transactionContext.isCompensating()) {
 			this.archive.setCompensableXid(branchXid);
-
-		} else {
+			transactionLogger.updateCompensable(this.archive);
+		} else if (this.transactionContext.isCoordinator() == false) {
 			this.archive.setTransactionXid(branchXid);
+			transactionLogger.updateCompensable(this.archive);
 		}
-
-		transactionLogger.updateCompensable(this.archive);
 
 	}
 
@@ -377,12 +383,10 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 			}
 			CompensableLogger transactionLogger = this.beanFactory.getCompensableLogger();
 			transactionLogger.updateCompensable(this.archive);
-		} else /* try-phase */{
-			if (this.transactionContext.isCoordinator()) {
-				this.coordinatorTried = true;
-			} else {
-				this.archive.setParticipantTried(true);
-			}
+		} else if (this.transactionContext.isCoordinator()) {
+			this.coordinatorTried = true;
+		} else {
+			this.archive.setParticipantTried(true);
 		}
 	}
 
@@ -401,12 +405,10 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 			}
 			CompensableLogger transactionLogger = this.beanFactory.getCompensableLogger();
 			transactionLogger.updateCompensable(this.archive);
-		} else /* try-phase */{
-			if (this.transactionContext.isCoordinator()) {
-				this.coordinatorTried = true;
-			} else {
-				this.archive.setParticipantTried(true);
-			}
+		} else if (this.transactionContext.isCoordinator()) {
+			this.coordinatorTried = true;
+		} else {
+			this.archive.setParticipantTried(true);
 		}
 	}
 

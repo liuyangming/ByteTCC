@@ -49,75 +49,116 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 	public void begin() throws NotSupportedException, SystemException {
 		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
-		RemoteCoordinator transactionCoordinator = this.beanFactory.getTransactionCoordinator();
+
+		CompensableTransaction transaction = compensableManager.getCompensableTransactionQuietly();
 
 		CompensableInvocationRegistry registry = CompensableInvocationRegistry.getInstance();
 		CompensableInvocation invocation = registry.getCurrent();
 
-		CompensableTransaction tccTransaction = compensableManager.getCompensableTransactionQuietly();
 		if (invocation != null) {
-
-			if (tccTransaction == null) {
-				compensableManager.begin();
-				tccTransaction = compensableManager.getCompensableTransactionQuietly();
-				TransactionContext transactionContext = tccTransaction.getTransactionContext();
-				transactionContext.setCompensable(true);
+			if (transaction == null) {
+				this.beginForCoordinator(transaction);
+				transaction = compensableManager.getCompensableTransactionQuietly();
 			} else {
-				XidFactory jtaXidFactory = this.beanFactory.getTransactionXidFactory();
-				TransactionContext tccTransactionContext = tccTransaction.getTransactionContext();
-				TransactionXid tccTransactionXid = tccTransactionContext.getXid();
-				TransactionXid jtaTransactionXid = null;
-				if (tccTransactionContext.isCompensating()) {
-					jtaTransactionXid = jtaXidFactory.createGlobalXid();
+				TransactionContext transactionContext = transaction.getTransactionContext();
+				if (transactionContext.isCompensating()) {
+					this.beginInCompensatingPhaseForCoordinator(transaction);
 				} else {
-					jtaTransactionXid = jtaXidFactory.createGlobalXid(tccTransactionXid.getGlobalTransactionId());
-				}
-				TransactionContext jtaTransactionContext = tccTransactionContext.clone();
-				jtaTransactionContext.setXid(jtaTransactionXid);
-				try {
-					Transaction jtaTransaction = transactionCoordinator.start(jtaTransactionContext, XAResource.TMNOFLAGS);
-					jtaTransaction.registerTransactionListener(tccTransaction);
-					jtaTransaction.setTransactionalExtra(tccTransaction);
-					tccTransaction.setTransactionalExtra(jtaTransaction);
-				} catch (TransactionException ex) {
-					logger.info("[{}] begin-transaction: error occurred while starting jta-transaction: {}",
-							ByteUtils.byteArrayToString(tccTransactionXid.getGlobalTransactionId()),
-							ByteUtils.byteArrayToString(jtaTransactionXid.getGlobalTransactionId()));
-					throw new SystemException("Error occurred while beginning a jta-transaction!");
+					this.beginInTryingPhaseForParticipant(transaction);
 				}
 			}
 
-			if (tccTransaction.getTransactionContext().isCompensating() == false) {
-				tccTransaction.registerCompensableInvocation(invocation);
-			}
-		} else if (tccTransaction == null) {
+			TransactionContext transactionContext = transaction.getTransactionContext();
+			TransactionXid xid = transactionContext.getXid();
+			transaction.registerCompensable(xid, invocation);
+		} else if (transaction == null) {
 			transactionManager.begin();
 		} else {
-			XidFactory jtaXidFactory = this.beanFactory.getTransactionXidFactory();
-			TransactionContext tccTransactionContext = tccTransaction.getTransactionContext();
-			TransactionXid tccTransactionXid = tccTransactionContext.getXid();
-			TransactionXid jtaTransactionXid = null;
-			if (tccTransactionContext.isCompensating()) {
-				jtaTransactionXid = jtaXidFactory.createGlobalXid();
-			} else {
-				jtaTransactionXid = jtaXidFactory.createGlobalXid(tccTransactionXid.getGlobalTransactionId());
-			}
+			this.beginInCompensatingPhaseForParticipant(transaction);
+		}
 
-			TransactionContext jtaTransactionContext = tccTransactionContext.clone();
-			jtaTransactionContext.setXid(jtaTransactionXid);
+	}
 
-			try {
-				Transaction transaction = transactionCoordinator.start(jtaTransactionContext, XAResource.TMNOFLAGS);
-				transaction.registerTransactionListener(tccTransaction);
-				transaction.setTransactionalExtra(tccTransaction);
-				tccTransaction.setTransactionalExtra(transaction);
-			} catch (TransactionException ex) {
-				logger.info("[{}] begin-transaction: error occurred while starting jta-transaction: {}",
-						ByteUtils.byteArrayToString(tccTransactionXid.getGlobalTransactionId()),
-						ByteUtils.byteArrayToString(jtaTransactionXid.getGlobalTransactionId()));
-				throw new SystemException("Error occurred while beginning a jta-transaction!");
-			}
+	protected void beginForCoordinator(CompensableTransaction tccTransaction) throws NotSupportedException, SystemException {
+		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
+		compensableManager.begin();
+		tccTransaction = compensableManager.getCompensableTransactionQuietly();
+		TransactionContext transactionContext = tccTransaction.getTransactionContext();
+		transactionContext.setCompensable(true);
+	}
 
+	protected void beginInCompensatingPhaseForCoordinator(CompensableTransaction tccTransaction)
+			throws NotSupportedException, SystemException {
+		RemoteCoordinator transactionCoordinator = this.beanFactory.getTransactionCoordinator();
+
+		XidFactory jtaXidFactory = this.beanFactory.getTransactionXidFactory();
+		TransactionContext tccTransactionContext = tccTransaction.getTransactionContext();
+		TransactionXid tccTransactionXid = tccTransactionContext.getXid();
+		TransactionXid jtaTransactionXid = jtaXidFactory.createGlobalXid();
+		TransactionContext jtaTransactionContext = tccTransactionContext.clone();
+		jtaTransactionContext.setXid(jtaTransactionXid);
+		try {
+			Transaction jtaTransaction = transactionCoordinator.start(jtaTransactionContext, XAResource.TMNOFLAGS);
+			jtaTransaction.registerTransactionListener(tccTransaction);
+			jtaTransaction.setTransactionalExtra(tccTransaction);
+			tccTransaction.setTransactionalExtra(jtaTransaction);
+		} catch (TransactionException ex) {
+			logger.info("[{}] begin-transaction: error occurred while starting jta-transaction: {}",
+					ByteUtils.byteArrayToString(tccTransactionXid.getGlobalTransactionId()),
+					ByteUtils.byteArrayToString(jtaTransactionXid.getGlobalTransactionId()));
+			throw new SystemException("Error occurred while beginning a jta-transaction!");
+		}
+
+	}
+
+	protected void beginInCompensatingPhaseForParticipant(CompensableTransaction tccTransaction)
+			throws NotSupportedException, SystemException {
+
+		RemoteCoordinator transactionCoordinator = this.beanFactory.getTransactionCoordinator();
+		XidFactory jtaXidFactory = this.beanFactory.getTransactionXidFactory();
+		TransactionContext tccTransactionContext = tccTransaction.getTransactionContext();
+		TransactionXid tccTransactionXid = tccTransactionContext.getXid();
+		TransactionXid jtaTransactionXid = null;
+		// if (tccTransactionContext.isCompensating()) {
+		jtaTransactionXid = jtaXidFactory.createGlobalXid();
+		// } else { jtaTransactionXid = jtaXidFactory.createGlobalXid(tccTransactionXid.getGlobalTransactionId()); }
+
+		TransactionContext jtaTransactionContext = tccTransactionContext.clone();
+		jtaTransactionContext.setXid(jtaTransactionXid);
+
+		try {
+			Transaction transaction = transactionCoordinator.start(jtaTransactionContext, XAResource.TMNOFLAGS);
+			transaction.registerTransactionListener(tccTransaction);
+			transaction.setTransactionalExtra(tccTransaction);
+			tccTransaction.setTransactionalExtra(transaction);
+		} catch (TransactionException ex) {
+			logger.info("[{}] begin-transaction: error occurred while starting jta-transaction: {}",
+					ByteUtils.byteArrayToString(tccTransactionXid.getGlobalTransactionId()),
+					ByteUtils.byteArrayToString(jtaTransactionXid.getGlobalTransactionId()));
+			throw new SystemException("Error occurred while beginning a jta-transaction!");
+		}
+	}
+
+	protected void beginInTryingPhaseForParticipant(CompensableTransaction tccTransaction)
+			throws NotSupportedException, SystemException {
+		RemoteCoordinator transactionCoordinator = this.beanFactory.getTransactionCoordinator();
+
+		XidFactory jtaXidFactory = this.beanFactory.getTransactionXidFactory();
+		TransactionContext tccTransactionContext = tccTransaction.getTransactionContext();
+		TransactionXid tccTransactionXid = tccTransactionContext.getXid();
+		TransactionXid jtaTransactionXid = jtaXidFactory.createGlobalXid(tccTransactionXid.getGlobalTransactionId());
+		TransactionContext jtaTransactionContext = tccTransactionContext.clone();
+		jtaTransactionContext.setXid(jtaTransactionXid);
+		try {
+			Transaction jtaTransaction = transactionCoordinator.start(jtaTransactionContext, XAResource.TMNOFLAGS);
+			jtaTransaction.registerTransactionListener(tccTransaction);
+			jtaTransaction.setTransactionalExtra(tccTransaction);
+			tccTransaction.setTransactionalExtra(jtaTransaction);
+		} catch (TransactionException ex) {
+			logger.info("[{}] begin-transaction: error occurred while starting jta-transaction: {}",
+					ByteUtils.byteArrayToString(tccTransactionXid.getGlobalTransactionId()),
+					ByteUtils.byteArrayToString(jtaTransactionXid.getGlobalTransactionId()));
+			throw new SystemException("Error occurred while beginning a jta-transaction!");
 		}
 
 	}

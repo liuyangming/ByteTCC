@@ -36,7 +36,8 @@ import org.bytesoft.transaction.xa.XidFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class TransactionRecoveryImpl implements TransactionRecovery, TransactionRecoveryListener, CompensableBeanFactoryAware {
+public class TransactionRecoveryImpl
+		implements TransactionRecovery, TransactionRecoveryListener, CompensableBeanFactoryAware {
 	static final Logger logger = LoggerFactory.getLogger(TransactionRecoveryImpl.class.getSimpleName());
 
 	private CompensableBeanFactory beanFactory;
@@ -60,8 +61,6 @@ public class TransactionRecoveryImpl implements TransactionRecovery, Transaction
 
 	private void fireTransactionStartRecovery() {
 		TransactionRecovery transactionRecovery = this.beanFactory.getTransactionRecovery();
-		// recover jta-transaction in confirm/cancel phase only.
-		// jta-transaction in try-phase should not be xa transaction.
 		transactionRecovery.startRecovery();
 	}
 
