@@ -19,15 +19,21 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.transaction.Status;
+import javax.transaction.SystemException;
 import javax.transaction.xa.Xid;
 
+import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.archive.CompensableArchive;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 import org.bytesoft.compensable.logging.CompensableLogger;
+import org.bytesoft.transaction.CommitRequiredException;
+import org.bytesoft.transaction.RollbackRequiredException;
 import org.bytesoft.transaction.Transaction;
 import org.bytesoft.transaction.TransactionContext;
 import org.bytesoft.transaction.TransactionRecovery;
+import org.bytesoft.transaction.TransactionRepository;
 import org.bytesoft.transaction.archive.TransactionArchive;
 import org.bytesoft.transaction.recovery.TransactionRecoveryCallback;
 import org.bytesoft.transaction.recovery.TransactionRecoveryListener;
@@ -65,7 +71,9 @@ public class TransactionRecoveryImpl
 	}
 
 	private void fireCompensableStartRecovery() {
+		final TransactionRepository transactionRepository = this.beanFactory.getTransactionRepository();
 		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
+
 		compensableLogger.recover(new TransactionRecoveryCallback() {
 			public void recover(TransactionArchive archive) {
 				this.recover((org.bytesoft.compensable.archive.TransactionArchive) archive);
@@ -81,14 +89,23 @@ public class TransactionRecoveryImpl
 				List<CompensableArchive> compensableArchiveList = archive.getCompensableResourceList();
 				for (int i = 0; i < compensableArchiveList.size(); i++) {
 					CompensableArchive compensableArchive = compensableArchiveList.get(i);
-					Xid transactionXid = compensableArchive.getTransactionXid();
-					Xid compensableXid = compensableArchive.getCompensableXid();
-					TransactionXid xid1 = xidFactory.createGlobalXid(transactionXid.getBranchQualifier());
-					TransactionXid xid2 = xidFactory.createGlobalXid(compensableXid.getBranchQualifier());
+					Xid transactionXid = compensableArchive.getCompensableXid();
+					TransactionXid compensableXid = xidFactory.createGlobalXid(transactionXid.getBranchQualifier());
 
-					Transaction tx = recovered.get(xid1);
+					Transaction tx = recovered.get(compensableXid);
+					if (tx != null) {
+						tx.setTransactionalExtra(transaction);
+						transaction.setTransactionalExtra(tx);
+					} else {
+						// TODO
+					}
+
 				}
 
+				TransactionContext transactionContext = transaction.getTransactionContext();
+				TransactionXid globalXid = transactionContext.getXid();
+				transactionRepository.putTransaction(globalXid, transaction);
+				transactionRepository.putErrorTransaction(globalXid, transaction);
 			}
 		});
 	}
@@ -98,7 +115,66 @@ public class TransactionRecoveryImpl
 	}
 
 	public void timingRecover() {
-		// TODO Auto-generated method stub
+		TransactionRepository transactionRepository = beanFactory.getTransactionRepository();
+		List<Transaction> transactions = transactionRepository.getErrorTransactionList();
+		int total = transactions == null ? 0 : transactions.size();
+		int value = 0;
+		for (int i = 0; transactions != null && i < transactions.size(); i++) {
+			Transaction transaction = transactions.get(i);
+			TransactionContext transactionContext = transaction.getTransactionContext();
+			TransactionXid xid = transactionContext.getXid();
+			try {
+				this.recoverTransaction(transaction);
+				transaction.recoveryForgetQuietly();
+			} catch (CommitRequiredException ex) {
+				logger.debug("[{}] recover: branch={}, message= commit-required",
+						ByteUtils.byteArrayToString(xid.getGlobalTransactionId()),
+						ByteUtils.byteArrayToString(xid.getBranchQualifier()));
+				continue;
+			} catch (RollbackRequiredException ex) {
+				logger.debug("[{}] recover: branch={}, message= rollback-required",
+						ByteUtils.byteArrayToString(xid.getGlobalTransactionId()),
+						ByteUtils.byteArrayToString(xid.getBranchQualifier()));
+				continue;
+			} catch (SystemException ex) {
+				logger.debug("[{}] recover: branch={}, message= {}",
+						ByteUtils.byteArrayToString(xid.getGlobalTransactionId()),
+						ByteUtils.byteArrayToString(xid.getBranchQualifier()), ex.getMessage());
+				continue;
+			} catch (RuntimeException ex) {
+				logger.debug("[{}] recover: branch={}, message= {}",
+						ByteUtils.byteArrayToString(xid.getGlobalTransactionId()),
+						ByteUtils.byteArrayToString(xid.getBranchQualifier()), ex.getMessage());
+				continue;
+			}
+		}
+		logger.info("[transaction-recovery] total= {}, success= {}", total, value);
+	}
+
+	public synchronized void recoverTransaction(Transaction transaction)
+			throws CommitRequiredException, RollbackRequiredException, SystemException {
+
+		TransactionContext transactionContext = transaction.getTransactionContext();
+		boolean coordinator = transactionContext.isCoordinator();
+		if (coordinator) {
+			int status = transaction.getTransactionStatus();
+			switch (status) {
+			case Status.STATUS_ACTIVE:
+			case Status.STATUS_MARKED_ROLLBACK:
+			case Status.STATUS_PREPARING:
+			case Status.STATUS_ROLLING_BACK:
+			case Status.STATUS_UNKNOWN:
+				transaction.recoveryRollback();
+				break;
+			case Status.STATUS_PREPARED:
+			case Status.STATUS_COMMITTING:
+				transaction.recoveryCommit();
+				break;
+			case Status.STATUS_COMMITTED:
+			case Status.STATUS_ROLLEDBACK:
+			default:
+			}
+		} // end-if (coordinator)
 
 	}
 
