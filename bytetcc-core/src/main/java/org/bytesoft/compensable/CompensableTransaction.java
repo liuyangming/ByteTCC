@@ -15,6 +15,7 @@
  */
 package org.bytesoft.compensable;
 
+import org.bytesoft.compensable.archive.CompensableArchive;
 import org.bytesoft.compensable.archive.TransactionArchive;
 import org.bytesoft.transaction.Transaction;
 import org.bytesoft.transaction.supports.TransactionListener;
@@ -26,6 +27,6 @@ public interface CompensableTransaction extends Transaction, TransactionListener
 
 	public TransactionArchive getTransactionArchive();
 
-	public void registerCompensable(TransactionXid xid, CompensableInvocation invocation);
+	public CompensableArchive registerCompensable(TransactionXid xid, CompensableInvocation invocation);
 
 }

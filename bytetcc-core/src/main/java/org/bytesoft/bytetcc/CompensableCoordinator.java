@@ -57,6 +57,8 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 
 	public Transaction start(TransactionContext transactionContext, int flags) throws TransactionException {
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
+		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
+
 		if (compensableManager.getTransactionQuietly() != null) {
 			throw new TransactionException(XAException.XAER_PROTO);
 		}
@@ -65,6 +67,8 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 		CompensableTransactionImpl transaction = new CompensableTransactionImpl(transactionContext);
 		transaction = new CompensableTransactionImpl(transactionContext);
 		transaction.setBeanFactory(this.beanFactory);
+
+		compensableLogger.createTransaction(transaction.getTransactionArchive());
 
 		compensableManager.associateThread(transaction);
 		compensableRepository.putTransaction(globalXid, transaction);
@@ -100,14 +104,19 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 		if (transaction == null) {
 			throw new XAException(XAException.XAER_NOTA);
 		}
-		TransactionContext transactionContext = transaction.getTransactionContext();
+		// TransactionContext transactionContext = transaction.getTransactionContext();
 
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
+		// CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
 		try {
 			compensableManager.associateThread(transaction);
-			transactionContext.setCompensating(true);
+			// transactionContext.setCompensating(true);
+			// transaction.setTransactionStatus(Status.STATUS_COMMITTING);
 
+			// compensableLogger.updateTransaction(transaction.getTransactionArchive());
 			transaction.commit();
+			// compensableLogger.deleteTransaction(transaction.getTransactionArchive());
+
 			compensableRepository.removeErrorTransaction(globalXid);
 			compensableRepository.removeTransaction(globalXid);
 		} catch (SecurityException ex) {
@@ -179,14 +188,19 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 		if (transaction == null) {
 			throw new XAException(XAException.XAER_NOTA);
 		}
-		TransactionContext transactionContext = transaction.getTransactionContext();
+		// TransactionContext transactionContext = transaction.getTransactionContext();
 
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
+		// CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
 		try {
 			compensableManager.associateThread(transaction);
-			transactionContext.setCompensating(true);
+			// transactionContext.setCompensating(true);
+			// transaction.setTransactionStatus(Status.STATUS_ROLLING_BACK);
 
+			// compensableLogger.updateTransaction(transaction.getTransactionArchive());
 			transaction.rollback();
+			// compensableLogger.deleteTransaction(transaction.getTransactionArchive());
+
 			compensableRepository.removeErrorTransaction(globalXid);
 			compensableRepository.removeTransaction(globalXid);
 		} catch (IllegalStateException ex) {

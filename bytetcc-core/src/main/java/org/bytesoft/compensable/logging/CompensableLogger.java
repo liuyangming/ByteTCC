@@ -33,6 +33,8 @@ public interface CompensableLogger {
 	public void updateCoordinator(XAResourceArchive archive);
 
 	/* compensable */
+	public void createCompensable(CompensableArchive archive);
+
 	public void updateCompensable(CompensableArchive archive);
 
 	/* recovery */

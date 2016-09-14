@@ -30,6 +30,7 @@ import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 import org.bytesoft.compensable.logging.CompensableLogger;
 import org.bytesoft.transaction.archive.XAResourceArchive;
 import org.bytesoft.transaction.logging.ArchiveDeserializer;
+import org.bytesoft.transaction.logging.LoggingFlushable;
 import org.bytesoft.transaction.logging.store.VirtualLoggingListener;
 import org.bytesoft.transaction.logging.store.VirtualLoggingRecord;
 import org.bytesoft.transaction.logging.store.VirtualLoggingSystem;
@@ -40,7 +41,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class SampleTransactionLogger extends VirtualLoggingSystemImpl
-		implements CompensableLogger, CompensableBeanFactoryAware {
+		implements CompensableLogger, LoggingFlushable, CompensableBeanFactoryAware {
 	static final Logger logger = LoggerFactory.getLogger(SampleTransactionLogger.class.getSimpleName());
 
 	private CompensableBeanFactory beanFactory;
@@ -79,6 +80,20 @@ public class SampleTransactionLogger extends VirtualLoggingSystemImpl
 			this.modify(archive.getXid(), byteArray);
 		} catch (RuntimeException rex) {
 			logger.error("Error occurred while modifying resource-archive.", rex);
+		}
+	}
+
+	public void createCompensable(CompensableArchive archive) {
+		ArchiveDeserializer deserializer = this.beanFactory.getArchiveDeserializer();
+		XidFactory xidFactory = this.beanFactory.getCompensableXidFactory();
+
+		try {
+			Xid xid = archive.getTransactionXid();
+			TransactionXid globalXid = xidFactory.createGlobalXid(xid.getGlobalTransactionId());
+			byte[] byteArray = deserializer.serialize(globalXid, archive);
+			this.create(globalXid, byteArray);
+		} catch (RuntimeException rex) {
+			logger.error("Error occurred while creating compensable-archive.", rex);
 		}
 	}
 
