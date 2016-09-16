@@ -97,6 +97,34 @@ public class TransactionCoordinator implements RemoteCoordinator, CompensableBea
 		return resultArray;
 	}
 
+	public void recoveryCommit(Xid xid, boolean onePhaseCommit) throws XAException {
+		RemoteCoordinator compensableCoordinator = this.beanFactory.getCompensableCoordinator();
+		RemoteCoordinator transactionCoordinator = this.beanFactory.getTransactionCoordinator();
+
+		int formatId = xid.getFormatId();
+		if (XidFactory.JTA_FORMAT_ID == formatId) {
+			transactionCoordinator.recoveryCommit(xid, onePhaseCommit);
+		} else if (XidFactory.TCC_FORMAT_ID == formatId) {
+			compensableCoordinator.recoveryCommit(xid, onePhaseCommit);
+		} else {
+			throw new XAException(XAException.XAER_INVAL);
+		}
+	}
+
+	public void recoveryRollback(Xid xid) throws XAException {
+		RemoteCoordinator compensableCoordinator = this.beanFactory.getCompensableCoordinator();
+		RemoteCoordinator transactionCoordinator = this.beanFactory.getTransactionCoordinator();
+
+		int formatId = xid.getFormatId();
+		if (XidFactory.JTA_FORMAT_ID == formatId) {
+			transactionCoordinator.recoveryRollback(xid);
+		} else if (XidFactory.TCC_FORMAT_ID == formatId) {
+			compensableCoordinator.recoveryRollback(xid);
+		} else {
+			throw new XAException(XAException.XAER_INVAL);
+		}
+	}
+
 	public void forget(Xid xid) throws XAException {
 		RemoteCoordinator compensableCoordinator = this.beanFactory.getCompensableCoordinator();
 		RemoteCoordinator transactionCoordinator = this.beanFactory.getTransactionCoordinator();
