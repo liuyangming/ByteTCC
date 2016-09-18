@@ -69,7 +69,11 @@ public class SampleTransactionLogger extends VirtualLoggingSystemImpl
 	}
 
 	public void deleteTransaction(TransactionArchive archive) {
-		this.delete(archive.getXid());
+		try {
+			this.delete(archive.getXid());
+		} catch (RuntimeException rex) {
+			logger.error("Error occurred while deleting transaction-archive.", rex);
+		}
 	}
 
 	public void updateCoordinator(XAResourceArchive archive) {

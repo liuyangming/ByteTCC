@@ -32,6 +32,8 @@ import org.bytesoft.compensable.CompensableTransaction;
 import org.bytesoft.compensable.archive.TransactionArchive;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 import org.bytesoft.compensable.logging.CompensableLogger;
+import org.bytesoft.transaction.CommitRequiredException;
+import org.bytesoft.transaction.RollbackRequiredException;
 import org.bytesoft.transaction.Transaction;
 import org.bytesoft.transaction.TransactionContext;
 import org.bytesoft.transaction.TransactionRepository;
@@ -140,8 +142,7 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 		CompensableLogger transactionLogger = this.beanFactory.getCompensableLogger();
 		XidFactory xidFactory = this.beanFactory.getCompensableXidFactory();
 		TransactionXid globalXid = xidFactory.createGlobalXid(xid.getGlobalTransactionId());
-		CompensableTransaction transaction = (CompensableTransaction) compensableRepository
-				.removeErrorTransaction(globalXid);
+		CompensableTransaction transaction = (CompensableTransaction) compensableRepository.removeErrorTransaction(globalXid);
 		if (transaction != null) {
 			TransactionArchive archive = transaction.getTransactionArchive();
 			transactionLogger.deleteTransaction(archive);
@@ -204,11 +205,142 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 	}
 
 	public void recoveryCommit(Xid xid, boolean onePhase) throws XAException {
-		// TODO
+		TransactionRepository transactionRepository = beanFactory.getTransactionRepository();
+		XidFactory xidFactory = this.beanFactory.getCompensableXidFactory();
+		TransactionXid branchXid = (TransactionXid) xid;
+		TransactionXid globalXid = xidFactory.createGlobalXid(branchXid.getGlobalTransactionId());
+		Transaction transaction = transactionRepository.getTransaction(globalXid);
+		TransactionContext transactionContext = transaction.getTransactionContext();
+		if (transactionContext.isRecoveried()) {
+			this.recoveryCommitRecoveredTransaction(globalXid, onePhase);
+		} else {
+			this.recoveryCommitActiveTransaction(globalXid, onePhase);
+		}
+	}
+
+	public void recoveryCommitRecoveredTransaction(TransactionXid xid, boolean onePhase) throws XAException {
+		TransactionRepository transactionRepository = beanFactory.getTransactionRepository();
+		Transaction transaction = transactionRepository.getTransaction(xid);
+		try {
+			transaction.recoveryRollback();
+		} catch (RollbackRequiredException rrex) {
+			logger.error("Error occurred while rolling back recovered transaction.", rrex);
+
+			XAException xaex = new XAException(XAException.XAER_RMERR);
+			xaex.initCause(rrex);
+			throw xaex;
+		} catch (SystemException ex) {
+			logger.error("Error occurred while rolling back recovered transaction.", ex);
+
+			XAException xaex = new XAException(XAException.XAER_RMERR);
+			xaex.initCause(ex);
+			throw xaex;
+		} catch (RuntimeException rrex) {
+			logger.error("Error occurred while rolling back recovered transaction.", rrex);
+
+			XAException xaex = new XAException(XAException.XAER_RMERR);
+			xaex.initCause(rrex);
+			throw xaex;
+		}
+	}
+
+	public void recoveryCommitActiveTransaction(TransactionXid xid, boolean onePhase) throws XAException {
+		TransactionRepository transactionRepository = beanFactory.getTransactionRepository();
+		Transaction transaction = transactionRepository.getTransaction(xid);
+		try {
+			transaction.recoveryCommit();
+		} catch (CommitRequiredException ex) {
+			logger.error("Error occurred while committing(recovery) active transaction.", ex);
+			transactionRepository.putErrorTransaction(xid, transaction);
+
+			XAException xaex = new XAException(XAException.XAER_RMERR);
+			xaex.initCause(ex);
+			throw xaex;
+		} catch (SystemException ex) {
+			logger.error("Error occurred while committing(recovery) active transaction.", ex);
+			transactionRepository.putErrorTransaction(xid, transaction);
+
+			XAException xaex = new XAException(XAException.XAER_RMERR);
+			xaex.initCause(ex);
+			throw xaex;
+		} catch (RuntimeException ex) {
+			logger.error("Error occurred while committing(recovery) active transaction.", ex);
+			transactionRepository.putErrorTransaction(xid, transaction);
+
+			XAException xaex = new XAException(XAException.XAER_RMERR);
+			xaex.initCause(ex);
+			throw xaex;
+		}
 	}
 
 	public void recoveryRollback(Xid xid) throws XAException {
-		// TODO
+		TransactionRepository transactionRepository = beanFactory.getTransactionRepository();
+		XidFactory xidFactory = this.beanFactory.getCompensableXidFactory();
+		TransactionXid branchXid = (TransactionXid) xid;
+		TransactionXid globalXid = xidFactory.createGlobalXid(branchXid.getGlobalTransactionId());
+
+		Transaction transaction = transactionRepository.getTransaction(globalXid);
+		TransactionContext transactionContext = transaction.getTransactionContext();
+		if (transactionContext.isRecoveried()) {
+			this.recoveryRollbackRecoveredTransaction(globalXid);
+		} else {
+			this.recoveryRollbackActiveTransaction(globalXid);
+		}
+	}
+
+	public void recoveryRollbackRecoveredTransaction(TransactionXid xid) throws XAException {
+		TransactionRepository transactionRepository = beanFactory.getTransactionRepository();
+		Transaction transaction = transactionRepository.getTransaction(xid);
+		try {
+			transaction.recoveryRollback();
+		} catch (RollbackRequiredException rrex) {
+			logger.error("Error occurred while rolling back recovered transaction.", rrex);
+
+			XAException xaex = new XAException(XAException.XAER_RMERR);
+			xaex.initCause(rrex);
+			throw xaex;
+		} catch (SystemException ex) {
+			logger.error("Error occurred while rolling back recovered transaction.", ex);
+
+			XAException xaex = new XAException(XAException.XAER_RMERR);
+			xaex.initCause(ex);
+			throw xaex;
+		} catch (RuntimeException rrex) {
+			logger.error("Error occurred while rolling back recovered transaction.", rrex);
+
+			XAException xaex = new XAException(XAException.XAER_RMERR);
+			xaex.initCause(rrex);
+			throw xaex;
+		}
+	}
+
+	public void recoveryRollbackActiveTransaction(TransactionXid xid) throws XAException {
+		TransactionRepository transactionRepository = beanFactory.getTransactionRepository();
+		Transaction transaction = transactionRepository.getTransaction(xid);
+		try {
+			transaction.recoveryRollback();
+		} catch (RollbackRequiredException rrex) {
+			logger.error("Error occurred while rolling back(recovery) active transaction.", rrex);
+			transactionRepository.putErrorTransaction(xid, transaction);
+
+			XAException xaex = new XAException(XAException.XAER_RMERR);
+			xaex.initCause(rrex);
+			throw xaex;
+		} catch (SystemException ex) {
+			logger.error("Error occurred while rolling back(recovery) active transaction.", ex);
+			transactionRepository.putErrorTransaction(xid, transaction);
+
+			XAException xaex = new XAException(XAException.XAER_RMERR);
+			xaex.initCause(ex);
+			throw xaex;
+		} catch (RuntimeException rrex) {
+			logger.error("Error occurred while rolling back(recovery) active transaction.", rrex);
+			transactionRepository.putErrorTransaction(xid, transaction);
+
+			XAException xaex = new XAException(XAException.XAER_RMERR);
+			xaex.initCause(rrex);
+			throw xaex;
+		}
 	}
 
 	public boolean setTransactionTimeout(int seconds) throws XAException {
