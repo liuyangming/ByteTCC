@@ -20,8 +20,12 @@ import org.bytesoft.compensable.archive.TransactionArchive;
 import org.bytesoft.transaction.archive.XAResourceArchive;
 import org.bytesoft.transaction.logging.ArchiveDeserializer;
 import org.bytesoft.transaction.xa.TransactionXid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ArchiveDeserializerImpl implements ArchiveDeserializer {
+	static final Logger logger = LoggerFactory.getLogger(ArchiveDeserializerImpl.class.getSimpleName());
+
 	static final byte TYPE_TRANSACTION = 0x0;
 	static final byte TYPE_XA_RESOURCE = 0x1;
 	static final byte TYPE_COMPENSABLE = 0x2;

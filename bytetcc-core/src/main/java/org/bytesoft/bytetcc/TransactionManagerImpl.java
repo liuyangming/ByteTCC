@@ -62,9 +62,9 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 			} else {
 				TransactionContext transactionContext = transaction.getTransactionContext();
 				if (transactionContext.isCompensating()) {
-					this.beginInCompensatingPhaseForCoordinator(transaction, invocation);
+					this.beginInCompensatingPhaseForCoordinator(transaction);
 				} else {
-					this.beginInTryingPhaseForParticipant(transaction, invocation);
+					this.beginInTryingPhaseForParticipant(transaction);
 				}
 			}
 		} else if (transaction == null) {
@@ -84,14 +84,13 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 		TransactionContext transactionContext = transaction.getTransactionContext();
 		transactionContext.setCompensable(true);
 
-		TransactionXid xid = transactionContext.getXid();
-		transaction.registerCompensable(xid, invocation);
+		transaction.registerCompensable(invocation);
 
 		compensableLogger.createTransaction(transaction.getTransactionArchive());
 	}
 
-	protected void beginInCompensatingPhaseForCoordinator(CompensableTransaction tccTransaction,
-			CompensableInvocation invocation) throws NotSupportedException, SystemException {
+	protected void beginInCompensatingPhaseForCoordinator(CompensableTransaction tccTransaction)
+			throws NotSupportedException, SystemException {
 		RemoteCoordinator transactionCoordinator = this.beanFactory.getTransactionCoordinator();
 
 		XidFactory jtaXidFactory = this.beanFactory.getTransactionXidFactory();
@@ -141,7 +140,7 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 		}
 	}
 
-	protected void beginInTryingPhaseForParticipant(CompensableTransaction tccTransaction, CompensableInvocation invocation)
+	protected void beginInTryingPhaseForParticipant(CompensableTransaction tccTransaction)
 			throws NotSupportedException, SystemException {
 		RemoteCoordinator transactionCoordinator = this.beanFactory.getTransactionCoordinator();
 
@@ -167,8 +166,8 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 		// compensableLogger.createCompensable(compensable); // lazy
 	}
 
-	public void commit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException, SecurityException,
-			IllegalStateException, SystemException {
+	public void commit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException,
+			SecurityException, IllegalStateException, SystemException {
 		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 

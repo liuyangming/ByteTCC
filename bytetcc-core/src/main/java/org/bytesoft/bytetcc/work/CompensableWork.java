@@ -23,8 +23,8 @@ import org.bytesoft.transaction.TransactionRecovery;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class CompensableTransactionWork implements Work, CompensableBeanFactoryAware {
-	static final Logger logger = LoggerFactory.getLogger(CompensableTransactionWork.class.getSimpleName());
+public class CompensableWork implements Work, CompensableBeanFactoryAware {
+	static final Logger logger = LoggerFactory.getLogger(CompensableWork.class.getSimpleName());
 
 	static final long SECOND_MILLIS = 1000L;
 	private long stopTimeMillis = -1;

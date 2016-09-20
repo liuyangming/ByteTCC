@@ -55,7 +55,7 @@ public class CompensableInvocationInfo implements Serializable {
 		for (int i = 0; this.parameterTypeArray != null && i < this.parameterTypeArray.length; i++) {
 			String className = this.parameterTypeArray[i];
 			try {
-				parameterTypes[i] = classLoader.loadClass(className);
+				parameterTypes[i] = Class.forName(className, false, classLoader); // classLoader.loadClass(className);
 			} catch (ClassNotFoundException ex) {
 				logger.error("Error occurred while loading class: {}", className, ex);
 				return that;

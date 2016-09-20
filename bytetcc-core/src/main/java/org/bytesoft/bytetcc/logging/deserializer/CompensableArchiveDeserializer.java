@@ -52,9 +52,17 @@ public class CompensableArchiveDeserializer implements ArchiveDeserializer, Comp
 
 		Xid transactionXid = archive.getTransactionXid();
 		Xid compensableXid = archive.getCompensableXid();
-		byte[] transactionBranchQualifier = transactionXid.getBranchQualifier();
+		byte[] transactionBranchQualifier = null;
 		byte[] compensableBranchQualifier = null;
-		if (compensableXid == null) {
+		if (transactionXid == null || transactionXid.getBranchQualifier() == null
+				|| transactionXid.getBranchQualifier().length == 0) {
+			transactionBranchQualifier = new byte[XidFactory.BRANCH_QUALIFIER_LENGTH];
+		} else {
+			transactionBranchQualifier = transactionXid.getBranchQualifier();
+		}
+
+		if (compensableXid == null || compensableXid.getBranchQualifier() == null
+				|| compensableXid.getBranchQualifier().length == 0) {
 			compensableBranchQualifier = new byte[XidFactory.BRANCH_QUALIFIER_LENGTH];
 		} else {
 			compensableBranchQualifier = compensableXid.getBranchQualifier();
@@ -84,7 +92,7 @@ public class CompensableArchiveDeserializer implements ArchiveDeserializer, Comp
 		byte[] transactionBranchQualifier = new byte[XidFactory.BRANCH_QUALIFIER_LENGTH];
 		byte[] compensableBranchQualifier = new byte[XidFactory.BRANCH_QUALIFIER_LENGTH];
 		System.arraycopy(array, 0, transactionBranchQualifier, 0, transactionBranchQualifier.length);
-		System.arraycopy(array, 0, compensableBranchQualifier, XidFactory.BRANCH_QUALIFIER_LENGTH,
+		System.arraycopy(array, XidFactory.BRANCH_QUALIFIER_LENGTH, compensableBranchQualifier, 0,
 				compensableBranchQualifier.length);
 
 		int value = array[XidFactory.BRANCH_QUALIFIER_LENGTH * 2];

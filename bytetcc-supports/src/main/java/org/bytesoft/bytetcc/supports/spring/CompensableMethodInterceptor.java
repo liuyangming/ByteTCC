@@ -26,8 +26,6 @@ import org.bytesoft.compensable.CompensableInvocationRegistry;
 import org.bytesoft.compensable.CompensableManager;
 import org.bytesoft.compensable.CompensableTransaction;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
-import org.bytesoft.transaction.TransactionContext;
-import org.bytesoft.transaction.xa.TransactionXid;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.transaction.annotation.Propagation;
@@ -61,21 +59,18 @@ public class CompensableMethodInterceptor
 			}
 
 			if (transaction != null) {
-				TransactionContext transactionContext = transaction.getTransactionContext();
-				TransactionXid xid = transactionContext.getXid();
-
 				Transactional transactional = mi.getMethod().getAnnotation(Transactional.class);
 				Propagation propagation = transactional == null ? null : transactional.propagation();
 				if (transactional == null) {
 					// should never happen
 				} else if (propagation == null) {
-					transaction.registerCompensable(xid, invocation);
+					transaction.registerCompensable(invocation);
 				} else if (Propagation.REQUIRED.equals(propagation)) {
-					transaction.registerCompensable(xid, invocation);
+					transaction.registerCompensable(invocation);
 				} else if (Propagation.MANDATORY.equals(propagation)) {
-					transaction.registerCompensable(xid, invocation);
+					transaction.registerCompensable(invocation);
 				} else if (Propagation.SUPPORTS.equals(propagation)) {
-					transaction.registerCompensable(xid, invocation);
+					transaction.registerCompensable(invocation);
 				}
 			}
 
