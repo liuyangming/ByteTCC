@@ -17,11 +17,13 @@ package org.bytesoft.bytetcc.work;
 
 import javax.resource.spi.work.Work;
 
+import org.bytesoft.compensable.CompensableBeanFactory;
+import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
+import org.bytesoft.transaction.TransactionRecovery;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
-public class CompensableTransactionWork implements Work {
+public class CompensableTransactionWork implements Work, CompensableBeanFactoryAware {
 	static final Logger logger = LoggerFactory.getLogger(CompensableTransactionWork.class.getSimpleName());
 
 	static final long SECOND_MILLIS = 1000L;
@@ -29,29 +31,16 @@ public class CompensableTransactionWork implements Work {
 	private long delayOfStoping = SECOND_MILLIS * 15;
 	private long recoveryInterval = SECOND_MILLIS * 60;
 
+	private CompensableBeanFactory beanFactory;
+
 	public void run() {
 
-		// org.bytesoft.bytejta.common.TransactionConfigurator jtaConfigurator =
-		// org.bytesoft.bytejta.common.TransactionConfigurator
-		// .getInstance();
-		// TransactionRecovery jtaRecovery = jtaConfigurator.getTransactionRecovery();
-		// try {
-		// jtaRecovery.startupRecover(false);
-		// } catch (RuntimeException rex) {
-		// logger.error(rex.getMessage(), rex);
-		// }
-		//
-		// org.bytesoft.bytetcc.common.TransactionConfigurator tccConfigurator =
-		// org.bytesoft.bytetcc.common.TransactionConfigurator
-		// .getInstance();
-		// TransactionRecovery tccRecovery = tccConfigurator.getTransactionRecovery();
-		// try {
-		// tccRecovery.startupRecover(false);
-		// } catch (RuntimeException rex) {
-		// logger.error(rex.getMessage(), rex);
-		// }
-
-		// TODO
+		TransactionRecovery compensableRecovery = this.beanFactory.getCompensableRecovery();
+		try {
+			compensableRecovery.startRecovery();
+		} catch (RuntimeException rex) {
+			logger.error(rex.getMessage(), rex);
+		}
 
 		long nextRecoveryTime = 0;
 		while (this.currentActive()) {
@@ -61,17 +50,10 @@ public class CompensableTransactionWork implements Work {
 			if (current >= nextRecoveryTime) {
 				nextRecoveryTime = current + this.recoveryInterval;
 				try {
-					// jtaRecovery.timingRecover();
+					compensableRecovery.timingRecover();
 				} catch (RuntimeException rex) {
 					logger.error(rex.getMessage(), rex);
 				}
-
-				try {
-					// tccRecovery.timingRecover();
-				} catch (RuntimeException rex) {
-					logger.error(rex.getMessage(), rex);
-				}
-
 			}
 
 			this.waitForMillis(100L);
@@ -83,7 +65,7 @@ public class CompensableTransactionWork implements Work {
 		try {
 			Thread.sleep(millis);
 		} catch (Exception ignore) {
-			// ignore
+			logger.debug(ignore.getMessage(), ignore);
 		}
 	}
 
@@ -101,6 +83,10 @@ public class CompensableTransactionWork implements Work {
 
 	public void setDelayOfStoping(long delayOfStoping) {
 		this.delayOfStoping = delayOfStoping;
+	}
+
+	public void setBeanFactory(CompensableBeanFactory tbf) {
+		this.beanFactory = tbf;
 	}
 
 }

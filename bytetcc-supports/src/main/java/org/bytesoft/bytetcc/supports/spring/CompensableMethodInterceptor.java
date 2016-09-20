@@ -23,9 +23,15 @@ import org.bytesoft.bytetcc.supports.CompensableInvocationImpl;
 import org.bytesoft.compensable.Compensable;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableInvocationRegistry;
+import org.bytesoft.compensable.CompensableManager;
+import org.bytesoft.compensable.CompensableTransaction;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
+import org.bytesoft.transaction.TransactionContext;
+import org.bytesoft.transaction.xa.TransactionXid;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 public class CompensableMethodInterceptor
 		implements MethodInterceptor, ApplicationContextAware, CompensableBeanFactoryAware {
@@ -36,6 +42,9 @@ public class CompensableMethodInterceptor
 	public Object invoke(MethodInvocation mi) throws Throwable {
 		CompensableInvocationRegistry registry = CompensableInvocationRegistry.getInstance();
 		Compensable compensable = mi.getMethod().getDeclaringClass().getAnnotation(Compensable.class);
+
+		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
+		CompensableTransaction transaction = compensableManager.getCompensableTransactionQuietly();
 
 		try {
 			CompensableInvocationImpl invocation = new CompensableInvocationImpl();
@@ -48,9 +57,28 @@ public class CompensableMethodInterceptor
 			if (beanNameArray.length == 1) {
 				invocation.setIdentifier(beanNameArray[0]);
 			} else {
-				// TODO
-				throw new IllegalStateException();
+				throw new IllegalStateException(); // TODO
 			}
+
+			if (transaction != null) {
+				TransactionContext transactionContext = transaction.getTransactionContext();
+				TransactionXid xid = transactionContext.getXid();
+
+				Transactional transactional = mi.getMethod().getAnnotation(Transactional.class);
+				Propagation propagation = transactional == null ? null : transactional.propagation();
+				if (transactional == null) {
+					// should never happen
+				} else if (propagation == null) {
+					transaction.registerCompensable(xid, invocation);
+				} else if (Propagation.REQUIRED.equals(propagation)) {
+					transaction.registerCompensable(xid, invocation);
+				} else if (Propagation.MANDATORY.equals(propagation)) {
+					transaction.registerCompensable(xid, invocation);
+				} else if (Propagation.SUPPORTS.equals(propagation)) {
+					transaction.registerCompensable(xid, invocation);
+				}
+			}
+
 			registry.register(invocation);
 			return mi.proceed();
 		} finally {

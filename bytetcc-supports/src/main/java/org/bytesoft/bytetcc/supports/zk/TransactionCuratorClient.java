@@ -75,12 +75,12 @@ public class TransactionCuratorClient extends URLStreamHandler implements Initia
 		MutablePropertyValues mpv = beanDef.getPropertyValues();
 		PropertyValue pv = mpv.getPropertyValue(KEY_FIELD_ZOOKEEPER_ADDRESS);
 		if (pv == null || pv.getValue() == null || StringUtils.isBlank(String.valueOf(pv.getValue()))) {
-			this.exec(beanFactory);
+			this.initZookeeperAddressIfNecessary(beanFactory);
 		}
 
 	}
 
-	public void exec(ConfigurableListableBeanFactory beanFactory) throws BeansException {
+	public void initZookeeperAddressIfNecessary(ConfigurableListableBeanFactory beanFactory) throws BeansException {
 		String[] beanNameArray = beanFactory.getBeanDefinitionNames();
 		for (int i = 0; i < beanNameArray.length; i++) {
 			String beanName = beanNameArray[i];

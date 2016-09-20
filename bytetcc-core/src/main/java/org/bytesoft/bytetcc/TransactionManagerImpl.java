@@ -163,10 +163,6 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 			throw new SystemException("Error occurred while beginning a jta-transaction!");
 		}
 
-		TransactionXid xid = tccTransactionContext.getXid();
-		// CompensableArchive compensable =
-		tccTransaction.registerCompensable(xid, invocation);
-
 		// CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
 		// compensableLogger.createCompensable(compensable); // lazy
 	}
