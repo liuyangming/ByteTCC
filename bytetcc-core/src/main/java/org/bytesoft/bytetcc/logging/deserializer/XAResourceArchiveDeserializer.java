@@ -21,6 +21,7 @@ import javax.transaction.xa.XAResource;
 import javax.transaction.xa.Xid;
 
 import org.bytesoft.bytejta.supports.resource.CommonResourceDescriptor;
+import org.bytesoft.bytejta.supports.resource.LocalXAResourceDescriptor;
 import org.bytesoft.bytejta.supports.resource.RemoteResourceDescriptor;
 import org.bytesoft.bytejta.supports.resource.UnidentifiedResourceDescriptor;
 import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
@@ -52,6 +53,9 @@ public class XAResourceArchiveDeserializer implements ArchiveDeserializer, Compe
 			identifierByteArray = descriptor.getIdentifier().getBytes();
 		} else if (RemoteResourceDescriptor.class.isInstance(descriptor)) {
 			typeByte = (byte) 0x2;
+			identifierByteArray = descriptor.getIdentifier().getBytes();
+		} else if (LocalXAResourceDescriptor.class.isInstance(descriptor)) {
+			typeByte = (byte) 0x3;
 			identifierByteArray = descriptor.getIdentifier().getBytes();
 		}
 
@@ -113,6 +117,16 @@ public class XAResourceArchiveDeserializer implements ArchiveDeserializer, Compe
 			resourceDescriptor.setDelegate((RemoteCoordinator) resource);
 			descriptor = resourceDescriptor;
 			descriptor = resourceDescriptor;
+		} else if (resourceType == 0x03) {
+			archive.setIdentified(true);
+			XAResource resource = this.deserializer.deserialize(identifier);
+			if (LocalXAResourceDescriptor.class.isInstance(resource)) {
+				descriptor = (LocalXAResourceDescriptor) resource;
+			} else {
+				LocalXAResourceDescriptor resourceDescriptor = new LocalXAResourceDescriptor();
+				resourceDescriptor.setDelegate(resource);
+				descriptor = resourceDescriptor;
+			}
 		} else {
 			UnidentifiedResourceDescriptor resourceDescriptor = new UnidentifiedResourceDescriptor();
 			descriptor = resourceDescriptor;
