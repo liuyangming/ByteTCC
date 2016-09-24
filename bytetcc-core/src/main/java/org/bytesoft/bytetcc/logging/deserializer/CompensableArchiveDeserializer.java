@@ -17,6 +17,7 @@ package org.bytesoft.bytetcc.logging.deserializer;
 
 import javax.transaction.xa.Xid;
 
+import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.common.utils.CommonUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableInvocation;
@@ -48,7 +49,18 @@ public class CompensableArchiveDeserializer implements ArchiveDeserializer, Comp
 			}
 		}
 
-		byte[] resultArray = new byte[XidFactory.BRANCH_QUALIFIER_LENGTH * 2 + 1 + byteArray.length];
+		String transactionResourceKey = archive.getTransactionResourceKey();
+		String compensableResourceKey = archive.getCompensableResourceKey();
+
+		byte[] transactionResourceKeyByteArray = transactionResourceKey == null ? new byte[0]
+				: transactionResourceKey.getBytes();
+		byte[] compensableResourceKeyByteArray = compensableResourceKey == null ? new byte[0]
+				: transactionResourceKey.getBytes();
+
+		byte[] resultArray = new byte[XidFactory.BRANCH_QUALIFIER_LENGTH * 2 + 1 //
+				+ 2 + transactionResourceKeyByteArray.length //
+				+ 2 + compensableResourceKeyByteArray.length //
+				+ byteArray.length];
 
 		Xid transactionXid = archive.getTransactionXid();
 		Xid compensableXid = archive.getCompensableXid();
@@ -75,15 +87,31 @@ public class CompensableArchiveDeserializer implements ArchiveDeserializer, Comp
 		int triedValue = archive.isParticipantTried() ? 0x1 : 0x0;
 		int confirmValue = archive.isConfirmed() ? 0x1 : 0x0;
 		int cancelValue = archive.isCancelled() ? 0x1 : 0x0;
-		int mixedValue = archive.isTxMixed() ? 0x1 : 0x0;
+		// int mixedValue = archive.isTxMixed() ? 0x1 : 0x0;
 
 		value = value | (triedValue << 1);
 		value = value | (confirmValue << 2);
 		value = value | (cancelValue << 3);
-		value = value | (mixedValue << 4);
+		// value = value | (mixedValue << 4);
 		resultArray[XidFactory.BRANCH_QUALIFIER_LENGTH * 2] = (byte) value;
 
-		System.arraycopy(byteArray, 0, resultArray, XidFactory.BRANCH_QUALIFIER_LENGTH * 2 + 1, byteArray.length);
+		byte[] lengthOfTransactionResourceKey = ByteUtils.shortToByteArray((short) transactionResourceKeyByteArray.length);
+		byte[] lengthOfCompensableResourceKey = ByteUtils.shortToByteArray((short) compensableResourceKeyByteArray.length);
+
+		int index = XidFactory.BRANCH_QUALIFIER_LENGTH * 2 + 1;
+		System.arraycopy(lengthOfTransactionResourceKey, 0, resultArray, index, lengthOfTransactionResourceKey.length);
+		index += lengthOfTransactionResourceKey.length;
+
+		System.arraycopy(transactionResourceKeyByteArray, 0, resultArray, index, transactionResourceKeyByteArray.length);
+		index += transactionResourceKeyByteArray.length;
+
+		System.arraycopy(lengthOfCompensableResourceKey, 0, resultArray, index, lengthOfCompensableResourceKey.length);
+		index += lengthOfCompensableResourceKey.length;
+
+		System.arraycopy(compensableResourceKeyByteArray, 0, resultArray, index, compensableResourceKeyByteArray.length);
+		index += compensableResourceKeyByteArray.length;
+
+		System.arraycopy(byteArray, 0, resultArray, index, byteArray.length);
 
 		return resultArray;
 	}
@@ -101,10 +129,31 @@ public class CompensableArchiveDeserializer implements ArchiveDeserializer, Comp
 		boolean tried = ((value >>> 1) & 0x1) == 0x1;
 		boolean confirmed = ((value >>> 2) & 0x1) == 0x1;
 		boolean cancelled = ((value >>> 3) & 0x1) == 0x1;
-		boolean mixed = ((value >>> 4) & 0x1) == 0x1;
+		// boolean mixed = ((value >>> 4) & 0x1) == 0x1;
 
-		byte[] byteArray = new byte[array.length - XidFactory.BRANCH_QUALIFIER_LENGTH * 2 - 1];
-		System.arraycopy(array, XidFactory.BRANCH_QUALIFIER_LENGTH * 2 + 1, byteArray, 0, byteArray.length);
+		int index = XidFactory.BRANCH_QUALIFIER_LENGTH * 2 + 1;
+
+		byte[] lengthOfTransactionResourceKey = new byte[2];
+		System.arraycopy(array, index, lengthOfTransactionResourceKey, 0, lengthOfTransactionResourceKey.length);
+		index += lengthOfTransactionResourceKey.length;
+		short transactionResourceKeySize = ByteUtils.byteArrayToShort(lengthOfTransactionResourceKey);
+		byte[] transactionResourceKeyByteArray = new byte[transactionResourceKeySize];
+		System.arraycopy(array, index, transactionResourceKeyByteArray, 0, transactionResourceKeyByteArray.length);
+		index += transactionResourceKeyByteArray.length;
+
+		byte[] lengthOfCompensableResourceKey = new byte[2];
+		System.arraycopy(array, index, lengthOfCompensableResourceKey, 0, lengthOfCompensableResourceKey.length);
+		index += lengthOfCompensableResourceKey.length;
+		short compensableResourceKeySize = ByteUtils.byteArrayToShort(lengthOfCompensableResourceKey);
+		byte[] compensableResourceKeyByteArray = new byte[compensableResourceKeySize];
+		System.arraycopy(array, index, compensableResourceKeyByteArray, 0, compensableResourceKeyByteArray.length);
+		index += transactionResourceKeyByteArray.length;
+
+		int usedSize = XidFactory.BRANCH_QUALIFIER_LENGTH * 2 + 1 + 2 + transactionResourceKeySize + 2
+				+ compensableResourceKeySize;
+
+		byte[] byteArray = new byte[array.length - usedSize];
+		System.arraycopy(array, index, byteArray, 0, byteArray.length);
 
 		CompensableInvocation compensable = null;
 		try {
@@ -122,7 +171,7 @@ public class CompensableArchiveDeserializer implements ArchiveDeserializer, Comp
 		archive.setParticipantTried(tried);
 		archive.setConfirmed(confirmed);
 		archive.setCancelled(cancelled);
-		archive.setTxMixed(mixed);
+		// archive.setTxMixed(mixed);
 		archive.setCompensable(compensable);
 		archive.setTransactionXid(transactionXid);
 		archive.setCompensableXid(compensableXid);

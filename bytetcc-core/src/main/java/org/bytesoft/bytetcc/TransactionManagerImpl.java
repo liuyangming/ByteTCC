@@ -58,7 +58,7 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 
 		if (invocation != null) {
 			if (transaction == null) {
-				this.beginForCoordinator(invocation);
+				this.beginInTryingPhaseForCoordinator(invocation);
 			} else {
 				TransactionContext transactionContext = transaction.getTransactionContext();
 				if (transactionContext.isCompensating()) {
@@ -75,7 +75,8 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 
 	}
 
-	protected void beginForCoordinator(CompensableInvocation invocation) throws NotSupportedException, SystemException {
+	protected void beginInTryingPhaseForCoordinator(CompensableInvocation invocation)
+			throws NotSupportedException, SystemException {
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
 
