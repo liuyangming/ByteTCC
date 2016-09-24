@@ -149,6 +149,11 @@ public class CompensableArchiveDeserializer implements ArchiveDeserializer, Comp
 		System.arraycopy(array, index, compensableResourceKeyByteArray, 0, compensableResourceKeyByteArray.length);
 		index += transactionResourceKeyByteArray.length;
 
+		String transactionResourceKey = transactionResourceKeyByteArray.length == 0 ? null
+				: new String(transactionResourceKeyByteArray);
+		String compensableResourceKey = compensableResourceKeyByteArray.length == 0 ? null
+				: new String(compensableResourceKeyByteArray);
+
 		int usedSize = XidFactory.BRANCH_QUALIFIER_LENGTH * 2 + 1 + 2 + transactionResourceKeySize + 2
 				+ compensableResourceKeySize;
 
@@ -175,6 +180,8 @@ public class CompensableArchiveDeserializer implements ArchiveDeserializer, Comp
 		archive.setCompensable(compensable);
 		archive.setTransactionXid(transactionXid);
 		archive.setCompensableXid(compensableXid);
+		archive.setTransactionResourceKey(transactionResourceKey);
+		archive.setCompensableResourceKey(compensableResourceKey);
 
 		return archive;
 	}
