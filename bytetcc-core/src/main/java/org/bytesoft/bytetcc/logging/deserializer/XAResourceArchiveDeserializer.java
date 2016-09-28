@@ -120,13 +120,9 @@ public class XAResourceArchiveDeserializer implements ArchiveDeserializer, Compe
 		} else if (resourceType == 0x03) {
 			archive.setIdentified(true);
 			XAResource resource = this.deserializer.deserialize(identifier);
-			if (LocalXAResourceDescriptor.class.isInstance(resource)) {
-				descriptor = (LocalXAResourceDescriptor) resource;
-			} else {
-				LocalXAResourceDescriptor resourceDescriptor = new LocalXAResourceDescriptor();
-				resourceDescriptor.setDelegate(resource);
-				descriptor = resourceDescriptor;
-			}
+			LocalXAResourceDescriptor resourceDescriptor = new LocalXAResourceDescriptor();
+			resourceDescriptor.setDelegate(resource);
+			descriptor = resourceDescriptor;
 		} else {
 			UnidentifiedResourceDescriptor resourceDescriptor = new UnidentifiedResourceDescriptor();
 			descriptor = resourceDescriptor;
