@@ -502,7 +502,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 			TransactionXid branchXid = (TransactionXid) current.getXid();
 			TransactionXid globalXid = xidFactory.createGlobalXid(branchXid.getGlobalTransactionId());
 			try {
-				current.recoveryCommit(globalXid, true);
+				current.recoveryCommit(globalXid);
 				current.setCommitted(true);
 				current.setCompleted(true);
 				transactionLogger.updateCoordinator(current);

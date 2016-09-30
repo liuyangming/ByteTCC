@@ -34,7 +34,9 @@ import org.springframework.beans.factory.config.RuntimeBeanReference;
 public class CompensableDubboConfigValidator implements BeanFactoryPostProcessor {
 	static final Logger logger = LoggerFactory.getLogger(CompensableDubboConfigValidator.class.getSimpleName());
 
-	static final String KEY_TIMEOUT = "timeout";
+	static final String CONSTANTS_CLUSTER_FAILFAST = "failfast";
+
+	static final String KEY_CLUSTER = "cluster";
 	static final String KEY_FILTER_COMPENSABLE = "compensable";
 	static final String KEY_GROUP_COMPENSABLE = "org.bytesoft.bytetcc";
 
@@ -94,11 +96,11 @@ public class CompensableDubboConfigValidator implements BeanFactoryPostProcessor
 				continue;
 			}
 
-			PropertyValue timeoutPv = mpv.getPropertyValue(KEY_TIMEOUT);
-			Object value = timeoutPv == null ? null : timeoutPv.getValue();
-			if (String.valueOf(Integer.MAX_VALUE).equals(value) == false) {
-				throw new FatalBeanException(String.format("Timeout value(beanId= %s) must be %s." //
-						, beanKey, Integer.MAX_VALUE));
+			PropertyValue cluster = mpv.getPropertyValue(KEY_CLUSTER);
+			Object value = cluster == null ? null : cluster.getValue();
+			if (CONSTANTS_CLUSTER_FAILFAST.equalsIgnoreCase(String.valueOf(value)) == false) {
+				throw new FatalBeanException(
+						String.format("The value of attribute 'cluster' (beanId= %s) must be 'failfast'.", beanKey));
 			}
 		}
 
@@ -119,11 +121,11 @@ public class CompensableDubboConfigValidator implements BeanFactoryPostProcessor
 				continue;
 			}
 
-			PropertyValue timeoutPv = mpv.getPropertyValue(KEY_TIMEOUT);
-			Object value = timeoutPv == null ? null : timeoutPv.getValue();
-			if (String.valueOf(Integer.MAX_VALUE).equals(value) == false) {
-				throw new FatalBeanException(String.format("The value of attribute 'timeout' (beanId= %s) must be %s." //
-						, beanKey, Integer.MAX_VALUE));
+			PropertyValue cluster = mpv.getPropertyValue(KEY_CLUSTER);
+			Object value = cluster == null ? null : cluster.getValue();
+			if (CONSTANTS_CLUSTER_FAILFAST.equalsIgnoreCase(String.valueOf(value)) == false) {
+				throw new FatalBeanException(
+						String.format("The value of attribute 'cluster' (beanId= %s) must be 'failfast'.", beanKey));
 			}
 		}
 	}
