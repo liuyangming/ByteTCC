@@ -35,6 +35,8 @@ public class SpringContainerContextImpl implements ContainerContext, Application
 			method.invoke(instance, args);
 		} catch (InvocationTargetException itex) {
 			throw new RuntimeException(itex.getTargetException());
+		} catch (RuntimeException rex) {
+			throw rex;
 		} catch (Throwable throwable) {
 			throw new RuntimeException(throwable);
 		}
@@ -49,6 +51,8 @@ public class SpringContainerContextImpl implements ContainerContext, Application
 			method.invoke(instance, args);
 		} catch (InvocationTargetException itex) {
 			throw new RuntimeException(itex.getTargetException());
+		} catch (RuntimeException rex) {
+			throw rex;
 		} catch (Throwable throwable) {
 			throw new RuntimeException(throwable);
 		}

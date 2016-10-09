@@ -61,8 +61,8 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 	private boolean coordinatorTried;
 	private int transactionVote;
 	private int transactionStatus = Status.STATUS_ACTIVE;
-	/* current comensable-decision. */
-	private transient Boolean decision;
+	/* current comensable-decision in confirm/cancel phase. */
+	private transient Boolean positive;
 	/* current compense-archive in confirm/cancel phase. */
 	private transient CompensableArchive archive;
 
@@ -87,8 +87,8 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 		return transactionArchive;
 	}
 
-	public void commit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException, SecurityException,
-			IllegalStateException, SystemException {
+	public void commit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException,
+			SecurityException, IllegalStateException, SystemException {
 
 		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
 
@@ -119,7 +119,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 
 			TransactionXid transactionXid = this.transactionContext.getXid();
 			try {
-				this.decision = true;
+				this.positive = true;
 				this.archive = current;
 				CompensableInvocation invocation = current.getCompensable();
 				if (invocation == null) {
@@ -129,7 +129,8 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 					byte[] branchQualifier = current.getTransactionXid().getBranchQualifier();
 					logger.error(
 							"[{}] commit-transaction: error occurred while confirming service: {}, please check whether the params of method(compensable-service) supports serialization.",
-							ByteUtils.byteArrayToString(globalTransactionId), ByteUtils.byteArrayToString(branchQualifier));
+							ByteUtils.byteArrayToString(globalTransactionId),
+							ByteUtils.byteArrayToString(branchQualifier));
 				} else {
 					executor.confirm(invocation);
 				}
@@ -140,7 +141,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 						ByteUtils.byteArrayToString(transactionXid.getGlobalTransactionId()), this.archive, rex);
 			} finally {
 				this.archive = null;
-				this.decision = null;
+				this.positive = null;
 			}
 		}
 
@@ -259,7 +260,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 
 			TransactionXid transactionXid = this.transactionContext.getXid();
 			try {
-				this.decision = false;
+				this.positive = false;
 				this.archive = current;
 				CompensableInvocation invocation = current.getCompensable();
 				if (invocation == null) {
@@ -269,7 +270,8 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 					byte[] branchQualifier = current.getTransactionXid().getBranchQualifier();
 					logger.error(
 							"[{}] rollback-transaction: error occurred while cancelling service: {}, please check whether the params of method(compensable-service) supports serialization.",
-							ByteUtils.byteArrayToString(globalTransactionId), ByteUtils.byteArrayToString(branchQualifier));
+							ByteUtils.byteArrayToString(globalTransactionId),
+							ByteUtils.byteArrayToString(branchQualifier));
 				} else {
 					executor.cancel(invocation);
 				}
@@ -280,7 +282,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 						ByteUtils.byteArrayToString(transactionXid.getGlobalTransactionId()), this.archive, rex);
 			} finally {
 				this.archive = null;
-				this.decision = null;
+				this.positive = null;
 			}
 		}
 
@@ -367,16 +369,20 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 	}
 
 	public void registerCompensable(CompensableInvocation invocation) {
+		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
+		XidFactory xidFactory = this.beanFactory.getTransactionXidFactory();
+
 		CompensableArchive archive = new CompensableArchive();
 
 		archive.setCompensable(invocation);
 
-		XidFactory xidFactory = this.beanFactory.getTransactionXidFactory();
-		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
 		if (transactionContext.isCoordinator()) {
 			TransactionXid xid = transactionContext.getXid();
-			TransactionXid globalXid = xidFactory.createGlobalXid(xid.getGlobalTransactionId());
-			archive.setTransactionXid(globalXid);
+			TransactionXid transactionXid = xidFactory.createGlobalXid(xid.getGlobalTransactionId());
+			archive.setTransactionXid(transactionXid);
+
+			TransactionXid compensableXid = xidFactory.createGlobalXid();
+			archive.setCompensableXid(compensableXid);
 
 			this.archiveList.add(archive);
 
@@ -390,43 +396,57 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 
 	}
 
-	public void registerSynchronization(Synchronization sync) throws RollbackException, IllegalStateException, SystemException {
+	public void registerSynchronization(Synchronization sync) throws RollbackException, IllegalStateException,
+			SystemException {
 	}
 
 	public void registerTransactionListener(TransactionListener listener) {
 	}
 
 	public void onCommitStart(TransactionXid xid) {
-		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
-
 		if (this.transactionContext.isCompensating()) {
-			this.archive.setCompensableXid(xid);
-			compensableLogger.updateCompensable(this.archive);
-		} else if (this.transactionContext.isCoordinator() == false) {
-			for (int i = 0; i < this.transientArchiveList.size(); i++) {
-				CompensableArchive compensableArchive = this.transientArchiveList.get(i);
-				compensableArchive.setTransactionXid(xid);
-				compensableLogger.createCompensable(compensableArchive);
-			}
+			return; // ignore
+		} else if (this.transactionContext.isCoordinator()) {
+			return; // ignore
+		}
+
+		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
+		XidFactory xidFactory = this.beanFactory.getTransactionXidFactory();
+
+		for (int i = 0; i < this.transientArchiveList.size(); i++) {
+			CompensableArchive compensableArchive = this.transientArchiveList.get(i);
+			compensableArchive.setTransactionXid(xid);
+
+			TransactionXid compensableXid = xidFactory.createGlobalXid();
+			compensableArchive.setCompensableXid(compensableXid);
+
+			compensableLogger.createCompensable(compensableArchive);
 		}
 
 	}
 
 	public void onCommitSuccess(TransactionXid xid) {
+		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
+
 		if (this.transactionContext.isCompensating()) {
-			if (this.decision == null) {
+			if (this.positive == null) {
 				// ignore
-			} else if (this.decision) {
+			} else if (this.positive) {
 				this.archive.setConfirmed(true);
 			} else {
 				this.archive.setCancelled(true);
 			}
-			CompensableLogger transactionLogger = this.beanFactory.getCompensableLogger();
-			transactionLogger.updateCompensable(this.archive);
+			compensableLogger.updateCompensable(this.archive);
 		} else if (this.transactionContext.isCoordinator()) {
 			this.coordinatorTried = true;
 		} else {
-			// this.archive.setParticipantTried(true); // TODO
+			for (int i = 0; i < this.transientArchiveList.size(); i++) {
+				CompensableArchive compensableArchive = this.transientArchiveList.get(i);
+
+				compensableArchive.setParticipantTried(true);
+				compensableLogger.updateCompensable(compensableArchive);
+			}
+
 		}
 	}
 
@@ -460,7 +480,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 
 			TransactionXid transactionXid = this.transactionContext.getXid();
 			try {
-				this.decision = true;
+				this.positive = true;
 				this.archive = current;
 				CompensableInvocation invocation = current.getCompensable();
 				if (invocation == null) {
@@ -470,7 +490,8 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 					byte[] branchQualifier = current.getTransactionXid().getBranchQualifier();
 					logger.error(
 							"[{}] recover-transaction: error occurred while confirming service: {}, please check whether the params of method(compensable-service) supports serialization.",
-							ByteUtils.byteArrayToString(globalTransactionId), ByteUtils.byteArrayToString(branchQualifier));
+							ByteUtils.byteArrayToString(globalTransactionId),
+							ByteUtils.byteArrayToString(branchQualifier));
 				} else {
 					executor.confirm(invocation);
 				}
@@ -481,7 +502,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 						ByteUtils.byteArrayToString(transactionXid.getGlobalTransactionId()), this.archive, rex);
 			} finally {
 				this.archive = null;
-				this.decision = null;
+				this.positive = null;
 			}
 		}
 
@@ -579,7 +600,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 
 			TransactionXid transactionXid = this.transactionContext.getXid();
 			try {
-				this.decision = false;
+				this.positive = false;
 				this.archive = current;
 				CompensableInvocation invocation = current.getCompensable();
 				if (invocation == null) {
@@ -589,7 +610,8 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 					byte[] branchQualifier = current.getTransactionXid().getBranchQualifier();
 					logger.error(
 							"[{}] rollback-transaction: error occurred while cancelling service: {}, please check whether the params of method(compensable-service) supports serialization.",
-							ByteUtils.byteArrayToString(globalTransactionId), ByteUtils.byteArrayToString(branchQualifier));
+							ByteUtils.byteArrayToString(globalTransactionId),
+							ByteUtils.byteArrayToString(branchQualifier));
 				} else {
 					executor.cancel(invocation);
 				}
@@ -600,7 +622,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 						ByteUtils.byteArrayToString(transactionXid.getGlobalTransactionId()), this.archive, rex);
 			} finally {
 				this.archive = null;
-				this.decision = null;
+				this.positive = null;
 			}
 		}
 
@@ -645,6 +667,10 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 	public void recoveryForgetQuietly() {
 		// TODO Auto-generated method stub
 
+	}
+
+	public CompensableArchive getCompensableArchive() {
+		return this.archive;
 	}
 
 	public void setRollbackOnly() throws IllegalStateException, SystemException {

@@ -31,6 +31,7 @@ import org.bytesoft.compensable.CompensableInvocation;
 import org.bytesoft.compensable.CompensableInvocationRegistry;
 import org.bytesoft.compensable.CompensableManager;
 import org.bytesoft.compensable.CompensableTransaction;
+import org.bytesoft.compensable.archive.CompensableArchive;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 import org.bytesoft.compensable.logging.CompensableLogger;
 import org.bytesoft.transaction.Transaction;
@@ -75,8 +76,8 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 
 	}
 
-	protected void beginInTryingPhaseForCoordinator(CompensableInvocation invocation)
-			throws NotSupportedException, SystemException {
+	protected void beginInTryingPhaseForCoordinator(CompensableInvocation invocation) throws NotSupportedException,
+			SystemException {
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
 
@@ -94,10 +95,10 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 			throws NotSupportedException, SystemException {
 		RemoteCoordinator transactionCoordinator = this.beanFactory.getTransactionCoordinator();
 
-		XidFactory jtaXidFactory = this.beanFactory.getTransactionXidFactory();
+		CompensableArchive archive = tccTransaction.getCompensableArchive();
+
 		TransactionContext tccTransactionContext = tccTransaction.getTransactionContext();
-		TransactionXid tccTransactionXid = tccTransactionContext.getXid();
-		TransactionXid jtaTransactionXid = jtaXidFactory.createGlobalXid();
+		TransactionXid jtaTransactionXid = (TransactionXid) archive.getCompensableXid();
 		TransactionContext jtaTransactionContext = tccTransactionContext.clone();
 		jtaTransactionContext.setXid(jtaTransactionXid);
 		try {
@@ -106,6 +107,7 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 			jtaTransaction.setTransactionalExtra(tccTransaction);
 			tccTransaction.setTransactionalExtra(jtaTransaction);
 		} catch (TransactionException ex) {
+			TransactionXid tccTransactionXid = tccTransactionContext.getXid();
 			logger.info("[{}] begin-transaction: error occurred while starting jta-transaction: {}",
 					ByteUtils.byteArrayToString(tccTransactionXid.getGlobalTransactionId()),
 					ByteUtils.byteArrayToString(jtaTransactionXid.getGlobalTransactionId()));
@@ -117,13 +119,11 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 			throws NotSupportedException, SystemException {
 
 		RemoteCoordinator transactionCoordinator = this.beanFactory.getTransactionCoordinator();
-		XidFactory jtaXidFactory = this.beanFactory.getTransactionXidFactory();
+
+		CompensableArchive archive = tccTransaction.getCompensableArchive();
+
 		TransactionContext tccTransactionContext = tccTransaction.getTransactionContext();
-		TransactionXid tccTransactionXid = tccTransactionContext.getXid();
-		TransactionXid jtaTransactionXid = null;
-		// if (tccTransactionContext.isCompensating()) {
-		jtaTransactionXid = jtaXidFactory.createGlobalXid();
-		// } else { jtaTransactionXid = jtaXidFactory.createGlobalXid(tccTransactionXid.getGlobalTransactionId()); }
+		TransactionXid jtaTransactionXid = (TransactionXid) archive.getCompensableXid();
 
 		TransactionContext jtaTransactionContext = tccTransactionContext.clone();
 		jtaTransactionContext.setXid(jtaTransactionXid);
@@ -134,6 +134,7 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 			transaction.setTransactionalExtra(tccTransaction);
 			tccTransaction.setTransactionalExtra(transaction);
 		} catch (TransactionException ex) {
+			TransactionXid tccTransactionXid = tccTransactionContext.getXid();
 			logger.info("[{}] begin-transaction: error occurred while starting jta-transaction: {}",
 					ByteUtils.byteArrayToString(tccTransactionXid.getGlobalTransactionId()),
 					ByteUtils.byteArrayToString(jtaTransactionXid.getGlobalTransactionId()));
@@ -236,8 +237,8 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 		return (isCompensableTransaction ? compensableManager : transactionManager).suspend();
 	}
 
-	public void resume(javax.transaction.Transaction tobj)
-			throws InvalidTransactionException, IllegalStateException, SystemException {
+	public void resume(javax.transaction.Transaction tobj) throws InvalidTransactionException, IllegalStateException,
+			SystemException {
 		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 
