@@ -30,6 +30,8 @@ public interface CompensableLogger {
 	public void deleteTransaction(TransactionArchive archive);
 
 	/* coordinator */
+	public void createCoordinator(XAResourceArchive archive);
+
 	public void updateCoordinator(XAResourceArchive archive);
 
 	/* compensable */

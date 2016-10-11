@@ -15,6 +15,7 @@
  */
 package org.bytesoft.bytetcc.supports.dubbo;
 
+import org.apache.commons.lang3.StringUtils;
 import org.bytesoft.bytetcc.TransactionCoordinator;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.FatalBeanException;
@@ -44,8 +45,10 @@ public class CompensableCoordinatorProcessor implements BeanFactoryPostProcessor
 			String propertyName = "name";
 			PropertyValue pv = values.getPropertyValue(propertyName);
 			application = pv == null ? null : (String) pv.getValue();
-		} else {
-			throw new FatalBeanException("没有指定dubbo应用名称, 或存在多于一个的应用名称!");
+		}
+
+		if (StringUtils.isBlank(application)) {
+			throw new FatalBeanException("There is no application name specified, or there is more than one application name!");
 		}
 
 		String[] coordinatorNameArray = beanFactory.getBeanNamesForType(TransactionCoordinator.class);
@@ -59,10 +62,10 @@ public class CompensableCoordinatorProcessor implements BeanFactoryPostProcessor
 			values.addPropertyValue("interface", TransactionCoordinator.class.getName());
 			values.addPropertyValue("ref", new RuntimeBeanReference(beanName));
 			values.addPropertyValue("retries", "0");
-			values.addPropertyValue("timeout", String.valueOf(Integer.MAX_VALUE)); // TODO
+			values.addPropertyValue("timeout", String.valueOf(1000L * 6));
 			registry.registerBeanDefinition(String.format("%s@%s", beanName, application), beanDef);
 		} else {
-			throw new FatalBeanException("没有可用的(或存在多余一个的)org.bytesoft.bytetcc.TransactionCoordinator!");
+			throw new FatalBeanException("No available(or redundant) org.bytesoft.bytetcc.TransactionCoordinator!");
 		}
 
 	}
