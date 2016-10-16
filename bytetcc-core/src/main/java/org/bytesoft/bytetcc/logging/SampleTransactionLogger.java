@@ -76,6 +76,17 @@ public class SampleTransactionLogger extends VirtualLoggingSystemImpl
 		}
 	}
 
+	public void createCoordinator(XAResourceArchive archive) {
+		ArchiveDeserializer deserializer = this.beanFactory.getArchiveDeserializer();
+
+		try {
+			byte[] byteArray = deserializer.serialize((TransactionXid) archive.getXid(), archive);
+			this.create(archive.getXid(), byteArray);
+		} catch (RuntimeException rex) {
+			logger.error("Error occurred while modifying resource-archive.", rex);
+		}
+	}
+
 	public void updateCoordinator(XAResourceArchive archive) {
 		ArchiveDeserializer deserializer = this.beanFactory.getArchiveDeserializer();
 

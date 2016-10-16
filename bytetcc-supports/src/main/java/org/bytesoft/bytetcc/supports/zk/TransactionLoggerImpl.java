@@ -32,6 +32,9 @@ public class TransactionLoggerImpl implements CompensableLogger {
 	public void deleteTransaction(TransactionArchive archive) {
 	}
 
+	public void createCoordinator(XAResourceArchive archive) {
+	}
+
 	public void updateCoordinator(XAResourceArchive archive) {
 	}
 
