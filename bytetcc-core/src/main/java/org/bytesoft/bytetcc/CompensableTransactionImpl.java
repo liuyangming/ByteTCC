@@ -44,6 +44,8 @@ import org.bytesoft.transaction.TransactionContext;
 import org.bytesoft.transaction.archive.XAResourceArchive;
 import org.bytesoft.transaction.supports.TransactionListener;
 import org.bytesoft.transaction.supports.TransactionListenerAdapter;
+import org.bytesoft.transaction.supports.TransactionResourceListener;
+import org.bytesoft.transaction.supports.resource.XAResourceDescriptor;
 import org.bytesoft.transaction.xa.TransactionXid;
 import org.bytesoft.transaction.xa.XidFactory;
 import org.slf4j.Logger;
@@ -58,13 +60,14 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 	private Transaction transaction;
 	private CompensableBeanFactory beanFactory;
 
-	private boolean coordinatorTried;
 	private int transactionVote;
 	private int transactionStatus = Status.STATUS_ACTIVE;
 	/* current comensable-decision in confirm/cancel phase. */
 	private transient Boolean positive;
 	/* current compense-archive in confirm/cancel phase. */
 	private transient CompensableArchive archive;
+
+	private transient String resourceKey;
 
 	/* current compensable-archive list in try phase, only used by participant. */
 	private final transient List<CompensableArchive> transientArchiveList = new ArrayList<CompensableArchive>();
@@ -229,7 +232,13 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 		compensableLogger.updateTransaction(this.getTransactionArchive());
 
 		boolean coordinator = this.transactionContext.isCoordinator();
-		if (coordinator && this.coordinatorTried == false) {
+		boolean coordinatorTried = false;
+		for (int i = 0; coordinator && i < this.archiveList.size(); i++) {
+			CompensableArchive compensableArchive = this.archiveList.get(i);
+			coordinatorTried = compensableArchive.isTried() ? true : coordinatorTried;
+		}
+
+		if (coordinator && coordinatorTried == false) {
 			boolean remoteSuccess = this.fireRemoteParticipantCancel();
 			if (remoteSuccess) {
 				this.transactionStatus = Status.STATUS_ROLLEDBACK;
@@ -369,27 +378,15 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 	}
 
 	public void registerCompensable(CompensableInvocation invocation) {
-		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
-		XidFactory xidFactory = this.beanFactory.getTransactionXidFactory();
-
 		CompensableArchive archive = new CompensableArchive();
 
 		archive.setCompensable(invocation);
 
 		if (transactionContext.isCoordinator()) {
-			TransactionXid xid = transactionContext.getXid();
-			TransactionXid transactionXid = xidFactory.createGlobalXid(xid.getGlobalTransactionId());
-			archive.setTransactionXid(transactionXid);
-
-			TransactionXid compensableXid = xidFactory.createGlobalXid();
-			archive.setCompensableXid(compensableXid);
-
+			// archive.setTransactionXid(transactionXid); // lazy
 			this.archiveList.add(archive);
-
-			compensableLogger.createCompensable(archive);
 		} else {
 			// archive.setTransactionXid(branchXid); // lazy
-
 			this.archiveList.add(archive);
 			this.transientArchiveList.add(archive);
 		}
@@ -403,24 +400,38 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 	public void registerTransactionListener(TransactionListener listener) {
 	}
 
-	public void onCommitStart(TransactionXid xid) {
-		if (this.transactionContext.isCompensating()) {
-			return; // ignore
-		} else if (this.transactionContext.isCoordinator()) {
-			return; // ignore
-		}
+	public void registerTransactionResourceListener(TransactionResourceListener listener) {
+	}
 
+	public void onCommitStart(TransactionXid xid) {
 		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
 		XidFactory xidFactory = this.beanFactory.getTransactionXidFactory();
 
-		for (int i = 0; i < this.transientArchiveList.size(); i++) {
-			CompensableArchive compensableArchive = this.transientArchiveList.get(i);
-			compensableArchive.setTransactionXid(xid);
+		if (this.transactionContext.isCompensating()) {
+			this.archive.setCompensableResourceKey(this.resourceKey);
+			compensableLogger.updateCompensable(this.archive);
+		} else if (this.transactionContext.isCoordinator()) {
+			for (int i = 0; i < this.archiveList.size(); i++) {
+				CompensableArchive compensableArchive = this.archiveList.get(i);
+				compensableArchive.setTransactionXid(xid);
+				compensableArchive.setTransactionResourceKey(this.resourceKey);
 
-			TransactionXid compensableXid = xidFactory.createGlobalXid();
-			compensableArchive.setCompensableXid(compensableXid);
+				TransactionXid compensableXid = xidFactory.createGlobalXid();
+				compensableArchive.setCompensableXid(compensableXid);
 
-			compensableLogger.createCompensable(compensableArchive);
+				compensableLogger.createCompensable(archive);
+			}
+		} else {
+			for (int i = 0; i < this.transientArchiveList.size(); i++) {
+				CompensableArchive compensableArchive = this.transientArchiveList.get(i);
+				compensableArchive.setTransactionXid(xid);
+				compensableArchive.setTransactionResourceKey(this.resourceKey);
+
+				TransactionXid compensableXid = xidFactory.createGlobalXid();
+				compensableArchive.setCompensableXid(compensableXid);
+
+				compensableLogger.createCompensable(compensableArchive);
+			}
 		}
 
 	}
@@ -438,16 +449,19 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 			}
 			compensableLogger.updateCompensable(this.archive);
 		} else if (this.transactionContext.isCoordinator()) {
-			this.coordinatorTried = true;
+			for (int i = 0; i < this.archiveList.size(); i++) {
+				CompensableArchive compensableArchive = this.archiveList.get(i);
+				compensableArchive.setTried(true);
+				compensableLogger.updateCompensable(compensableArchive);
+			}
 		} else {
 			for (int i = 0; i < this.transientArchiveList.size(); i++) {
 				CompensableArchive compensableArchive = this.transientArchiveList.get(i);
-
-				compensableArchive.setParticipantTried(true);
+				compensableArchive.setTried(true);
 				compensableLogger.updateCompensable(compensableArchive);
 			}
-
 		}
+
 	}
 
 	public void recoveryCommit() throws CommitRequiredException, SystemException {
@@ -667,6 +681,20 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 	public void recoveryForgetQuietly() {
 		// TODO Auto-generated method stub
 
+	}
+
+	public void onEnlistResource(TransactionXid branchXid, XAResource xares) {
+		if (XAResourceDescriptor.class.isInstance(xares)) {
+			XAResourceDescriptor descriptor = (XAResourceDescriptor) xares;
+			this.resourceKey = descriptor.getIdentifier();
+		} else if (XAResourceArchive.class.isInstance(xares)) {
+			XAResourceArchive resourceArchive = (XAResourceArchive) xares;
+			XAResourceDescriptor descriptor = resourceArchive.getDescriptor();
+			this.resourceKey = descriptor == null ? null : descriptor.getIdentifier();
+		}
+	}
+
+	public void onDelistResource(TransactionXid branchXid, XAResource xares) {
 	}
 
 	public CompensableArchive getCompensableArchive() {

@@ -27,7 +27,7 @@ public class CompensableArchive {
 	/* try-phase. */
 	private String transactionResourceKey;
 	private Xid transactionXid;
-	private boolean participantTried;
+	private boolean tried;
 
 	/* confirm/cancel phase. */
 	private String compensableResourceKey;
@@ -79,12 +79,12 @@ public class CompensableArchive {
 		this.compensable = compensable;
 	}
 
-	public boolean isParticipantTried() {
-		return participantTried;
+	public boolean isTried() {
+		return tried;
 	}
 
-	public void setParticipantTried(boolean participantTried) {
-		this.participantTried = participantTried;
+	public void setTried(boolean tried) {
+		this.tried = tried;
 	}
 
 	public boolean isConfirmed() {

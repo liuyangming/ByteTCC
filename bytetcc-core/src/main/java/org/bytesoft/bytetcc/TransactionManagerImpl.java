@@ -103,9 +103,11 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 		jtaTransactionContext.setXid(jtaTransactionXid);
 		try {
 			Transaction jtaTransaction = transactionCoordinator.start(jtaTransactionContext, XAResource.TMNOFLAGS);
-			jtaTransaction.registerTransactionListener(tccTransaction);
 			jtaTransaction.setTransactionalExtra(tccTransaction);
 			tccTransaction.setTransactionalExtra(jtaTransaction);
+
+			jtaTransaction.registerTransactionResourceListener(tccTransaction);
+			jtaTransaction.registerTransactionListener(tccTransaction);
 		} catch (TransactionException ex) {
 			TransactionXid tccTransactionXid = tccTransactionContext.getXid();
 			logger.info("[{}] begin-transaction: error occurred while starting jta-transaction: {}",
@@ -130,9 +132,11 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 
 		try {
 			Transaction transaction = transactionCoordinator.start(jtaTransactionContext, XAResource.TMNOFLAGS);
-			transaction.registerTransactionListener(tccTransaction);
 			transaction.setTransactionalExtra(tccTransaction);
 			tccTransaction.setTransactionalExtra(transaction);
+
+			transaction.registerTransactionResourceListener(tccTransaction);
+			transaction.registerTransactionListener(tccTransaction);
 		} catch (TransactionException ex) {
 			TransactionXid tccTransactionXid = tccTransactionContext.getXid();
 			logger.info("[{}] begin-transaction: error occurred while starting jta-transaction: {}",
@@ -154,9 +158,11 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 		jtaTransactionContext.setXid(jtaTransactionXid);
 		try {
 			Transaction jtaTransaction = transactionCoordinator.start(jtaTransactionContext, XAResource.TMNOFLAGS);
-			jtaTransaction.registerTransactionListener(tccTransaction);
 			jtaTransaction.setTransactionalExtra(tccTransaction);
 			tccTransaction.setTransactionalExtra(jtaTransaction);
+
+			jtaTransaction.registerTransactionResourceListener(tccTransaction);
+			jtaTransaction.registerTransactionListener(tccTransaction);
 		} catch (TransactionException ex) {
 			logger.info("[{}] begin-transaction: error occurred while starting jta-transaction: {}",
 					ByteUtils.byteArrayToString(tccTransactionXid.getGlobalTransactionId()),

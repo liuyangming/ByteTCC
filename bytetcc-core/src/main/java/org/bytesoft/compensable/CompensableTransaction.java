@@ -19,8 +19,9 @@ import org.bytesoft.compensable.archive.CompensableArchive;
 import org.bytesoft.compensable.archive.TransactionArchive;
 import org.bytesoft.transaction.Transaction;
 import org.bytesoft.transaction.supports.TransactionListener;
+import org.bytesoft.transaction.supports.TransactionResourceListener;
 
-public interface CompensableTransaction extends Transaction, TransactionListener {
+public interface CompensableTransaction extends Transaction, TransactionListener, TransactionResourceListener {
 
 	public Transaction getTransaction();
 
