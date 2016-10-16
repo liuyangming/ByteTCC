@@ -90,8 +90,8 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 		return transactionArchive;
 	}
 
-	public void commit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException, SecurityException,
-			IllegalStateException, SystemException {
+	public void commit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException,
+			SecurityException, IllegalStateException, SystemException {
 
 		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
 
@@ -132,7 +132,8 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 					byte[] branchQualifier = current.getTransactionXid().getBranchQualifier();
 					logger.error(
 							"[{}] commit-transaction: error occurred while confirming service: {}, please check whether the params of method(compensable-service) supports serialization.",
-							ByteUtils.byteArrayToString(globalTransactionId), ByteUtils.byteArrayToString(branchQualifier));
+							ByteUtils.byteArrayToString(globalTransactionId),
+							ByteUtils.byteArrayToString(branchQualifier));
 				} else {
 					executor.confirm(invocation);
 				}
@@ -279,7 +280,8 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 					byte[] branchQualifier = current.getTransactionXid().getBranchQualifier();
 					logger.error(
 							"[{}] rollback-transaction: error occurred while cancelling service: {}, please check whether the params of method(compensable-service) supports serialization.",
-							ByteUtils.byteArrayToString(globalTransactionId), ByteUtils.byteArrayToString(branchQualifier));
+							ByteUtils.byteArrayToString(globalTransactionId),
+							ByteUtils.byteArrayToString(branchQualifier));
 				} else {
 					executor.cancel(invocation);
 				}
@@ -392,7 +394,8 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 
 	}
 
-	public void registerSynchronization(Synchronization sync) throws RollbackException, IllegalStateException, SystemException {
+	public void registerSynchronization(Synchronization sync) throws RollbackException, IllegalStateException,
+			SystemException {
 	}
 
 	public void registerTransactionListener(TransactionListener listener) {
@@ -502,7 +505,8 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 					byte[] branchQualifier = current.getTransactionXid().getBranchQualifier();
 					logger.error(
 							"[{}] recover-transaction: error occurred while confirming service: {}, please check whether the params of method(compensable-service) supports serialization.",
-							ByteUtils.byteArrayToString(globalTransactionId), ByteUtils.byteArrayToString(branchQualifier));
+							ByteUtils.byteArrayToString(globalTransactionId),
+							ByteUtils.byteArrayToString(branchQualifier));
 				} else {
 					executor.confirm(invocation);
 				}
@@ -621,7 +625,8 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 					byte[] branchQualifier = current.getTransactionXid().getBranchQualifier();
 					logger.error(
 							"[{}] rollback-transaction: error occurred while cancelling service: {}, please check whether the params of method(compensable-service) supports serialization.",
-							ByteUtils.byteArrayToString(globalTransactionId), ByteUtils.byteArrayToString(branchQualifier));
+							ByteUtils.byteArrayToString(globalTransactionId),
+							ByteUtils.byteArrayToString(branchQualifier));
 				} else {
 					executor.cancel(invocation);
 				}
@@ -679,7 +684,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 
 	}
 
-	public void onEnlistResource(TransactionXid branchXid, XAResource xares) {
+	public void onEnlistResource(XAResource xares) {
 		if (XAResourceDescriptor.class.isInstance(xares)) {
 			XAResourceDescriptor descriptor = (XAResourceDescriptor) xares;
 			this.resourceKey = descriptor.getIdentifier();
@@ -690,7 +695,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 		}
 	}
 
-	public void onDelistResource(TransactionXid branchXid, XAResource xares) {
+	public void onDelistResource(XAResource xares) {
 	}
 
 	public CompensableArchive getCompensableArchive() {

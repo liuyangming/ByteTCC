@@ -84,7 +84,7 @@ public class CompensableArchiveDeserializer implements ArchiveDeserializer, Comp
 				XidFactory.BRANCH_QUALIFIER_LENGTH);
 
 		int value = archive.isCoordinator() ? 0x1 : 0x0;
-		int triedValue = archive.isParticipantTried() ? 0x1 : 0x0;
+		int triedValue = archive.isTried() ? 0x1 : 0x0;
 		int confirmValue = archive.isConfirmed() ? 0x1 : 0x0;
 		int cancelValue = archive.isCancelled() ? 0x1 : 0x0;
 		// int mixedValue = archive.isTxMixed() ? 0x1 : 0x0;
@@ -173,7 +173,7 @@ public class CompensableArchiveDeserializer implements ArchiveDeserializer, Comp
 
 		CompensableArchive archive = new CompensableArchive();
 		archive.setCoordinator(coordinator);
-		archive.setParticipantTried(tried);
+		archive.setTried(tried);
 		archive.setConfirmed(confirmed);
 		archive.setCancelled(cancelled);
 		// archive.setTxMixed(mixed);
