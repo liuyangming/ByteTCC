@@ -420,7 +420,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 				TransactionXid compensableXid = xidFactory.createGlobalXid();
 				compensableArchive.setCompensableXid(compensableXid);
 
-				compensableLogger.createCompensable(archive);
+				compensableLogger.createCompensable(compensableArchive);
 			}
 		} else {
 			for (int i = 0; i < this.transientArchiveList.size(); i++) {
