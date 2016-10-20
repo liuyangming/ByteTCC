@@ -21,22 +21,27 @@ ByteTCC倾向于认为：Confirm阶段并是一个辅助而非必须的阶段。
 Cancel阶段的操作主要是用于对Try阶段的执行结果进行补偿，该阶段执行的存在多个资源参与事务已经被可以将分布式事务分成几个阶段处理了影响（Try阶段的LocalTransaction已经提交了）。
 Cancel补偿逻辑是业务必须提供的，但并不意味着Cancel阶段一定会执行该补偿逻辑。如果Try阶段虽然被调用但是其所在的LocalTransaction被TCC事务管理器回滚了，则Cancel阶段的补偿操作可以不必执行。
 
-## 二、ByteTCC为什么要基于本地事务（JTA事务）完成TCC全局事务？
+## 二、ByteTCC为什么要基于本地事务（JTA事务）实现TCC全局事务？
 TCC各阶段均有业务service构成，而业务service对数据的修改又由本地事务（JTA事务）来控制提交，因此，TCC必须依赖各阶段（Try/Confirm/Cancel）的本地事务的原子性和一致性来实现全局事务的原子性和一致性。
 
 ## 三、ByteTCC为什么要基于TransactionManager的机制来实现TCC全局事务？
 EJB/Spring容器的声明式事务处理机制都是将事务请求（begin、commit、rollback等）委托给TransactionManager来完成，因此TCC各阶段的service执行的结果生效与否（commit/rollback），从TransactionManager的底层角度就可以有比较准确的判断。
 
-相反，如果从应用系统层面/service层面根据注解、配置、异常等信息判断本地事务是否提交，则效果要差的多，并且也非常复杂。EJB/Spring都将异常定义成系统异常、业务异常两类异常，不同类型的异常对应有不同的事务完成策略，且两类异常还可通过注解/配置追加，如spring可通过Transactional.rollbackFor/noRollbackFor来配置什么异常应该回滚什么异常不应该回滚。可见，service执行抛出异常时，并不能说明事务被回滚了。更有甚者，部分容器（比如EJB）还允许业务代码通过Context来设置自己希望的事务完成方向（如EJBContext.setRollbackOnly）。所以，如果仅从应用系统层面/service层面来判断本地事务状态，是不能保证准确的。
+相反，如果从应用系统层面/service层面根据注解、配置、异常等信息判断本地事务是否提交，则效果要差的多，并且也非常复杂。EJB/Spring都将异常定义成系统异常、应用异常两类异常，不同类型的异常对应有不同的事务完成策略，且两类异常还可通过注解/配置调整/追加，如spring可通过Transactional.rollbackFor/noRollbackFor来配置什么异常应该回滚什么异常不应该回滚。可见，service执行抛出异常时，并不能说明事务被回滚了。更有甚者，部分容器（比如EJB）还允许业务代码通过Context来设置自己希望的事务完成方向（如EJBContext.setRollbackOnly）。所以，如果仅从应用系统层面/service层面来判断本地事务状态，是不能保证准确的。
 
 ## 四、关于幂等性
-ByteTCC不要求service的实现逻辑具有幂等性。事实上，ByteTCC也不推荐这样做，因为在业务层面实现幂等性，其复杂度非常高。因此ByteTCC在实现是也做了这方面的考虑。ByteTCC在补偿TCC事务时，虽然也可能会多次调用confirm/cancel方法，但是ByteTCC可以确保每个confirm/cancel方法仅被"执行并提交"一次，所以，使用ByteTCC时可以仅关注业务逻辑，而不必考虑事务相关的细节。
+ByteTCC不要求service的实现逻辑具有幂等性。事实上，ByteTCC也不推荐这样做，因为在业务层面实现幂等性，其复杂度非常高。因此ByteTCC在实现时也做了这方面的考虑。ByteTCC在补偿TCC事务时，虽然也可能会多次调用confirm/cancel方法，但是ByteTCC可以确保每个confirm/cancel方法仅被"执行并提交"一次，所以，使用ByteTCC时可以仅关注业务逻辑，而不必考虑事务相关的细节。
 
 #### 仅“执行并提交”一次的说明：
 * 1、Confirm操作虽然可能被多次调用，但是其参与的LocalTransaction均由ByteTCC事务管理器控制，一旦Confirm操作所在的LocalTransaction事务被ByteTCC事务管理器成功提交，则ByteTCC事务管理器会标注该Confirm操作成功，后续将不再执行该Confirm操作。
 * 2、Cancel操作的控制原理同Confirm操作。需要说明的是，Cancel操作只有在Try阶段所在的LocalTransaction被成功提交的情况下才会被调用，Try阶段所在的LocalTransaction被回滚时Cancel操作不会被执行。
 
-## 五、ByteTCC中TCC机制与事务补偿机制的区别
+## 五、ByteTCC中TCC机制与事务补偿机制的异同
+#### 5.1、相同之处
+* 1、都为业务操作提供一个补偿操作，该操作在全局事务决定回滚的情况下被调用；
+
+#### 5.2、不同之处
+* 1、TCC机制提供一个Confirm操作，该操作在全局事务决定提交的情况下被调用；需要说明的是，ByteTCC更倾向于Confirm只是一个可选的阶段，即不是每个业务都需要一个确认的逻辑。在没有指定Confirm操作的情况下，TCC即等同于事务补偿机制。
 
 ## 六、ByteTCC中TCC事务与普通事务的异同
 #### 6.1、相同之处
