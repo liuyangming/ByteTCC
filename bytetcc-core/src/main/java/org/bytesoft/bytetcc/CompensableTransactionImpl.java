@@ -394,8 +394,8 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 
 	}
 
-	public void registerSynchronization(Synchronization sync) throws RollbackException, IllegalStateException,
-			SystemException {
+	public void registerSynchronization(Synchronization sync)
+			throws RollbackException, IllegalStateException, SystemException {
 	}
 
 	public void registerTransactionListener(TransactionListener listener) {
@@ -700,6 +700,20 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 
 	public CompensableArchive getCompensableArchive() {
 		return this.archive;
+	}
+
+	/**
+	 * only for recovery.
+	 */
+	public List<CompensableArchive> getCompensableArchiveList() {
+		return this.archiveList;
+	}
+
+	/**
+	 * only for recovery.
+	 */
+	public List<XAResourceArchive> getParticipantArchiveList() {
+		return this.resourceList;
 	}
 
 	public void setRollbackOnly() throws IllegalStateException, SystemException {

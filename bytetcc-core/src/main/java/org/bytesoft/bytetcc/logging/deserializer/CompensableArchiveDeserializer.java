@@ -147,7 +147,7 @@ public class CompensableArchiveDeserializer implements ArchiveDeserializer, Comp
 		short compensableResourceKeySize = ByteUtils.byteArrayToShort(lengthOfCompensableResourceKey);
 		byte[] compensableResourceKeyByteArray = new byte[compensableResourceKeySize];
 		System.arraycopy(array, index, compensableResourceKeyByteArray, 0, compensableResourceKeyByteArray.length);
-		index += transactionResourceKeyByteArray.length;
+		index += compensableResourceKeyByteArray.length;
 
 		String transactionResourceKey = transactionResourceKeyByteArray.length == 0 ? null
 				: new String(transactionResourceKeyByteArray);

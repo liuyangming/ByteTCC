@@ -109,19 +109,21 @@ public class XAResourceArchiveDeserializer implements ArchiveDeserializer, Compe
 			CommonResourceDescriptor resourceDescriptor = new CommonResourceDescriptor();
 			XAResource resource = this.deserializer.deserialize(identifier);
 			resourceDescriptor.setDelegate(resource);
+			resourceDescriptor.setIdentifier(identifier);
 			descriptor = resourceDescriptor;
 		} else if (resourceType == 0x02) {
 			archive.setIdentified(true);
 			RemoteResourceDescriptor resourceDescriptor = new RemoteResourceDescriptor();
 			XAResource resource = this.deserializer.deserialize(identifier);
 			resourceDescriptor.setDelegate((RemoteCoordinator) resource);
-			descriptor = resourceDescriptor;
+			resourceDescriptor.setIdentifier(identifier);
 			descriptor = resourceDescriptor;
 		} else if (resourceType == 0x03) {
 			archive.setIdentified(true);
 			XAResource resource = this.deserializer.deserialize(identifier);
 			LocalXAResourceDescriptor resourceDescriptor = new LocalXAResourceDescriptor();
 			resourceDescriptor.setDelegate(resource);
+			resourceDescriptor.setIdentifier(identifier);
 			descriptor = resourceDescriptor;
 		} else {
 			UnidentifiedResourceDescriptor resourceDescriptor = new UnidentifiedResourceDescriptor();
