@@ -188,6 +188,28 @@ public class SampleTransactionLogger extends VirtualLoggingSystemImpl
 						}
 					}
 
+				} else if (CompensableArchive.class.isInstance(obj)) {
+					TransactionArchive archive = xidMap.get(identifier);
+					if (archive == null) {
+						return;
+					}
+
+					List<CompensableArchive> compensables = archive.getCompensableResourceList();
+					CompensableArchive resourceArchive = (CompensableArchive) obj;
+
+					if (VirtualLoggingSystem.OPERATOR_CREATE == action.getOperator()) {
+						compensables.add(resourceArchive);
+					} else {
+						boolean matched = false;
+						for (int i = 0; matched == false && compensables != null && i < compensables.size(); i++) {
+							CompensableArchive element = compensables.get(i);
+							if (resourceArchive.getCompensableXid().equals(element.getCompensableXid())) {
+								matched = true;
+								compensables.set(i, resourceArchive);
+							}
+						}
+					}
+
 				}
 
 			}

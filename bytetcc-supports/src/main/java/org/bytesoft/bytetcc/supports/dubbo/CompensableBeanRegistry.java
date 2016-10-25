@@ -15,15 +15,26 @@
  */
 package org.bytesoft.bytetcc.supports.dubbo;
 
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
 import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class CompensableBeanRegistry implements CompensableBeanFactoryAware {
+	static final Logger logger = LoggerFactory.getLogger(CompensableBeanRegistry.class.getSimpleName());
 	private static final CompensableBeanRegistry instance = new CompensableBeanRegistry();
 
 	private CompensableBeanFactory beanFactory;
 	private RemoteCoordinator consumeCoordinator;
+
+	private Lock lock = new ReentrantLock();
+	private Condition condition = this.lock.newCondition();
 
 	private CompensableBeanRegistry() {
 		if (instance != null) {
@@ -44,11 +55,31 @@ public final class CompensableBeanRegistry implements CompensableBeanFactoryAwar
 	}
 
 	public RemoteCoordinator getConsumeCoordinator() {
-		return consumeCoordinator;
+		try {
+			this.lock.lock();
+			while (this.consumeCoordinator == null) {
+				try {
+					this.condition.await(1, TimeUnit.SECONDS);
+				} catch (InterruptedException ex) {
+					logger.debug(ex.getMessage());
+				}
+			}
+
+			// ConsumeCoordinator is injected by the CompensableConfigPostProcessor, which has a slight delay.
+			return consumeCoordinator;
+		} finally {
+			this.lock.unlock();
+		}
 	}
 
 	public void setConsumeCoordinator(RemoteCoordinator consumeCoordinator) {
-		this.consumeCoordinator = consumeCoordinator;
+		try {
+			this.lock.lock();
+			this.consumeCoordinator = consumeCoordinator;
+			this.condition.signalAll();
+		} finally {
+			this.lock.unlock();
+		}
 	}
 
 }

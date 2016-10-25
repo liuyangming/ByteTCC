@@ -205,7 +205,7 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 	}
 
 	public void recoveryCommit(Xid xid, boolean onePhase) throws XAException {
-		TransactionRepository transactionRepository = beanFactory.getTransactionRepository();
+		TransactionRepository transactionRepository = beanFactory.getCompensableRepository();
 		XidFactory xidFactory = this.beanFactory.getCompensableXidFactory();
 		TransactionXid branchXid = (TransactionXid) xid;
 		TransactionXid globalXid = xidFactory.createGlobalXid(branchXid.getGlobalTransactionId());
@@ -219,7 +219,7 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 	}
 
 	public void recoveryCommitRecoveredTransaction(TransactionXid xid, boolean onePhase) throws XAException {
-		TransactionRepository transactionRepository = beanFactory.getTransactionRepository();
+		TransactionRepository transactionRepository = beanFactory.getCompensableRepository();
 		Transaction transaction = transactionRepository.getTransaction(xid);
 		try {
 			transaction.recoveryRollback();
@@ -245,7 +245,7 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 	}
 
 	public void recoveryCommitActiveTransaction(TransactionXid xid, boolean onePhase) throws XAException {
-		TransactionRepository transactionRepository = beanFactory.getTransactionRepository();
+		TransactionRepository transactionRepository = beanFactory.getCompensableRepository();
 		Transaction transaction = transactionRepository.getTransaction(xid);
 		try {
 			transaction.recoveryCommit();
@@ -274,7 +274,7 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 	}
 
 	public void recoveryRollback(Xid xid) throws XAException {
-		TransactionRepository transactionRepository = beanFactory.getTransactionRepository();
+		TransactionRepository transactionRepository = beanFactory.getCompensableRepository();
 		XidFactory xidFactory = this.beanFactory.getCompensableXidFactory();
 		TransactionXid branchXid = (TransactionXid) xid;
 		TransactionXid globalXid = xidFactory.createGlobalXid(branchXid.getGlobalTransactionId());
@@ -289,7 +289,7 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 	}
 
 	public void recoveryRollbackRecoveredTransaction(TransactionXid xid) throws XAException {
-		TransactionRepository transactionRepository = beanFactory.getTransactionRepository();
+		TransactionRepository transactionRepository = beanFactory.getCompensableRepository();
 		Transaction transaction = transactionRepository.getTransaction(xid);
 		try {
 			transaction.recoveryRollback();
@@ -315,7 +315,7 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 	}
 
 	public void recoveryRollbackActiveTransaction(TransactionXid xid) throws XAException {
-		TransactionRepository transactionRepository = beanFactory.getTransactionRepository();
+		TransactionRepository transactionRepository = beanFactory.getCompensableRepository();
 		Transaction transaction = transactionRepository.getTransaction(xid);
 		try {
 			transaction.recoveryRollback();

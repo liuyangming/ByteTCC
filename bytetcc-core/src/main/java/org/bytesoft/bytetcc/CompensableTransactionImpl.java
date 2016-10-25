@@ -169,6 +169,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 				current.setCommitted(true);
 				current.setCompleted(true);
 				transactionLogger.updateCoordinator(current);
+				// transactionLogger.flushImmediately();
 			} catch (XAException ex) {
 				success = false;
 
@@ -317,6 +318,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 				current.setRolledback(true);
 				current.setCompleted(true);
 				transactionLogger.updateCoordinator(current);
+				// transactionLogger.flushImmediately();
 			} catch (XAException ex) {
 				success = false;
 
@@ -449,17 +451,20 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 				this.archive.setCancelled(true);
 			}
 			compensableLogger.updateCompensable(this.archive);
+			// compensableLogger.flushImmediately();
 		} else if (this.transactionContext.isCoordinator()) {
 			for (int i = 0; i < this.archiveList.size(); i++) {
 				CompensableArchive compensableArchive = this.archiveList.get(i);
 				compensableArchive.setTried(true);
 				compensableLogger.updateCompensable(compensableArchive);
+				// compensableLogger.flushImmediately();
 			}
 		} else {
 			for (int i = 0; i < this.transientArchiveList.size(); i++) {
 				CompensableArchive compensableArchive = this.transientArchiveList.get(i);
 				compensableArchive.setTried(true);
 				compensableLogger.updateCompensable(compensableArchive);
+				// compensableLogger.flushImmediately();
 			}
 		}
 
@@ -542,6 +547,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 				current.setCommitted(true);
 				current.setCompleted(true);
 				transactionLogger.updateCoordinator(current);
+				// transactionLogger.flushImmediately();
 			} catch (XAException ex) {
 				switch (ex.errorCode) {
 				case XAException.XA_HEURCOM:
@@ -662,6 +668,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 				current.setRolledback(true);
 				current.setCompleted(true);
 				transactionLogger.updateCoordinator(current);
+				// transactionLogger.flushImmediately();
 			} catch (XAException ex) {
 				success = false;
 

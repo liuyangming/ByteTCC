@@ -24,6 +24,7 @@ import javax.transaction.SystemException;
 
 import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;
+import org.bytesoft.compensable.CompensableManager;
 import org.bytesoft.compensable.archive.CompensableArchive;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 import org.bytesoft.compensable.logging.CompensableLogger;
@@ -71,7 +72,7 @@ public class TransactionRecoveryImpl
 	}
 
 	private void fireCompensableStartRecovery() {
-		final TransactionRepository transactionRepository = this.beanFactory.getTransactionRepository();
+		final TransactionRepository transactionRepository = this.beanFactory.getCompensableRepository();
 		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
 
 		compensableLogger.recover(new TransactionRecoveryCallback() {
@@ -153,7 +154,7 @@ public class TransactionRecoveryImpl
 	}
 
 	public void timingRecover() {
-		TransactionRepository transactionRepository = beanFactory.getTransactionRepository();
+		TransactionRepository transactionRepository = beanFactory.getCompensableRepository();
 		List<Transaction> transactions = transactionRepository.getErrorTransactionList();
 		int total = transactions == null ? 0 : transactions.size();
 		int value = 0;
@@ -192,9 +193,15 @@ public class TransactionRecoveryImpl
 	public synchronized void recoverTransaction(Transaction transaction)
 			throws CommitRequiredException, RollbackRequiredException, SystemException {
 
+		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 		TransactionContext transactionContext = transaction.getTransactionContext();
 		if (transactionContext.isCoordinator()) {
-			this.recoverCoordinator(transaction);
+			try {
+				compensableManager.associateThread(transaction);
+				this.recoverCoordinator(transaction);
+			} finally {
+				compensableManager.desociateThread();
+			}
 		} // end-if (coordinator)
 
 	}

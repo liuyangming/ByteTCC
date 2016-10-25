@@ -68,14 +68,20 @@ public class CompensableArchiveDeserializer implements ArchiveDeserializer, Comp
 		byte[] compensableBranchQualifier = null;
 		if (transactionXid == null || transactionXid.getBranchQualifier() == null
 				|| transactionXid.getBranchQualifier().length == 0) {
+			byte[] transactionGlobalTransactionId = transactionXid.getGlobalTransactionId();
 			transactionBranchQualifier = new byte[XidFactory.BRANCH_QUALIFIER_LENGTH];
+			System.arraycopy(transactionGlobalTransactionId, 0, transactionBranchQualifier, 0,
+					XidFactory.BRANCH_QUALIFIER_LENGTH);
 		} else {
 			transactionBranchQualifier = transactionXid.getBranchQualifier();
 		}
 
 		if (compensableXid == null || compensableXid.getBranchQualifier() == null
 				|| compensableXid.getBranchQualifier().length == 0) {
+			byte[] compensableGlobalTransactionId = compensableXid.getGlobalTransactionId();
 			compensableBranchQualifier = new byte[XidFactory.BRANCH_QUALIFIER_LENGTH];
+			System.arraycopy(compensableGlobalTransactionId, 0, compensableBranchQualifier, 0,
+					XidFactory.BRANCH_QUALIFIER_LENGTH);
 		} else {
 			compensableBranchQualifier = compensableXid.getBranchQualifier();
 		}
@@ -95,20 +101,24 @@ public class CompensableArchiveDeserializer implements ArchiveDeserializer, Comp
 		// value = value | (mixedValue << 4);
 		resultArray[XidFactory.BRANCH_QUALIFIER_LENGTH * 2] = (byte) value;
 
-		byte[] lengthOfTransactionResourceKey = ByteUtils.shortToByteArray((short) transactionResourceKeyByteArray.length);
-		byte[] lengthOfCompensableResourceKey = ByteUtils.shortToByteArray((short) compensableResourceKeyByteArray.length);
+		byte[] lengthOfTransactionResourceKey = ByteUtils
+				.shortToByteArray((short) transactionResourceKeyByteArray.length);
+		byte[] lengthOfCompensableResourceKey = ByteUtils
+				.shortToByteArray((short) compensableResourceKeyByteArray.length);
 
 		int index = XidFactory.BRANCH_QUALIFIER_LENGTH * 2 + 1;
 		System.arraycopy(lengthOfTransactionResourceKey, 0, resultArray, index, lengthOfTransactionResourceKey.length);
 		index += lengthOfTransactionResourceKey.length;
 
-		System.arraycopy(transactionResourceKeyByteArray, 0, resultArray, index, transactionResourceKeyByteArray.length);
+		System.arraycopy(transactionResourceKeyByteArray, 0, resultArray, index,
+				transactionResourceKeyByteArray.length);
 		index += transactionResourceKeyByteArray.length;
 
 		System.arraycopy(lengthOfCompensableResourceKey, 0, resultArray, index, lengthOfCompensableResourceKey.length);
 		index += lengthOfCompensableResourceKey.length;
 
-		System.arraycopy(compensableResourceKeyByteArray, 0, resultArray, index, compensableResourceKeyByteArray.length);
+		System.arraycopy(compensableResourceKeyByteArray, 0, resultArray, index,
+				compensableResourceKeyByteArray.length);
 		index += compensableResourceKeyByteArray.length;
 
 		System.arraycopy(byteArray, 0, resultArray, index, byteArray.length);
@@ -167,9 +177,9 @@ public class CompensableArchiveDeserializer implements ArchiveDeserializer, Comp
 			logger.error("Error occurred while deserializing object: {}", byteArray);
 		}
 
-		XidFactory xidFactory = this.beanFactory.getCompensableXidFactory();
-		Xid transactionXid = xidFactory.createBranchXid(xid, transactionBranchQualifier);
-		Xid compensableXid = xidFactory.createBranchXid(xid, compensableBranchQualifier);
+		XidFactory xidFactory = this.beanFactory.getTransactionXidFactory();
+		Xid transactionXid = xidFactory.createGlobalXid(transactionBranchQualifier);
+		Xid compensableXid = xidFactory.createGlobalXid(compensableBranchQualifier);
 
 		CompensableArchive archive = new CompensableArchive();
 		archive.setCoordinator(coordinator);
