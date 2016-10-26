@@ -146,7 +146,7 @@ public class CompensableAnnotationValidator implements BeanFactoryPostProcessor 
 		Transactional transactional = method.getAnnotation(Transactional.class);
 		if (transactional == null) {
 			Class<?> declaringClass = method.getDeclaringClass();
-			transactional = declaringClass.getDeclaredAnnotation(Transactional.class);
+			transactional = declaringClass.getAnnotation(Transactional.class);
 		}
 
 		if (transactional == null) {
@@ -165,7 +165,7 @@ public class CompensableAnnotationValidator implements BeanFactoryPostProcessor 
 		Transactional transactional = method.getAnnotation(Transactional.class);
 		if (transactional == null) {
 			Class<?> declaringClass = method.getDeclaringClass();
-			transactional = declaringClass.getDeclaredAnnotation(Transactional.class);
+			transactional = declaringClass.getAnnotation(Transactional.class);
 		}
 
 		if (transactional == null) {
