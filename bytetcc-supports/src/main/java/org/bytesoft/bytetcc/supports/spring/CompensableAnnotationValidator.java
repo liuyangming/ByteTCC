@@ -101,7 +101,7 @@ public class CompensableAnnotationValidator implements BeanFactoryPostProcessor 
 						Method interfaceMethod = methodArray[j];
 						Method method = clazz.getMethod(interfaceMethod.getName(), interfaceMethod.getParameterTypes());
 						this.validateTransactionalPropagation(method, clazz);
-						this.validateTransactionalRollbackFor(method, clazz);
+						this.validateTransactionalRollbackFor(method, clazz, confirmableKey);
 					}
 				} catch (IllegalStateException ex) {
 					throw new FatalBeanException(ex.getMessage(), ex);
@@ -128,7 +128,7 @@ public class CompensableAnnotationValidator implements BeanFactoryPostProcessor 
 						Method interfaceMethod = methodArray[j];
 						Method method = clazz.getMethod(interfaceMethod.getName(), interfaceMethod.getParameterTypes());
 						this.validateTransactionalPropagation(method, clazz);
-						this.validateTransactionalRollbackFor(method, clazz);
+						this.validateTransactionalRollbackFor(method, clazz, cancellableKey);
 					}
 				} catch (IllegalStateException ex) {
 					throw new FatalBeanException(ex.getMessage(), ex);
@@ -145,6 +145,11 @@ public class CompensableAnnotationValidator implements BeanFactoryPostProcessor 
 	private void validateTransactionalPropagation(Method method, Class<?> clazz) throws IllegalStateException {
 		Transactional transactional = method.getAnnotation(Transactional.class);
 		if (transactional == null) {
+			Class<?> declaringClass = method.getDeclaringClass();
+			transactional = declaringClass.getDeclaredAnnotation(Transactional.class);
+		}
+
+		if (transactional == null) {
 			throw new IllegalStateException(String.format("Method(%s) must be specificed a Transactional annotation!", method));
 		}
 		Propagation propagation = transactional.propagation();
@@ -156,13 +161,24 @@ public class CompensableAnnotationValidator implements BeanFactoryPostProcessor 
 		}
 	}
 
-	private void validateTransactionalRollbackFor(Method method, Class<?> clazz) throws IllegalStateException {
+	private void validateTransactionalRollbackFor(Method method, Class<?> clazz, String beanName) throws IllegalStateException {
 		Transactional transactional = method.getAnnotation(Transactional.class);
+		if (transactional == null) {
+			Class<?> declaringClass = method.getDeclaringClass();
+			transactional = declaringClass.getDeclaredAnnotation(Transactional.class);
+		}
+
 		if (transactional == null) {
 			throw new IllegalStateException(String.format("Method(%s) must be specificed a Transactional annotation!", method));
 		}
 
-		// transactional.rollbackForClassName(); // TODO ignore
+		String[] rollbackForClassNameArray = transactional.rollbackForClassName();
+		if (rollbackForClassNameArray != null && rollbackForClassNameArray.length > 0) {
+			throw new IllegalStateException(String.format(
+					"The transactional annotation on the confirm/cancel class does not support the property rollbackForClassName yet(beanId= %s)!",
+					beanName));
+		}
+
 		Class<?>[] rollErrorArray = transactional.rollbackFor();
 
 		Class<?>[] errorTypeArray = method.getExceptionTypes();
