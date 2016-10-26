@@ -27,6 +27,8 @@ import javax.transaction.SystemException;
 import javax.transaction.xa.XAException;
 import javax.transaction.xa.XAResource;
 
+import org.apache.commons.lang3.StringUtils;
+import org.bytesoft.bytejta.supports.jdbc.RecoveredResource;
 import org.bytesoft.bytejta.supports.resource.RemoteResourceDescriptor;
 import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.common.utils.CommonUtils;
@@ -46,6 +48,7 @@ import org.bytesoft.transaction.supports.TransactionListener;
 import org.bytesoft.transaction.supports.TransactionListenerAdapter;
 import org.bytesoft.transaction.supports.TransactionResourceListener;
 import org.bytesoft.transaction.supports.resource.XAResourceDescriptor;
+import org.bytesoft.transaction.supports.serialize.XAResourceDeserializer;
 import org.bytesoft.transaction.xa.TransactionXid;
 import org.bytesoft.transaction.xa.XidFactory;
 import org.slf4j.Logger;
@@ -90,8 +93,8 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 		return transactionArchive;
 	}
 
-	public void commit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException,
-			SecurityException, IllegalStateException, SystemException {
+	public void commit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException, SecurityException,
+			IllegalStateException, SystemException {
 
 		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
 
@@ -113,7 +116,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 	private boolean fireNativeParticipantConfirm() {
 		boolean success = true;
 
-		ContainerContext executor = this.beanFactory.getContainerContext();
+		ContainerContext container = this.beanFactory.getContainerContext();
 		for (int i = this.archiveList.size() - 1; i >= 0; i--) {
 			CompensableArchive current = this.archiveList.get(i);
 			if (current.isConfirmed()) {
@@ -132,10 +135,9 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 					byte[] branchQualifier = current.getTransactionXid().getBranchQualifier();
 					logger.error(
 							"[{}] commit-transaction: error occurred while confirming service: {}, please check whether the params of method(compensable-service) supports serialization.",
-							ByteUtils.byteArrayToString(globalTransactionId),
-							ByteUtils.byteArrayToString(branchQualifier));
+							ByteUtils.byteArrayToString(globalTransactionId), ByteUtils.byteArrayToString(branchQualifier));
 				} else {
-					executor.confirm(invocation);
+					container.confirm(invocation);
 				}
 			} catch (RuntimeException rex) {
 				success = false;
@@ -262,7 +264,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 	private boolean fireNativeParticipantCancel() {
 		boolean success = true;
 
-		ContainerContext executor = this.beanFactory.getContainerContext();
+		ContainerContext container = this.beanFactory.getContainerContext();
 		for (int i = this.archiveList.size() - 1; i >= 0; i--) {
 			CompensableArchive current = this.archiveList.get(i);
 			if (current.isCancelled()) {
@@ -281,10 +283,9 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 					byte[] branchQualifier = current.getTransactionXid().getBranchQualifier();
 					logger.error(
 							"[{}] rollback-transaction: error occurred while cancelling service: {}, please check whether the params of method(compensable-service) supports serialization.",
-							ByteUtils.byteArrayToString(globalTransactionId),
-							ByteUtils.byteArrayToString(branchQualifier));
+							ByteUtils.byteArrayToString(globalTransactionId), ByteUtils.byteArrayToString(branchQualifier));
 				} else {
-					executor.cancel(invocation);
+					container.cancel(invocation);
 				}
 			} catch (RuntimeException rex) {
 				success = false;
@@ -396,8 +397,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 
 	}
 
-	public void registerSynchronization(Synchronization sync)
-			throws RollbackException, IllegalStateException, SystemException {
+	public void registerSynchronization(Synchronization sync) throws RollbackException, IllegalStateException, SystemException {
 	}
 
 	public void registerTransactionListener(TransactionListener listener) {
@@ -491,39 +491,87 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 	private boolean fireNativeParticipantRecoveryConfirm() {
 		boolean success = true;
 
-		ContainerContext executor = this.beanFactory.getContainerContext();
+		ContainerContext container = this.beanFactory.getContainerContext();
+		XAResourceDeserializer resourceDeserializer = this.beanFactory.getResourceDeserializer();
+		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
+
+		boolean previouConfirmed = false;
 		for (int i = this.archiveList.size() - 1; i >= 0; i--) {
 			CompensableArchive current = this.archiveList.get(i);
-			if (current.isConfirmed()) {
+			boolean currentConfirmed = current.isConfirmed();
+
+			if (currentConfirmed) {
 				continue;
 			}
 
-			TransactionXid transactionXid = this.transactionContext.getXid();
+			TransactionXid compensableXid = (TransactionXid) current.getCompensableXid();
 			try {
 				this.positive = true;
 				this.archive = current;
+
+				String identifier = current.getCompensableResourceKey();
+				if (StringUtils.isBlank(identifier)) {
+					if (previouConfirmed) {
+						logger.warn(
+								"There is no valid resource participated in the current branch transaction, the status of the current branch transaction is unknown!");
+					} else {
+						logger.debug("There is no valid resource participated in the current branch transaction!");
+					}
+				} else {
+					XAResource xares = resourceDeserializer.deserialize(identifier);
+					if (RecoveredResource.class.isInstance(xares)) {
+						RecoveredResource resource = (RecoveredResource) xares;
+						try {
+							resource.recoverable(compensableXid);
+							current.setConfirmed(true);
+							compensableLogger.updateCompensable(this.archive);
+							// compensableLogger.flushImmediately();
+							continue;
+						} catch (XAException xaex) {
+							switch (xaex.errorCode) {
+							case XAException.XAER_NOTA:
+								break;
+							case XAException.XAER_RMERR:
+								logger.warn(
+										"The database table 'bytejta' cannot found, the status of the current branch transaction is unknown!");
+								break;
+							default:
+								logger.error("Illegal state, the status of the current branch transaction is unknown!");
+							}
+						}
+					} else {
+						logger.error("Illegal resources, the status of the current branch transaction is unknown!");
+					}
+				}
+
 				CompensableInvocation invocation = current.getCompensable();
 				if (invocation == null) {
-					success = false;
-
-					byte[] globalTransactionId = transactionXid.getGlobalTransactionId();
-					byte[] branchQualifier = current.getTransactionXid().getBranchQualifier();
-					logger.error(
-							"[{}] recover-transaction: error occurred while confirming service: {}, please check whether the params of method(compensable-service) supports serialization.",
-							ByteUtils.byteArrayToString(globalTransactionId),
-							ByteUtils.byteArrayToString(branchQualifier));
+					throw new IllegalArgumentException();
 				} else {
-					executor.confirm(invocation);
+					container.confirm(invocation);
 				}
+			} catch (IllegalArgumentException rex) {
+				success = false;
+
+				TransactionXid transactionXid = this.transactionContext.getXid();
+				byte[] globalTransactionId = transactionXid.getGlobalTransactionId();
+				byte[] branchQualifier = compensableXid.getBranchQualifier();
+				logger.error(
+						"[{}] recover-transaction: error occurred while confirming service: {}, please check whether the params of method(compensable-service) supports serialization.",
+						ByteUtils.byteArrayToString(globalTransactionId), ByteUtils.byteArrayToString(branchQualifier));
 			} catch (RuntimeException rex) {
 				success = false;
 
+				TransactionXid transactionXid = this.transactionContext.getXid();
 				logger.error("[{}] recover-transaction: error occurred while confirming service: {}",
 						ByteUtils.byteArrayToString(transactionXid.getGlobalTransactionId()), this.archive, rex);
 			} finally {
 				this.archive = null;
 				this.positive = null;
+
+				previouConfirmed = currentConfirmed;
 			}
+
 		}
 
 		return success;
@@ -612,30 +660,74 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 	private boolean fireNativeParticipantRecoveryCancel() {
 		boolean success = true;
 
-		ContainerContext executor = this.beanFactory.getContainerContext();
+		ContainerContext container = this.beanFactory.getContainerContext();
+		XAResourceDeserializer resourceDeserializer = this.beanFactory.getResourceDeserializer();
+		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
+
+		boolean previouCancelled = false;
 		for (int i = this.archiveList.size() - 1; i >= 0; i--) {
 			CompensableArchive current = this.archiveList.get(i);
-			if (current.isCancelled()) {
+			boolean currentCancelled = current.isCancelled();
+
+			if (currentCancelled) {
 				continue;
 			}
 
+			TransactionXid compensableXid = (TransactionXid) current.getCompensableXid();
 			TransactionXid transactionXid = this.transactionContext.getXid();
 			try {
 				this.positive = false;
 				this.archive = current;
+
+				String identifier = current.getCompensableResourceKey();
+				if (StringUtils.isBlank(identifier)) {
+					if (previouCancelled) {
+						logger.warn(
+								"There is no valid resource participated in the current branch transaction, the status of the current branch transaction is unknown!");
+					} else {
+						logger.debug("There is no valid resource participated in the current branch transaction!");
+					}
+				} else {
+					XAResource xares = resourceDeserializer.deserialize(identifier);
+					if (RecoveredResource.class.isInstance(xares)) {
+						RecoveredResource resource = (RecoveredResource) xares;
+						try {
+							resource.recoverable(compensableXid);
+							current.setCancelled(true);
+							compensableLogger.updateCompensable(this.archive);
+							// compensableLogger.flushImmediately();
+							continue;
+						} catch (XAException xaex) {
+							switch (xaex.errorCode) {
+							case XAException.XAER_NOTA:
+								break;
+							case XAException.XAER_RMERR:
+								logger.warn(
+										"The database table 'bytejta' cannot found, the status of the current branch transaction is unknown!");
+								break;
+							default:
+								logger.error("Illegal state, the status of the current branch transaction is unknown!");
+							}
+						}
+					} else {
+						logger.error("Illegal resources, the status of the current branch transaction is unknown!");
+					}
+				}
+
 				CompensableInvocation invocation = current.getCompensable();
 				if (invocation == null) {
-					success = false;
-
-					byte[] globalTransactionId = transactionXid.getGlobalTransactionId();
-					byte[] branchQualifier = current.getTransactionXid().getBranchQualifier();
-					logger.error(
-							"[{}] rollback-transaction: error occurred while cancelling service: {}, please check whether the params of method(compensable-service) supports serialization.",
-							ByteUtils.byteArrayToString(globalTransactionId),
-							ByteUtils.byteArrayToString(branchQualifier));
+					throw new IllegalArgumentException();
 				} else {
-					executor.cancel(invocation);
+					container.cancel(invocation);
 				}
+			} catch (IllegalArgumentException rex) {
+				success = false;
+
+				byte[] globalTransactionId = transactionXid.getGlobalTransactionId();
+				byte[] branchQualifier = current.getTransactionXid().getBranchQualifier();
+				logger.error(
+						"[{}] rollback-transaction: error occurred while cancelling service: {}, please check whether the params of method(compensable-service) supports serialization.",
+						ByteUtils.byteArrayToString(globalTransactionId), ByteUtils.byteArrayToString(branchQualifier));
 			} catch (RuntimeException rex) {
 				success = false;
 
@@ -644,6 +736,8 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 			} finally {
 				this.archive = null;
 				this.positive = null;
+
+				previouCancelled = currentCancelled;
 			}
 		}
 

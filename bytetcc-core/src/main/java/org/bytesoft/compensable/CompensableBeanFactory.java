@@ -22,6 +22,7 @@ import org.bytesoft.transaction.TransactionRecovery;
 import org.bytesoft.transaction.TransactionRepository;
 import org.bytesoft.transaction.logging.ArchiveDeserializer;
 import org.bytesoft.transaction.supports.rpc.TransactionInterceptor;
+import org.bytesoft.transaction.supports.serialize.XAResourceDeserializer;
 import org.bytesoft.transaction.xa.XidFactory;
 
 public interface CompensableBeanFactory {
@@ -53,5 +54,7 @@ public interface CompensableBeanFactory {
 	public ContainerContext getContainerContext();
 
 	public ArchiveDeserializer getArchiveDeserializer();
+
+	public XAResourceDeserializer getResourceDeserializer();
 
 }

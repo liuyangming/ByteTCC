@@ -25,6 +25,7 @@ import org.bytesoft.transaction.TransactionRecovery;
 import org.bytesoft.transaction.TransactionRepository;
 import org.bytesoft.transaction.logging.ArchiveDeserializer;
 import org.bytesoft.transaction.supports.rpc.TransactionInterceptor;
+import org.bytesoft.transaction.supports.serialize.XAResourceDeserializer;
 import org.bytesoft.transaction.xa.XidFactory;
 
 public final class TransactionBeanFactoryImpl implements CompensableBeanFactory {
@@ -43,6 +44,7 @@ public final class TransactionBeanFactoryImpl implements CompensableBeanFactory 
 	private RemoteCoordinator compensableCoordinator;
 	private ContainerContext containerContext;
 	private ArchiveDeserializer archiveDeserializer;
+	private XAResourceDeserializer resourceDeserializer;
 
 	public TransactionManager getTransactionManager() {
 		return transactionManager;
@@ -154,6 +156,14 @@ public final class TransactionBeanFactoryImpl implements CompensableBeanFactory 
 
 	public void setArchiveDeserializer(ArchiveDeserializer archiveDeserializer) {
 		this.archiveDeserializer = archiveDeserializer;
+	}
+
+	public XAResourceDeserializer getResourceDeserializer() {
+		return resourceDeserializer;
+	}
+
+	public void setResourceDeserializer(XAResourceDeserializer resourceDeserializer) {
+		this.resourceDeserializer = resourceDeserializer;
 	}
 
 }

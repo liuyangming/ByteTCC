@@ -17,9 +17,13 @@ package org.bytesoft.bytetcc.supports.spring;
 
 import org.springframework.beans.BeansException;
 import org.springframework.beans.FatalBeanException;
+import org.springframework.beans.MutablePropertyValues;
+import org.springframework.beans.PropertyValue;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
+import org.springframework.beans.factory.config.RuntimeBeanReference;
+import org.springframework.transaction.annotation.AnnotationTransactionAttributeSource;
 
 public class TransactionConfigPostProcessor implements BeanFactoryPostProcessor {
 
@@ -37,9 +41,24 @@ public class TransactionConfigPostProcessor implements BeanFactoryPostProcessor 
 			}
 
 			if (org.springframework.transaction.interceptor.TransactionInterceptor.class.getName().equals(beanClassName)) {
-				throw new FatalBeanException(String.format(
-						"Declaring transactions by configuration is not supported yet, please use annotations to declare transactions(beanId= %s).",
-						beanName));
+				boolean errorExists = true;
+
+				MutablePropertyValues mpv = beanDef.getPropertyValues();
+				PropertyValue pv = mpv.getPropertyValue("transactionAttributeSource");
+				Object value = pv == null ? null : pv.getValue();
+				if (value != null && RuntimeBeanReference.class.isInstance(value)) {
+					RuntimeBeanReference reference = (RuntimeBeanReference) value;
+					BeanDefinition refBeanDef = beanFactory.getBeanDefinition(reference.getBeanName());
+					String refBeanClassName = refBeanDef.getBeanClassName();
+					errorExists = AnnotationTransactionAttributeSource.class.getName().equals(refBeanClassName) == false;
+				}
+
+				if (errorExists) {
+					throw new FatalBeanException(String.format(
+							"Declaring transactions by configuration is not supported yet, please use annotations to declare transactions(beanId= %s).",
+							beanName));
+				}
+
 			}
 		}
 	}
