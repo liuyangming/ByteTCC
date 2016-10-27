@@ -22,6 +22,7 @@ import org.bytesoft.common.utils.CommonUtils;
 import org.bytesoft.compensable.CompensableInvocation;
 
 public class CompensableArchive {
+	private Xid identifier;
 
 	private CompensableInvocation compensable;
 
@@ -62,6 +63,14 @@ public class CompensableArchive {
 		boolean transactionXidEquals = CommonUtils.equals(this.transactionXid, that.transactionXid);
 		boolean compensableXidEquals = CommonUtils.equals(this.compensableXid, that.compensableXid);
 		return transactionXidEquals && compensableXidEquals;
+	}
+
+	public Xid getIdentifier() {
+		return identifier;
+	}
+
+	public void setIdentifier(Xid identifier) {
+		this.identifier = identifier;
 	}
 
 	public Xid getTransactionXid() {

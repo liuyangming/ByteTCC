@@ -15,6 +15,8 @@
  */
 package org.bytesoft.bytetcc.logging.deserializer;
 
+import java.util.Arrays;
+
 import javax.transaction.xa.Xid;
 
 import org.bytesoft.common.utils.ByteUtils;
@@ -31,6 +33,7 @@ import org.slf4j.LoggerFactory;
 
 public class CompensableArchiveDeserializer implements ArchiveDeserializer, CompensableBeanFactoryAware {
 	static final Logger logger = LoggerFactory.getLogger(CommonUtils.class);
+	static final int LENGTH_OF_XID = XidFactory.GLOBAL_TRANSACTION_LENGTH + XidFactory.BRANCH_QUALIFIER_LENGTH;
 
 	private CompensableBeanFactory beanFactory;
 
@@ -57,37 +60,44 @@ public class CompensableArchiveDeserializer implements ArchiveDeserializer, Comp
 		byte[] compensableResourceKeyByteArray = compensableResourceKey == null ? new byte[0]
 				: transactionResourceKey.getBytes();
 
-		byte[] resultArray = new byte[XidFactory.BRANCH_QUALIFIER_LENGTH * 2 + 1 //
+		byte[] resultArray = new byte[XidFactory.GLOBAL_TRANSACTION_LENGTH + LENGTH_OF_XID * 2 + 1 //
 				+ 2 + transactionResourceKeyByteArray.length //
 				+ 2 + compensableResourceKeyByteArray.length //
 				+ byteArray.length];
 
+		Xid identifier = archive.getIdentifier();
+		byte[] keyByteArray = identifier.getGlobalTransactionId();
+		System.arraycopy(keyByteArray, 0, resultArray, 0, XidFactory.GLOBAL_TRANSACTION_LENGTH);
+
 		Xid transactionXid = archive.getTransactionXid();
 		Xid compensableXid = archive.getCompensableXid();
+		byte[] transactionGlobalTransactionId = null;
 		byte[] transactionBranchQualifier = null;
+		byte[] compensableGlobalTransactionId = null;
 		byte[] compensableBranchQualifier = null;
-		if (transactionXid == null || transactionXid.getBranchQualifier() == null
-				|| transactionXid.getBranchQualifier().length == 0) {
-			byte[] transactionGlobalTransactionId = transactionXid.getGlobalTransactionId();
-			transactionBranchQualifier = new byte[XidFactory.BRANCH_QUALIFIER_LENGTH];
-			System.arraycopy(transactionGlobalTransactionId, 0, transactionBranchQualifier, 0,
-					XidFactory.BRANCH_QUALIFIER_LENGTH);
+		if (transactionXid == null) {
+			transactionGlobalTransactionId = new byte[XidFactory.GLOBAL_TRANSACTION_LENGTH];
+			compensableBranchQualifier = new byte[XidFactory.BRANCH_QUALIFIER_LENGTH];
 		} else {
+			transactionGlobalTransactionId = transactionXid.getGlobalTransactionId();
 			transactionBranchQualifier = transactionXid.getBranchQualifier();
 		}
+		System.arraycopy(transactionGlobalTransactionId, 0, resultArray, XidFactory.GLOBAL_TRANSACTION_LENGTH,
+				XidFactory.GLOBAL_TRANSACTION_LENGTH);
+		System.arraycopy(transactionBranchQualifier, 0, resultArray, XidFactory.GLOBAL_TRANSACTION_LENGTH * 2,
+				XidFactory.BRANCH_QUALIFIER_LENGTH);
 
-		if (compensableXid == null || compensableXid.getBranchQualifier() == null
-				|| compensableXid.getBranchQualifier().length == 0) {
-			byte[] compensableGlobalTransactionId = compensableXid.getGlobalTransactionId();
+		if (compensableXid == null) {
+			compensableGlobalTransactionId = new byte[XidFactory.GLOBAL_TRANSACTION_LENGTH];
 			compensableBranchQualifier = new byte[XidFactory.BRANCH_QUALIFIER_LENGTH];
-			System.arraycopy(compensableGlobalTransactionId, 0, compensableBranchQualifier, 0,
-					XidFactory.BRANCH_QUALIFIER_LENGTH);
 		} else {
+			compensableGlobalTransactionId = compensableXid.getGlobalTransactionId();
 			compensableBranchQualifier = compensableXid.getBranchQualifier();
 		}
-		System.arraycopy(transactionBranchQualifier, 0, resultArray, 0, XidFactory.BRANCH_QUALIFIER_LENGTH);
-		System.arraycopy(compensableBranchQualifier, 0, resultArray, XidFactory.BRANCH_QUALIFIER_LENGTH,
-				XidFactory.BRANCH_QUALIFIER_LENGTH);
+		System.arraycopy(compensableGlobalTransactionId, 0, resultArray,
+				XidFactory.GLOBAL_TRANSACTION_LENGTH + LENGTH_OF_XID, XidFactory.GLOBAL_TRANSACTION_LENGTH);
+		System.arraycopy(compensableBranchQualifier, 0, resultArray,
+				LENGTH_OF_XID + XidFactory.GLOBAL_TRANSACTION_LENGTH * 2, XidFactory.BRANCH_QUALIFIER_LENGTH);
 
 		int value = archive.isCoordinator() ? 0x1 : 0x0;
 		int triedValue = archive.isTried() ? 0x1 : 0x0;
@@ -99,14 +109,14 @@ public class CompensableArchiveDeserializer implements ArchiveDeserializer, Comp
 		value = value | (confirmValue << 2);
 		value = value | (cancelValue << 3);
 		// value = value | (mixedValue << 4);
-		resultArray[XidFactory.BRANCH_QUALIFIER_LENGTH * 2] = (byte) value;
+		resultArray[XidFactory.GLOBAL_TRANSACTION_LENGTH + LENGTH_OF_XID * 2] = (byte) value;
 
 		byte[] lengthOfTransactionResourceKey = ByteUtils
 				.shortToByteArray((short) transactionResourceKeyByteArray.length);
 		byte[] lengthOfCompensableResourceKey = ByteUtils
 				.shortToByteArray((short) compensableResourceKeyByteArray.length);
 
-		int index = XidFactory.BRANCH_QUALIFIER_LENGTH * 2 + 1;
+		int index = XidFactory.GLOBAL_TRANSACTION_LENGTH + LENGTH_OF_XID * 2 + 1;
 		System.arraycopy(lengthOfTransactionResourceKey, 0, resultArray, index, lengthOfTransactionResourceKey.length);
 		index += lengthOfTransactionResourceKey.length;
 
@@ -127,13 +137,23 @@ public class CompensableArchiveDeserializer implements ArchiveDeserializer, Comp
 	}
 
 	public Object deserialize(TransactionXid xid, byte[] array) {
+		byte[] keyByteArray = new byte[XidFactory.GLOBAL_TRANSACTION_LENGTH];
+		System.arraycopy(array, 0, keyByteArray, 0, keyByteArray.length);
+
+		byte[] transactionGlobalTransactionId = new byte[XidFactory.GLOBAL_TRANSACTION_LENGTH];
 		byte[] transactionBranchQualifier = new byte[XidFactory.BRANCH_QUALIFIER_LENGTH];
+		byte[] compensableGlobalTransactionId = new byte[XidFactory.GLOBAL_TRANSACTION_LENGTH];
 		byte[] compensableBranchQualifier = new byte[XidFactory.BRANCH_QUALIFIER_LENGTH];
-		System.arraycopy(array, 0, transactionBranchQualifier, 0, transactionBranchQualifier.length);
-		System.arraycopy(array, XidFactory.BRANCH_QUALIFIER_LENGTH, compensableBranchQualifier, 0,
+		System.arraycopy(array, XidFactory.GLOBAL_TRANSACTION_LENGTH, transactionGlobalTransactionId, 0,
+				transactionGlobalTransactionId.length);
+		System.arraycopy(array, XidFactory.GLOBAL_TRANSACTION_LENGTH * 2, transactionBranchQualifier, 0,
+				transactionBranchQualifier.length);
+		System.arraycopy(array, XidFactory.GLOBAL_TRANSACTION_LENGTH + LENGTH_OF_XID, compensableGlobalTransactionId, 0,
+				compensableGlobalTransactionId.length);
+		System.arraycopy(array, LENGTH_OF_XID + XidFactory.GLOBAL_TRANSACTION_LENGTH * 2, compensableBranchQualifier, 0,
 				compensableBranchQualifier.length);
 
-		int value = array[XidFactory.BRANCH_QUALIFIER_LENGTH * 2];
+		int value = array[XidFactory.GLOBAL_TRANSACTION_LENGTH + LENGTH_OF_XID * 2];
 
 		boolean coordinator = (value & 0x1) == 0x1;
 		boolean tried = ((value >>> 1) & 0x1) == 0x1;
@@ -141,7 +161,7 @@ public class CompensableArchiveDeserializer implements ArchiveDeserializer, Comp
 		boolean cancelled = ((value >>> 3) & 0x1) == 0x1;
 		// boolean mixed = ((value >>> 4) & 0x1) == 0x1;
 
-		int index = XidFactory.BRANCH_QUALIFIER_LENGTH * 2 + 1;
+		int index = XidFactory.GLOBAL_TRANSACTION_LENGTH + LENGTH_OF_XID * 2 + 1;
 
 		byte[] lengthOfTransactionResourceKey = new byte[2];
 		System.arraycopy(array, index, lengthOfTransactionResourceKey, 0, lengthOfTransactionResourceKey.length);
@@ -164,7 +184,7 @@ public class CompensableArchiveDeserializer implements ArchiveDeserializer, Comp
 		String compensableResourceKey = compensableResourceKeyByteArray.length == 0 ? null
 				: new String(compensableResourceKeyByteArray);
 
-		int usedSize = XidFactory.BRANCH_QUALIFIER_LENGTH * 2 + 1 + 2 + transactionResourceKeySize + 2
+		int usedSize = XidFactory.GLOBAL_TRANSACTION_LENGTH + LENGTH_OF_XID * 2 + 1 + 2 + transactionResourceKeySize + 2
 				+ compensableResourceKeySize;
 
 		byte[] byteArray = new byte[array.length - usedSize];
@@ -178,10 +198,22 @@ public class CompensableArchiveDeserializer implements ArchiveDeserializer, Comp
 		}
 
 		XidFactory xidFactory = this.beanFactory.getTransactionXidFactory();
-		Xid transactionXid = xidFactory.createGlobalXid(transactionBranchQualifier);
-		Xid compensableXid = xidFactory.createGlobalXid(compensableBranchQualifier);
+		Xid transactionXid = null;
+		Xid compensableXid = null;
+
+		if (Arrays.equals(transactionGlobalTransactionId, new byte[XidFactory.GLOBAL_TRANSACTION_LENGTH]) == false) {
+			TransactionXid transactionGlobalXid = xidFactory.createGlobalXid(transactionGlobalTransactionId);
+			transactionXid = xidFactory.createBranchXid(transactionGlobalXid, transactionBranchQualifier);
+		}
+		if (Arrays.equals(compensableGlobalTransactionId, new byte[XidFactory.GLOBAL_TRANSACTION_LENGTH]) == false) {
+			TransactionXid compensableGlobalXid = xidFactory.createGlobalXid(compensableGlobalTransactionId);
+			compensableXid = xidFactory.createBranchXid(compensableGlobalXid, compensableBranchQualifier);
+		}
+
+		Xid identifier = xidFactory.createGlobalXid(keyByteArray);
 
 		CompensableArchive archive = new CompensableArchive();
+		archive.setIdentifier(identifier);
 		archive.setCoordinator(coordinator);
 		archive.setTried(tried);
 		archive.setConfirmed(confirmed);

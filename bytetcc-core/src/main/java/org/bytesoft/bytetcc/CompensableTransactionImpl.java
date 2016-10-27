@@ -26,6 +26,7 @@ import javax.transaction.Synchronization;
 import javax.transaction.SystemException;
 import javax.transaction.xa.XAException;
 import javax.transaction.xa.XAResource;
+import javax.transaction.xa.Xid;
 
 import org.apache.commons.lang3.StringUtils;
 import org.bytesoft.bytejta.supports.jdbc.RecoveredResource;
@@ -69,8 +70,6 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 	private transient Boolean positive;
 	/* current compense-archive in confirm/cancel phase. */
 	private transient CompensableArchive archive;
-
-	private transient String resourceKey;
 
 	/* current compensable-archive list in try phase, only used by participant. */
 	private final transient List<CompensableArchive> transientArchiveList = new ArrayList<CompensableArchive>();
@@ -382,7 +381,10 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 	}
 
 	public void registerCompensable(CompensableInvocation invocation) {
+		XidFactory xidFactory = this.beanFactory.getTransactionXidFactory();
+
 		CompensableArchive archive = new CompensableArchive();
+		archive.setIdentifier(xidFactory.createGlobalXid());
 
 		archive.setCompensable(invocation);
 
@@ -406,21 +408,35 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 	public void registerTransactionResourceListener(TransactionResourceListener listener) {
 	}
 
-	public void onCommitStart(TransactionXid xid) {
+	public void onEnlistResource(Xid xid, XAResource xares) {
+	}
+
+	public void onDelistResource(Xid xid, XAResource xares) {
+		String resourceKey = null;
+		if (XAResourceDescriptor.class.isInstance(xares)) {
+			XAResourceDescriptor descriptor = (XAResourceDescriptor) xares;
+			resourceKey = descriptor.getIdentifier();
+		} else if (XAResourceArchive.class.isInstance(xares)) {
+			XAResourceArchive resourceArchive = (XAResourceArchive) xares;
+			XAResourceDescriptor descriptor = resourceArchive.getDescriptor();
+			resourceKey = descriptor == null ? null : descriptor.getIdentifier();
+		}
+
 		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
-		XidFactory xidFactory = this.beanFactory.getTransactionXidFactory();
+		// XidFactory xidFactory = this.beanFactory.getTransactionXidFactory();
 
 		if (this.transactionContext.isCompensating()) {
-			this.archive.setCompensableResourceKey(this.resourceKey);
+			this.archive.setCompensableXid(xid);
+			this.archive.setCompensableResourceKey(resourceKey);
 			compensableLogger.updateCompensable(this.archive);
 		} else if (this.transactionContext.isCoordinator()) {
 			for (int i = 0; i < this.archiveList.size(); i++) {
 				CompensableArchive compensableArchive = this.archiveList.get(i);
 				compensableArchive.setTransactionXid(xid);
-				compensableArchive.setTransactionResourceKey(this.resourceKey);
+				compensableArchive.setTransactionResourceKey(resourceKey);
 
-				TransactionXid compensableXid = xidFactory.createGlobalXid();
-				compensableArchive.setCompensableXid(compensableXid);
+				// TransactionXid compensableXid = xidFactory.createGlobalXid();
+				// compensableArchive.setCompensableXid(compensableXid);
 
 				compensableLogger.createCompensable(compensableArchive);
 			}
@@ -428,10 +444,10 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 			for (int i = 0; i < this.transientArchiveList.size(); i++) {
 				CompensableArchive compensableArchive = this.transientArchiveList.get(i);
 				compensableArchive.setTransactionXid(xid);
-				compensableArchive.setTransactionResourceKey(this.resourceKey);
+				compensableArchive.setTransactionResourceKey(resourceKey);
 
-				TransactionXid compensableXid = xidFactory.createGlobalXid();
-				compensableArchive.setCompensableXid(compensableXid);
+				// TransactionXid compensableXid = xidFactory.createGlobalXid();
+				// compensableArchive.setCompensableXid(compensableXid);
 
 				compensableLogger.createCompensable(compensableArchive);
 			}
@@ -451,20 +467,20 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 				this.archive.setCancelled(true);
 			}
 			compensableLogger.updateCompensable(this.archive);
-			// compensableLogger.flushImmediately();
 		} else if (this.transactionContext.isCoordinator()) {
 			for (int i = 0; i < this.archiveList.size(); i++) {
 				CompensableArchive compensableArchive = this.archiveList.get(i);
 				compensableArchive.setTried(true);
-				compensableLogger.updateCompensable(compensableArchive);
-				// compensableLogger.flushImmediately();
+				// compensableLogger.updateCompensable(compensableArchive);
 			}
+			TransactionArchive transactionArchive = this.getTransactionArchive();
+			transactionArchive.setCompensableStatus(Status.STATUS_COMMITTING);
+			compensableLogger.updateTransaction(transactionArchive);
 		} else {
 			for (int i = 0; i < this.transientArchiveList.size(); i++) {
 				CompensableArchive compensableArchive = this.transientArchiveList.get(i);
 				compensableArchive.setTried(true);
 				compensableLogger.updateCompensable(compensableArchive);
-				// compensableLogger.flushImmediately();
 			}
 		}
 
@@ -524,8 +540,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 						try {
 							resource.recoverable(compensableXid);
 							current.setConfirmed(true);
-							compensableLogger.updateCompensable(this.archive);
-							// compensableLogger.flushImmediately();
+							compensableLogger.updateCompensable(current);
 							continue;
 						} catch (XAException xaex) {
 							switch (xaex.errorCode) {
@@ -673,6 +688,38 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 				continue;
 			}
 
+			if (current.isTried() == false) /* this.transactionContext.isCoordinator() == false && */ {
+				String identifier = current.getTransactionResourceKey();
+				if (StringUtils.isBlank(identifier)) {
+					logger.warn(
+							"There is no valid resource participated in the trying branch transaction, the status of the branch transaction is unknown!");
+				} else {
+					XAResource xares = resourceDeserializer.deserialize(identifier);
+					if (RecoveredResource.class.isInstance(xares)) {
+						RecoveredResource resource = (RecoveredResource) xares;
+						try {
+							resource.recoverable(current.getTransactionXid());
+							current.setTried(true);
+							compensableLogger.updateCompensable(current);
+						} catch (XAException xaex) {
+							switch (xaex.errorCode) {
+							case XAException.XAER_NOTA:
+								current.setTried(false);
+								continue;
+							case XAException.XAER_RMERR:
+								logger.warn(
+										"The database table 'bytejta' cannot found, the status of the trying branch transaction is unknown!");
+								break;
+							default:
+								logger.error("Illegal state, the status of the trying branch transaction is unknown!");
+							}
+						}
+					} else {
+						logger.error("Illegal resources, the status of the trying branch transaction is unknown!");
+					}
+				}
+			}
+
 			TransactionXid compensableXid = (TransactionXid) current.getCompensableXid();
 			TransactionXid transactionXid = this.transactionContext.getXid();
 			try {
@@ -694,8 +741,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 						try {
 							resource.recoverable(compensableXid);
 							current.setCancelled(true);
-							compensableLogger.updateCompensable(this.archive);
-							// compensableLogger.flushImmediately();
+							compensableLogger.updateCompensable(current);
 							continue;
 						} catch (XAException xaex) {
 							switch (xaex.errorCode) {
@@ -783,20 +829,6 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 	public void recoveryForgetQuietly() {
 		// TODO Auto-generated method stub
 
-	}
-
-	public void onEnlistResource(XAResource xares) {
-		if (XAResourceDescriptor.class.isInstance(xares)) {
-			XAResourceDescriptor descriptor = (XAResourceDescriptor) xares;
-			this.resourceKey = descriptor.getIdentifier();
-		} else if (XAResourceArchive.class.isInstance(xares)) {
-			XAResourceArchive resourceArchive = (XAResourceArchive) xares;
-			XAResourceDescriptor descriptor = resourceArchive.getDescriptor();
-			this.resourceKey = descriptor == null ? null : descriptor.getIdentifier();
-		}
-	}
-
-	public void onDelistResource(XAResource xares) {
 	}
 
 	public CompensableArchive getCompensableArchive() {

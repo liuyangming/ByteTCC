@@ -203,7 +203,7 @@ public class SampleTransactionLogger extends VirtualLoggingSystemImpl
 						boolean matched = false;
 						for (int i = 0; matched == false && compensables != null && i < compensables.size(); i++) {
 							CompensableArchive element = compensables.get(i);
-							if (resourceArchive.getCompensableXid().equals(element.getCompensableXid())) {
+							if (resourceArchive.getIdentifier().equals(element.getIdentifier())) {
 								matched = true;
 								compensables.set(i, resourceArchive);
 							}
@@ -218,10 +218,14 @@ public class SampleTransactionLogger extends VirtualLoggingSystemImpl
 		for (Iterator<Map.Entry<Xid, TransactionArchive>> itr = xidMap.entrySet().iterator(); itr.hasNext();) {
 			Map.Entry<Xid, TransactionArchive> entry = itr.next();
 			TransactionArchive archive = entry.getValue();
-			try {
-				callback.recover(archive);
-			} catch (RuntimeException rex) {
-				logger.error("Error occurred while recovering transaction(xid= {}).", archive.getXid(), rex);
+			if (archive == null) {
+				continue;
+			} else {
+				try {
+					callback.recover(archive);
+				} catch (RuntimeException rex) {
+					logger.error("Error occurred while recovering transaction(xid= {}).", archive.getXid(), rex);
+				}
 			}
 		}
 

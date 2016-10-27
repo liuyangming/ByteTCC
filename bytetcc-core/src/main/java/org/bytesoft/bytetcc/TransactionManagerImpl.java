@@ -32,7 +32,6 @@ import org.bytesoft.compensable.CompensableInvocation;
 import org.bytesoft.compensable.CompensableInvocationRegistry;
 import org.bytesoft.compensable.CompensableManager;
 import org.bytesoft.compensable.CompensableTransaction;
-import org.bytesoft.compensable.archive.CompensableArchive;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 import org.bytesoft.compensable.logging.CompensableLogger;
 import org.bytesoft.transaction.Transaction;
@@ -94,68 +93,6 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 		transaction.registerCompensable(invocation);
 	}
 
-	protected void beginInCompensatingPhaseForCoordinator(CompensableTransaction tccTransaction)
-			throws NotSupportedException, SystemException {
-		RemoteCoordinator transactionCoordinator = this.beanFactory.getTransactionCoordinator();
-
-		CompensableArchive archive = tccTransaction.getCompensableArchive();
-
-		TransactionContext tccTransactionContext = tccTransaction.getTransactionContext();
-		TransactionXid jtaTransactionXid = (TransactionXid) archive.getCompensableXid();
-		TransactionContext jtaTransactionContext = tccTransactionContext.clone();
-		jtaTransactionContext.setXid(jtaTransactionXid);
-		try {
-			Transaction jtaTransaction = transactionCoordinator.start(jtaTransactionContext, XAResource.TMNOFLAGS);
-			jtaTransaction.setTransactionalExtra(tccTransaction);
-			tccTransaction.setTransactionalExtra(jtaTransaction);
-
-			jtaTransaction.registerTransactionResourceListener(tccTransaction);
-			jtaTransaction.registerTransactionListener(tccTransaction);
-		} catch (TransactionException ex) {
-			TransactionXid tccTransactionXid = tccTransactionContext.getXid();
-			logger.info("[{}] begin-transaction: error occurred while starting jta-transaction: {}",
-					ByteUtils.byteArrayToString(tccTransactionXid.getGlobalTransactionId()),
-					ByteUtils.byteArrayToString(jtaTransactionXid.getGlobalTransactionId()));
-			throw new SystemException("Error occurred while beginning a jta-transaction!");
-		}
-	}
-
-	protected void beginInCompensatingPhaseForRecovery(CompensableTransaction compensable)
-			throws NotSupportedException, SystemException {
-		this.beginInCompensatingPhaseForParticipant(compensable);
-	}
-
-	protected void beginInCompensatingPhaseForParticipant(CompensableTransaction compensable)
-			throws NotSupportedException, SystemException {
-
-		XidFactory transactionXidFactory = this.beanFactory.getTransactionXidFactory();
-		RemoteCoordinator transactionCoordinator = this.beanFactory.getTransactionCoordinator();
-
-		CompensableArchive archive = compensable.getCompensableArchive();
-
-		TransactionContext compensableContext = compensable.getTransactionContext();
-		TransactionXid compensableXid = (TransactionXid) archive.getCompensableXid();
-		// TransactionXid compensableXid = compensableContext.getXid();
-		TransactionXid transactionXid = transactionXidFactory.createGlobalXid(compensableXid.getGlobalTransactionId());
-
-		TransactionContext jtaTransactionContext = compensableContext.clone();
-		jtaTransactionContext.setXid(transactionXid);
-
-		try {
-			Transaction transaction = transactionCoordinator.start(jtaTransactionContext, XAResource.TMNOFLAGS);
-			transaction.setTransactionalExtra(compensable);
-			compensable.setTransactionalExtra(transaction);
-
-			transaction.registerTransactionResourceListener(compensable);
-			transaction.registerTransactionListener(compensable);
-		} catch (TransactionException ex) {
-			logger.info("[{}] begin-transaction: error occurred while starting jta-transaction: {}",
-					ByteUtils.byteArrayToString(compensableXid.getGlobalTransactionId()),
-					ByteUtils.byteArrayToString(transactionXid.getGlobalTransactionId()));
-			throw new SystemException("Error occurred while beginning a jta-transaction!");
-		}
-	}
-
 	protected void beginInTryingPhaseForParticipant(CompensableTransaction compensable)
 			throws NotSupportedException, SystemException {
 		RemoteCoordinator transactionCoordinator = this.beanFactory.getTransactionCoordinator();
@@ -182,6 +119,46 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 
 		// CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
 		// compensableLogger.createCompensable(compensable.getCompensableArchive()); // lazy
+	}
+
+	private void beginInCompensatingPhase(CompensableTransaction compensable)
+			throws NotSupportedException, SystemException {
+		XidFactory transactionXidFactory = this.beanFactory.getTransactionXidFactory();
+		RemoteCoordinator transactionCoordinator = this.beanFactory.getTransactionCoordinator();
+
+		TransactionContext compensableContext = compensable.getTransactionContext();
+		TransactionXid transactionXid = transactionXidFactory.createGlobalXid();
+		TransactionContext transactionContext = compensableContext.clone();
+		transactionContext.setXid(transactionXid);
+		try {
+			Transaction transaction = transactionCoordinator.start(transactionContext, XAResource.TMNOFLAGS);
+			transaction.setTransactionalExtra(compensable);
+			compensable.setTransactionalExtra(transaction);
+
+			transaction.registerTransactionResourceListener(compensable);
+			transaction.registerTransactionListener(compensable);
+		} catch (TransactionException ex) {
+			TransactionXid compensableXid = compensableContext.getXid();
+			logger.info("[{}] begin-transaction: error occurred while starting jta-transaction: {}",
+					ByteUtils.byteArrayToString(compensableXid.getGlobalTransactionId()),
+					ByteUtils.byteArrayToString(transactionXid.getGlobalTransactionId()));
+			throw new SystemException("Error occurred while beginning a jta-transaction!");
+		}
+	}
+
+	protected void beginInCompensatingPhaseForCoordinator(CompensableTransaction compensable)
+			throws NotSupportedException, SystemException {
+		this.beginInCompensatingPhase(compensable);
+	}
+
+	protected void beginInCompensatingPhaseForParticipant(CompensableTransaction compensable)
+			throws NotSupportedException, SystemException {
+		this.beginInCompensatingPhase(compensable);
+	}
+
+	protected void beginInCompensatingPhaseForRecovery(CompensableTransaction compensable)
+			throws NotSupportedException, SystemException {
+		this.beginInCompensatingPhase(compensable);
 	}
 
 	public void commit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException,
