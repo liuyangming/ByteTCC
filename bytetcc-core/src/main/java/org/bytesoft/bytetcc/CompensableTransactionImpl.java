@@ -92,8 +92,8 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 		return transactionArchive;
 	}
 
-	public void commit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException, SecurityException,
-			IllegalStateException, SystemException {
+	public synchronized void commit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException,
+			SecurityException, IllegalStateException, SystemException {
 
 		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
 
@@ -112,7 +112,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 
 	}
 
-	private boolean fireNativeParticipantConfirm() {
+	private synchronized boolean fireNativeParticipantConfirm() {
 		boolean success = true;
 
 		ContainerContext container = this.beanFactory.getContainerContext();
@@ -152,7 +152,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 		return success;
 	}
 
-	private boolean fireRemoteParticipantConfirm() {
+	private synchronized boolean fireRemoteParticipantConfirm() {
 		boolean success = true;
 
 		for (int i = 0; i < this.resourceList.size(); i++) {
@@ -226,7 +226,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 		throw new SystemException("Not supported!");
 	}
 
-	public void rollback() throws IllegalStateException, SystemException {
+	public synchronized void rollback() throws IllegalStateException, SystemException {
 		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
 
 		this.transactionStatus = Status.STATUS_ROLLING_BACK;
@@ -260,7 +260,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 		}
 	}
 
-	private boolean fireNativeParticipantCancel() {
+	private synchronized boolean fireNativeParticipantCancel() {
 		boolean success = true;
 
 		ContainerContext container = this.beanFactory.getContainerContext();
@@ -300,7 +300,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 		return success;
 	}
 
-	private boolean fireRemoteParticipantCancel() {
+	private synchronized boolean fireRemoteParticipantCancel() {
 		boolean success = true;
 
 		for (int i = 0; i < this.resourceList.size(); i++) {
@@ -486,7 +486,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 
 	}
 
-	public void recoveryCommit() throws CommitRequiredException, SystemException {
+	public synchronized void recoveryCommit() throws CommitRequiredException, SystemException {
 		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
 
 		this.transactionContext.setCompensating(true);
@@ -504,7 +504,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 
 	}
 
-	private boolean fireNativeParticipantRecoveryConfirm() {
+	private synchronized boolean fireNativeParticipantRecoveryConfirm() {
 		boolean success = true;
 
 		ContainerContext container = this.beanFactory.getContainerContext();
@@ -550,6 +550,13 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 								logger.warn(
 										"The database table 'bytejta' cannot found, the status of the current branch transaction is unknown!");
 								break;
+							case XAException.XAER_RMFAIL:
+								success = false;
+
+								Xid xid = current.getTransactionXid();
+								logger.error("Error occurred while recovering the branch transaction service: {}",
+										ByteUtils.byteArrayToString(xid.getGlobalTransactionId()), xaex);
+								break;
 							default:
 								logger.error("Illegal state, the status of the current branch transaction is unknown!");
 							}
@@ -592,7 +599,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 		return success;
 	}
 
-	private boolean fireRemoteParticipantRecoveryConfirm() {
+	private synchronized boolean fireRemoteParticipantRecoveryConfirm() {
 		boolean success = true;
 
 		for (int i = 0; i < this.resourceList.size(); i++) {
@@ -654,7 +661,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 		return success;
 	}
 
-	public void recoveryRollback() throws RollbackRequiredException, SystemException {
+	public synchronized void recoveryRollback() throws RollbackRequiredException, SystemException {
 		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
 
 		this.transactionStatus = Status.STATUS_ROLLING_BACK;
@@ -672,7 +679,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 
 	}
 
-	private boolean fireNativeParticipantRecoveryCancel() {
+	private synchronized boolean fireNativeParticipantRecoveryCancel() {
 		boolean success = true;
 
 		ContainerContext container = this.beanFactory.getContainerContext();
@@ -709,6 +716,13 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 							case XAException.XAER_RMERR:
 								logger.warn(
 										"The database table 'bytejta' cannot found, the status of the trying branch transaction is unknown!");
+								break;
+							case XAException.XAER_RMFAIL:
+								success = false;
+
+								Xid xid = current.getTransactionXid();
+								logger.error("Error occurred while recovering the branch transaction service: {}",
+										ByteUtils.byteArrayToString(xid.getGlobalTransactionId()), xaex);
 								break;
 							default:
 								logger.error("Illegal state, the status of the trying branch transaction is unknown!");
@@ -751,6 +765,13 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 								logger.warn(
 										"The database table 'bytejta' cannot found, the status of the current branch transaction is unknown!");
 								break;
+							case XAException.XAER_RMFAIL:
+								success = false;
+
+								Xid xid = current.getTransactionXid();
+								logger.error("Error occurred while recovering the branch transaction service: {}",
+										ByteUtils.byteArrayToString(xid.getGlobalTransactionId()), xaex);
+								break;
 							default:
 								logger.error("Illegal state, the status of the current branch transaction is unknown!");
 							}
@@ -790,7 +811,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 		return success;
 	}
 
-	private boolean fireRemoteParticipantRecoveryCancel() {
+	private synchronized boolean fireRemoteParticipantRecoveryCancel() {
 		boolean success = true;
 
 		for (int i = 0; i < this.resourceList.size(); i++) {
@@ -826,8 +847,84 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 		return success;
 	}
 
-	public void recoveryForgetQuietly() {
-		// TODO Auto-generated method stub
+	public synchronized void recoveryForget() throws SystemException {
+		XAResourceDeserializer resourceDeserializer = this.beanFactory.getResourceDeserializer();
+		boolean success = true;
+
+		for (int i = 0; i < this.archiveList.size(); i++) {
+			CompensableArchive current = this.archiveList.get(i);
+
+			String transactionResourceKey = current.getTransactionResourceKey();
+			String compensableResourceKey = current.getCompensableResourceKey();
+			if (StringUtils.isNotBlank(transactionResourceKey) && i == 0) {
+				XAResource xares = resourceDeserializer.deserialize(transactionResourceKey);
+				if (RecoveredResource.class.isInstance(xares)) {
+					RecoveredResource resource = (RecoveredResource) xares;
+					Xid branchXid = current.getTransactionXid();
+					try {
+						resource.forget(branchXid);
+					} catch (XAException xaex) {
+						switch (xaex.errorCode) {
+						case XAException.XAER_NOTA:
+							break;
+						case XAException.XAER_RMERR:
+						case XAException.XAER_RMFAIL:
+						default:
+							success = false;
+							logger.error("forget-transaction: error occurred while forgetting branch: {}", branchXid, xaex);
+						}
+					}
+				}
+			}
+
+			if (StringUtils.isNotBlank(compensableResourceKey)) {
+				XAResource xares = resourceDeserializer.deserialize(compensableResourceKey);
+				if (RecoveredResource.class.isInstance(xares)) {
+					RecoveredResource resource = (RecoveredResource) xares;
+					Xid branchXid = current.getCompensableXid();
+					try {
+						resource.forget(branchXid);
+					} catch (XAException xaex) {
+						switch (xaex.errorCode) {
+						case XAException.XAER_NOTA:
+							break;
+						case XAException.XAER_RMERR:
+						case XAException.XAER_RMFAIL:
+						default:
+							success = false;
+							logger.error("forget-transaction: error occurred while forgetting branch: {}", branchXid, xaex);
+						}
+					}
+				}
+			}
+
+		}
+
+		for (int i = 0; i < this.resourceList.size(); i++) {
+			XAResourceArchive current = this.resourceList.get(i);
+
+			XidFactory xidFactory = this.beanFactory.getCompensableXidFactory();
+			TransactionXid branchXid = (TransactionXid) current.getXid();
+			TransactionXid globalXid = xidFactory.createGlobalXid(branchXid.getGlobalTransactionId());
+			try {
+				current.forget(globalXid);
+			} catch (XAException ex) {
+				switch (ex.errorCode) {
+				case XAException.XAER_NOTA:
+					break;
+				default:
+					success = false;
+					logger.error("forget-transaction: error occurred while forgetting branch: {}", branchXid, ex);
+				}
+			} catch (RuntimeException rex) {
+				success = false;
+				logger.error("forget-transaction: error occurred while forgetting branch: {}", branchXid, rex);
+			}
+		}
+
+		if (success == false) {
+			throw new SystemException();
+		}
 
 	}
 

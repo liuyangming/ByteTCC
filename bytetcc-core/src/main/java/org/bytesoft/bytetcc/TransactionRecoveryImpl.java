@@ -23,6 +23,7 @@ import javax.transaction.Status;
 import javax.transaction.SystemException;
 import javax.transaction.xa.XAException;
 import javax.transaction.xa.XAResource;
+import javax.transaction.xa.Xid;
 
 import org.apache.commons.lang3.StringUtils;
 import org.bytesoft.bytejta.supports.jdbc.RecoveredResource;
@@ -167,7 +168,7 @@ public class TransactionRecoveryImpl implements TransactionRecovery, Transaction
 			TransactionXid xid = transactionContext.getXid();
 			try {
 				this.recoverTransaction(transaction);
-				transaction.recoveryForgetQuietly();
+				transaction.recoveryForget();
 			} catch (CommitRequiredException ex) {
 				logger.debug("[{}] recover: branch={}, message= commit-required",
 						ByteUtils.byteArrayToString(xid.getGlobalTransactionId()),
@@ -260,6 +261,11 @@ public class TransactionRecoveryImpl implements TransactionRecovery, Transaction
 						case XAException.XAER_RMERR:
 							logger.warn(
 									"The database table 'bytejta' cannot found, the status of the trying branch transaction is unknown!");
+							break;
+						case XAException.XAER_RMFAIL:
+							Xid xid = compensableArchive.getTransactionXid();
+							logger.error("Error occurred while recovering the branch transaction service: {}",
+									ByteUtils.byteArrayToString(xid.getGlobalTransactionId()), xaex);
 							break;
 						default:
 							logger.error("Illegal state, the status of the trying branch transaction is unknown!");

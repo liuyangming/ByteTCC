@@ -142,10 +142,26 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 		CompensableLogger transactionLogger = this.beanFactory.getCompensableLogger();
 		XidFactory xidFactory = this.beanFactory.getCompensableXidFactory();
 		TransactionXid globalXid = xidFactory.createGlobalXid(xid.getGlobalTransactionId());
-		CompensableTransaction transaction = (CompensableTransaction) compensableRepository.removeErrorTransaction(globalXid);
-		if (transaction != null) {
+		CompensableTransaction transaction = (CompensableTransaction) compensableRepository.getTransaction(globalXid);
+		if (transaction == null) {
+			throw new XAException(XAException.XAER_NOTA);
+		}
+
+		boolean success = true;
+		try {
+			transaction.recoveryForget();
 			TransactionArchive archive = transaction.getTransactionArchive();
 			transactionLogger.deleteTransaction(archive);
+		} catch (SystemException ex) {
+			success = false;
+			throw new XAException(XAException.XAER_RMERR);
+		} catch (RuntimeException rex) {
+			success = false;
+			throw new XAException(XAException.XAER_RMERR);
+		} finally {
+			if (success) {
+				compensableRepository.removeErrorTransaction(globalXid);
+			}
 		}
 	}
 
