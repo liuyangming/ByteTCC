@@ -25,7 +25,7 @@ import org.springframework.beans.PropertyValue;
 import org.springframework.beans.factory.config.BeanDefinition;
 
 public class ServiceConfigValidator implements DubboConfigValidator {
-	static final Logger logger = LoggerFactory.getLogger(ServiceConfigValidator.class.getSimpleName());
+	static final Logger logger = LoggerFactory.getLogger(ServiceConfigValidator.class);
 
 	private String beanName;
 	private BeanDefinition beanDefinition;

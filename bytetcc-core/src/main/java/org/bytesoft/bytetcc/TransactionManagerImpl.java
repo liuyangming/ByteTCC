@@ -44,7 +44,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class TransactionManagerImpl implements TransactionManager, CompensableBeanFactoryAware {
-	static final Logger logger = LoggerFactory.getLogger(TransactionManagerImpl.class.getSimpleName());
+	static final Logger logger = LoggerFactory.getLogger(TransactionManagerImpl.class);
 
 	private CompensableBeanFactory beanFactory;
 
@@ -78,8 +78,8 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 
 	}
 
-	protected void beginInTryingPhaseForCoordinator(CompensableInvocation invocation)
-			throws NotSupportedException, SystemException {
+	protected void beginInTryingPhaseForCoordinator(CompensableInvocation invocation) throws NotSupportedException,
+			SystemException {
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
 
@@ -89,12 +89,14 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 		transactionContext.setCompensable(true);
 
 		compensableLogger.createTransaction(transaction.getTransactionArchive());
+		logger.info("{}| compensable transaction begin!",
+				ByteUtils.byteArrayToString(transactionContext.getXid().getGlobalTransactionId()));
 
 		transaction.registerCompensable(invocation);
 	}
 
-	protected void beginInTryingPhaseForParticipant(CompensableTransaction compensable)
-			throws NotSupportedException, SystemException {
+	protected void beginInTryingPhaseForParticipant(CompensableTransaction compensable) throws NotSupportedException,
+			SystemException {
 		RemoteCoordinator transactionCoordinator = this.beanFactory.getTransactionCoordinator();
 
 		XidFactory transactionXidFactory = this.beanFactory.getTransactionXidFactory();
@@ -121,8 +123,8 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 		// compensableLogger.createCompensable(compensable.getCompensableArchive()); // lazy
 	}
 
-	private void beginInCompensatingPhase(CompensableTransaction compensable)
-			throws NotSupportedException, SystemException {
+	private void beginInCompensatingPhase(CompensableTransaction compensable) throws NotSupportedException,
+			SystemException {
 		XidFactory transactionXidFactory = this.beanFactory.getTransactionXidFactory();
 		RemoteCoordinator transactionCoordinator = this.beanFactory.getTransactionCoordinator();
 
@@ -173,8 +175,8 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 		}
 	}
 
-	public void invokeCommitForRecovery() throws RollbackException, HeuristicMixedException, HeuristicRollbackException,
-			SecurityException, IllegalStateException, SystemException {
+	public void invokeCommitForRecovery() throws RollbackException, HeuristicMixedException,
+			HeuristicRollbackException, SecurityException, IllegalStateException, SystemException {
 		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 		Transaction transaction = transactionManager.getTransactionQuietly();
@@ -186,10 +188,18 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 		try {
 			transactionCoordinator.end(transactionContext, XAResource.TMSUCCESS);
 			transactionCoordinator.recoveryCommit(transactionXid, true);
-		} catch (TransactionException ex) {
-			ex.printStackTrace(); // TODO
-		} catch (XAException ex) {
-			ex.printStackTrace(); // TODO
+		} catch (XAException xaex) {
+			switch (xaex.errorCode) {
+			case XAException.XA_HEURCOM:
+				break;
+			case XAException.XA_HEURRB:
+				throw new HeuristicRollbackException();
+			case XAException.XA_HEURMIX:
+				throw new HeuristicMixedException();
+			case XAException.XAER_RMERR:
+			default:
+				throw new SystemException();
+			}
 		} finally {
 			compensable.setTransactionalExtra(null);
 		}
@@ -245,10 +255,8 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 		try {
 			transactionCoordinator.end(transactionContext, XAResource.TMSUCCESS);
 			transactionCoordinator.recoveryRollback(transactionXid);
-		} catch (TransactionException ex) {
-			ex.printStackTrace(); // TODO
-		} catch (XAException ex) {
-			ex.printStackTrace(); // TODO
+		} catch (XAException xaex) {
+			throw new SystemException();
 		} finally {
 			compensable.setTransactionalExtra(null);
 		}
@@ -297,8 +305,8 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 		return (isCompensableTransaction ? compensableManager : transactionManager).suspend();
 	}
 
-	public void resume(javax.transaction.Transaction tobj)
-			throws InvalidTransactionException, IllegalStateException, SystemException {
+	public void resume(javax.transaction.Transaction tobj) throws InvalidTransactionException, IllegalStateException,
+			SystemException {
 		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 

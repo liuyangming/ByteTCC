@@ -26,13 +26,16 @@ import org.bytesoft.compensable.CompensableInvocationRegistry;
 import org.bytesoft.compensable.CompensableManager;
 import org.bytesoft.compensable.CompensableTransaction;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-public class CompensableMethodInterceptor
-		implements MethodInterceptor, ApplicationContextAware, CompensableBeanFactoryAware {
+public class CompensableMethodInterceptor implements MethodInterceptor, ApplicationContextAware,
+		CompensableBeanFactoryAware {
+	static final Logger logger = LoggerFactory.getLogger(CompensableMethodInterceptor.class);
 
 	private CompensableBeanFactory beanFactory;
 	private ApplicationContext applicationContext;
@@ -55,6 +58,7 @@ public class CompensableMethodInterceptor
 			if (beanNameArray.length == 1) {
 				invocation.setIdentifier(beanNameArray[0]);
 			} else {
+				logger.error("Class {} has multiple bean definition!", mi.getThis().getClass().getName());
 				throw new IllegalStateException(); // TODO
 			}
 

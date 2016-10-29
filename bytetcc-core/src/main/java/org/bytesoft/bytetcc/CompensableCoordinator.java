@@ -26,6 +26,7 @@ import javax.transaction.xa.XAResource;
 import javax.transaction.xa.Xid;
 
 import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
+import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableManager;
 import org.bytesoft.compensable.CompensableTransaction;
@@ -44,7 +45,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class CompensableCoordinator implements RemoteCoordinator, CompensableBeanFactoryAware {
-	static final Logger logger = LoggerFactory.getLogger(CompensableCoordinator.class.getSimpleName());
+	static final Logger logger = LoggerFactory.getLogger(CompensableCoordinator.class);
 
 	private CompensableBeanFactory beanFactory;
 
@@ -71,6 +72,8 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 		transaction.setBeanFactory(this.beanFactory);
 
 		compensableLogger.createTransaction(transaction.getTransactionArchive());
+		logger.info("{}| compensable transaction begin!",
+				ByteUtils.byteArrayToString(globalXid.getGlobalTransactionId()));
 
 		compensableManager.associateThread(transaction);
 		compensableRepository.putTransaction(globalXid, transaction);
@@ -152,6 +155,9 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 			transaction.recoveryForget();
 			TransactionArchive archive = transaction.getTransactionArchive();
 			transactionLogger.deleteTransaction(archive);
+
+			logger.info("{}| compensable transaction forgot!",
+					ByteUtils.byteArrayToString(xid.getGlobalTransactionId()));
 		} catch (SystemException ex) {
 			success = false;
 			throw new XAException(XAException.XAER_RMERR);

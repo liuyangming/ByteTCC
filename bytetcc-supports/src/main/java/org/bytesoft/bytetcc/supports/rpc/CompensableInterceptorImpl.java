@@ -36,7 +36,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class CompensableInterceptorImpl implements TransactionInterceptor, CompensableBeanFactoryAware {
-	static final Logger logger = LoggerFactory.getLogger(CompensableInterceptorImpl.class.getSimpleName());
+	static final Logger logger = LoggerFactory.getLogger(CompensableInterceptorImpl.class);
 
 	private CompensableBeanFactory beanFactory;
 

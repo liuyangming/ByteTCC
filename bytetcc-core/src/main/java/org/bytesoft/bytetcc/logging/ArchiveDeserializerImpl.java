@@ -24,7 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class ArchiveDeserializerImpl implements ArchiveDeserializer {
-	static final Logger logger = LoggerFactory.getLogger(ArchiveDeserializerImpl.class.getSimpleName());
+	static final Logger logger = LoggerFactory.getLogger(ArchiveDeserializerImpl.class);
 
 	static final byte TYPE_TRANSACTION = 0x0;
 	static final byte TYPE_XA_RESOURCE = 0x1;

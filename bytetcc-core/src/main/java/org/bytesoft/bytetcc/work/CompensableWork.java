@@ -24,7 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class CompensableWork implements Work, CompensableBeanFactoryAware {
-	static final Logger logger = LoggerFactory.getLogger(CompensableWork.class.getSimpleName());
+	static final Logger logger = LoggerFactory.getLogger(CompensableWork.class);
 
 	static final long SECOND_MILLIS = 1000L;
 	private long stopTimeMillis = -1;

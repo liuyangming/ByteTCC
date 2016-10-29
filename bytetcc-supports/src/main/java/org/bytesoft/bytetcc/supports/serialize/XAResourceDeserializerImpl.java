@@ -43,7 +43,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 
 public class XAResourceDeserializerImpl implements XAResourceDeserializer, ApplicationContextAware {
-	static final Logger logger = LoggerFactory.getLogger(XAResourceDeserializerImpl.class.getSimpleName());
+	static final Logger logger = LoggerFactory.getLogger(XAResourceDeserializerImpl.class);
 
 	private static Pattern pattern = Pattern.compile("^[^:]+\\s*:\\s*\\d+$");
 	private ApplicationContext applicationContext;

@@ -27,7 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public final class CompensableBeanRegistry implements CompensableBeanFactoryAware {
-	static final Logger logger = LoggerFactory.getLogger(CompensableBeanRegistry.class.getSimpleName());
+	static final Logger logger = LoggerFactory.getLogger(CompensableBeanRegistry.class);
 	private static final CompensableBeanRegistry instance = new CompensableBeanRegistry();
 
 	private CompensableBeanFactory beanFactory;

@@ -45,7 +45,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class CompensableManagerImpl implements CompensableManager, CompensableBeanFactoryAware {
-	static final Logger logger = LoggerFactory.getLogger(CompensableManagerImpl.class.getSimpleName());
+	static final Logger logger = LoggerFactory.getLogger(CompensableManagerImpl.class);
 
 	private CompensableBeanFactory beanFactory;
 	private final Map<Thread, Transaction> compensableMap = new ConcurrentHashMap<Thread, Transaction>();

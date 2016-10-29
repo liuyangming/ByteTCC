@@ -34,6 +34,8 @@ import org.bytesoft.compensable.CompensableManager;
 import org.bytesoft.transaction.Transaction;
 import org.bytesoft.transaction.TransactionContext;
 import org.bytesoft.transaction.supports.rpc.TransactionInterceptor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.alibaba.dubbo.common.URL;
 import com.alibaba.dubbo.rpc.Filter;
@@ -46,6 +48,7 @@ import com.caucho.hessian.io.HessianInput;
 import com.caucho.hessian.io.HessianOutput;
 
 public class CompensableServiceFilter implements Filter {
+	static final Logger logger = LoggerFactory.getLogger(CompensableServiceFilter.class);
 
 	public Result invoke(Invoker<?> invoker, Invocation invocation) throws RpcException {
 		if (RpcContext.getContext().isProviderSide()) {
@@ -77,8 +80,9 @@ public class CompensableServiceFilter implements Filter {
 			dubboCoordinator.setInvocationContext(invocationContext);
 			dubboCoordinator.setRemoteCoordinator(consumeCoordinator);
 
-			remoteCoordinator = (RemoteCoordinator) Proxy.newProxyInstance(DubboRemoteCoordinator.class.getClassLoader(),
-					new Class[] { RemoteCoordinator.class }, dubboCoordinator);
+			remoteCoordinator = (RemoteCoordinator) Proxy.newProxyInstance(
+					DubboRemoteCoordinator.class.getClassLoader(), new Class[] { RemoteCoordinator.class },
+					dubboCoordinator);
 			remoteCoordinatorRegistry.putTransactionManagerStub(address, remoteCoordinator);
 		}
 
@@ -105,7 +109,8 @@ public class CompensableServiceFilter implements Filter {
 			result = invoker.invoke(invocation);
 
 			Transaction transaction = transactionManager.getCompensableTransactionQuietly();
-			TransactionContext nativeTransactionContext = transaction == null ? null : transaction.getTransactionContext();
+			TransactionContext nativeTransactionContext = transaction == null ? null : transaction
+					.getTransactionContext();
 
 			response.setTransactionContext(nativeTransactionContext);
 
@@ -120,14 +125,11 @@ public class CompensableServiceFilter implements Filter {
 				invocation.getAttachments().put(TransactionContext.class.getName(), nativeTansactionContextContent);
 			}
 		} catch (IOException ex) {
-			// TODO
-			ex.printStackTrace();
-		} catch (RpcException rex) {
-			// TODO
-			rex.printStackTrace();
+			logger.error("Error occurred in remote call!", ex);
+			throw new RpcException(ex.getMessage());
 		} catch (RuntimeException rex) {
-			// TODO
-			rex.printStackTrace();
+			logger.error("Error occurred in remote call!", rex);
+			throw new RpcException(rex.getMessage());
 		}
 		return result;
 	}
@@ -156,8 +158,9 @@ public class CompensableServiceFilter implements Filter {
 			dubboCoordinator.setInvocationContext(invocationContext);
 			dubboCoordinator.setRemoteCoordinator(consumeCoordinator);
 
-			remoteCoordinator = (RemoteCoordinator) Proxy.newProxyInstance(DubboRemoteCoordinator.class.getClassLoader(),
-					new Class[] { RemoteCoordinator.class }, dubboCoordinator);
+			remoteCoordinator = (RemoteCoordinator) Proxy.newProxyInstance(
+					DubboRemoteCoordinator.class.getClassLoader(), new Class[] { RemoteCoordinator.class },
+					dubboCoordinator);
 			remoteCoordinatorRegistry.putTransactionManagerStub(address, remoteCoordinator);
 		}
 
@@ -195,14 +198,11 @@ public class CompensableServiceFilter implements Filter {
 			}
 			transactionInterceptor.afterReceiveResponse(response);
 		} catch (IOException ex) {
-			// TODO
-			ex.printStackTrace();
-		} catch (RpcException rex) {
-			// TODO
-			rex.printStackTrace();
+			logger.error("Error occurred in remote call!", ex);
+			throw new RpcException(ex.getMessage());
 		} catch (RuntimeException rex) {
-			// TODO
-			rex.printStackTrace();
+			logger.error("Error occurred in remote call!", rex);
+			throw new RpcException(rex.getMessage());
 		}
 		return result;
 	}

@@ -42,7 +42,7 @@ import org.slf4j.LoggerFactory;
 
 public class SampleTransactionLogger extends VirtualLoggingSystemImpl
 		implements CompensableLogger, LoggingFlushable, CompensableBeanFactoryAware {
-	static final Logger logger = LoggerFactory.getLogger(SampleTransactionLogger.class.getSimpleName());
+	static final Logger logger = LoggerFactory.getLogger(SampleTransactionLogger.class);
 
 	private CompensableBeanFactory beanFactory;
 
