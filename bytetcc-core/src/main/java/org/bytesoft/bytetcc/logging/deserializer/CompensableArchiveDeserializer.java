@@ -77,7 +77,7 @@ public class CompensableArchiveDeserializer implements ArchiveDeserializer, Comp
 		byte[] compensableBranchQualifier = null;
 		if (transactionXid == null) {
 			transactionGlobalTransactionId = new byte[XidFactory.GLOBAL_TRANSACTION_LENGTH];
-			compensableBranchQualifier = new byte[XidFactory.BRANCH_QUALIFIER_LENGTH];
+			transactionBranchQualifier = new byte[XidFactory.BRANCH_QUALIFIER_LENGTH];
 		} else {
 			transactionGlobalTransactionId = transactionXid.getGlobalTransactionId();
 			transactionBranchQualifier = transactionXid.getBranchQualifier();

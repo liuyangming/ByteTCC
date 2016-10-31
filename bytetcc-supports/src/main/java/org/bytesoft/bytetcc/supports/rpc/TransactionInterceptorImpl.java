@@ -35,11 +35,11 @@ public class TransactionInterceptorImpl implements TransactionInterceptor, Compe
 	public void beforeSendRequest(TransactionRequest request) throws IllegalStateException {
 		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
-		Transaction tccTransaction = compensableManager.getCompensableTransactionQuietly();
-		Transaction jtaTransaction = transactionManager.getTransactionQuietly();
-		if (tccTransaction != null && tccTransaction.getTransactionContext().isCompensable()) {
+		Transaction compensable = compensableManager.getCompensableTransactionQuietly();
+		Transaction transaction = transactionManager.getTransactionQuietly();
+		if (compensable != null && compensable.getTransactionContext().isCompensable()) {
 			this.compensableInterceptor.beforeSendRequest(request);
-		} else if (jtaTransaction != null) {
+		} else if (transaction != null) {
 			this.transactionInterceptor.beforeSendRequest(request);
 		}
 	}
@@ -56,11 +56,11 @@ public class TransactionInterceptorImpl implements TransactionInterceptor, Compe
 	public void beforeSendResponse(TransactionResponse response) throws IllegalStateException {
 		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
-		Transaction tccTransaction = compensableManager.getCompensableTransactionQuietly();
-		Transaction jtaTransaction = transactionManager.getTransactionQuietly();
-		if (tccTransaction != null && tccTransaction.getTransactionContext().isCompensable()) {
+		Transaction compensable = compensableManager.getCompensableTransactionQuietly();
+		Transaction transaction = transactionManager.getTransactionQuietly();
+		if (compensable != null && compensable.getTransactionContext().isCompensable()) {
 			this.compensableInterceptor.beforeSendResponse(response);
-		} else if (jtaTransaction != null) {
+		} else if (transaction != null) {
 			this.transactionInterceptor.beforeSendResponse(response);
 		}
 	}
@@ -68,11 +68,11 @@ public class TransactionInterceptorImpl implements TransactionInterceptor, Compe
 	public void afterReceiveResponse(TransactionResponse response) throws IllegalStateException {
 		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
-		Transaction tccTransaction = compensableManager.getCompensableTransactionQuietly();
-		Transaction jtaTransaction = transactionManager.getTransactionQuietly();
-		if (tccTransaction != null && tccTransaction.getTransactionContext().isCompensable()) {
+		Transaction compensable = compensableManager.getCompensableTransactionQuietly();
+		Transaction transaction = transactionManager.getTransactionQuietly();
+		if (compensable != null && compensable.getTransactionContext().isCompensable()) {
 			this.compensableInterceptor.afterReceiveResponse(response);
-		} else if (jtaTransaction != null) {
+		} else if (transaction != null) {
 			this.transactionInterceptor.afterReceiveResponse(response);
 		}
 	}
