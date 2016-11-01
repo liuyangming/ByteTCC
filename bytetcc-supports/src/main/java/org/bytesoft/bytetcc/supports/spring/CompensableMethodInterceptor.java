@@ -19,7 +19,9 @@ import java.lang.reflect.Method;
 
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
+import org.apache.commons.lang3.StringUtils;
 import org.bytesoft.bytetcc.supports.CompensableInvocationImpl;
+import org.bytesoft.bytetcc.supports.spring.aware.CompensableBeanNameAware;
 import org.bytesoft.compensable.Compensable;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableInvocationRegistry;
@@ -33,8 +35,8 @@ import org.springframework.context.ApplicationContextAware;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-public class CompensableMethodInterceptor
-		implements MethodInterceptor, ApplicationContextAware, CompensableBeanFactoryAware {
+public class CompensableMethodInterceptor implements MethodInterceptor, ApplicationContextAware,
+		CompensableBeanFactoryAware {
 	static final Logger logger = LoggerFactory.getLogger(CompensableMethodInterceptor.class);
 
 	private CompensableBeanFactory beanFactory;
@@ -42,13 +44,26 @@ public class CompensableMethodInterceptor
 
 	public Object invoke(MethodInvocation mi) throws Throwable {
 		String identifier = null;
-		String[] beanNameArray = this.applicationContext.getBeanNamesForType(mi.getThis().getClass());
-		if (beanNameArray.length == 1) {
-			identifier = beanNameArray[0];
+		Object bean = mi.getThis();
+		if (CompensableBeanNameAware.class.isInstance(bean)) {
+			CompensableBeanNameAware config = (CompensableBeanNameAware) bean;
+			identifier = config.getBeanName();
+			if (StringUtils.isBlank(identifier)) {
+				logger.error("BeanId(class= {}) should not be null!", bean.getClass().getName());
+				throw new IllegalStateException(String.format("BeanId(class= %s) should not be null!", bean.getClass()
+						.getName()));
+			}
 		} else {
-			logger.error("Class {} has multiple bean definition!", mi.getThis().getClass().getName());
-			throw new IllegalStateException(
-					String.format("Class %s has multiple bean definition!", mi.getThis().getClass().getName()));
+			String[] beanNameArray = this.applicationContext.getBeanNamesForType(bean.getClass());
+			if (beanNameArray.length == 1) {
+				identifier = beanNameArray[0];
+			} else {
+				logger.error("Class {} does not implement interface {}, and there are multiple bean definitions!", bean
+						.getClass().getName(), CompensableBeanNameAware.class.getName());
+				throw new IllegalStateException(String.format(
+						"Class %s does not implement interface %s, and there are multiple bean definitions!", bean
+								.getClass().getName(), CompensableBeanNameAware.class.getName()));
+			}
 		}
 
 		return this.execute(identifier, mi);
