@@ -33,14 +33,28 @@ import org.springframework.context.ApplicationContextAware;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-public class CompensableMethodInterceptor implements MethodInterceptor, ApplicationContextAware,
-		CompensableBeanFactoryAware {
+public class CompensableMethodInterceptor
+		implements MethodInterceptor, ApplicationContextAware, CompensableBeanFactoryAware {
 	static final Logger logger = LoggerFactory.getLogger(CompensableMethodInterceptor.class);
 
 	private CompensableBeanFactory beanFactory;
 	private ApplicationContext applicationContext;
 
 	public Object invoke(MethodInvocation mi) throws Throwable {
+		String identifier = null;
+		String[] beanNameArray = this.applicationContext.getBeanNamesForType(mi.getThis().getClass());
+		if (beanNameArray.length == 1) {
+			identifier = beanNameArray[0];
+		} else {
+			logger.error("Class {} has multiple bean definition!", mi.getThis().getClass().getName());
+			throw new IllegalStateException(
+					String.format("Class %s has multiple bean definition!", mi.getThis().getClass().getName()));
+		}
+
+		return this.execute(identifier, mi);
+	}
+
+	public Object execute(String identifier, MethodInvocation mi) throws Throwable {
 		CompensableInvocationRegistry registry = CompensableInvocationRegistry.getInstance();
 		Compensable compensable = mi.getMethod().getDeclaringClass().getAnnotation(Compensable.class);
 
@@ -54,13 +68,7 @@ public class CompensableMethodInterceptor implements MethodInterceptor, Applicat
 			invocation.setArgs(mi.getArguments());
 			invocation.setCancellableKey(compensable.cancellableKey());
 			invocation.setConfirmableKey(compensable.confirmableKey());
-			String[] beanNameArray = this.applicationContext.getBeanNamesForType(mi.getThis().getClass());
-			if (beanNameArray.length == 1) {
-				invocation.setIdentifier(beanNameArray[0]);
-			} else {
-				logger.error("Class {} has multiple bean definition!", mi.getThis().getClass().getName());
-				throw new IllegalStateException(); // TODO
-			}
+			invocation.setIdentifier(identifier);
 
 			if (transaction != null) {
 				Transactional transactional = mi.getMethod().getAnnotation(Transactional.class);

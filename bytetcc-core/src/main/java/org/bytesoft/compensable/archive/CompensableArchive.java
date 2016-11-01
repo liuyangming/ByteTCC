@@ -41,9 +41,11 @@ public class CompensableArchive {
 	public String toString() {
 		return String.format(
 				"[compensable-archive| transactionXid= %s, compensableXid= %s, confirmed= %s, cancelled= %s]",
-				ByteUtils.byteArrayToString(this.transactionXid.getGlobalTransactionId()),
-				ByteUtils.byteArrayToString(this.compensableXid.getGlobalTransactionId()), this.confirmed,
-				this.cancelled);
+				this.transactionXid == null ? null
+						: ByteUtils.byteArrayToString(this.transactionXid.getGlobalTransactionId()),
+				this.compensableXid == null ? null
+						: ByteUtils.byteArrayToString(this.compensableXid.getGlobalTransactionId()),
+				this.confirmed, this.cancelled);
 	}
 
 	public int hashCode() {

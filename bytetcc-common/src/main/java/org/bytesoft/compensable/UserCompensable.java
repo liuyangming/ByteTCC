@@ -21,17 +21,13 @@ import javax.transaction.NotSupportedException;
 import javax.transaction.RollbackException;
 import javax.transaction.SystemException;
 
-import org.bytesoft.transaction.TransactionManager;
+public interface UserCompensable extends javax.transaction.UserTransaction {
 
-public interface CompensableManager extends TransactionManager {
+	void compensableBegin() throws NotSupportedException, SystemException;
 
-	public CompensableTransaction getCompensableTransactionQuietly();
-
-	public void compensableBegin() throws NotSupportedException, SystemException;
-
-	public void compensableCommit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException,
+	void compensableCommit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException,
 			SecurityException, IllegalStateException, SystemException;
 
-	public void compensableRollback() throws IllegalStateException, SecurityException, SystemException;
+	void compensableRollback() throws IllegalStateException, SecurityException, SystemException;
 
 }
