@@ -1,14 +1,14 @@
-ByteTCC是一个基于TCC（Try/Confirm/Cancel）事务补偿机制的分布式事务管理器，兼容JTA，因此可以很好的与EJB、Spring等容器（本文档下文说明中将以Spring容器为例）进行集成，支持Spring容器的声明式事务。
+ByteTCC是一个基于TCC（Try/Confirm/Cancel）事务补偿机制的分布式事务管理器，兼容JTA，可以很好的与EJB、Spring等容器（本文档下文说明中将以Spring容器为例）进行集成，支持Spring容器的声明式事务。
 
-ByteTCC将TCC事务从逻辑上分为两个部分：TRY阶段、CC阶段（Confirm/Cancel）。每个阶段均由一个或多个service来构成，每个service均包含自己的业务逻辑。service在执行时，其操作由本地事务（LocalTransaction）来保证其原子性，即TCC事务基于本地事务（主要是LocalTransaction）来实现。
+ByteTCC将TCC事务从逻辑上分为两个阶段：TRY阶段、CC阶段（Confirm/Cancel）。每个阶段均由一个或多个service来构成，每个service均包含自己的业务逻辑。service在执行时，其操作由本地事务（LocalTransaction）来保证其原子性，即TCC事务基于本地事务来实现。
 
 ## 一、ByteTCC对Try/Confirm/Cancel各阶段职责的规划
 一般认为，Try阶段适用于对业务数据执行校验并预留出资源；Confirm阶段在Try阶段预留的资源上执行真正的业务操作；Cancel则用于释放Try阶段预留出的资源。
 
-但上述原则并不能适用于所有的场景。
+然而，上述原则并不能适用于所有的场景。
 
 为什么这么说呢？TCC事务中，Try阶段是由业务直接调用的，而Confirm/Cancel则是由TCC事务管理器触发调用的，因此，
-* 1、如果Try阶段仅做校验和预留资源，而将真正的业务操作放在Confirm阶段执行，那么，一旦业务执行(Confirm阶段)出错，就会使得i)该错误不能被业务程序（调用方）感知并处理；ii)TCC事务管理器也没有针对Confirm操作错误的处理机制。故保障性低。
+* 1、如果Try阶段仅做校验和预留资源，而将真正的业务操作放在Confirm阶段执行，那么，一旦业务执行(Confirm阶段)出错，就会使得i)该错误不能被业务程序（调用方）感知并处理；ii)TCC事务管理器也没有针对Confirm操作错误的处理机制，故保障性低。
 * 2、相反，如果真正的业务操作在Try阶段执行，在业务执行出错时业务程序（调用方）仍然可以获得对其进行处理的机会，即使不便处理或者处理失败的情况下后续还有Confirm/Cancel操作对Try阶段的操作进行补充/补偿，故保障性高；
 
 正因如此，ByteTCC更倾向于认为：Try阶段才是TCC事务最关键的阶段，而Confirm阶段仅是Try阶段的一个辅助和补充(非必需，需要时才使用)。任何重要的操作，只要不会导致事务出现不一致性的可能，都应该尽可能的在Try阶段执行。
@@ -62,7 +62,7 @@ ByteTCC不要求service的实现逻辑具有幂等性。事实上，ByteTCC也�
 * 4、支持出错事务恢复。
 
 ## 八、当前版本
-#### 0.2.1-SNAPSHOT主要目标
+#### 0.3.0-SNAPSHOT主要目标
 * 1、精简TCC事务管理器的处理逻辑；
 * 2、新增对dubbo框架的支持。
 
@@ -75,4 +75,4 @@ ByteTCC不要求service的实现逻辑具有幂等性。事实上，ByteTCC也�
 * 文档：http://code.taobao.org/p/openjtcc/wiki/index/
 
 ## 十、建议及改进
-0.2.1-SNAPSHOT版本目前仍在开发中，若您有任何建议，可以通过1）加入qq群537445956向群主提出，或2）发送邮件至bytefox@126.com向我反馈。本人承诺，任何建议都将会被认真考虑，优秀的建议将会被采用，但不保证一定会在当前版本中实现。
+0.3.0-SNAPSHOT版本目前仍在开发中，若您有任何建议，可以通过1）加入qq群537445956向群主提出，或2）发送邮件至bytefox@126.com向我反馈。本人承诺，任何建议都将会被认真考虑，优秀的建议将会被采用，但不保证一定会在当前版本中实现。

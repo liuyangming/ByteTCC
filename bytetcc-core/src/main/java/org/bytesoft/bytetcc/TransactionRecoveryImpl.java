@@ -163,71 +163,67 @@ public class TransactionRecoveryImpl
 		CompensableTransactionImpl compensable = (CompensableTransactionImpl) transaction;
 		List<CompensableArchive> archiveList = compensable.getCompensableArchiveList();
 
-		CompensableArchive compensableArchive = null;
-		boolean tried = false;
-		for (int i = archiveList.size() - 1; i >= 0; i--) {
-			CompensableArchive current = archiveList.get(i);
-			if (current.isTried()) {
-				tried = true;
-				break;
-			}
-			compensableArchive = current;
-		}
-
 		XAResourceDeserializer resourceDeserializer = this.beanFactory.getResourceDeserializer();
 		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
-		if (tried == false) {
-			if (compensableArchive == null || StringUtils.isBlank(compensableArchive.getTransactionResourceKey())) {
-				logger.warn(
-						"There is no valid resource participated in the trying branch transaction, the status of the branch transaction is unknown!");
-			} else {
-				XAResource xares = resourceDeserializer.deserialize(compensableArchive.getTransactionResourceKey());
-				if (RecoveredResource.class.isInstance(xares)) {
-					RecoveredResource resource = (RecoveredResource) xares;
-					try {
-						resource.recoverable(compensableArchive.getTransactionXid());
-						compensableArchive.setTried(true);
-						transaction.setTransactionStatus(Status.STATUS_COMMITTING); // TODO
-						compensableLogger.updateTransaction(compensable.getTransactionArchive());
-					} catch (XAException xaex) {
-						switch (xaex.errorCode) {
-						case XAException.XAER_NOTA:
-							transaction.setTransactionStatus(Status.STATUS_MARKED_ROLLBACK);
-							compensableLogger.updateTransaction(compensable.getTransactionArchive());
-							break;
-						case XAException.XAER_RMERR:
-							logger.warn(
-									"The database table 'bytejta' cannot found, the status of the trying branch transaction is unknown!");
-							break;
-						case XAException.XAER_RMFAIL:
-							Xid xid = compensableArchive.getTransactionXid();
-							logger.error("Error occurred while recovering the branch transaction service: {}",
-									ByteUtils.byteArrayToString(xid.getGlobalTransactionId()), xaex);
-							break;
-						default:
-							logger.error("Illegal state, the status of the trying branch transaction is unknown!");
-						}
-					}
+
+		for (int i = 0; i < archiveList.size(); i++) {
+			CompensableArchive archive = archiveList.get(i);
+
+			if (archive.isTried() == false) {
+				if (StringUtils.isBlank(archive.getTransactionResourceKey())) {
+					logger.warn(
+							"There is no valid resource participated in the trying branch transaction, the status of the branch transaction is unknown!");
 				} else {
-					logger.error("Illegal resources, the status of the trying branch transaction is unknown!");
+					XAResource xares = resourceDeserializer.deserialize(archive.getTransactionResourceKey());
+					if (RecoveredResource.class.isInstance(xares)) {
+						RecoveredResource resource = (RecoveredResource) xares;
+						try {
+							resource.recoverable(archive.getTransactionXid());
+							archive.setTried(true);
+							transaction.setTransactionStatus(Status.STATUS_COMMITTING); // TODO
+							transaction.getTransactionContext().setCompensating(true);
+							compensableLogger.updateTransaction(compensable.getTransactionArchive());
+						} catch (XAException xaex) {
+							switch (xaex.errorCode) {
+							case XAException.XAER_NOTA:
+								transaction.setTransactionStatus(Status.STATUS_MARKED_ROLLBACK);
+								compensableLogger.updateTransaction(compensable.getTransactionArchive());
+								break;
+							case XAException.XAER_RMERR:
+								logger.warn(
+										"The database table 'bytejta' cannot found, the status of the trying branch transaction is unknown!");
+								break;
+							case XAException.XAER_RMFAIL:
+								Xid xid = archive.getTransactionXid();
+								logger.error("Error occurred while recovering the branch transaction service: {}",
+										ByteUtils.byteArrayToString(xid.getGlobalTransactionId()), xaex);
+								break;
+							default:
+								logger.error("Illegal state, the status of the trying branch transaction is unknown!");
+							}
+						}
+					} else {
+						logger.error("Illegal resources, the status of the trying branch transaction is unknown!");
+					}
 				}
-			}
-		} else {
-			switch (transaction.getTransactionStatus()) {
-			case Status.STATUS_ACTIVE:
-			case Status.STATUS_MARKED_ROLLBACK:
-			case Status.STATUS_PREPARING:
-			case Status.STATUS_ROLLING_BACK:
-			case Status.STATUS_UNKNOWN:
-				transaction.setTransactionStatus(Status.STATUS_COMMITTING); // TODO
-				compensableLogger.updateTransaction(compensable.getTransactionArchive());
-				break;
-			case Status.STATUS_PREPARED:
-			case Status.STATUS_COMMITTING:
-			case Status.STATUS_COMMITTED:
-			case Status.STATUS_ROLLEDBACK:
-			default:
-				// ignore
+			} else {
+				switch (transaction.getTransactionStatus()) {
+				case Status.STATUS_ACTIVE:
+				case Status.STATUS_MARKED_ROLLBACK:
+				case Status.STATUS_PREPARING:
+				case Status.STATUS_ROLLING_BACK:
+				case Status.STATUS_UNKNOWN:
+					transaction.setTransactionStatus(Status.STATUS_COMMITTING); // TODO
+					transaction.getTransactionContext().setCompensating(true);
+					compensableLogger.updateTransaction(compensable.getTransactionArchive());
+					break;
+				case Status.STATUS_PREPARED:
+				case Status.STATUS_COMMITTING:
+				case Status.STATUS_COMMITTED:
+				case Status.STATUS_ROLLEDBACK:
+				default:
+					// ignore
+				}
 			}
 		}
 	}

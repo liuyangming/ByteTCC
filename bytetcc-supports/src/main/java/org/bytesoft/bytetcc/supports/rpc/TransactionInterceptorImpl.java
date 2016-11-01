@@ -20,7 +20,6 @@ import org.bytesoft.compensable.CompensableManager;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 import org.bytesoft.transaction.Transaction;
 import org.bytesoft.transaction.TransactionContext;
-import org.bytesoft.transaction.TransactionManager;
 import org.bytesoft.transaction.supports.rpc.TransactionInterceptor;
 import org.bytesoft.transaction.supports.rpc.TransactionRequest;
 import org.bytesoft.transaction.supports.rpc.TransactionResponse;
@@ -29,18 +28,19 @@ public class TransactionInterceptorImpl implements TransactionInterceptor, Compe
 
 	private CompensableBeanFactory beanFactory;
 
-	private TransactionInterceptor transactionInterceptor;
+	// private TransactionInterceptor transactionInterceptor;
 	private TransactionInterceptor compensableInterceptor;
 
 	public void beforeSendRequest(TransactionRequest request) throws IllegalStateException {
-		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
+		// TransactionManager transactionManager = this.beanFactory.getTransactionManager();
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 		Transaction compensable = compensableManager.getCompensableTransactionQuietly();
-		Transaction transaction = transactionManager.getTransactionQuietly();
+		// Transaction transaction = transactionManager.getTransactionQuietly();
 		if (compensable != null && compensable.getTransactionContext().isCompensable()) {
 			this.compensableInterceptor.beforeSendRequest(request);
-		} else if (transaction != null) {
-			this.transactionInterceptor.beforeSendRequest(request);
+		} else /* if (transaction != null) */ {
+			throw new IllegalStateException(
+					"Only compensable transaction can propagate its transaction context to the remote node!");
 		}
 	}
 
@@ -48,32 +48,35 @@ public class TransactionInterceptorImpl implements TransactionInterceptor, Compe
 		TransactionContext transactionContext = (TransactionContext) request.getTransactionContext();
 		if (transactionContext != null && transactionContext.isCompensable()) {
 			this.compensableInterceptor.afterReceiveRequest(request);
-		} else if (transactionContext != null && transactionContext.isCompensable() == false) {
-			this.transactionInterceptor.afterReceiveRequest(request);
+		} else /* if (transactionContext != null && transactionContext.isCompensable() == false) */ {
+			throw new IllegalStateException(
+					"Only compensable transaction can propagate its transaction context to the remote node!");
 		}
 	}
 
 	public void beforeSendResponse(TransactionResponse response) throws IllegalStateException {
-		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
+		// TransactionManager transactionManager = this.beanFactory.getTransactionManager();
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 		Transaction compensable = compensableManager.getCompensableTransactionQuietly();
-		Transaction transaction = transactionManager.getTransactionQuietly();
+		// Transaction transaction = transactionManager.getTransactionQuietly();
 		if (compensable != null && compensable.getTransactionContext().isCompensable()) {
 			this.compensableInterceptor.beforeSendResponse(response);
-		} else if (transaction != null) {
-			this.transactionInterceptor.beforeSendResponse(response);
+		} else /* if (transaction != null) */ {
+			throw new IllegalStateException(
+					"Only compensable transaction can propagate its transaction context to the remote node!");
 		}
 	}
 
 	public void afterReceiveResponse(TransactionResponse response) throws IllegalStateException {
-		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
+		// TransactionManager transactionManager = this.beanFactory.getTransactionManager();
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 		Transaction compensable = compensableManager.getCompensableTransactionQuietly();
-		Transaction transaction = transactionManager.getTransactionQuietly();
+		// Transaction transaction = transactionManager.getTransactionQuietly();
 		if (compensable != null && compensable.getTransactionContext().isCompensable()) {
 			this.compensableInterceptor.afterReceiveResponse(response);
-		} else if (transaction != null) {
-			this.transactionInterceptor.afterReceiveResponse(response);
+		} else /* if (transaction != null) */ {
+			throw new IllegalStateException(
+					"Only compensable transaction can propagate its transaction context to the remote node!");
 		}
 	}
 
@@ -81,13 +84,12 @@ public class TransactionInterceptorImpl implements TransactionInterceptor, Compe
 		this.beanFactory = tbf;
 	}
 
-	public TransactionInterceptor getTransactionInterceptor() {
-		return transactionInterceptor;
-	}
-
-	public void setTransactionInterceptor(TransactionInterceptor transactionInterceptor) {
-		this.transactionInterceptor = transactionInterceptor;
-	}
+	// public TransactionInterceptor getTransactionInterceptor() {
+	// return transactionInterceptor;
+	// }
+	// public void setTransactionInterceptor(TransactionInterceptor transactionInterceptor) {
+	// this.transactionInterceptor = transactionInterceptor;
+	// }
 
 	public TransactionInterceptor getCompensableInterceptor() {
 		return compensableInterceptor;
