@@ -33,14 +33,13 @@ public class CompensableWork implements Work, CompensableBeanFactoryAware {
 
 	private CompensableBeanFactory beanFactory;
 
-	public void run() {
-
+	public void initialize() {
 		TransactionRecovery compensableRecovery = this.beanFactory.getCompensableRecovery();
-		try {
-			compensableRecovery.startRecovery();
-		} catch (RuntimeException rex) {
-			logger.error(rex.getMessage(), rex);
-		}
+		compensableRecovery.startRecovery();
+	}
+
+	public void run() {
+		TransactionRecovery compensableRecovery = this.beanFactory.getCompensableRecovery();
 
 		long nextRecoveryTime = 0;
 		while (this.currentActive()) {

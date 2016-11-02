@@ -139,6 +139,20 @@ public class TransactionCoordinator implements RemoteCoordinator, CompensableBea
 		}
 	}
 
+	public void recoveryForget(Xid xid) throws XAException {
+		RemoteCoordinator compensableCoordinator = this.beanFactory.getCompensableCoordinator();
+		RemoteCoordinator transactionCoordinator = this.beanFactory.getTransactionCoordinator();
+
+		int formatId = xid.getFormatId();
+		if (XidFactory.JTA_FORMAT_ID == formatId) {
+			transactionCoordinator.recoveryForget(xid);
+		} else if (XidFactory.TCC_FORMAT_ID == formatId) {
+			compensableCoordinator.recoveryForget(xid);
+		} else {
+			throw new XAException(XAException.XAER_INVAL);
+		}
+	}
+
 	public String getIdentifier() {
 		throw new IllegalStateException();
 	}

@@ -55,6 +55,10 @@
 		<property name="transactionArchiveDeserializer" ref="bytetccTransactionArchiveDeserializer" />
 	</bean>
 
+	<bean id="bytetccCleanupWork" class="org.bytesoft.bytetcc.work.CleanupWork" init-method="initialize">
+		<property name="directory" value="bytetcc" />
+	</bean>
+
 	<bean id="bytetccBeanFactory" class="org.bytesoft.bytetcc.TransactionBeanFactoryImpl">
 		<property name="transactionManager" ref="bytejtaTransactionManager" />
 		<property name="compensableManager" ref="bytetccCompensableManager" />
@@ -71,6 +75,7 @@
 		<property name="compensableLogger" ref="bytetccTransactionLogger" />
 		<property name="archiveDeserializer" ref="bytetccArchiveDeserializer" />
 		<property name="resourceDeserializer" ref="bytetccResourceDeserializer" />
+		<property name="localResourceCleaner" ref="bytetccCleanupWork" />
 	</bean>
 
 </beans>

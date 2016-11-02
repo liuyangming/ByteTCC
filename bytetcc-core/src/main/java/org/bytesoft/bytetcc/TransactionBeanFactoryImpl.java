@@ -16,6 +16,7 @@
 package org.bytesoft.bytetcc;
 
 import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
+import org.bytesoft.bytetcc.supports.resource.LocalResourceCleaner;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableManager;
 import org.bytesoft.compensable.ContainerContext;
@@ -45,6 +46,7 @@ public final class TransactionBeanFactoryImpl implements CompensableBeanFactory 
 	private ContainerContext containerContext;
 	private ArchiveDeserializer archiveDeserializer;
 	private XAResourceDeserializer resourceDeserializer;
+	private LocalResourceCleaner localResourceCleaner;
 
 	public TransactionManager getTransactionManager() {
 		return transactionManager;
@@ -164,6 +166,14 @@ public final class TransactionBeanFactoryImpl implements CompensableBeanFactory 
 
 	public void setResourceDeserializer(XAResourceDeserializer resourceDeserializer) {
 		this.resourceDeserializer = resourceDeserializer;
+	}
+
+	public LocalResourceCleaner getLocalResourceCleaner() {
+		return localResourceCleaner;
+	}
+
+	public void setLocalResourceCleaner(LocalResourceCleaner localResourceCleaner) {
+		this.localResourceCleaner = localResourceCleaner;
 	}
 
 }

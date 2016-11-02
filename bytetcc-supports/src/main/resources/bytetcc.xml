@@ -17,10 +17,16 @@
 	<bean id="compensableBeanRegistry" class="org.bytesoft.bytetcc.supports.dubbo.CompensableBeanRegistry"
 		factory-method="getInstance" />
 
-	<bean id="compensableWork" class="org.bytesoft.bytetcc.work.CompensableWork" />
+	<bean id="compensableWork" class="org.bytesoft.bytetcc.work.CompensableWork" init-method="initialize" />
+
 	<bean id="compensableWorkManager" class="org.bytesoft.transaction.work.SimpleWorkManager" />
 	<bean id="compensableResourceAdapter" class="org.bytesoft.transaction.adapter.ResourceAdapterImpl">
-		<property name="transactionWork" ref="compensableWork" />
+		<property name="workList">
+			<list>
+				<ref bean="compensableWork" />
+				<ref bean="bytetccCleanupWork" />
+			</list>
+		</property>
 	</bean>
 	<bean id="resourceAdapter" class="org.springframework.jca.support.ResourceAdapterFactoryBean">
 		<property name="workManager" ref="compensableWorkManager" />

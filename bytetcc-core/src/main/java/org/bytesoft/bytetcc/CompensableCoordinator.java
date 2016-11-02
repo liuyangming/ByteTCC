@@ -72,8 +72,7 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 		transaction.setBeanFactory(this.beanFactory);
 
 		compensableLogger.createTransaction(transaction.getTransactionArchive());
-		logger.info("{}| compensable transaction begin!",
-				ByteUtils.byteArrayToString(globalXid.getGlobalTransactionId()));
+		logger.info("{}| compensable transaction begin!", ByteUtils.byteArrayToString(globalXid.getGlobalTransactionId()));
 
 		compensableManager.associateThread(transaction);
 		compensableRepository.putTransaction(globalXid, transaction);
@@ -152,12 +151,44 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 
 		boolean success = true;
 		try {
+			transaction.forget();
+			TransactionArchive archive = transaction.getTransactionArchive();
+			transactionLogger.deleteTransaction(archive);
+
+			logger.info("{}| compensable transaction forgot!", ByteUtils.byteArrayToString(xid.getGlobalTransactionId()));
+		} catch (SystemException ex) {
+			success = false;
+			throw new XAException(XAException.XAER_RMERR);
+		} catch (RuntimeException rex) {
+			success = false;
+			throw new XAException(XAException.XAER_RMERR);
+		} finally {
+			if (success) {
+				compensableRepository.removeErrorTransaction(globalXid);
+			}
+		}
+	}
+
+	public void recoveryForget(Xid xid) throws XAException {
+		if (xid == null) {
+			throw new XAException(XAException.XAER_INVAL);
+		}
+		TransactionRepository compensableRepository = this.beanFactory.getCompensableRepository();
+		CompensableLogger transactionLogger = this.beanFactory.getCompensableLogger();
+		XidFactory xidFactory = this.beanFactory.getCompensableXidFactory();
+		TransactionXid globalXid = xidFactory.createGlobalXid(xid.getGlobalTransactionId());
+		CompensableTransaction transaction = (CompensableTransaction) compensableRepository.getTransaction(globalXid);
+		if (transaction == null) {
+			throw new XAException(XAException.XAER_NOTA);
+		}
+
+		boolean success = true;
+		try {
 			transaction.recoveryForget();
 			TransactionArchive archive = transaction.getTransactionArchive();
 			transactionLogger.deleteTransaction(archive);
 
-			logger.info("{}| compensable transaction forgot!",
-					ByteUtils.byteArrayToString(xid.getGlobalTransactionId()));
+			logger.info("{}| compensable transaction forgot!", ByteUtils.byteArrayToString(xid.getGlobalTransactionId()));
 		} catch (SystemException ex) {
 			success = false;
 			throw new XAException(XAException.XAER_RMERR);

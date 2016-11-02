@@ -16,6 +16,7 @@
 package org.bytesoft.compensable;
 
 import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
+import org.bytesoft.bytetcc.supports.resource.LocalResourceCleaner;
 import org.bytesoft.compensable.logging.CompensableLogger;
 import org.bytesoft.transaction.TransactionManager;
 import org.bytesoft.transaction.TransactionRecovery;
@@ -56,5 +57,7 @@ public interface CompensableBeanFactory {
 	public ArchiveDeserializer getArchiveDeserializer();
 
 	public XAResourceDeserializer getResourceDeserializer();
+
+	public LocalResourceCleaner getLocalResourceCleaner();
 
 }
