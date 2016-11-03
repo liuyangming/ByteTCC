@@ -42,12 +42,13 @@ import org.bytesoft.bytetcc.supports.resource.LocalResourceCleaner;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.archive.CompensableArchive;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
+import org.bytesoft.compensable.aware.CompensableEndpointAware;
 import org.bytesoft.transaction.supports.serialize.XAResourceDeserializer;
 import org.bytesoft.transaction.xa.XidFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class CleanupWork implements Work, LocalResourceCleaner, CompensableBeanFactoryAware {
+public class CleanupWork implements Work, LocalResourceCleaner, CompensableEndpointAware, CompensableBeanFactoryAware {
 	static final Logger logger = LoggerFactory.getLogger(CompensableWork.class);
 	static final byte[] IDENTIFIER = "org.bytesoft.bytetcc.resource.cleanup".getBytes();
 
@@ -67,6 +68,7 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableBeanF
 	private Lock lock = new ReentrantLock();
 	private Condition condition = this.lock.newCondition();
 
+	private String endpoint;
 	private int sizeOfRaf = -1;
 	private int endIndex = CONSTANTS_START_INDEX;
 	private File directory;
@@ -76,6 +78,12 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableBeanF
 	private final List<Record> recordList = new ArrayList<Record>();
 
 	public void initialize() {
+		if (this.directory == null) {
+			String address = StringUtils.trimToEmpty(this.endpoint);
+			String dirName = address.replaceAll("\\:|\\.", "_");
+			this.directory = new File(String.format("bytetcc/%s", dirName));
+		}
+
 		if (this.directory.exists() == false) {
 			if (this.directory.mkdirs() == false) {
 				throw new RuntimeException();
@@ -425,8 +433,17 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableBeanF
 		String compensableKey = archive.getCompensableResourceKey();
 		Xid compensableXid = archive.getCompensableXid();
 
-		this.forget(transactionXid, transactionKey);
-		this.forget(compensableXid, compensableKey);
+		try {
+			this.forget(transactionXid, transactionKey);
+		} catch (RuntimeException rex) {
+			logger.error("forget-transaction: error occurred while forgetting branch: {}", transactionXid, rex);
+		}
+
+		try {
+			this.forget(compensableXid, compensableKey);
+		} catch (RuntimeException rex) {
+			logger.error("forget-transaction: error occurred while forgetting branch: {}", compensableXid, rex);
+		}
 	}
 
 	public void forget(Xid xid, String resourceId) throws RuntimeException {
@@ -461,6 +478,10 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableBeanF
 
 	protected boolean currentActive() {
 		return this.stopTimeMillis <= 0 || System.currentTimeMillis() < this.stopTimeMillis;
+	}
+
+	public void setEndpoint(String identifier) {
+		this.endpoint = identifier;
 	}
 
 	public long getDelayOfStoping() {

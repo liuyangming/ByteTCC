@@ -15,6 +15,7 @@
  */
 package org.bytesoft.compensable.archive;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -22,6 +23,7 @@ public class TransactionArchive extends org.bytesoft.transaction.archive.Transac
 
 	private int compensableStatus; // active, committing, committed, rollingback, rolledback
 	private boolean compensable;
+	private Serializable variable;
 	private final List<CompensableArchive> compensableResourceList = new ArrayList<CompensableArchive>();
 
 	public int getCompensableStatus() {
@@ -42,6 +44,14 @@ public class TransactionArchive extends org.bytesoft.transaction.archive.Transac
 
 	public void setCompensable(boolean compensable) {
 		this.compensable = compensable;
+	}
+
+	public Serializable getVariable() {
+		return variable;
+	}
+
+	public void setVariable(Serializable variable) {
+		this.variable = variable;
 	}
 
 }

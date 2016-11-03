@@ -13,23 +13,13 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this distribution; if not, see <http://www.gnu.org/licenses/>.
  */
-package org.bytesoft.compensable;
+package org.bytesoft.bytetcc.supports.spring.aware;
 
-import org.bytesoft.compensable.archive.CompensableArchive;
-import org.bytesoft.compensable.archive.TransactionArchive;
-import org.bytesoft.transaction.Transaction;
-import org.bytesoft.transaction.supports.TransactionListener;
-import org.bytesoft.transaction.supports.TransactionResourceListener;
+import org.bytesoft.compensable.CompensableContext;
 
-public interface CompensableTransaction
-		extends Transaction, CompensableContext, TransactionListener, TransactionResourceListener {
+public interface CompensableContextAware {
+	public static final String COMPENSABLE_CONTEXT_FIELD_NAME = "compensableContext";
 
-	public Transaction getTransaction();
-
-	public CompensableArchive getCompensableArchive();
-
-	public TransactionArchive getTransactionArchive();
-
-	public void registerCompensable(CompensableInvocation invocation);
+	public void setCompensableContext(CompensableContext aware);
 
 }

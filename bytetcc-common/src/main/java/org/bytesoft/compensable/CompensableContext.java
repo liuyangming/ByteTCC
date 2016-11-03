@@ -15,21 +15,12 @@
  */
 package org.bytesoft.compensable;
 
-import org.bytesoft.compensable.archive.CompensableArchive;
-import org.bytesoft.compensable.archive.TransactionArchive;
-import org.bytesoft.transaction.Transaction;
-import org.bytesoft.transaction.supports.TransactionListener;
-import org.bytesoft.transaction.supports.TransactionResourceListener;
+import java.io.Serializable;
 
-public interface CompensableTransaction
-		extends Transaction, CompensableContext, TransactionListener, TransactionResourceListener {
+public interface CompensableContext {
 
-	public Transaction getTransaction();
+	public Serializable getVariable() throws IllegalStateException;
 
-	public CompensableArchive getCompensableArchive();
-
-	public TransactionArchive getTransactionArchive();
-
-	public void registerCompensable(CompensableInvocation invocation);
+	public void setVariable(Serializable variable) throws IllegalStateException;
 
 }

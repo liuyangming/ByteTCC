@@ -13,23 +13,10 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this distribution; if not, see <http://www.gnu.org/licenses/>.
  */
-package org.bytesoft.compensable;
+package org.bytesoft.compensable.aware;
 
-import org.bytesoft.compensable.archive.CompensableArchive;
-import org.bytesoft.compensable.archive.TransactionArchive;
-import org.bytesoft.transaction.Transaction;
-import org.bytesoft.transaction.supports.TransactionListener;
-import org.bytesoft.transaction.supports.TransactionResourceListener;
+public interface CompensableEndpointAware {
+	public static final String ENDPOINT_FIELD_NAME = "endpoint";
 
-public interface CompensableTransaction
-		extends Transaction, CompensableContext, TransactionListener, TransactionResourceListener {
-
-	public Transaction getTransaction();
-
-	public CompensableArchive getCompensableArchive();
-
-	public TransactionArchive getTransactionArchive();
-
-	public void registerCompensable(CompensableInvocation invocation);
-
+	public void setEndpoint(String identifier);
 }

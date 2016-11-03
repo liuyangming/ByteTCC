@@ -15,6 +15,7 @@
  */
 package org.bytesoft.bytetcc;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -65,6 +66,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 	private Transaction transaction;
 	private CompensableBeanFactory beanFactory;
 
+	private Serializable variable;
 	private int transactionVote;
 	private int transactionStatus = Status.STATUS_ACTIVE;
 	/* current comensable-decision in confirm/cancel phase. */
@@ -83,6 +85,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 
 	public TransactionArchive getTransactionArchive() {
 		TransactionArchive transactionArchive = new TransactionArchive();
+		transactionArchive.setVariable(this.variable);
 		transactionArchive.setCoordinator(this.transactionContext.isCoordinator());
 		transactionArchive.setCompensable(this.transactionContext.isCompensable());
 		transactionArchive.setCompensableStatus(this.transactionStatus);
@@ -139,7 +142,8 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 					byte[] branchQualifier = current.getTransactionXid().getBranchQualifier();
 					logger.error(
 							"{}| error occurred while confirming service: {}, please check whether the params of method(compensable-service) supports serialization.",
-							ByteUtils.byteArrayToString(globalTransactionId), ByteUtils.byteArrayToString(branchQualifier));
+							ByteUtils.byteArrayToString(globalTransactionId),
+							ByteUtils.byteArrayToString(branchQualifier));
 				} else {
 					container.confirm(invocation);
 				}
@@ -176,7 +180,8 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 				current.setCompleted(true);
 				transactionLogger.updateCoordinator(current);
 
-				logger.info("{}| confirm remote branch: {}", ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()),
+				logger.info("{}| confirm remote branch: {}",
+						ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()),
 						current.getDescriptor().getIdentifier());
 			} catch (XAException ex) {
 				switch (ex.errorCode) {
@@ -295,7 +300,8 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 					byte[] branchQualifier = current.getTransactionXid().getBranchQualifier();
 					logger.error(
 							"{}| error occurred while cancelling service: {}, please check whether the params of method(compensable-service) supports serialization.",
-							ByteUtils.byteArrayToString(globalTransactionId), ByteUtils.byteArrayToString(branchQualifier));
+							ByteUtils.byteArrayToString(globalTransactionId),
+							ByteUtils.byteArrayToString(branchQualifier));
 				} else {
 					container.cancel(invocation);
 				}
@@ -332,7 +338,8 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 				current.setCompleted(true);
 				transactionLogger.updateCoordinator(current);
 
-				logger.info("{}| cancel remote branch: {}", ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()),
+				logger.info("{}| cancel remote branch: {}",
+						ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()),
 						current.getDescriptor().getIdentifier());
 			} catch (XAException ex) {
 				success = false;
@@ -374,8 +381,8 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 			resourceArchive.setXid(branchXid);
 			resourceArchive.setDescriptor(descriptor);
 			this.resourceList.add(resourceArchive);
-			logger.info("{}| enlist remote resource: {}.", ByteUtils.byteArrayToString(globalXid.getGlobalTransactionId()),
-					identifier);
+			logger.info("{}| enlist remote resource: {}.",
+					ByteUtils.byteArrayToString(globalXid.getGlobalTransactionId()), identifier);
 		}
 
 		return true;
@@ -416,7 +423,8 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 
 	}
 
-	public void registerSynchronization(Synchronization sync) throws RollbackException, IllegalStateException, SystemException {
+	public void registerSynchronization(Synchronization sync)
+			throws RollbackException, IllegalStateException, SystemException {
 	}
 
 	public void registerTransactionListener(TransactionListener listener) {
@@ -915,7 +923,8 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 				resourceCleaner.forget(current);
 			} catch (RuntimeException rex) {
 				success = false;
-				logger.error("forget-transaction: error occurred while forgetting compensable archive: {}", current, rex);
+				logger.error("forget-transaction: error occurred while forgetting compensable archive: {}", current,
+						rex);
 			}
 		}
 
@@ -1099,6 +1108,14 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 
 	public void setTransactionVote(int transactionVote) {
 		this.transactionVote = transactionVote;
+	}
+
+	public Serializable getVariable() {
+		return variable;
+	}
+
+	public void setVariable(Serializable variable) {
+		this.variable = variable;
 	}
 
 }

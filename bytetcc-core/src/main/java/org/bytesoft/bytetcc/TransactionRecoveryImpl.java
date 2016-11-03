@@ -130,6 +130,7 @@ public class TransactionRecoveryImpl
 		transaction.setBeanFactory(this.beanFactory);
 		transaction.setTransactionVote(archive.getVote());
 		transaction.setTransactionStatus(archive.getCompensableStatus());
+		transaction.setVariable(archive.getVariable());
 
 		List<XAResourceArchive> participantList = archive.getRemoteResources();
 		for (int i = 0; i < participantList.size(); i++) {

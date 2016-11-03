@@ -39,6 +39,7 @@ public class CompensableConfigPostProcessor implements BeanFactoryPostProcessor 
 		String applicationBeanId = null;
 		String registryBeanId = null;
 		String transactionBeanId = null;
+		String compensableBeanId = null;
 
 		for (int i = 0; i < beanNameArray.length; i++) {
 			String beanName = beanNameArray[i];
@@ -65,6 +66,13 @@ public class CompensableConfigPostProcessor implements BeanFactoryPostProcessor 
 					throw new FatalBeanException(
 							"There is more than one org.bytesoft.bytetcc.supports.dubbo.CompensableBeanRegistry was found!");
 				}
+			} else if (org.bytesoft.bytetcc.CompensableCoordinator.class.getName().equals(beanClassName)) {
+				if (StringUtils.isBlank(compensableBeanId)) {
+					compensableBeanId = beanName;
+				} else {
+					throw new FatalBeanException(
+							"There is more than one org.bytesoft.bytetcc.CompensableCoordinator was found!");
+				}
 			}
 		}
 
@@ -80,7 +88,10 @@ public class CompensableConfigPostProcessor implements BeanFactoryPostProcessor 
 			throw new FatalBeanException("No application name was found!");
 		}
 
-		if (StringUtils.isBlank(transactionBeanId)) {
+		if (StringUtils.isBlank(compensableBeanId)) {
+			throw new FatalBeanException(
+					"No configuration of class org.bytesoft.bytetcc.CompensableCoordinator was found.");
+		} else if (StringUtils.isBlank(transactionBeanId)) {
 			throw new FatalBeanException(
 					"No configuration of class org.bytesoft.bytetcc.TransactionCoordinator was found.");
 		} else if (registryBeanId == null) {

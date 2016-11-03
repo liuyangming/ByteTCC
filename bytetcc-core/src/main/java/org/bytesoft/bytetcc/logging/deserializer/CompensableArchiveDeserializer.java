@@ -32,7 +32,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class CompensableArchiveDeserializer implements ArchiveDeserializer, CompensableBeanFactoryAware {
-	static final Logger logger = LoggerFactory.getLogger(CommonUtils.class);
+	static final Logger logger = LoggerFactory.getLogger(CompensableArchiveDeserializer.class);
 	static final int LENGTH_OF_XID = XidFactory.GLOBAL_TRANSACTION_LENGTH + XidFactory.BRANCH_QUALIFIER_LENGTH;
 
 	private CompensableBeanFactory beanFactory;
