@@ -146,8 +146,13 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 							"{}| error occurred while confirming service: {}, please check whether the params of method(compensable-service) supports serialization.",
 							ByteUtils.byteArrayToString(globalTransactionId),
 							ByteUtils.byteArrayToString(branchQualifier));
-				} else {
+				} else if (StringUtils.isNotBlank(invocation.getConfirmableKey())) {
 					container.confirm(invocation);
+				} else {
+					current.setConfirmed(true);
+					logger.info("{}| confirm: identifier= {}, resourceKey= {}, resourceXid= {}.",
+							ByteUtils.byteArrayToString(transactionContext.getXid().getGlobalTransactionId()),
+							current.getIdentifier(), current.getCompensableResourceKey(), current.getCompensableXid());
 				}
 			} catch (RuntimeException rex) {
 				success = false;
@@ -302,8 +307,13 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 							"{}| error occurred while cancelling service: {}, please check whether the params of method(compensable-service) supports serialization.",
 							ByteUtils.byteArrayToString(globalTransactionId),
 							ByteUtils.byteArrayToString(branchQualifier));
-				} else {
+				} else if (StringUtils.isNotBlank(invocation.getCancellableKey())) {
 					container.cancel(invocation);
+				} else {
+					this.archive.setCancelled(true);
+					logger.info("{}| cancel: identifier= {}, resourceKey= {}, resourceXid= {}.",
+							ByteUtils.byteArrayToString(transactionContext.getXid().getGlobalTransactionId()),
+							current.getIdentifier(), current.getCompensableResourceKey(), current.getCompensableXid());
 				}
 			} catch (RuntimeException rex) {
 				success = false;
@@ -596,8 +606,13 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 				CompensableInvocation invocation = current.getCompensable();
 				if (invocation == null) {
 					throw new IllegalArgumentException();
-				} else {
+				} else if (StringUtils.isNotBlank(invocation.getConfirmableKey())) {
 					container.confirm(invocation);
+				} else {
+					current.setConfirmed(true);
+					logger.info("{}| confirm: identifier= {}, resourceKey= {}, resourceXid= {}.",
+							ByteUtils.byteArrayToString(transactionContext.getXid().getGlobalTransactionId()),
+							current.getIdentifier(), current.getCompensableResourceKey(), current.getCompensableXid());
 				}
 			} catch (IllegalArgumentException rex) {
 				success = false;
@@ -820,8 +835,13 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 				CompensableInvocation invocation = current.getCompensable();
 				if (invocation == null) {
 					throw new IllegalArgumentException();
-				} else {
+				} else if (StringUtils.isNotBlank(invocation.getCancellableKey())) {
 					container.cancel(invocation);
+				} else {
+					this.archive.setCancelled(true);
+					logger.info("{}| cancel: identifier= {}, resourceKey= {}, resourceXid= {}.",
+							ByteUtils.byteArrayToString(transactionContext.getXid().getGlobalTransactionId()),
+							current.getIdentifier(), current.getCompensableResourceKey(), current.getCompensableXid());
 				}
 			} catch (IllegalArgumentException rex) {
 				success = false;
