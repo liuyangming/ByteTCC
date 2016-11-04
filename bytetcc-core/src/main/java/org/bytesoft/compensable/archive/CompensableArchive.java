@@ -17,6 +17,7 @@ package org.bytesoft.compensable.archive;
 
 import javax.transaction.xa.Xid;
 
+import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.common.utils.CommonUtils;
 import org.bytesoft.compensable.CompensableInvocation;
 
@@ -39,9 +40,11 @@ public class CompensableArchive {
 	private boolean cancelled;
 
 	public String toString() {
+		String key = (this.identifier == null || this.identifier.getGlobalTransactionId() == null) ? null
+				: ByteUtils.byteArrayToString(this.identifier.getGlobalTransactionId());
 		return String.format(
-				"[compensable-archive| transactionKey= %s, transactionXid= %s, compensableKey= %s, compensableXid= %s, confirmed= %s, cancelled= %s]",
-				this.transactionResourceKey, this.transactionXid, this.compensableResourceKey, this.compensableXid,
+				"[compensable-archive| identifier= %s, transactionKey= %s, transactionXid= %s, compensableKey= %s, compensableXid= %s, confirmed= %s, cancelled= %s]",
+				key, this.transactionResourceKey, this.transactionXid, this.compensableResourceKey, this.compensableXid,
 				this.confirmed, this.cancelled);
 	}
 
