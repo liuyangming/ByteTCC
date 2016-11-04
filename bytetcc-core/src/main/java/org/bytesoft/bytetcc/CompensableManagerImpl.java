@@ -417,6 +417,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 
 		this.desociateThread();
 		this.invokeCompensableCommit(transaction);
+
 	}
 
 	protected void invokeCompensableCommit(CompensableTransaction compensable)
@@ -447,27 +448,30 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 			errorExists = true;
 		} finally {
 			compensable.setTransactionalExtra(null);
+		}
 
-			boolean success = false;
-			try {
-				if (errorExists) {
-					this.fireCompensableRollback(compensable);
-				} else if (commitExists) {
-					this.fireCompensableCommit(compensable);
-				} else if (rollbackExists) {
-					this.fireCompensableRollback(compensable);
-					throw new HeuristicRollbackException();
-				}
+		boolean success = false;
+		try {
+			if (errorExists) {
+				this.fireCompensableRollback(compensable);
+				compensable.forget(); // forget transaction
+			} else if (commitExists) {
+				this.fireCompensableCommit(compensable);
+				compensable.forget(); // forget transaction
+			} else if (rollbackExists) {
+				this.fireCompensableRollback(compensable);
+				compensable.forget(); // forget transaction
 				success = true;
-			} finally {
-				TransactionXid xid = compensableContext.getXid();
-				if (success) {
-					compensableRepository.removeTransaction(xid);
-				} else {
-					compensableRepository.putErrorTransaction(xid, compensable);
-				}
+				throw new HeuristicRollbackException();
 			}
-
+			success = true;
+		} finally {
+			TransactionXid xid = compensableContext.getXid();
+			if (success) {
+				compensableRepository.removeTransaction(xid);
+			} else {
+				compensableRepository.putErrorTransaction(xid, compensable);
+			}
 		}
 
 	}
@@ -537,6 +541,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 
 		this.desociateThread();
 		this.invokeCompensableRollback(transaction);
+
 	}
 
 	protected void invokeCompensableRollback(CompensableTransaction compensable)
@@ -549,20 +554,22 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 		TransactionContext compensableContext = compensable.getTransactionContext();
 		TransactionContext transactionContext = transaction.getTransactionContext();
 
-		boolean success = false;
 		try {
 			TransactionXid transactionXid = transactionContext.getXid();
 			transactionCoordinator.end(transactionContext, XAResource.TMSUCCESS);
 			transactionCoordinator.rollback(transactionXid);
-			success = true;
 		} catch (XAException ex) {
-			this.fireCompensableRollback(compensable);
-			success = true;
+			logger.error("Error occurred while rolling back transaction in try phase!", ex);
 		} finally {
 			compensable.setTransactionalExtra(null);
+		}
 
+		boolean success = false;
+		try {
 			this.fireCompensableRollback(compensable);
-
+			compensable.forget(); // forget transaction
+			success = true;
+		} finally {
 			TransactionXid xid = compensableContext.getXid();
 			if (success) {
 				compensableRepository.removeTransaction(xid);

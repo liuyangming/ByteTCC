@@ -40,7 +40,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.bytesoft.bytejta.supports.jdbc.RecoveredResource;
 import org.bytesoft.bytetcc.supports.resource.LocalResourceCleaner;
 import org.bytesoft.compensable.CompensableBeanFactory;
-import org.bytesoft.compensable.archive.CompensableArchive;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 import org.bytesoft.compensable.aware.CompensableEndpointAware;
 import org.bytesoft.transaction.supports.serialize.XAResourceDeserializer;
@@ -55,9 +54,9 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableEndpo
 	static final long SECOND_MILLIS = 1000L;
 
 	static final int CONSTANTS_START_INDEX = IDENTIFIER.length + 2 + 4 + 4;
-	static final int CONSTANTS_RES_ID_MAX_SIZE = 32;
-	static final int CONSTANTS_RECORD_SIZE = CONSTANTS_RES_ID_MAX_SIZE * 2 + XidFactory.GLOBAL_TRANSACTION_LENGTH
-			+ XidFactory.GLOBAL_TRANSACTION_LENGTH * 2 + XidFactory.BRANCH_QUALIFIER_LENGTH * 2;
+	static final int CONSTANTS_RES_ID_MAX_SIZE = 23;
+	static final int CONSTANTS_RECORD_SIZE = CONSTANTS_RES_ID_MAX_SIZE + XidFactory.GLOBAL_TRANSACTION_LENGTH
+			+ XidFactory.BRANCH_QUALIFIER_LENGTH;
 
 	static final String CONSTANTS_RESOURCE_NAME = "resource.log";
 
@@ -210,63 +209,32 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableEndpo
 		}
 	}
 
-	public void forget(CompensableArchive archive) throws RuntimeException {
-		Xid identifier = archive.getIdentifier();
-		byte[] identifierGlobalTransactionId = identifier == null ? new byte[XidFactory.GLOBAL_TRANSACTION_LENGTH]
-				: identifier.getGlobalTransactionId();
+	public void forget(Xid xid, String resourceId) throws RuntimeException {
+		byte[] globalTransactionId = xid.getGlobalTransactionId();
+		byte[] branchQualifier = xid.getBranchQualifier();
+		byte[] keyByteArray = resourceId.getBytes();
 
-		Xid transactionXid = archive.getTransactionXid();
-		byte[] transactionGlobalTransactionId = transactionXid == null ? new byte[XidFactory.GLOBAL_TRANSACTION_LENGTH]
-				: transactionXid.getGlobalTransactionId();
-		byte[] transactionBranchQualifier = transactionXid == null ? new byte[XidFactory.BRANCH_QUALIFIER_LENGTH]
-				: transactionXid.getBranchQualifier();
-		String transactionKey = archive.getTransactionResourceKey();
-		byte[] transactionByteArray = transactionKey == null ? new byte[0] : transactionKey.getBytes();
-
-		Xid compensableXid = archive.getCompensableXid();
-		byte[] compensableGlobalTransactionId = compensableXid == null ? new byte[XidFactory.GLOBAL_TRANSACTION_LENGTH]
-				: compensableXid.getGlobalTransactionId();
-		byte[] compensableBranchQualifier = compensableXid == null ? new byte[XidFactory.BRANCH_QUALIFIER_LENGTH]
-				: compensableXid.getBranchQualifier();
-		String compensableKey = archive.getCompensableResourceKey();
-		byte[] compensableByteArray = compensableKey == null ? new byte[0] : compensableKey.getBytes();
-
-		byte sizeOfTransactionKey = (byte) transactionByteArray.length;
-		byte sizeOfCompensableKey = (byte) compensableByteArray.length;
-
-		if (sizeOfTransactionKey > CONSTANTS_RES_ID_MAX_SIZE) {
+		byte sizeOfkeyByteArray = (byte) keyByteArray.length;
+		if (sizeOfkeyByteArray > CONSTANTS_RES_ID_MAX_SIZE) {
 			throw new IllegalStateException("The resource name is too long!");
 		}
 
-		if (sizeOfCompensableKey > CONSTANTS_RES_ID_MAX_SIZE) {
-			throw new IllegalStateException("The resource name is too long!");
-		}
-
-		byte[] transactionKeyByteArray = new byte[CONSTANTS_RES_ID_MAX_SIZE];
-		byte[] compensableKeyByteArray = new byte[CONSTANTS_RES_ID_MAX_SIZE];
-
-		System.arraycopy(transactionByteArray, 0, transactionKeyByteArray, 0, transactionByteArray.length);
-		System.arraycopy(compensableByteArray, 0, compensableKeyByteArray, 0, compensableByteArray.length);
+		byte[] resourceByteArray = new byte[CONSTANTS_RES_ID_MAX_SIZE];
+		System.arraycopy(keyByteArray, 0, resourceByteArray, 0, keyByteArray.length);
 
 		ByteBuffer buffer = ByteBuffer.allocate(1 + CONSTANTS_RECORD_SIZE);
 		buffer.put((byte) 0x1);
 
-		buffer.put(identifierGlobalTransactionId);
-
-		buffer.put(transactionGlobalTransactionId);
-		buffer.put(transactionBranchQualifier);
-		buffer.put(transactionKeyByteArray);
-
-		buffer.put(compensableGlobalTransactionId);
-		buffer.put(compensableBranchQualifier);
-		buffer.put(compensableKeyByteArray);
+		buffer.put(globalTransactionId);
+		buffer.put(branchQualifier);
+		buffer.put(resourceByteArray);
 
 		buffer.flip();
 
-		this.invokeForget(archive, buffer);
+		this.invokeForget(xid, resourceId, buffer);
 	}
 
-	private void invokeForget(CompensableArchive archive, ByteBuffer buffer) throws IllegalStateException {
+	private void invokeForget(Xid xid, String resource, ByteBuffer buffer) throws IllegalStateException {
 		try {
 			this.lock.lock();
 
@@ -295,8 +263,9 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableEndpo
 			this.header.putInt(position);
 
 			Record record = new Record();
+			record.resource = resource;
+			record.xid = xid;
 			record.startIndex = current;
-			record.archive = archive;
 			this.recordList.add(record);
 
 			this.condition.signalAll();
@@ -327,23 +296,24 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableEndpo
 
 			for (int i = 0; i < selectedRecordList.size(); i++) {
 				Record record = selectedRecordList.get(i);
-				int startIndex = record.startIndex;
-				CompensableArchive archive = record.archive;
 				try {
-					this.cleanup(archive);
+					this.cleanup(record.xid, record.resource);
 				} catch (RuntimeException rex) {
+					logger.error("forget-transaction: error occurred while forgetting branch: {}", record.xid, rex);
+
 					try {
 						this.lock.lock();
 						this.recordList.add(record);
 					} finally {
 						this.lock.unlock();
 					}
+
 				}
 
 				try {
 					this.lock.lock();
 
-					this.channel.position(startIndex);
+					this.channel.position(record.startIndex);
 					ByteBuffer buffer = ByteBuffer.allocate(1);
 					buffer.put((byte) 0x0);
 					this.channel.write(buffer);
@@ -427,26 +397,7 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableEndpo
 		return position;
 	}
 
-	private void cleanup(CompensableArchive archive) {
-		String transactionKey = archive.getTransactionResourceKey();
-		Xid transactionXid = archive.getTransactionXid();
-		String compensableKey = archive.getCompensableResourceKey();
-		Xid compensableXid = archive.getCompensableXid();
-
-		try {
-			this.forget(transactionXid, transactionKey);
-		} catch (RuntimeException rex) {
-			logger.error("forget-transaction: error occurred while forgetting branch: {}", transactionXid, rex);
-		}
-
-		try {
-			this.forget(compensableXid, compensableKey);
-		} catch (RuntimeException rex) {
-			logger.error("forget-transaction: error occurred while forgetting branch: {}", compensableXid, rex);
-		}
-	}
-
-	public void forget(Xid xid, String resourceId) throws RuntimeException {
+	private void cleanup(Xid xid, String resourceId) throws RuntimeException {
 		XAResourceDeserializer resourceDeserializer = this.beanFactory.getResourceDeserializer();
 		if (StringUtils.isNotBlank(resourceId)) {
 			RecoveredResource resource = (RecoveredResource) resourceDeserializer.deserialize(resourceId);
@@ -506,7 +457,8 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableEndpo
 
 	public static class Record {
 		public int startIndex;
-		public CompensableArchive archive;
+		public Xid xid;
+		public String resource;
 	}
 
 }

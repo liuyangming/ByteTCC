@@ -49,8 +49,7 @@ import org.bytesoft.transaction.xa.XidFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class TransactionRecoveryImpl
-		implements TransactionRecovery, TransactionRecoveryListener, CompensableBeanFactoryAware {
+public class TransactionRecoveryImpl implements TransactionRecovery, TransactionRecoveryListener, CompensableBeanFactoryAware {
 	static final Logger logger = LoggerFactory.getLogger(TransactionRecoveryImpl.class);
 
 	private CompensableBeanFactory beanFactory;
@@ -240,7 +239,6 @@ public class TransactionRecoveryImpl
 			TransactionXid xid = transactionContext.getXid();
 			try {
 				this.recoverTransaction(transaction);
-				transaction.recoveryForget();
 			} catch (CommitRequiredException ex) {
 				logger.debug("[{}] recover: branch={}, message= commit-required",
 						ByteUtils.byteArrayToString(xid.getGlobalTransactionId()),
@@ -252,18 +250,16 @@ public class TransactionRecoveryImpl
 						ByteUtils.byteArrayToString(xid.getBranchQualifier()));
 				continue;
 			} catch (SystemException ex) {
-				logger.debug("[{}] recover: branch={}, message= {}",
-						ByteUtils.byteArrayToString(xid.getGlobalTransactionId()),
+				logger.debug("[{}] recover: branch={}, message= {}", ByteUtils.byteArrayToString(xid.getGlobalTransactionId()),
 						ByteUtils.byteArrayToString(xid.getBranchQualifier()), ex.getMessage());
 				continue;
 			} catch (RuntimeException ex) {
-				logger.debug("[{}] recover: branch={}, message= {}",
-						ByteUtils.byteArrayToString(xid.getGlobalTransactionId()),
+				logger.debug("[{}] recover: branch={}, message= {}", ByteUtils.byteArrayToString(xid.getGlobalTransactionId()),
 						ByteUtils.byteArrayToString(xid.getBranchQualifier()), ex.getMessage());
 				continue;
 			}
 		}
-		logger.info("[transaction-recovery] total= {}, success= {}", total, value);
+		logger.debug("[transaction-recovery] total= {}, success= {}", total, value);
 	}
 
 	public synchronized void recoverTransaction(Transaction transaction)
@@ -292,10 +288,12 @@ public class TransactionRecoveryImpl
 		case Status.STATUS_ROLLING_BACK:
 		case Status.STATUS_UNKNOWN:
 			transaction.recoveryRollback();
+			transaction.recoveryForget();
 			break;
 		case Status.STATUS_PREPARED:
 		case Status.STATUS_COMMITTING:
 			transaction.recoveryCommit();
+			transaction.recoveryForget();
 			break;
 		case Status.STATUS_COMMITTED:
 		case Status.STATUS_ROLLEDBACK:

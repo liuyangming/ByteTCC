@@ -17,12 +17,8 @@ package org.bytesoft.bytetcc.supports.resource;
 
 import javax.transaction.xa.Xid;
 
-import org.bytesoft.compensable.archive.CompensableArchive;
-
 public interface LocalResourceCleaner {
 
 	public void forget(Xid xid, String resourceId) throws RuntimeException;
-
-	public void forget(CompensableArchive archive) throws RuntimeException;
 
 }
