@@ -67,6 +67,9 @@ ByteTCC不要求service的实现逻辑具有幂等性。事实上，ByteTCC也�
 * 1、精简TCC事务管理器的处理逻辑；
 * 2、新增对dubbo框架的支持。
 
+#### 0.3.0-SNAPSHOT样例
+* 地址： https://github.com/liuyangming/ByteTCC-sample
+
 ## 九、已发布的历史版本
 ##### 0.1.2
 * 地址：http://code.google.com/p/bytetcc
