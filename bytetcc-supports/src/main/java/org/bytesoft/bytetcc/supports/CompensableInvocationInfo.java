@@ -54,11 +54,29 @@ public class CompensableInvocationInfo implements Serializable {
 		Class<?>[] parameterTypes = new Class<?>[this.parameterTypeArray == null ? 0 : this.parameterTypeArray.length];
 		for (int i = 0; this.parameterTypeArray != null && i < this.parameterTypeArray.length; i++) {
 			String className = this.parameterTypeArray[i];
-			try {
-				parameterTypes[i] = Class.forName(className, false, classLoader); // classLoader.loadClass(className);
-			} catch (ClassNotFoundException ex) {
-				logger.error("Error occurred while loading class: {}", className, ex);
-				return that;
+			if (Double.TYPE.getName().equals(className)) {
+				parameterTypes[i] = Double.TYPE;
+			} else if (Long.TYPE.getName().equals(className)) {
+				parameterTypes[i] = Long.TYPE;
+			} else if (Integer.TYPE.getName().equals(className)) {
+				parameterTypes[i] = Integer.TYPE;
+			} else if (Float.TYPE.getName().equals(className)) {
+				parameterTypes[i] = Float.TYPE;
+			} else if (Short.TYPE.getName().equals(className)) {
+				parameterTypes[i] = Short.TYPE;
+			} else if (Character.TYPE.getName().equals(className)) {
+				parameterTypes[i] = Character.TYPE;
+			} else if (Boolean.TYPE.getName().equals(className)) {
+				parameterTypes[i] = Boolean.TYPE;
+			} else if (Byte.TYPE.getName().equals(className)) {
+				parameterTypes[i] = Byte.TYPE;
+			} else {
+				try {
+					parameterTypes[i] = Class.forName(className, false, classLoader); // classLoader.loadClass(className);
+				} catch (ClassNotFoundException ex) {
+					logger.error("Error occurred while loading class: {}", className, ex);
+					return that;
+				}
 			}
 		}
 
