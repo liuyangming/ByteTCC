@@ -23,7 +23,7 @@ import org.bytesoft.compensable.CompensableManager;
 import org.bytesoft.compensable.CompensableTransaction;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 
-public class CompensableContextRegistry implements CompensableContext, CompensableBeanFactoryAware {
+public class CompensableContextImpl implements CompensableContext, CompensableBeanFactoryAware {
 	private CompensableBeanFactory beanFactory;
 
 	public Serializable getVariable() {

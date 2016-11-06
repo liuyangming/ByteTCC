@@ -58,7 +58,7 @@
 	</bean>
 
 	<bean id="bytetccCleanupWork" class="org.bytesoft.bytetcc.work.CleanupWork" init-method="initialize" />
-	<bean id="bytetccCompensableContextRegistry" class="org.bytesoft.bytetcc.supports.CompensableContextRegistry" />
+	<bean id="bytetccCompensableContext" class="org.bytesoft.bytetcc.supports.CompensableContextImpl" />
 
 	<bean id="bytetccBeanFactory" class="org.bytesoft.bytetcc.TransactionBeanFactoryImpl">
 		<property name="transactionManager" ref="bytejtaTransactionManager" />
@@ -77,7 +77,7 @@
 		<property name="archiveDeserializer" ref="bytetccArchiveDeserializer" />
 		<property name="resourceDeserializer" ref="bytetccResourceDeserializer" />
 		<property name="localResourceCleaner" ref="bytetccCleanupWork" />
-		<property name="compensableContextRegistry" ref="bytetccCompensableContextRegistry" />
+		<property name="compensableContext" ref="bytetccCompensableContext" />
 	</bean>
 
 </beans>

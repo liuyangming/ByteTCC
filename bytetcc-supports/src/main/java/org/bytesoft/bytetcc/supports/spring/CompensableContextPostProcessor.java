@@ -18,9 +18,9 @@ package org.bytesoft.bytetcc.supports.spring;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.bytesoft.bytetcc.supports.CompensableContextRegistry;
 import org.bytesoft.bytetcc.supports.spring.aware.CompensableContextAware;
 import org.bytesoft.compensable.CompensableBeanFactory;
+import org.bytesoft.compensable.CompensableContext;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.FatalBeanException;
@@ -36,8 +36,8 @@ public class CompensableContextPostProcessor implements BeanPostProcessor, Compe
 	public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
 		if (CompensableContextAware.class.isInstance(bean)) {
 			CompensableContextAware aware = (CompensableContextAware) bean;
-			CompensableContextRegistry registry = this.beanFactory.getCompensableContextRegistry();
-			aware.setCompensableContext(registry);
+			CompensableContext compensableContext = this.beanFactory.getCompensableContext();
+			aware.setCompensableContext(compensableContext);
 		}
 		return bean;
 	}
@@ -68,11 +68,11 @@ public class CompensableContextPostProcessor implements BeanPostProcessor, Compe
 				beanDefList.add(beanDef);
 			}
 
-			if (CompensableContextRegistry.class.isAssignableFrom(beanClass)) {
+			if (CompensableContext.class.isAssignableFrom(beanClass)) {
 				if (targetBeanId == null) {
 					targetBeanId = beanName;
 				} else {
-					throw new FatalBeanException("Duplicated compensable-bean-factory defined.");
+					throw new FatalBeanException("Duplicated compensable-context defined.");
 				}
 			}
 
