@@ -17,7 +17,9 @@ package org.bytesoft.bytetcc.logging.deserializer;
 
 import java.io.Serializable;
 import java.nio.ByteBuffer;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.common.utils.CommonUtils;
@@ -46,17 +48,17 @@ public class TransactionArchiveDeserializer extends
 		int remoteArchiveNumber = remoteArchiveList.size();
 
 		byte[] varByteArray = null;
-		if (archive.getVariable() == null) {
+		if (archive.getVariables() == null) {
 			varByteArray = ByteUtils.shortToByteArray((short) 0);
 		} else {
 			try {
-				byte[] textByteArray = CommonUtils.serializeObject(archive.getVariable());
+				byte[] textByteArray = CommonUtils.serializeObject((Serializable) archive.getVariables());
 				byte[] sizeByteArray = ByteUtils.shortToByteArray((short) textByteArray.length);
 				varByteArray = new byte[sizeByteArray.length + textByteArray.length];
 				System.arraycopy(sizeByteArray, 0, varByteArray, 0, sizeByteArray.length);
 				System.arraycopy(textByteArray, 0, varByteArray, sizeByteArray.length, textByteArray.length);
 			} catch (Exception ex) {
-				logger.error("Error occurred while serializing variable: {}", archive.getVariable());
+				logger.error("Error occurred while serializing variable: {}", archive.getVariables());
 				varByteArray = ByteUtils.shortToByteArray((short) 0);
 			}
 		}
@@ -122,6 +124,7 @@ public class TransactionArchiveDeserializer extends
 		return byteArray;
 	}
 
+	@SuppressWarnings("unchecked")
 	public Object deserialize(TransactionXid xid, byte[] array) {
 
 		ByteBuffer buffer = ByteBuffer.wrap(array);
@@ -146,12 +149,15 @@ public class TransactionArchiveDeserializer extends
 			byte[] varByteArray = new byte[sizeOfVar];
 			buffer.get(varByteArray);
 
+			Map<String, Serializable> variables = null;
 			try {
-				Serializable variable = (Serializable) CommonUtils.deserializeObject(varByteArray);
-				archive.setVariable(variable);
+				variables = (Map<String, Serializable>) CommonUtils.deserializeObject(varByteArray);
 			} catch (Exception ex) {
+				variables = new HashMap<String, Serializable>();
 				logger.error("Error occurred while deserializing object: {}", varByteArray);
 			}
+
+			archive.setVariables(variables);
 		}
 
 		int nativeArchiveNumber = buffer.get();

@@ -26,7 +26,7 @@ import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 public class CompensableContextImpl implements CompensableContext, CompensableBeanFactoryAware {
 	private CompensableBeanFactory beanFactory;
 
-	public Serializable getVariable() {
+	public Serializable getVariable(String key) {
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 		if (compensableManager == null) {
 			throw new IllegalStateException("org.bytesoft.compensable.CompensableManager is undefined!");
@@ -35,10 +35,10 @@ public class CompensableContextImpl implements CompensableContext, CompensableBe
 		if (compensable == null) {
 			throw new IllegalStateException("There is no active compensable transaction!");
 		}
-		return compensable.getVariable();
+		return compensable.getVariable(key);
 	}
 
-	public void setVariable(Serializable variable) {
+	public void setVariable(String key, Serializable variable) {
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 		if (compensableManager == null) {
 			throw new IllegalStateException("org.bytesoft.compensable.CompensableManager is undefined!");
@@ -49,7 +49,7 @@ public class CompensableContextImpl implements CompensableContext, CompensableBe
 		} else if (compensable.getTransactionContext().isCompensating()) {
 			throw new IllegalStateException("CompensableContext.setVariable(String) is forbidden in compensable phase!");
 		}
-		compensable.setVariable(variable);
+		compensable.setVariable(key, variable);
 	}
 
 	public CompensableBeanFactory getBeanFactory() {

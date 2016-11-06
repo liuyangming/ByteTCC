@@ -17,13 +17,15 @@ package org.bytesoft.compensable.archive;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class TransactionArchive extends org.bytesoft.transaction.archive.TransactionArchive {
 
 	private int compensableStatus; // active, committing, committed, rollingback, rolledback
 	private boolean compensable;
-	private Serializable variable;
+	private Map<String, Serializable> variables = new HashMap<String, Serializable>();
 	private final List<CompensableArchive> compensableResourceList = new ArrayList<CompensableArchive>();
 
 	public int getCompensableStatus() {
@@ -46,12 +48,12 @@ public class TransactionArchive extends org.bytesoft.transaction.archive.Transac
 		this.compensable = compensable;
 	}
 
-	public Serializable getVariable() {
-		return variable;
+	public Map<String, Serializable> getVariables() {
+		return variables;
 	}
 
-	public void setVariable(Serializable variable) {
-		this.variable = variable;
+	public void setVariables(Map<String, Serializable> variables) {
+		this.variables = variables;
 	}
 
 }
