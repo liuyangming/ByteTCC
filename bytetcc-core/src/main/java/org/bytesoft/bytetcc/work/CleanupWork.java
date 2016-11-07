@@ -62,13 +62,11 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableEndpo
 
 	static final String CONSTANTS_RESOURCE_NAME = "resource.log";
 
-	private long stopTimeMillis = -1;
-	private long delayOfStoping = SECOND_MILLIS * 5;
-
 	private CompensableBeanFactory beanFactory;
 	private Lock lock = new ReentrantLock();
 	private Condition condition = this.lock.newCondition();
 
+	private boolean released = false;
 	private String endpoint;
 	private int sizeOfRaf = -1;
 	private int endIndex = CONSTANTS_START_INDEX;
@@ -284,7 +282,7 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableEndpo
 	}
 
 	public void run() {
-		while (this.currentActive()) {
+		while (this.released == false) {
 			if (this.recordMap.isEmpty()) {
 				this.waitForMillis(10L);
 				continue;
@@ -449,23 +447,11 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableEndpo
 	}
 
 	public void release() {
-		this.stopTimeMillis = System.currentTimeMillis() + this.delayOfStoping;
-	}
-
-	protected boolean currentActive() {
-		return this.stopTimeMillis <= 0 || System.currentTimeMillis() < this.stopTimeMillis;
+		this.released = true;
 	}
 
 	public void setEndpoint(String identifier) {
 		this.endpoint = identifier;
-	}
-
-	public long getDelayOfStoping() {
-		return delayOfStoping;
-	}
-
-	public void setDelayOfStoping(long delayOfStoping) {
-		this.delayOfStoping = delayOfStoping;
 	}
 
 	public void setBeanFactory(CompensableBeanFactory tbf) {

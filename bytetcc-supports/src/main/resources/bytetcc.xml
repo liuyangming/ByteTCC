@@ -21,6 +21,7 @@
 		<property name="workList">
 			<list>
 				<ref bean="compensableWork" />
+				<ref bean="bytetccCompensableLogger" />
 				<ref bean="bytetccCleanupWork" />
 			</list>
 		</property>
