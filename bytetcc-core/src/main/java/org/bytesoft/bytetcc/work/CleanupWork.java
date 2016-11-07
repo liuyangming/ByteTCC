@@ -26,8 +26,10 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.FileChannel.MapMode;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -74,7 +76,7 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableEndpo
 	private RandomAccessFile raf;
 	private FileChannel channel;
 	private MappedByteBuffer header;
-	private final List<Record> recordList = new ArrayList<Record>();
+	private final Map<String, List<Record>> recordMap = new HashMap<String, List<Record>>();
 
 	public void initialize() {
 		if (this.directory == null) {
@@ -266,7 +268,14 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableEndpo
 			record.resource = resource;
 			record.xid = xid;
 			record.startIndex = current;
-			this.recordList.add(record);
+			// this.recordList.add(record);
+
+			List<Record> recordList = this.recordMap.get(record.resource);
+			if (recordList == null) {
+				recordList = new ArrayList<Record>();
+				this.recordMap.put(record.resource, recordList);
+			}
+			recordList.add(record);
 
 			this.condition.signalAll();
 		} finally {
@@ -276,54 +285,66 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableEndpo
 
 	public void run() {
 		while (this.currentActive()) {
-			if (this.recordList.isEmpty()) {
+			if (this.recordMap.isEmpty()) {
 				this.waitForMillis(10L);
 				continue;
 			}
 
+			String selectedResourceId = null;
 			List<Record> selectedRecordList = new ArrayList<Record>();
 			try {
 				this.lock.lock();
-				Iterator<Record> itr = this.recordList.iterator();
-				for (int i = 0; i < 10 && itr.hasNext(); i++) {
-					Record record = itr.next();
-					selectedRecordList.add(record);
-					itr.remove();
+				Iterator<Map.Entry<String, List<Record>>> itr = this.recordMap.entrySet().iterator();
+				while (selectedRecordList.isEmpty() && itr.hasNext()) {
+					Map.Entry<String, List<Record>> entry = itr.next();
+					List<Record> recordList = entry.getValue();
+					if (recordList != null && recordList.isEmpty() == false) {
+						selectedResourceId = entry.getKey();
+						selectedRecordList.addAll(recordList);
+						recordList.clear(); // clear
+					}
 				}
 			} finally {
 				this.lock.unlock();
 			}
 
+			List<Xid> selectedXidList = new ArrayList<Xid>();
 			for (int i = 0; i < selectedRecordList.size(); i++) {
 				Record record = selectedRecordList.get(i);
-				try {
-					this.cleanup(record.xid, record.resource);
-				} catch (RuntimeException rex) {
-					logger.error("forget-transaction: error occurred while forgetting branch: resource= {}, xid= {}",
-							record.resource, record.xid, rex);
+				selectedXidList.add(record.xid);
+			}
 
-					try {
-						this.lock.lock();
-						this.recordList.add(record);
-					} finally {
-						this.lock.unlock();
-					}
-
-				}
+			try {
+				this.cleanup(selectedResourceId, selectedXidList);
+			} catch (RuntimeException rex) {
+				logger.error("forget-transaction: error occurred while forgetting branch: resource= {}, xids= {}",
+						selectedResourceId, selectedXidList, rex);
 
 				try {
 					this.lock.lock();
-
-					this.channel.position(record.startIndex);
-					ByteBuffer buffer = ByteBuffer.allocate(1);
-					buffer.put((byte) 0x0);
-					this.channel.write(buffer);
-				} catch (IOException ex) {
-					this.recordList.add(record);
+					List<Record> recordList = this.recordMap.get(selectedResourceId);
+					recordList.addAll(selectedRecordList);
 				} finally {
 					this.lock.unlock();
 				}
 
+				continue;
+			}
+
+			for (int i = 0; i < selectedRecordList.size(); i++) {
+				Record record = selectedRecordList.get(i);
+				try {
+					this.lock.lock();
+					this.channel.position(record.startIndex);
+					ByteBuffer buffer = ByteBuffer.allocate(1);
+					buffer.put((byte) 0x0);
+					this.channel.write(buffer);
+				} catch (Exception ex) {
+					List<Record> recordList = this.recordMap.get(selectedResourceId);
+					recordList.add(record);
+				} finally {
+					this.lock.unlock();
+				}
 			}
 
 			this.compress();
@@ -398,12 +419,14 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableEndpo
 		return position;
 	}
 
-	private void cleanup(Xid xid, String resourceId) throws RuntimeException {
+	private void cleanup(String resourceId, List<Xid> xidList) throws RuntimeException {
 		XAResourceDeserializer resourceDeserializer = this.beanFactory.getResourceDeserializer();
 		if (StringUtils.isNotBlank(resourceId)) {
+			Xid[] xidArray = new Xid[xidList.size()];
+			xidList.toArray(xidArray);
 			RecoveredResource resource = (RecoveredResource) resourceDeserializer.deserialize(resourceId);
 			try {
-				resource.forget(xid);
+				resource.forget(xidArray);
 			} catch (XAException xaex) {
 				switch (xaex.errorCode) {
 				case XAException.XAER_NOTA:
@@ -414,6 +437,7 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableEndpo
 				}
 			}
 		}
+
 	}
 
 	private void waitForMillis(long millis) {
