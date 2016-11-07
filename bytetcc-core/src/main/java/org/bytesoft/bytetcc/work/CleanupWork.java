@@ -299,7 +299,8 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableEndpo
 				try {
 					this.cleanup(record.xid, record.resource);
 				} catch (RuntimeException rex) {
-					logger.error("forget-transaction: error occurred while forgetting branch: {}", record.xid, rex);
+					logger.error("forget-transaction: error occurred while forgetting branch: resource= {}, xid= {}",
+							record.resource, record.xid, rex);
 
 					try {
 						this.lock.lock();

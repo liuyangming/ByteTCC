@@ -15,7 +15,10 @@
  */
 package org.bytesoft.bytetcc.supports.dubbo.validator;
 
+import java.lang.reflect.Method;
+
 import org.bytesoft.bytetcc.supports.dubbo.DubboConfigValidator;
+import org.bytesoft.compensable.RemotingException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
@@ -51,6 +54,42 @@ public class ReferenceConfigValidator implements DubboConfigValidator {
 			throw new FatalBeanException(
 					String.format("The value of attr 'filter'(beanId= %s) should be 'compensable'.", this.beanName));
 		}
+
+		PropertyValue pv = mpv.getPropertyValue("interface");
+		String clazzName = String.valueOf(pv.getValue());
+		ClassLoader cl = Thread.currentThread().getContextClassLoader();
+
+		Class<?> clazz = null;
+		try {
+			clazz = cl.loadClass(clazzName);
+		} catch (ClassNotFoundException ex) {
+			throw new FatalBeanException(String.format("Cannot load class %s.", clazzName));
+		}
+
+		Method[] methodArray = clazz.getMethods();
+		for (int i = 0; i < methodArray.length; i++) {
+			Method method = methodArray[i];
+			boolean declared = false;
+			Class<?>[] exceptionTypeArray = method.getExceptionTypes();
+			for (int j = 0; j < exceptionTypeArray.length; j++) {
+				Class<?> exceptionType = exceptionTypeArray[j];
+				if (RemotingException.class.isAssignableFrom(exceptionType)) {
+					declared = true;
+					break;
+				}
+			}
+
+			if (declared == false) {
+				// throw new FatalBeanException(String.format(
+				// "The remote call method(%s) must be declared to throw a remote exception:
+				// org.bytesoft.compensable.RemotingException!",
+				// method));
+				logger.warn("The remote call method({}) should be declared to throw a remote exception: {}!", method,
+						RemotingException.class.getName());
+			}
+
+		}
+
 	}
 
 	public String getBeanName() {

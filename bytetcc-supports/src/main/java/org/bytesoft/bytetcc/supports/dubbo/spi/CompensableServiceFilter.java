@@ -31,6 +31,7 @@ import org.bytesoft.bytetcc.supports.dubbo.CompensableBeanRegistry;
 import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableManager;
+import org.bytesoft.compensable.RemotingException;
 import org.bytesoft.transaction.Transaction;
 import org.bytesoft.transaction.TransactionContext;
 import org.bytesoft.transaction.supports.rpc.TransactionInterceptor;
@@ -50,7 +51,7 @@ import com.caucho.hessian.io.HessianOutput;
 public class CompensableServiceFilter implements Filter {
 	static final Logger logger = LoggerFactory.getLogger(CompensableServiceFilter.class);
 
-	public Result invoke(Invoker<?> invoker, Invocation invocation) throws RpcException {
+	public Result invoke(Invoker<?> invoker, Invocation invocation) throws RpcException, RemotingException {
 		if (RpcContext.getContext().isProviderSide()) {
 			return this.providerInvoke(invoker, invocation);
 		} else {
@@ -58,7 +59,7 @@ public class CompensableServiceFilter implements Filter {
 		}
 	}
 
-	public Result providerInvoke(Invoker<?> invoker, Invocation invocation) throws RpcException {
+	public Result providerInvoke(Invoker<?> invoker, Invocation invocation) throws RpcException, RemotingException {
 		RemoteCoordinatorRegistry remoteCoordinatorRegistry = RemoteCoordinatorRegistry.getInstance();
 		CompensableBeanRegistry beanRegistry = CompensableBeanRegistry.getInstance();
 		RemoteCoordinator consumeCoordinator = beanRegistry.getConsumeCoordinator();
@@ -93,11 +94,11 @@ public class CompensableServiceFilter implements Filter {
 		try {
 			this.beforeProviderInvoke(invocation, request, response);
 			result = invoker.invoke(invocation);
-		} catch (RpcException rex) {
+		} catch (RemotingException rex) {
 			throw rex;
 		} catch (RuntimeException rex) {
 			logger.error("Error occurred in remote call!", rex);
-			throw new RpcException(rex.getMessage());
+			throw new RemotingException(rex.getMessage());
 		} finally {
 			this.afterProviderInvoke(invocation, request, response);
 		}
@@ -110,7 +111,7 @@ public class CompensableServiceFilter implements Filter {
 		CompensableBeanFactory beanFactory = beanRegistry.getBeanFactory();
 		TransactionInterceptor transactionInterceptor = beanFactory.getTransactionInterceptor();
 
-		RpcException rpcError = null;
+		RemotingException rpcError = null;
 		// String transactionContextContent = RpcContext.getContext()
 		// .getAttachment(TransactionContext.class.getName());
 		String transactionContextContent = invocation.getAttachment(TransactionContext.class.getName());
@@ -123,7 +124,7 @@ public class CompensableServiceFilter implements Filter {
 				request.setTransactionContext(remoteTransactionContext);
 			} catch (IOException ex) {
 				logger.error("Error occurred in remote call!", ex);
-				rpcError = new RpcException(ex.getMessage());
+				rpcError = new RemotingException(ex.getMessage());
 			}
 		}
 
@@ -131,7 +132,7 @@ public class CompensableServiceFilter implements Filter {
 			transactionInterceptor.afterReceiveRequest(request);
 		} catch (RuntimeException rex) {
 			logger.error("Error occurred in remote call!", rex);
-			throw new RpcException(rex.getMessage());
+			throw new RemotingException(rex.getMessage());
 		}
 
 		if (rpcError != null) {
@@ -166,14 +167,14 @@ public class CompensableServiceFilter implements Filter {
 			}
 		} catch (IOException ex) {
 			logger.error("Error occurred in remote call!", ex);
-			throw new RpcException(ex.getMessage());
+			throw new RemotingException(ex.getMessage());
 		} catch (RuntimeException rex) {
 			logger.error("Error occurred in remote call!", rex);
-			throw new RpcException(rex.getMessage());
+			throw new RemotingException(rex.getMessage());
 		}
 	}
 
-	public Result consumerInvoke(Invoker<?> invoker, Invocation invocation) throws RpcException {
+	public Result consumerInvoke(Invoker<?> invoker, Invocation invocation) throws RpcException, RemotingException {
 		RemoteCoordinatorRegistry remoteCoordinatorRegistry = RemoteCoordinatorRegistry.getInstance();
 		CompensableBeanRegistry beanRegistry = CompensableBeanRegistry.getInstance();
 		CompensableBeanFactory beanFactory = beanRegistry.getBeanFactory();
@@ -213,11 +214,11 @@ public class CompensableServiceFilter implements Filter {
 		try {
 			this.beforeConsumerInvoke(invocation, request, response);
 			result = invoker.invoke(invocation);
-		} catch (RpcException rex) {
+		} catch (RemotingException rex) {
 			throw rex;
 		} catch (RuntimeException rex) {
 			logger.error("Error occurred in remote call!", rex);
-			throw new RpcException(rex.getMessage());
+			throw new RemotingException(rex.getMessage());
 		} finally {
 			this.afterConsumerInvoke(invocation, request, response);
 		}
@@ -239,7 +240,7 @@ public class CompensableServiceFilter implements Filter {
 				output.writeObject(request.getTransactionContext());
 			} catch (IOException ex) {
 				logger.error("Error occurred in remote call!", ex);
-				throw new RpcException(ex.getMessage());
+				throw new RemotingException(ex.getMessage());
 			}
 			String transactionContextContent = ByteUtils.byteArrayToString(baos.toByteArray());
 			// RpcContext.getContext().setAttachment(TransactionContext.class.getName(),
@@ -254,7 +255,7 @@ public class CompensableServiceFilter implements Filter {
 		CompensableBeanFactory beanFactory = beanRegistry.getBeanFactory();
 		TransactionInterceptor transactionInterceptor = beanFactory.getTransactionInterceptor();
 
-		RpcException rpcError = null;
+		RemotingException rpcError = null;
 		try {
 			if (request.getTransactionContext() != null) {
 				// String transactionContextContent = RpcContext.getContext()
@@ -268,14 +269,14 @@ public class CompensableServiceFilter implements Filter {
 			}
 		} catch (IOException ex) {
 			logger.error("Error occurred in remote call!", ex);
-			rpcError = new RpcException(ex.getMessage());
+			rpcError = new RemotingException(ex.getMessage());
 		}
 
 		try {
 			transactionInterceptor.afterReceiveResponse(response);
 		} catch (RuntimeException rex) {
 			logger.error("Error occurred in remote call!", rex);
-			throw new RpcException(rex.getMessage());
+			throw new RemotingException(rex.getMessage());
 		}
 
 		if (rpcError != null) {

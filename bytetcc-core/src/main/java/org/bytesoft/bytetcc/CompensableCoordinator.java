@@ -60,31 +60,35 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 	public Transaction start(TransactionContext transactionContext, int flags) throws TransactionException {
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
+		TransactionRepository compensableRepository = this.beanFactory.getCompensableRepository();
 
 		if (compensableManager.getTransactionQuietly() != null) {
 			throw new TransactionException(XAException.XAER_PROTO);
 		}
-		TransactionRepository compensableRepository = this.beanFactory.getCompensableRepository();
 		TransactionXid globalXid = transactionContext.getXid();
-		CompensableTransactionImpl transaction = new CompensableTransactionImpl(transactionContext);
-		transaction = new CompensableTransactionImpl(transactionContext);
-		transaction.setBeanFactory(this.beanFactory);
+		Transaction transaction = compensableRepository.getTransaction(globalXid);
+		if (transaction == null) {
+			transaction = new CompensableTransactionImpl(transactionContext);
+			transaction = new CompensableTransactionImpl(transactionContext);
+			((CompensableTransactionImpl) transaction).setBeanFactory(this.beanFactory);
 
-		compensableLogger.createTransaction(transaction.getTransactionArchive());
-		logger.info("{}| compensable transaction begin!",
-				ByteUtils.byteArrayToString(globalXid.getGlobalTransactionId()));
+			compensableRepository.putTransaction(globalXid, transaction);
+
+			compensableLogger.createTransaction(((CompensableTransactionImpl) transaction).getTransactionArchive());
+			logger.info("{}| compensable transaction begin!", ByteUtils.byteArrayToString(globalXid.getGlobalTransactionId()));
+		}
 
 		compensableManager.associateThread(transaction);
-		compensableRepository.putTransaction(globalXid, transaction);
 
 		return transaction;
 	}
 
 	public Transaction end(TransactionContext transactionContext, int flags) throws TransactionException {
-		CompensableManager transactionManager = this.beanFactory.getCompensableManager();
-		CompensableTransaction transaction = transactionManager.getCompensableTransactionQuietly();
+		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
+		CompensableTransaction transaction = compensableManager.getCompensableTransactionQuietly();
 		// clear CompensableTransactionImpl.transientArchiveList in CompensableTransactionImpl.onCommitSuccess().
 		// ((CompensableTransactionImpl) transaction).participantComplete();
+		compensableManager.desociateThread();
 		return transaction == null ? null : transaction.getTransaction();
 	}
 
@@ -232,6 +236,10 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 		TransactionXid branchXid = (TransactionXid) xid;
 		TransactionXid globalXid = xidFactory.createGlobalXid(branchXid.getGlobalTransactionId());
 		Transaction transaction = transactionRepository.getTransaction(globalXid);
+		if (transaction == null) {
+			throw new XAException(XAException.XAER_NOTA);
+		}
+
 		TransactionContext transactionContext = transaction.getTransactionContext();
 		if (transactionContext.isRecoveried()) {
 			this.recoveryCommitRecoveredTransaction(globalXid, onePhase);
@@ -240,9 +248,10 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 		}
 	}
 
-	public void recoveryCommitRecoveredTransaction(TransactionXid xid, boolean onePhase) throws XAException {
+	private void recoveryCommitRecoveredTransaction(TransactionXid xid, boolean onePhase) throws XAException {
 		TransactionRepository transactionRepository = beanFactory.getCompensableRepository();
 		Transaction transaction = transactionRepository.getTransaction(xid);
+
 		try {
 			transaction.recoveryRollback();
 		} catch (RollbackRequiredException rrex) {
@@ -266,9 +275,10 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 		}
 	}
 
-	public void recoveryCommitActiveTransaction(TransactionXid xid, boolean onePhase) throws XAException {
+	private void recoveryCommitActiveTransaction(TransactionXid xid, boolean onePhase) throws XAException {
 		TransactionRepository transactionRepository = beanFactory.getCompensableRepository();
 		Transaction transaction = transactionRepository.getTransaction(xid);
+
 		try {
 			transaction.recoveryCommit();
 		} catch (CommitRequiredException ex) {
@@ -302,6 +312,10 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 		TransactionXid globalXid = xidFactory.createGlobalXid(branchXid.getGlobalTransactionId());
 
 		Transaction transaction = transactionRepository.getTransaction(globalXid);
+		if (transaction == null) {
+			throw new XAException(XAException.XAER_NOTA);
+		}
+
 		TransactionContext transactionContext = transaction.getTransactionContext();
 		if (transactionContext.isRecoveried()) {
 			this.recoveryRollbackRecoveredTransaction(globalXid);
@@ -310,9 +324,10 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 		}
 	}
 
-	public void recoveryRollbackRecoveredTransaction(TransactionXid xid) throws XAException {
+	private void recoveryRollbackRecoveredTransaction(TransactionXid xid) throws XAException {
 		TransactionRepository transactionRepository = beanFactory.getCompensableRepository();
 		Transaction transaction = transactionRepository.getTransaction(xid);
+
 		try {
 			transaction.recoveryRollback();
 		} catch (RollbackRequiredException rrex) {
@@ -336,9 +351,10 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 		}
 	}
 
-	public void recoveryRollbackActiveTransaction(TransactionXid xid) throws XAException {
+	private void recoveryRollbackActiveTransaction(TransactionXid xid) throws XAException {
 		TransactionRepository transactionRepository = beanFactory.getCompensableRepository();
 		Transaction transaction = transactionRepository.getTransaction(xid);
+
 		try {
 			transaction.recoveryRollback();
 		} catch (RollbackRequiredException rrex) {

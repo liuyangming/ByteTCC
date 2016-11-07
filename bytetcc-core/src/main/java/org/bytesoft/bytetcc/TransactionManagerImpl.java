@@ -85,58 +85,10 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 
 	protected void beginInTryingPhaseForParticipant(CompensableTransaction compensable)
 			throws NotSupportedException, SystemException {
-		// RemoteCoordinator transactionCoordinator = this.beanFactory.getTransactionCoordinator();
-		//
-		// XidFactory transactionXidFactory = this.beanFactory.getTransactionXidFactory();
-		// TransactionContext compensableContext = compensable.getTransactionContext();
-		// TransactionXid compensableXid = compensableContext.getXid();
-		// TransactionXid transactionXid =
-		// transactionXidFactory.createGlobalXid(compensableXid.getGlobalTransactionId());
-		// TransactionContext transactionContext = compensableContext.clone();
-		// transactionContext.setXid(transactionXid);
-		// try {
-		// Transaction transaction = transactionCoordinator.start(transactionContext, XAResource.TMNOFLAGS);
-		// transaction.setTransactionalExtra(compensable);
-		// compensable.setTransactionalExtra(transaction);
-		//
-		// transaction.registerTransactionResourceListener(compensable);
-		// transaction.registerTransactionListener(compensable);
-		// } catch (TransactionException ex) {
-		// logger.info("[{}] begin-transaction: error occurred while starting jta-transaction: {}",
-		// ByteUtils.byteArrayToString(compensableXid.getGlobalTransactionId()),
-		// ByteUtils.byteArrayToString(transactionXid.getGlobalTransactionId()));
-		// throw new SystemException("Error occurred while beginning a jta-transaction!");
-		// }
-
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 		// this.beginInCompensatingPhase(compensable);
 		compensableManager.begin();
 	}
-
-	// private void beginInCompensatingPhase(CompensableTransaction compensable)
-	// throws NotSupportedException, SystemException {
-	// XidFactory transactionXidFactory = this.beanFactory.getTransactionXidFactory();
-	// RemoteCoordinator transactionCoordinator = this.beanFactory.getTransactionCoordinator();
-	//
-	// TransactionContext compensableContext = compensable.getTransactionContext();
-	// TransactionXid transactionXid = transactionXidFactory.createGlobalXid();
-	// TransactionContext transactionContext = compensableContext.clone();
-	// transactionContext.setXid(transactionXid);
-	// try {
-	// Transaction transaction = transactionCoordinator.start(transactionContext, XAResource.TMNOFLAGS);
-	// transaction.setTransactionalExtra(compensable);
-	// compensable.setTransactionalExtra(transaction);
-	//
-	// transaction.registerTransactionResourceListener(compensable);
-	// transaction.registerTransactionListener(compensable);
-	// } catch (TransactionException ex) {
-	// TransactionXid compensableXid = compensableContext.getXid();
-	// logger.info("[{}] begin-transaction: error occurred while starting jta-transaction: {}",
-	// ByteUtils.byteArrayToString(compensableXid.getGlobalTransactionId()),
-	// ByteUtils.byteArrayToString(transactionXid.getGlobalTransactionId()));
-	// throw new SystemException("Error occurred while beginning a jta-transaction!");
-	// }
-	// }
 
 	protected void beginInCompensatingPhaseForCoordinator() throws NotSupportedException, SystemException {
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
@@ -185,6 +137,8 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 			switch (xaex.errorCode) {
 			case XAException.XA_HEURCOM:
 				break;
+			case XAException.XAER_NOTA:
+				// throw new HeuristicRollbackException();
 			case XAException.XA_HEURRB:
 				throw new HeuristicRollbackException();
 			case XAException.XA_HEURMIX:
@@ -253,7 +207,12 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 			transactionCoordinator.end(transactionContext, XAResource.TMSUCCESS);
 			transactionCoordinator.recoveryRollback(transactionXid);
 		} catch (XAException xaex) {
-			throw new SystemException();
+			switch (xaex.errorCode) {
+			case XAException.XAER_NOTA:
+				break;
+			default:
+				throw new SystemException();
+			}
 		} finally {
 			compensable.setTransactionalExtra(null);
 		}

@@ -22,6 +22,7 @@ import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
 import org.bytesoft.compensable.Compensable;
+import org.bytesoft.compensable.RemotingException;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.FatalBeanException;
 import org.springframework.beans.factory.config.BeanDefinition;
@@ -67,6 +68,7 @@ public class CompensableAnnotationValidator implements BeanFactoryPostProcessor 
 				for (int j = 0; j < methodArray.length; j++) {
 					Method interfaceMethod = methodArray[j];
 					Method method = clazz.getMethod(interfaceMethod.getName(), interfaceMethod.getParameterTypes());
+					this.validateDeclaredRemotingException(method, clazz);
 					this.validateTransactionalPropagation(method, clazz);
 				}
 			} catch (IllegalStateException ex) {
@@ -92,7 +94,8 @@ public class CompensableAnnotationValidator implements BeanFactoryPostProcessor 
 				}
 				Class<?> clazz = otherServiceMap.get(confirmableKey);
 				if (clazz == null) {
-					throw new IllegalStateException(String.format("The confirm bean(id= %s) is not exists!", confirmableKey));
+					throw new IllegalStateException(
+							String.format("The confirm bean(id= %s) is not exists!", confirmableKey));
 				}
 
 				try {
@@ -100,6 +103,7 @@ public class CompensableAnnotationValidator implements BeanFactoryPostProcessor 
 					for (int j = 0; j < methodArray.length; j++) {
 						Method interfaceMethod = methodArray[j];
 						Method method = clazz.getMethod(interfaceMethod.getName(), interfaceMethod.getParameterTypes());
+						this.validateDeclaredRemotingException(method, clazz);
 						this.validateTransactionalPropagation(method, clazz);
 						this.validateTransactionalRollbackFor(method, clazz, confirmableKey);
 					}
@@ -119,7 +123,8 @@ public class CompensableAnnotationValidator implements BeanFactoryPostProcessor 
 				}
 				Class<?> clazz = otherServiceMap.get(cancellableKey);
 				if (clazz == null) {
-					throw new IllegalStateException(String.format("The cancel bean(id= %s) is not exists!", cancellableKey));
+					throw new IllegalStateException(
+							String.format("The cancel bean(id= %s) is not exists!", cancellableKey));
 				}
 
 				try {
@@ -127,6 +132,7 @@ public class CompensableAnnotationValidator implements BeanFactoryPostProcessor 
 					for (int j = 0; j < methodArray.length; j++) {
 						Method interfaceMethod = methodArray[j];
 						Method method = clazz.getMethod(interfaceMethod.getName(), interfaceMethod.getParameterTypes());
+						this.validateDeclaredRemotingException(method, clazz);
 						this.validateTransactionalPropagation(method, clazz);
 						this.validateTransactionalRollbackFor(method, clazz, cancellableKey);
 					}
@@ -142,6 +148,26 @@ public class CompensableAnnotationValidator implements BeanFactoryPostProcessor 
 		}
 	}
 
+	private void validateDeclaredRemotingException(Method method, Class<?> clazz) throws IllegalStateException {
+		Class<?>[] exceptionTypeArray = method.getExceptionTypes();
+
+		boolean located = false;
+		for (int i = 0; i < exceptionTypeArray.length; i++) {
+			Class<?> exceptionType = exceptionTypeArray[i];
+			if (RemotingException.class.isAssignableFrom(exceptionType)) {
+				located = true;
+				break;
+			}
+		}
+
+		if (located) {
+			throw new FatalBeanException(String.format(
+					"The method(%s) shouldn't be declared to throw a remote exception: org.bytesoft.compensable.RemotingException!",
+					method));
+		}
+
+	}
+
 	private void validateTransactionalPropagation(Method method, Class<?> clazz) throws IllegalStateException {
 		Transactional transactional = method.getAnnotation(Transactional.class);
 		if (transactional == null) {
@@ -150,7 +176,8 @@ public class CompensableAnnotationValidator implements BeanFactoryPostProcessor 
 		}
 
 		if (transactional == null) {
-			throw new IllegalStateException(String.format("Method(%s) must be specificed a Transactional annotation!", method));
+			throw new IllegalStateException(
+					String.format("Method(%s) must be specificed a Transactional annotation!", method));
 		}
 		Propagation propagation = transactional.propagation();
 		if (Propagation.REQUIRED.equals(propagation) == false //
@@ -161,7 +188,8 @@ public class CompensableAnnotationValidator implements BeanFactoryPostProcessor 
 		}
 	}
 
-	private void validateTransactionalRollbackFor(Method method, Class<?> clazz, String beanName) throws IllegalStateException {
+	private void validateTransactionalRollbackFor(Method method, Class<?> clazz, String beanName)
+			throws IllegalStateException {
 		Transactional transactional = method.getAnnotation(Transactional.class);
 		if (transactional == null) {
 			Class<?> declaringClass = method.getDeclaringClass();
@@ -169,7 +197,8 @@ public class CompensableAnnotationValidator implements BeanFactoryPostProcessor 
 		}
 
 		if (transactional == null) {
-			throw new IllegalStateException(String.format("Method(%s) must be specificed a Transactional annotation!", method));
+			throw new IllegalStateException(
+					String.format("Method(%s) must be specificed a Transactional annotation!", method));
 		}
 
 		String[] rollbackForClassNameArray = transactional.rollbackForClassName();
@@ -198,9 +227,9 @@ public class CompensableAnnotationValidator implements BeanFactoryPostProcessor 
 			}
 
 			if (matched == false) {
-				throw new IllegalStateException(
-						String.format("The value of Transactional.rollbackFor annotated on method(%s) must includes %s!",
-								method, errorType.getName()));
+				throw new IllegalStateException(String.format(
+						"The value of Transactional.rollbackFor annotated on method(%s) must includes %s!", method,
+						errorType.getName()));
 			}
 		}
 	}
