@@ -30,6 +30,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -54,6 +55,7 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableEndpo
 	static final byte[] IDENTIFIER = "org.bytesoft.bytetcc.resource.cleanup".getBytes();
 
 	static final long SECOND_MILLIS = 1000L;
+	static final int MAX_HANDLE_RECORDS = 200;
 
 	static final int CONSTANTS_START_INDEX = IDENTIFIER.length + 2 + 4 + 4;
 	static final int CONSTANTS_RES_ID_MAX_SIZE = 23;
@@ -281,47 +283,72 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableEndpo
 		}
 	}
 
+	private Selection select() {
+		Selection selection = new Selection();
+		Iterator<Map.Entry<String, List<Record>>> itr = this.recordMap.entrySet().iterator();
+		while (selection.records.isEmpty() && itr.hasNext()) {
+			Map.Entry<String, List<Record>> entry = itr.next();
+			List<Record> recordList = entry.getValue();
+			if (recordList != null && recordList.isEmpty() == false) {
+				selection.resource = entry.getKey();
+				if (recordList.size() > MAX_HANDLE_RECORDS) {
+					int index = 0;
+					for (Iterator<Record> recordItr = recordList.iterator(); index < MAX_HANDLE_RECORDS
+							&& recordItr.hasNext(); index++) {
+						Record record = recordItr.next();
+						selection.records.add(record);
+						recordItr.remove(); // remove
+					}
+				} else {
+					selection.records.addAll(recordList);
+					recordList.clear(); // clear
+				}
+				break;
+			}
+		}
+		return selection;
+	}
+
 	public void run() {
 		while (this.released == false) {
-			if (this.recordMap.isEmpty()) {
-				this.waitForMillis(10L);
-				continue;
-			}
-
-			String selectedResourceId = null;
-			List<Record> selectedRecordList = new ArrayList<Record>();
+			Selection selection = null;
 			try {
 				this.lock.lock();
-				Iterator<Map.Entry<String, List<Record>>> itr = this.recordMap.entrySet().iterator();
-				while (selectedRecordList.isEmpty() && itr.hasNext()) {
-					Map.Entry<String, List<Record>> entry = itr.next();
-					List<Record> recordList = entry.getValue();
-					if (recordList != null && recordList.isEmpty() == false) {
-						selectedResourceId = entry.getKey();
-						selectedRecordList.addAll(recordList);
-						recordList.clear(); // clear
+				for (long times = 0, start = System.currentTimeMillis(); times < 30
+						&& (System.currentTimeMillis() - start) < 30000;) {
+					long waitingMillis = 100;
+					long begin = System.currentTimeMillis();
+					try {
+						this.condition.await(waitingMillis, TimeUnit.MILLISECONDS);
+					} catch (InterruptedException ex) {
+						logger.debug(ex.getMessage());
 					}
+					times = ((System.currentTimeMillis() - begin) < (waitingMillis - 1)) ? times + 1 : times;
 				}
+				selection = this.select();
 			} finally {
 				this.lock.unlock();
 			}
 
+			int selectedSize = selection.records.size();
+			boolean compressRequired = selectedSize == 0;
+
 			List<Xid> selectedXidList = new ArrayList<Xid>();
-			for (int i = 0; i < selectedRecordList.size(); i++) {
-				Record record = selectedRecordList.get(i);
+			for (int i = 0; selection != null && i < selectedSize; i++) {
+				Record record = selection.records.get(i);
 				selectedXidList.add(record.xid);
 			}
 
 			try {
-				this.cleanup(selectedResourceId, selectedXidList);
+				this.cleanup(selection.resource, selectedXidList);
 			} catch (RuntimeException rex) {
 				logger.error("forget-transaction: error occurred while forgetting branch: resource= {}, xids= {}",
-						selectedResourceId, selectedXidList, rex);
+						selection.resource, selectedXidList, rex);
 
 				try {
 					this.lock.lock();
-					List<Record> recordList = this.recordMap.get(selectedResourceId);
-					recordList.addAll(selectedRecordList);
+					List<Record> recordList = this.recordMap.get(selection.resource);
+					recordList.addAll(selection.records);
 				} finally {
 					this.lock.unlock();
 				}
@@ -329,8 +356,8 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableEndpo
 				continue;
 			}
 
-			for (int i = 0; i < selectedRecordList.size(); i++) {
-				Record record = selectedRecordList.get(i);
+			for (int i = 0; selection != null && i < selectedSize; i++) {
+				Record record = selection.records.get(i);
 				try {
 					this.lock.lock();
 					this.channel.position(record.startIndex);
@@ -338,14 +365,17 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableEndpo
 					buffer.put((byte) 0x0);
 					this.channel.write(buffer);
 				} catch (Exception ex) {
-					List<Record> recordList = this.recordMap.get(selectedResourceId);
+					List<Record> recordList = this.recordMap.get(selection.resource);
 					recordList.add(record);
 				} finally {
 					this.lock.unlock();
 				}
 			}
 
-			this.compress();
+			if (compressRequired) {
+				this.compress();
+			}
+
 		} // end-while (this.currentActive())
 
 		this.destroy();
@@ -438,13 +468,13 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableEndpo
 
 	}
 
-	private void waitForMillis(long millis) {
-		try {
-			Thread.sleep(millis);
-		} catch (Exception ignore) {
-			logger.debug(ignore.getMessage(), ignore);
-		}
-	}
+	// private void waitForMillis(long millis) {
+	// try {
+	// Thread.sleep(millis);
+	// } catch (Exception ignore) {
+	// logger.debug(ignore.getMessage(), ignore);
+	// }
+	// }
 
 	public void release() {
 		this.released = true;
@@ -470,6 +500,11 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableEndpo
 		public int startIndex;
 		public Xid xid;
 		public String resource;
+	}
+
+	public static class Selection {
+		public String resource;
+		public List<Record> records = new ArrayList<Record>();
 	}
 
 }
