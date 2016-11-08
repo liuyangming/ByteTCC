@@ -138,6 +138,7 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableEndpo
 		this.checkStartIndex();
 		this.endIndex = this.checkEndIndex();
 
+		this.compress();
 	}
 
 	private void checkIdentifier() {
