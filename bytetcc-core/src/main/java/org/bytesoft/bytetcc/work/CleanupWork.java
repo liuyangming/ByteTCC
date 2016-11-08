@@ -330,11 +330,8 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableEndpo
 				this.lock.unlock();
 			}
 
-			int selectedSize = selection.records.size();
-			boolean compressRequired = selectedSize == 0;
-
 			List<Xid> selectedXidList = new ArrayList<Xid>();
-			for (int i = 0; selection != null && i < selectedSize; i++) {
+			for (int i = 0; selection != null && i < selection.records.size(); i++) {
 				Record record = selection.records.get(i);
 				selectedXidList.add(record.xid);
 			}
@@ -356,7 +353,7 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableEndpo
 				continue;
 			}
 
-			for (int i = 0; selection != null && i < selectedSize; i++) {
+			for (int i = 0; selection != null && i < selection.records.size(); i++) {
 				Record record = selection.records.get(i);
 				try {
 					this.lock.lock();
@@ -372,10 +369,7 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableEndpo
 				}
 			}
 
-			if (compressRequired) {
-				this.compress();
-			}
-
+			this.compress();
 		} // end-while (this.currentActive())
 
 		this.destroy();
@@ -389,9 +383,10 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableEndpo
 			this.lock.lock();
 			locked = true;
 			this.endIndex = position;
+
 		} catch (RuntimeException rex) {
-			File resourceFile = new File(this.directory, CONSTANTS_RESOURCE_NAME);
-			logger.error("Error occurred while compressing file {}.", resourceFile, rex);
+			logger.error("Error occurred while compressing file {}." //
+					, new File(this.directory, CONSTANTS_RESOURCE_NAME), rex);
 		} finally {
 			if (locked) {
 				this.lock.unlock();
