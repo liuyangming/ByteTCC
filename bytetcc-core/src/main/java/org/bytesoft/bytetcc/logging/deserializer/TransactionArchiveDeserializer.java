@@ -79,7 +79,7 @@ public class TransactionArchiveDeserializer extends
 			length = length + elementByteArray.length;
 		}
 
-		byte[][] remoteByteArray = new byte[nativeArchiveNumber][];
+		byte[][] remoteByteArray = new byte[remoteArchiveNumber][];
 		for (int i = 0; i < remoteArchiveNumber; i++) {
 			XAResourceArchive resourceArchive = remoteArchiveList.get(i);
 
