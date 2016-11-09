@@ -69,7 +69,6 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 		Transaction transaction = compensableRepository.getTransaction(globalXid);
 		if (transaction == null) {
 			transaction = new CompensableTransactionImpl(transactionContext);
-			transaction = new CompensableTransactionImpl(transactionContext);
 			((CompensableTransactionImpl) transaction).setBeanFactory(this.beanFactory);
 
 			compensableRepository.putTransaction(globalXid, transaction);
@@ -86,10 +85,15 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 	public Transaction end(TransactionContext transactionContext, int flags) throws TransactionException {
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 		CompensableTransaction transaction = compensableManager.getCompensableTransactionQuietly();
+		if (transaction == null) {
+			throw new TransactionException(XAException.XAER_PROTO);
+		}
+
 		// clear CompensableTransactionImpl.transientArchiveList in CompensableTransactionImpl.onCommitSuccess().
 		// ((CompensableTransactionImpl) transaction).participantComplete();
 		compensableManager.desociateThread();
-		return transaction == null ? null : transaction.getTransaction();
+
+		return transaction;
 	}
 
 	public void start(Xid xid, int flags) throws XAException {
@@ -253,24 +257,27 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 		Transaction transaction = transactionRepository.getTransaction(xid);
 
 		try {
-			transaction.recoveryRollback();
-		} catch (RollbackRequiredException rrex) {
-			logger.error("Error occurred while rolling back recovered transaction.", rrex);
-
-			XAException xaex = new XAException(XAException.XAER_RMERR);
-			xaex.initCause(rrex);
-			throw xaex;
-		} catch (SystemException ex) {
-			logger.error("Error occurred while rolling back recovered transaction.", ex);
+			transaction.recoveryCommit();
+		} catch (CommitRequiredException ex) {
+			logger.error("Error occurred while committing(recovery) recovered transaction.", ex);
+			transactionRepository.putErrorTransaction(xid, transaction);
 
 			XAException xaex = new XAException(XAException.XAER_RMERR);
 			xaex.initCause(ex);
 			throw xaex;
-		} catch (RuntimeException rrex) {
-			logger.error("Error occurred while rolling back recovered transaction.", rrex);
+		} catch (SystemException ex) {
+			logger.error("Error occurred while committing(recovery) recovered transaction.", ex);
+			transactionRepository.putErrorTransaction(xid, transaction);
 
 			XAException xaex = new XAException(XAException.XAER_RMERR);
-			xaex.initCause(rrex);
+			xaex.initCause(ex);
+			throw xaex;
+		} catch (RuntimeException ex) {
+			logger.error("Error occurred while committing(recovery) recovered transaction.", ex);
+			transactionRepository.putErrorTransaction(xid, transaction);
+
+			XAException xaex = new XAException(XAException.XAER_RMERR);
+			xaex.initCause(ex);
 			throw xaex;
 		}
 	}
@@ -331,19 +338,19 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 		try {
 			transaction.recoveryRollback();
 		} catch (RollbackRequiredException rrex) {
-			logger.error("Error occurred while rolling back recovered transaction.", rrex);
+			logger.error("Error occurred while rolling back(recovery) recovered transaction.", rrex);
 
 			XAException xaex = new XAException(XAException.XAER_RMERR);
 			xaex.initCause(rrex);
 			throw xaex;
 		} catch (SystemException ex) {
-			logger.error("Error occurred while rolling back recovered transaction.", ex);
+			logger.error("Error occurred while rolling back(recovery) recovered transaction.", ex);
 
 			XAException xaex = new XAException(XAException.XAER_RMERR);
 			xaex.initCause(ex);
 			throw xaex;
 		} catch (RuntimeException rrex) {
-			logger.error("Error occurred while rolling back recovered transaction.", rrex);
+			logger.error("Error occurred while rolling back(recovery) recovered transaction.", rrex);
 
 			XAException xaex = new XAException(XAException.XAER_RMERR);
 			xaex.initCause(rrex);

@@ -22,10 +22,7 @@ import javax.transaction.NotSupportedException;
 import javax.transaction.RollbackException;
 import javax.transaction.Status;
 import javax.transaction.SystemException;
-import javax.transaction.xa.XAException;
-import javax.transaction.xa.XAResource;
 
-import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableInvocation;
 import org.bytesoft.compensable.CompensableInvocationRegistry;
@@ -35,7 +32,6 @@ import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 import org.bytesoft.transaction.Transaction;
 import org.bytesoft.transaction.TransactionContext;
 import org.bytesoft.transaction.TransactionManager;
-import org.bytesoft.transaction.xa.TransactionXid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -86,81 +82,33 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 	protected void beginInTryingPhaseForParticipant(CompensableTransaction compensable)
 			throws NotSupportedException, SystemException {
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
-		// this.beginInCompensatingPhase(compensable);
 		compensableManager.begin();
 	}
 
 	protected void beginInCompensatingPhaseForCoordinator() throws NotSupportedException, SystemException {
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
-		// this.beginInCompensatingPhase(compensable);
 		compensableManager.begin();
 	}
 
 	protected void beginInCompensatingPhaseForParticipant() throws NotSupportedException, SystemException {
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
-		// this.beginInCompensatingPhase(compensable);
 		compensableManager.begin();
 	}
 
 	protected void beginInCompensatingPhaseForRecovery() throws NotSupportedException, SystemException {
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
-		// this.beginInCompensatingPhase(compensable);
 		compensableManager.begin();
 	}
 
 	public void commit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException,
 			SecurityException, IllegalStateException, SystemException {
-		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
-		Transaction compensable = compensableManager.getCompensableTransactionQuietly();
-
-		if (compensable != null && compensable.getTransactionContext().isRecoveried()) {
-			this.invokeCommitForRecovery();
-		} else {
-			this.invokeCommit();
-		}
-	}
-
-	public void invokeCommitForRecovery() throws RollbackException, HeuristicMixedException, HeuristicRollbackException,
-			SecurityException, IllegalStateException, SystemException {
 		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
+
 		Transaction transaction = transactionManager.getTransactionQuietly();
-		CompensableTransaction compensable = compensableManager.getCompensableTransactionQuietly();
-
-		RemoteCoordinator transactionCoordinator = this.beanFactory.getTransactionCoordinator();
-		TransactionContext transactionContext = transaction.getTransactionContext();
-		TransactionXid transactionXid = transactionContext.getXid();
-		try {
-			transactionCoordinator.end(transactionContext, XAResource.TMSUCCESS);
-			transactionCoordinator.recoveryCommit(transactionXid, true);
-		} catch (XAException xaex) {
-			switch (xaex.errorCode) {
-			case XAException.XA_HEURCOM:
-				break;
-			case XAException.XAER_NOTA:
-				// throw new HeuristicRollbackException();
-			case XAException.XA_HEURRB:
-				throw new HeuristicRollbackException();
-			case XAException.XA_HEURMIX:
-				throw new HeuristicMixedException();
-			case XAException.XAER_RMERR:
-			default:
-				throw new SystemException();
-			}
-		} finally {
-			compensable.setTransactionalExtra(null);
-		}
-	}
-
-	public void invokeCommit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException,
-			SecurityException, IllegalStateException, SystemException {
-		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
-		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
+		Transaction compensable = compensableManager.getCompensableTransactionQuietly();
 
 		TransactionContext compensableContext = null;
-		Transaction transaction = transactionManager.getTransactionQuietly();
-		Transaction compensable = compensableManager.getCompensableTransactionQuietly();
-
 		if (transaction == null && compensable == null) {
 			throw new IllegalStateException();
 		} else if (compensable == null) {
@@ -168,7 +116,13 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 		} else {
 			compensableContext = compensable.getTransactionContext();
 		}
-		if (compensableContext.isCompensable() == false) {
+
+		if (compensableContext.isRecoveried()) {
+			if (compensableContext.isCompensable() == false) {
+				throw new IllegalStateException();
+			}
+			compensableManager.commit();
+		} else if (compensableContext.isCompensable() == false) {
 			transactionManager.commit();
 		} else if (compensableContext.isCompensating()) {
 			compensableManager.commit();
@@ -181,62 +135,34 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 		} else {
 			compensableManager.commit();
 		}
+
 	}
 
 	public void rollback() throws IllegalStateException, SecurityException, SystemException {
-		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
-		Transaction compensable = compensableManager.getCompensableTransactionQuietly();
-
-		if (compensable != null && compensable.getTransactionContext().isRecoveried()) {
-			this.invokeRollbackForRecovery();
-		} else {
-			this.invokeRollback();
-		}
-	}
-
-	public void invokeRollbackForRecovery() throws IllegalStateException, SecurityException, SystemException {
-		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
-		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
-		Transaction transaction = transactionManager.getTransactionQuietly();
-		CompensableTransaction compensable = compensableManager.getCompensableTransactionQuietly();
-
-		RemoteCoordinator transactionCoordinator = this.beanFactory.getTransactionCoordinator();
-		TransactionContext transactionContext = transaction.getTransactionContext();
-		TransactionXid transactionXid = transactionContext.getXid();
-		try {
-			transactionCoordinator.end(transactionContext, XAResource.TMSUCCESS);
-			transactionCoordinator.recoveryRollback(transactionXid);
-		} catch (XAException xaex) {
-			switch (xaex.errorCode) {
-			case XAException.XAER_NOTA:
-				break;
-			default:
-				throw new SystemException();
-			}
-		} finally {
-			compensable.setTransactionalExtra(null);
-		}
-	}
-
-	public void invokeRollback() throws IllegalStateException, SecurityException, SystemException {
 		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 
-		TransactionContext transactionContext = null;
 		Transaction transaction = transactionManager.getTransactionQuietly();
 		Transaction compensable = compensableManager.getCompensableTransactionQuietly();
+
+		TransactionContext compensableContext = null;
 		if (transaction == null && compensable == null) {
 			throw new IllegalStateException();
 		} else if (compensable == null) {
-			transactionContext = transaction.getTransactionContext();
+			compensableContext = transaction.getTransactionContext();
 		} else {
-			transactionContext = compensable.getTransactionContext();
+			compensableContext = compensable.getTransactionContext();
 		}
 
-		if (transactionContext.isCompensable() == false) {
+		if (compensableContext.isRecoveried()) {
+			if (compensableContext.isCompensable() == false) {
+				throw new IllegalStateException();
+			}
+			compensableManager.rollback();
+		} else if (compensableContext.isCompensable() == false) {
 			transactionManager.rollback();
-		} else if (transactionContext.isCoordinator()) {
-			if (transactionContext.isPropagated()) {
+		} else if (compensableContext.isCoordinator()) {
+			if (compensableContext.isPropagated()) {
 				compensableManager.rollback();
 			} else {
 				compensableManager.compensableRollback();

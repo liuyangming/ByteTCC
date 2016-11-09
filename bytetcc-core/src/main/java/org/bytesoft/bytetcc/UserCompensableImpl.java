@@ -80,8 +80,8 @@ public class UserCompensableImpl implements UserCompensable, Referenceable, Seri
 		this.transactionManager.begin();
 	}
 
-	public void commit() throws HeuristicMixedException, HeuristicRollbackException, IllegalStateException,
-			RollbackException, SecurityException, SystemException {
+	public void commit() throws HeuristicMixedException, HeuristicRollbackException, IllegalStateException, RollbackException,
+			SecurityException, SystemException {
 		this.transactionManager.commit();
 	}
 
@@ -185,18 +185,15 @@ public class UserCompensableImpl implements UserCompensable, Referenceable, Seri
 	}
 
 	public int getStatus() throws SystemException {
-		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
-		return compensableManager.getStatus();
+		return this.transactionManager.getStatus();
 	}
 
 	public void setRollbackOnly() throws IllegalStateException, SystemException {
-		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
-		compensableManager.setRollbackOnly();
+		this.transactionManager.setRollbackOnly();
 	}
 
 	public void setTransactionTimeout(int timeout) throws SystemException {
-		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
-		compensableManager.setTransactionTimeout(timeout);
+		this.transactionManager.setTimeoutSeconds(timeout);
 	}
 
 	public Reference getReference() throws NamingException {

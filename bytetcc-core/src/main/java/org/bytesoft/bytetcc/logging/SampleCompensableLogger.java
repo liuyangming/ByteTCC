@@ -174,15 +174,6 @@ public class SampleCompensableLogger extends VirtualLoggingSystemImpl
 					XAResourceArchive resourceArchive = (XAResourceArchive) obj;
 					boolean matched = false;
 
-					List<XAResourceArchive> nativeResources = archive.getNativeResources();
-					for (int i = 0; matched == false && nativeResources != null && i < nativeResources.size(); i++) {
-						XAResourceArchive element = nativeResources.get(i);
-						if (resourceArchive.getXid().equals(element.getXid())) {
-							matched = true;
-							nativeResources.set(i, resourceArchive);
-						}
-					}
-
 					List<XAResourceArchive> remoteResources = archive.getRemoteResources();
 					for (int i = 0; matched == false && remoteResources != null && i < remoteResources.size(); i++) {
 						XAResourceArchive element = remoteResources.get(i);
@@ -190,6 +181,10 @@ public class SampleCompensableLogger extends VirtualLoggingSystemImpl
 							matched = true;
 							remoteResources.set(i, resourceArchive);
 						}
+					}
+
+					if (matched == false) {
+						remoteResources.add(resourceArchive);
 					}
 
 				} else if (CompensableArchive.class.isInstance(obj)) {
@@ -201,18 +196,23 @@ public class SampleCompensableLogger extends VirtualLoggingSystemImpl
 					List<CompensableArchive> compensables = archive.getCompensableResourceList();
 					CompensableArchive resourceArchive = (CompensableArchive) obj;
 
-					if (VirtualLoggingSystem.OPERATOR_CREATE == action.getOperator()) {
-						compensables.add(resourceArchive);
-					} else {
-						boolean matched = false;
-						for (int i = 0; matched == false && compensables != null && i < compensables.size(); i++) {
-							CompensableArchive element = compensables.get(i);
-							if (resourceArchive.getIdentifier().equals(element.getIdentifier())) {
-								matched = true;
-								compensables.set(i, resourceArchive);
-							}
+					// if (VirtualLoggingSystem.OPERATOR_CREATE == action.getOperator()) {
+					// compensables.add(resourceArchive);
+					// } else {
+					boolean matched = false;
+					for (int i = 0; matched == false && compensables != null && i < compensables.size(); i++) {
+						CompensableArchive element = compensables.get(i);
+						if (resourceArchive.getIdentifier().equals(element.getIdentifier())) {
+							matched = true;
+							compensables.set(i, resourceArchive);
 						}
 					}
+
+					if (matched == false) {
+						compensables.add(resourceArchive);
+					}
+
+					// }
 
 				}
 
