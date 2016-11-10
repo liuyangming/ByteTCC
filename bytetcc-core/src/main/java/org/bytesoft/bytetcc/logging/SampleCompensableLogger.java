@@ -104,13 +104,11 @@ public class SampleCompensableLogger extends VirtualLoggingSystemImpl
 
 	public void createCompensable(CompensableArchive archive) {
 		ArchiveDeserializer deserializer = this.beanFactory.getArchiveDeserializer();
-		XidFactory xidFactory = this.beanFactory.getCompensableXidFactory();
 
 		try {
-			Xid xid = archive.getTransactionXid();
-			TransactionXid globalXid = xidFactory.createGlobalXid(xid.getGlobalTransactionId());
-			byte[] byteArray = deserializer.serialize(globalXid, archive);
-			this.create(globalXid, byteArray);
+			TransactionXid xid = (TransactionXid) archive.getIdentifier();
+			byte[] byteArray = deserializer.serialize(xid, archive);
+			this.create(xid, byteArray);
 		} catch (RuntimeException rex) {
 			logger.error("Error occurred while creating compensable-archive.", rex);
 		}
@@ -118,13 +116,11 @@ public class SampleCompensableLogger extends VirtualLoggingSystemImpl
 
 	public void updateCompensable(CompensableArchive archive) {
 		ArchiveDeserializer deserializer = this.beanFactory.getArchiveDeserializer();
-		XidFactory xidFactory = this.beanFactory.getCompensableXidFactory();
 
 		try {
-			Xid xid = archive.getTransactionXid();
-			TransactionXid globalXid = xidFactory.createGlobalXid(xid.getGlobalTransactionId());
-			byte[] byteArray = deserializer.serialize(globalXid, archive);
-			this.modify(globalXid, byteArray);
+			TransactionXid xid = (TransactionXid) archive.getIdentifier();
+			byte[] byteArray = deserializer.serialize(xid, archive);
+			this.modify(xid, byteArray);
 		} catch (RuntimeException rex) {
 			logger.error("Error occurred while modifying compensable-archive.", rex);
 		}
@@ -168,6 +164,7 @@ public class SampleCompensableLogger extends VirtualLoggingSystemImpl
 				} else if (XAResourceArchive.class.isInstance(obj)) {
 					TransactionArchive archive = xidMap.get(identifier);
 					if (archive == null) {
+						logger.error("Error occurred while recovering resource archive: {}", obj);
 						return;
 					}
 
@@ -190,6 +187,7 @@ public class SampleCompensableLogger extends VirtualLoggingSystemImpl
 				} else if (CompensableArchive.class.isInstance(obj)) {
 					TransactionArchive archive = xidMap.get(identifier);
 					if (archive == null) {
+						logger.error("Error occurred while recovering compensable archive: {}", obj);
 						return;
 					}
 

@@ -170,7 +170,7 @@ public class TransactionRecoveryImpl implements TransactionRecovery, Transaction
 				case Status.STATUS_PREPARING:
 				case Status.STATUS_ROLLING_BACK:
 				case Status.STATUS_UNKNOWN:
-					transaction.setTransactionStatus(Status.STATUS_COMMITTING); // TODO
+					transaction.setTransactionStatus(Status.STATUS_PREPARED);
 					transaction.getTransactionContext().setCompensating(true);
 					compensableLogger.updateTransaction(compensable.getTransactionArchive());
 					break;
