@@ -492,13 +492,13 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableEndpo
 		this.directory = directory;
 	}
 
-	public static class Record {
+	private static class Record {
 		public int startIndex;
 		public Xid xid;
 		public String resource;
 	}
 
-	public static class Selection {
+	private static class Selection {
 		public String resource;
 		public List<Record> records = new ArrayList<Record>();
 	}

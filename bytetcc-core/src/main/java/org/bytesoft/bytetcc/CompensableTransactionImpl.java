@@ -1136,6 +1136,10 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 		return this.variables.get(key);
 	}
 
+	public boolean isCurrentCompensableServiceTried() {
+		return this.archive.isTried();
+	}
+
 	public void setVariable(String key, Serializable variable) {
 		this.variables.put(key, variable);
 	}

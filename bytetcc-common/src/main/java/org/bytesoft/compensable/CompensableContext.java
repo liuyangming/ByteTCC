@@ -19,6 +19,8 @@ import java.io.Serializable;
 
 public interface CompensableContext {
 
+	public boolean isCurrentCompensableServiceTried() throws IllegalStateException;
+
 	public Serializable getVariable(String key) throws IllegalStateException;
 
 	public void setVariable(String key, Serializable variable) throws IllegalStateException;
