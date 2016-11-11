@@ -34,10 +34,11 @@ public class CompensableContextImpl implements CompensableContext, CompensableBe
 		CompensableTransaction compensable = compensableManager.getCompensableTransactionQuietly();
 		if (compensable == null) {
 			throw new IllegalStateException("There is no active compensable transaction!");
-		} else if (compensable.getTransactionContext().isCompensating() == false) {
-			throw new IllegalStateException("CompensableContext.setVariable(String) is forbidden in try phase!");
+		} else if (compensable.getTransactionContext().isCompensating()) {
+			return compensable.isCurrentCompensableServiceTried();
 		}
-		return compensable.isCurrentCompensableServiceTried();
+
+		return false;
 	}
 
 	public Serializable getVariable(String key) {
