@@ -84,8 +84,6 @@ public class CompensableServiceFilter implements Filter {
 			remoteCoordinatorRegistry.putTransactionManagerStub(address, remoteCoordinator);
 		}
 
-		Result result = null;
-
 		TransactionRequestImpl request = new TransactionRequestImpl();
 		request.setTargetTransactionCoordinator(remoteCoordinator);
 
@@ -93,7 +91,7 @@ public class CompensableServiceFilter implements Filter {
 		response.setSourceTransactionCoordinator(remoteCoordinator);
 		try {
 			this.beforeProviderInvoke(invocation, request, response);
-			result = invoker.invoke(invocation);
+			return invoker.invoke(invocation);
 		} catch (RemotingException rex) {
 			throw rex;
 		} catch (RuntimeException rex) {
@@ -102,7 +100,7 @@ public class CompensableServiceFilter implements Filter {
 		} finally {
 			this.afterProviderInvoke(invocation, request, response);
 		}
-		return result;
+
 	}
 
 	private void beforeProviderInvoke(Invocation invocation, TransactionRequestImpl request,
@@ -203,8 +201,6 @@ public class CompensableServiceFilter implements Filter {
 			remoteCoordinatorRegistry.putTransactionManagerStub(address, remoteCoordinator);
 		}
 
-		Result result = null;
-
 		TransactionRequestImpl request = new TransactionRequestImpl();
 		request.setTransactionContext(nativeTransactionContext);
 		request.setTargetTransactionCoordinator(remoteCoordinator);
@@ -213,7 +209,7 @@ public class CompensableServiceFilter implements Filter {
 		response.setSourceTransactionCoordinator(remoteCoordinator);
 		try {
 			this.beforeConsumerInvoke(invocation, request, response);
-			result = invoker.invoke(invocation);
+			return invoker.invoke(invocation);
 		} catch (RemotingException rex) {
 			throw rex;
 		} catch (RuntimeException rex) {
@@ -223,7 +219,6 @@ public class CompensableServiceFilter implements Filter {
 			this.afterConsumerInvoke(invocation, request, response);
 		}
 
-		return result;
 	}
 
 	private void beforeConsumerInvoke(Invocation invocation, TransactionRequestImpl request,

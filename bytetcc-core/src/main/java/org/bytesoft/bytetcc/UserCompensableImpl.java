@@ -27,14 +27,18 @@ import javax.transaction.RollbackException;
 import javax.transaction.SystemException;
 import javax.transaction.xa.XAException;
 import javax.transaction.xa.XAResource;
+import javax.transaction.xa.Xid;
 
 import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableManager;
+import org.bytesoft.compensable.CompensableTransaction;
 import org.bytesoft.compensable.UserCompensable;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
+import org.bytesoft.transaction.Transaction;
 import org.bytesoft.transaction.TransactionContext;
 import org.bytesoft.transaction.TransactionManager;
+import org.bytesoft.transaction.TransactionRepository;
 import org.bytesoft.transaction.internal.TransactionException;
 import org.bytesoft.transaction.xa.TransactionXid;
 import org.bytesoft.transaction.xa.XidFactory;
@@ -48,7 +52,7 @@ public class UserCompensableImpl implements UserCompensable, Referenceable, Seri
 	private CompensableBeanFactory beanFactory;
 	private TransactionManager transactionManager;
 
-	public void compensableBegin() throws NotSupportedException, SystemException {
+	public TransactionXid compensableBegin() throws NotSupportedException, SystemException {
 		RemoteCoordinator compensableCoordinator = this.beanFactory.getCompensableCoordinator();
 		CompensableManager tompensableManager = this.beanFactory.getCompensableManager();
 		XidFactory compensableXidFactory = this.beanFactory.getCompensableXidFactory();
@@ -74,20 +78,49 @@ public class UserCompensableImpl implements UserCompensable, Referenceable, Seri
 			logger.error("Error occurred while beginning an compensable transaction!", ex);
 			throw new SystemException(ex.getMessage());
 		}
+
+		return compensableXid;
 	}
 
 	public void begin() throws NotSupportedException, SystemException {
 		this.transactionManager.begin();
 	}
 
-	public void commit() throws HeuristicMixedException, HeuristicRollbackException, IllegalStateException, RollbackException,
-			SecurityException, SystemException {
+	public void commit() throws HeuristicMixedException, HeuristicRollbackException, IllegalStateException,
+			RollbackException, SecurityException, SystemException {
 		this.transactionManager.commit();
+	}
+
+	public void compensableRecoveryCommit(Xid xid) throws RollbackException, HeuristicMixedException,
+			HeuristicRollbackException, SecurityException, IllegalStateException, SystemException {
+		TransactionRepository transactionRepository = this.beanFactory.getCompensableRepository();
+		if (xid == null) {
+			throw new IllegalStateException();
+		} else if (TransactionXid.class.isInstance(xid) == false) {
+			throw new IllegalStateException();
+		} else if (xid.getFormatId() != XidFactory.TCC_FORMAT_ID) {
+			throw new IllegalStateException();
+		}
+
+		TransactionXid compensableXid = (TransactionXid) xid;
+		Transaction transaction = transactionRepository.getTransaction(compensableXid);
+		if (transaction == null) {
+			throw new IllegalStateException();
+		} else if (CompensableTransaction.class.isInstance(transaction) == false) {
+			throw new IllegalStateException();
+		}
+
+		CompensableTransaction compensable = (CompensableTransaction) transaction;
+		TransactionContext compensableContext = compensable.getTransactionContext();
+		if (compensableContext.isRecoveried() == false) {
+			throw new IllegalStateException();
+		}
+
+		this.invokeCompensableCommit(compensable);
 	}
 
 	public void compensableCommit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException,
 			SecurityException, IllegalStateException, SystemException {
-		RemoteCoordinator compensableCoordinator = this.beanFactory.getCompensableCoordinator();
 		CompensableManager tompensableManager = this.beanFactory.getCompensableManager();
 
 		CompensableTransactionImpl compensable = (CompensableTransactionImpl) tompensableManager
@@ -95,6 +128,14 @@ public class UserCompensableImpl implements UserCompensable, Referenceable, Seri
 		if (compensable == null) {
 			throw new IllegalStateException();
 		}
+
+		this.invokeCompensableCommit(compensable);
+	}
+
+	private void invokeCompensableCommit(CompensableTransaction compensable) throws RollbackException,
+			HeuristicMixedException, HeuristicRollbackException, SecurityException, IllegalStateException,
+			SystemException {
+		RemoteCoordinator compensableCoordinator = this.beanFactory.getCompensableCoordinator();
 
 		TransactionContext compensableContext = compensable.getTransactionContext();
 		boolean success = false;
@@ -139,8 +180,34 @@ public class UserCompensableImpl implements UserCompensable, Referenceable, Seri
 		this.transactionManager.rollback();
 	}
 
+	public void compensableRecoveryRollback(Xid xid) throws IllegalStateException, SecurityException, SystemException {
+		TransactionRepository transactionRepository = this.beanFactory.getCompensableRepository();
+		if (xid == null) {
+			throw new IllegalStateException();
+		} else if (TransactionXid.class.isInstance(xid) == false) {
+			throw new IllegalStateException();
+		} else if (xid.getFormatId() != XidFactory.TCC_FORMAT_ID) {
+			throw new IllegalStateException();
+		}
+
+		TransactionXid compensableXid = (TransactionXid) xid;
+		Transaction transaction = transactionRepository.getTransaction(compensableXid);
+		if (transaction == null) {
+			throw new IllegalStateException();
+		} else if (CompensableTransaction.class.isInstance(transaction) == false) {
+			throw new IllegalStateException();
+		}
+
+		CompensableTransaction compensable = (CompensableTransaction) transaction;
+		TransactionContext compensableContext = compensable.getTransactionContext();
+		if (compensableContext.isRecoveried() == false) {
+			throw new IllegalStateException();
+		}
+
+		this.invokeCompensableRollback(compensable);
+	}
+
 	public void compensableRollback() throws IllegalStateException, SecurityException, SystemException {
-		RemoteCoordinator compensableCoordinator = this.beanFactory.getCompensableCoordinator();
 		CompensableManager tompensableManager = this.beanFactory.getCompensableManager();
 
 		CompensableTransactionImpl compensable = (CompensableTransactionImpl) tompensableManager
@@ -149,6 +216,12 @@ public class UserCompensableImpl implements UserCompensable, Referenceable, Seri
 			throw new IllegalStateException();
 		}
 
+		this.invokeCompensableRollback(compensable);
+	}
+
+	private void invokeCompensableRollback(CompensableTransaction compensable) throws IllegalStateException,
+			SecurityException, SystemException {
+		RemoteCoordinator compensableCoordinator = this.beanFactory.getCompensableCoordinator();
 		TransactionContext compensableContext = compensable.getTransactionContext();
 		boolean success = false;
 		try {

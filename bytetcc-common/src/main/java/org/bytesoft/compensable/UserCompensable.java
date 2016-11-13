@@ -20,14 +20,20 @@ import javax.transaction.HeuristicRollbackException;
 import javax.transaction.NotSupportedException;
 import javax.transaction.RollbackException;
 import javax.transaction.SystemException;
+import javax.transaction.xa.Xid;
 
 public interface UserCompensable extends javax.transaction.UserTransaction {
 
-	void compensableBegin() throws NotSupportedException, SystemException;
+	public Xid compensableBegin() throws NotSupportedException, SystemException;
 
-	void compensableCommit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException,
+	public void compensableCommit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException,
 			SecurityException, IllegalStateException, SystemException;
 
-	void compensableRollback() throws IllegalStateException, SecurityException, SystemException;
+	public void compensableRollback() throws IllegalStateException, SecurityException, SystemException;
+
+	public void compensableRecoveryCommit(Xid xid) throws RollbackException, HeuristicMixedException,
+			HeuristicRollbackException, SecurityException, IllegalStateException, SystemException;
+
+	public void compensableRecoveryRollback(Xid xid) throws IllegalStateException, SecurityException, SystemException;
 
 }
