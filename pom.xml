@@ -4,7 +4,7 @@
 
 	<groupId>org.bytesoft</groupId>
 	<artifactId>bytetcc-parent</artifactId>
-	<version>0.3.0-SNAPSHOT</version>
+	<version>0.3.0-alpha</version>
 	<packaging>pom</packaging>
 	<name>bytetcc-parent</name>
 	<url>http://maven.apache.org</url>
