@@ -50,7 +50,8 @@ import org.bytesoft.transaction.xa.XidFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class TransactionRecoveryImpl implements TransactionRecovery, TransactionRecoveryListener, CompensableBeanFactoryAware {
+public class TransactionRecoveryImpl
+		implements TransactionRecovery, TransactionRecoveryListener, CompensableBeanFactoryAware {
 	static final Logger logger = LoggerFactory.getLogger(TransactionRecoveryImpl.class);
 
 	private CompensableBeanFactory beanFactory;
@@ -93,17 +94,7 @@ public class TransactionRecoveryImpl implements TransactionRecovery, Transaction
 				TransactionContext transactionContext = transaction.getTransactionContext();
 
 				TransactionXid compensableXid = transactionContext.getXid();
-				if (transactionContext.isCompensable()) {
-					switch (transaction.getTransactionStatus()) {
-					case Status.STATUS_ACTIVE:
-					case Status.STATUS_MARKED_ROLLBACK:
-					case Status.STATUS_PREPARING:
-					case Status.STATUS_UNKNOWN:
-						recoverStatusIfNecessary(transaction);
-						break;
-					default: // ignore
-					}
-				} else {
+				if (transactionContext.isCompensable() == false) {
 					TransactionXid transactionXid = transactionXidFactory
 							.createGlobalXid(compensableXid.getGlobalTransactionId());
 					Transaction tx = recovered.get(transactionXid);
@@ -111,7 +102,9 @@ public class TransactionRecoveryImpl implements TransactionRecovery, Transaction
 						tx.setTransactionalExtra(transaction);
 						transaction.setTransactionalExtra(tx);
 					}
-				} // end-if (transactionContext.isCompensable())
+				} else if (transactionContext.isCoordinator()) {
+					recoverStatusIfNecessary(transaction);
+				} // end-if (transactionContext.isCoordinator())
 
 				transactionRepository.putTransaction(compensableXid, transaction);
 				transactionRepository.putErrorTransaction(compensableXid, transaction);
@@ -127,7 +120,7 @@ public class TransactionRecoveryImpl implements TransactionRecovery, Transaction
 		TransactionContext transactionContext = new TransactionContext();
 		transactionContext.setCompensable(true);
 		transactionContext.setCoordinator(archive.isCoordinator());
-		// transactionContext.setCompensating(compensating); // TODO
+		transactionContext.setCompensating(true);
 		transactionContext.setRecoveried(true);
 		transactionContext.setXid(xidFactory.createGlobalXid(archive.getXid().getGlobalTransactionId()));
 
@@ -152,94 +145,95 @@ public class TransactionRecoveryImpl implements TransactionRecovery, Transaction
 		return transaction;
 	}
 
-	private void recoverStatusIfNecessary(Transaction transaction) {
+	public void recoverStatusIfNecessary(Transaction transaction) {
 		CompensableTransactionImpl compensable = (CompensableTransactionImpl) transaction;
 		List<CompensableArchive> archiveList = compensable.getCompensableArchiveList();
 
-		XAResourceDeserializer resourceDeserializer = this.beanFactory.getResourceDeserializer();
 		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
 
 		Map<TransactionBranchKey, Boolean> triedMap = new HashMap<TransactionBranchKey, Boolean>();
+		int triedNumber = 0;
+		int unTriedNumber = 0;
 		for (int i = 0; i < archiveList.size(); i++) {
 			CompensableArchive archive = archiveList.get(i);
 
+			TransactionBranchKey recordKey = new TransactionBranchKey();
+			recordKey.xid = archive.getTransactionXid();
+			recordKey.resource = archive.getTransactionResourceKey();
+
 			if (archive.isTried()) {
-				switch (transaction.getTransactionStatus()) {
-				case Status.STATUS_ACTIVE:
-				case Status.STATUS_MARKED_ROLLBACK:
-				case Status.STATUS_PREPARING:
-				case Status.STATUS_ROLLING_BACK:
-				case Status.STATUS_UNKNOWN:
-					transaction.setTransactionStatus(Status.STATUS_PREPARED);
-					transaction.getTransactionContext().setCompensating(true);
-					compensableLogger.updateTransaction(compensable.getTransactionArchive());
-					break;
-				case Status.STATUS_PREPARED:
-				case Status.STATUS_COMMITTING:
-				case Status.STATUS_COMMITTED:
-				case Status.STATUS_ROLLEDBACK:
-				default:
-					// ignore
+				triedNumber++;
+			} else if (StringUtils.isBlank(recordKey.resource)) {
+				triedNumber++;
+
+				logger.warn(
+						"There is no valid resource participated in the trying branch transaction, the status of the branch transaction is unknown!");
+			} else if (triedMap.containsKey(recordKey)) {
+				Boolean tried = triedMap.get(recordKey);
+				if (Boolean.TRUE.equals(tried)) {
+					archive.setTried(true);
+					triedNumber++;
+
+					compensableLogger.updateCompensable(archive);
+				} else {
+					unTriedNumber++;
 				}
 			} else {
-				Xid transactionXid = archive.getTransactionXid();
-				String resourceKey = archive.getTransactionResourceKey();
+				Boolean tried = this.calculateCompensableTried(recordKey);
+				if (Boolean.TRUE.equals(tried)) {
+					archive.setTried(true);
+					triedNumber++;
 
-				TransactionBranchKey recordKey = new TransactionBranchKey();
-				recordKey.xid = transactionXid;
-				recordKey.resource = resourceKey;
-
-				if (StringUtils.isBlank(resourceKey)) {
-					logger.warn(
-							"There is no valid resource participated in the trying branch transaction, the status of the branch transaction is unknown!");
-				} else if (triedMap.containsKey(recordKey)) {
-					Boolean tried = triedMap.get(recordKey);
-					if (Boolean.TRUE.equals(tried)) {
-						transaction.setTransactionStatus(Status.STATUS_COMMITTING); // TODO
-					} else {
-						transaction.setTransactionStatus(Status.STATUS_MARKED_ROLLBACK);
-					}
-					transaction.getTransactionContext().setCompensating(true);
-					compensableLogger.updateTransaction(compensable.getTransactionArchive());
+					triedMap.put(recordKey, Boolean.TRUE);
+					compensableLogger.updateCompensable(archive);
 				} else {
-					XAResource xares = resourceDeserializer.deserialize(resourceKey);
-					if (RecoveredResource.class.isInstance(xares)) {
-						RecoveredResource resource = (RecoveredResource) xares;
-						try {
-							resource.recoverable(archive.getTransactionXid());
-							archive.setTried(true);
-							triedMap.put(recordKey, Boolean.TRUE);
-
-							transaction.setTransactionStatus(Status.STATUS_COMMITTING); // TODO
-							transaction.getTransactionContext().setCompensating(true);
-							compensableLogger.updateTransaction(compensable.getTransactionArchive());
-						} catch (XAException xaex) {
-							switch (xaex.errorCode) {
-							case XAException.XAER_NOTA:
-								triedMap.put(recordKey, Boolean.FALSE);
-
-								transaction.setTransactionStatus(Status.STATUS_MARKED_ROLLBACK);
-								transaction.getTransactionContext().setCompensating(true);
-								compensableLogger.updateTransaction(compensable.getTransactionArchive());
-								break;
-							case XAException.XAER_RMERR:
-								logger.warn(
-										"The database table 'bytejta' cannot found, the status of the trying branch transaction is unknown!");
-								break;
-							case XAException.XAER_RMFAIL:
-								logger.error("Error occurred while recovering the branch transaction service: {}",
-										ByteUtils.byteArrayToString(transactionXid.getGlobalTransactionId()), xaex);
-								break;
-							default:
-								logger.error("Illegal state, the status of the trying branch transaction is unknown!");
-							}
-						}
-					} else {
-						logger.error("Illegal resources, the status of the trying branch transaction is unknown!");
-					}
+					triedMap.put(recordKey, tried);
+					unTriedNumber++;
 				}
-			} // end-else-if (archive.isTried())
+			}
 		} // end-for
+
+		if (triedNumber > 0 && unTriedNumber > 0) {
+			transaction.setTransactionStatus(Status.STATUS_PREPARING);
+			compensableLogger.updateTransaction(compensable.getTransactionArchive());
+		} else if (triedNumber > 0) {
+			transaction.setTransactionStatus(Status.STATUS_PREPARED);
+			compensableLogger.updateTransaction(compensable.getTransactionArchive());
+		}
+
+	}
+
+	private Boolean calculateCompensableTried(TransactionBranchKey recordKey) {
+		XAResourceDeserializer resourceDeserializer = this.beanFactory.getResourceDeserializer();
+		XAResource xares = resourceDeserializer.deserialize(recordKey.resource);
+
+		Xid transactionXid = recordKey.xid;
+		if (RecoveredResource.class.isInstance(xares)) {
+			RecoveredResource resource = (RecoveredResource) xares;
+			try {
+				resource.recoverable(transactionXid);
+				return true;
+			} catch (XAException xaex) {
+				switch (xaex.errorCode) {
+				case XAException.XAER_NOTA:
+					return false;
+				case XAException.XAER_RMERR:
+					logger.warn(
+							"The database table 'bytejta' cannot found, the status of the trying branch transaction is unknown!");
+					break;
+				case XAException.XAER_RMFAIL:
+					logger.error("Error occurred while recovering the branch transaction service: {}",
+							ByteUtils.byteArrayToString(transactionXid.getGlobalTransactionId()), xaex);
+					break;
+				default:
+					logger.error("Illegal state, the status of the trying branch transaction is unknown!");
+				}
+			}
+		} else {
+			logger.error("Illegal resources, the status of the trying branch transaction is unknown!");
+		}
+
+		return null;
 	}
 
 	public void timingRecover() {
@@ -264,11 +258,13 @@ public class TransactionRecoveryImpl implements TransactionRecovery, Transaction
 						ByteUtils.byteArrayToString(xid.getBranchQualifier()));
 				continue;
 			} catch (SystemException ex) {
-				logger.debug("{}| recover: branch={}, message= {}", ByteUtils.byteArrayToString(xid.getGlobalTransactionId()),
+				logger.debug("{}| recover: branch={}, message= {}",
+						ByteUtils.byteArrayToString(xid.getGlobalTransactionId()),
 						ByteUtils.byteArrayToString(xid.getBranchQualifier()), ex.getMessage());
 				continue;
 			} catch (RuntimeException ex) {
-				logger.debug("{}| recover: branch={}, message= {}", ByteUtils.byteArrayToString(xid.getGlobalTransactionId()),
+				logger.debug("{}| recover: branch={}, message= {}",
+						ByteUtils.byteArrayToString(xid.getGlobalTransactionId()),
 						ByteUtils.byteArrayToString(xid.getBranchQualifier()), ex.getMessage());
 				continue;
 			}
