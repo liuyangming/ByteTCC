@@ -120,7 +120,8 @@ public class TransactionRecoveryImpl
 		TransactionContext transactionContext = new TransactionContext();
 		transactionContext.setCompensable(true);
 		transactionContext.setCoordinator(archive.isCoordinator());
-		transactionContext.setCompensating(true);
+		transactionContext.setPropagated(archive.isPropagated());
+		transactionContext.setCompensating(archive.isPropagated() == false);
 		transactionContext.setRecoveried(true);
 		transactionContext.setXid(xidFactory.createGlobalXid(archive.getXid().getGlobalTransactionId()));
 
@@ -146,6 +147,7 @@ public class TransactionRecoveryImpl
 	}
 
 	public void recoverStatusIfNecessary(Transaction transaction) {
+		TransactionContext transactionContext = transaction.getTransactionContext();
 		CompensableTransactionImpl compensable = (CompensableTransactionImpl) transaction;
 		List<CompensableArchive> archiveList = compensable.getCompensableArchiveList();
 
@@ -164,8 +166,7 @@ public class TransactionRecoveryImpl
 			if (archive.isTried()) {
 				triedNumber++;
 			} else if (StringUtils.isBlank(recordKey.resource)) {
-				triedNumber++;
-
+				// triedNumber++;
 				logger.warn(
 						"There is no valid resource participated in the trying branch transaction, the status of the branch transaction is unknown!");
 			} else if (triedMap.containsKey(recordKey)) {
@@ -196,7 +197,7 @@ public class TransactionRecoveryImpl
 		if (triedNumber > 0 && unTriedNumber > 0) {
 			transaction.setTransactionStatus(Status.STATUS_PREPARING);
 			compensableLogger.updateTransaction(compensable.getTransactionArchive());
-		} else if (triedNumber > 0) {
+		} else if (triedNumber > 0 && transactionContext.isPropagated() == false) {
 			transaction.setTransactionStatus(Status.STATUS_PREPARED);
 			compensableLogger.updateTransaction(compensable.getTransactionArchive());
 		}
@@ -291,12 +292,18 @@ public class TransactionRecoveryImpl
 	public synchronized void recoverCoordinator(Transaction transaction)
 			throws CommitRequiredException, RollbackRequiredException, SystemException {
 
+		TransactionContext transactionContext = transaction.getTransactionContext();
 		switch (transaction.getTransactionStatus()) {
 		case Status.STATUS_ACTIVE:
 		case Status.STATUS_MARKED_ROLLBACK:
 		case Status.STATUS_PREPARING:
-		case Status.STATUS_ROLLING_BACK:
 		case Status.STATUS_UNKNOWN:
+			if (transactionContext.isPropagated() == false) {
+				transaction.recoveryRollback();
+				transaction.recoveryForget();
+			}
+			break;
+		case Status.STATUS_ROLLING_BACK:
 			transaction.recoveryRollback();
 			transaction.recoveryForget();
 			break;

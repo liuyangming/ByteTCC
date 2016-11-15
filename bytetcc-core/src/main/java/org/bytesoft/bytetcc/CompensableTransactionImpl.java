@@ -92,6 +92,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 		TransactionArchive transactionArchive = new TransactionArchive();
 		transactionArchive.setVariables(this.variables);
 		transactionArchive.setCoordinator(this.transactionContext.isCoordinator());
+		transactionArchive.setPropagated(this.transactionContext.isPropagated());
 		transactionArchive.setCompensable(this.transactionContext.isCompensable());
 		transactionArchive.setCompensableStatus(this.transactionStatus);
 		transactionArchive.setVote(this.transactionVote);
@@ -585,7 +586,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 						this.archive.getCompensableResourceKey(), this.archive.getCompensableXid());
 			}
 			compensableLogger.updateCompensable(this.archive);
-		} else if (this.transactionContext.isCoordinator()) {
+		} else if (this.transactionContext.isCoordinator() && this.transactionContext.isPropagated() == false) {
 			for (Iterator<CompensableArchive> itr = this.transientArchiveList.iterator(); itr.hasNext();) {
 				CompensableArchive compensableArchive = itr.next();
 				itr.remove(); // remove

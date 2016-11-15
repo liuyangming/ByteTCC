@@ -25,6 +25,7 @@ public class TransactionArchive extends org.bytesoft.transaction.archive.Transac
 
 	private int compensableStatus; // active, committing, committed, rollingback, rolledback
 	private boolean compensable;
+	private boolean propagated;
 	private Map<String, Serializable> variables = new HashMap<String, Serializable>();
 	private final List<CompensableArchive> compensableResourceList = new ArrayList<CompensableArchive>();
 
@@ -54,6 +55,14 @@ public class TransactionArchive extends org.bytesoft.transaction.archive.Transac
 
 	public void setVariables(Map<String, Serializable> variables) {
 		this.variables = variables;
+	}
+
+	public boolean isPropagated() {
+		return propagated;
+	}
+
+	public void setPropagated(boolean propagated) {
+		this.propagated = propagated;
 	}
 
 }

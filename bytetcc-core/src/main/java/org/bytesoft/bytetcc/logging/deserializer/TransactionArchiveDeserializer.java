@@ -63,7 +63,7 @@ public class TransactionArchiveDeserializer extends
 			}
 		}
 
-		int length = 5 + varByteArray.length + 2;
+		int length = 6 + varByteArray.length + 2;
 		byte[][] nativeByteArray = new byte[nativeArchiveNumber][];
 		for (int i = 0; i < nativeArchiveNumber; i++) {
 			CompensableArchive compensableArchive = nativeArchiveList.get(i);
@@ -100,6 +100,7 @@ public class TransactionArchiveDeserializer extends
 		byteArray[position++] = (byte) archive.getStatus();
 		byteArray[position++] = (byte) archive.getVote();
 		byteArray[position++] = archive.isCoordinator() ? (byte) 0x1 : (byte) 0x0;
+		byteArray[position++] = archive.isPropagated() ? (byte) 0x1 : (byte) 0x0;
 		byteArray[position++] = archive.isCompensable() ? (byte) 0x1 : (byte) 0x0;
 		byteArray[position++] = (byte) archive.getCompensableStatus();
 
@@ -135,12 +136,14 @@ public class TransactionArchiveDeserializer extends
 		int status = buffer.get();
 		int vote = buffer.get();
 		int coordinatorValue = buffer.get();
+		int propagatedValue = buffer.get();
 		int compensableValue = buffer.get();
 		int compensableStatus = buffer.get();
 
 		archive.setStatus(status);
 		archive.setVote(vote);
 		archive.setCoordinator(coordinatorValue != 0);
+		archive.setPropagated(propagatedValue != 0);
 		archive.setCompensable(compensableValue != 0);
 		archive.setCompensableStatus(compensableStatus);
 
