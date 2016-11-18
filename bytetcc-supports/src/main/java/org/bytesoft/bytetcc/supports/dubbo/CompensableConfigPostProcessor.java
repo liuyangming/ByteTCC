@@ -49,14 +49,14 @@ public class CompensableConfigPostProcessor implements BeanFactoryPostProcessor 
 				if (StringUtils.isBlank(applicationBeanId)) {
 					applicationBeanId = beanName;
 				} else {
-					throw new FatalBeanException("There is more than one application name was found!");
+					throw new FatalBeanException("There are more than one application name was found!");
 				}
 			} else if (org.bytesoft.bytetcc.TransactionCoordinator.class.getName().equals(beanClassName)) {
 				if (StringUtils.isBlank(transactionBeanId)) {
 					transactionBeanId = beanName;
 				} else {
 					throw new FatalBeanException(
-							"There is more than one org.bytesoft.bytetcc.TransactionCoordinator was found!");
+							"There are more than one org.bytesoft.bytetcc.TransactionCoordinator was found!");
 				}
 			} else if (org.bytesoft.bytetcc.supports.dubbo.CompensableBeanRegistry.class.getName()
 					.equals(beanClassName)) {
@@ -64,14 +64,14 @@ public class CompensableConfigPostProcessor implements BeanFactoryPostProcessor 
 					registryBeanId = beanName;
 				} else {
 					throw new FatalBeanException(
-							"There is more than one org.bytesoft.bytetcc.supports.dubbo.CompensableBeanRegistry was found!");
+							"There are more than one org.bytesoft.bytetcc.supports.dubbo.CompensableBeanRegistry was found!");
 				}
 			} else if (org.bytesoft.bytetcc.CompensableCoordinator.class.getName().equals(beanClassName)) {
 				if (StringUtils.isBlank(compensableBeanId)) {
 					compensableBeanId = beanName;
 				} else {
 					throw new FatalBeanException(
-							"There is more than one org.bytesoft.bytetcc.CompensableCoordinator was found!");
+							"There are more than one org.bytesoft.bytetcc.CompensableCoordinator was found!");
 				}
 			}
 		}

@@ -60,7 +60,7 @@ public class CompensableEndpointPostProcessor implements BeanFactoryPostProcesso
 				if (protocolDef == null) {
 					protocolDef = beanDef;
 				} else {
-					throw new FatalBeanException("There is more than one com.alibaba.dubbo.config.ProtocolConfig was found!");
+					throw new FatalBeanException("There are more than one com.alibaba.dubbo.config.ProtocolConfig was found!");
 				}
 			}
 		}

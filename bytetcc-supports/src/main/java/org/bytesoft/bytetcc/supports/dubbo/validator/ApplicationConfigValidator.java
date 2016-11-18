@@ -30,7 +30,7 @@ public class ApplicationConfigValidator implements DubboConfigValidator {
 		if (this.definitionList == null || this.definitionList.isEmpty()) {
 			throw new FatalBeanException("There is no application name specified!");
 		} else if (this.definitionList.size() > 1) {
-			throw new FatalBeanException("There is more than one application name specified!");
+			throw new FatalBeanException("There are more than one application name specified!");
 		}
 	}
 
