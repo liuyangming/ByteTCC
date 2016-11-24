@@ -86,8 +86,8 @@ public class UserCompensableImpl implements UserCompensable, Referenceable, Seri
 		this.transactionManager.begin();
 	}
 
-	public void commit() throws HeuristicMixedException, HeuristicRollbackException, IllegalStateException,
-			RollbackException, SecurityException, SystemException {
+	public void commit() throws HeuristicMixedException, HeuristicRollbackException, IllegalStateException, RollbackException,
+			SecurityException, SystemException {
 		this.transactionManager.commit();
 	}
 
@@ -131,39 +131,26 @@ public class UserCompensableImpl implements UserCompensable, Referenceable, Seri
 
 	}
 
-	public void compensableRecoveryCommit(Xid xid) throws RollbackException, HeuristicMixedException,
-			HeuristicRollbackException, SecurityException, IllegalStateException, SystemException {
-		TransactionRepository transactionRepository = this.beanFactory.getCompensableRepository();
-		if (xid == null) {
-			throw new IllegalStateException();
-		} else if (TransactionXid.class.isInstance(xid) == false) {
-			throw new IllegalStateException();
-		} else if (xid.getFormatId() != XidFactory.TCC_FORMAT_ID) {
+	public void compensableRecoveryCommit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException,
+			SecurityException, IllegalStateException, SystemException {
+		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
+		CompensableTransaction compensable = compensableManager.getCompensableTransactionQuietly();
+		if (compensable == null) {
 			throw new IllegalStateException();
 		}
 
-		TransactionXid compensableXid = (TransactionXid) xid;
-		Transaction transaction = transactionRepository.getTransaction(compensableXid);
-		if (transaction == null) {
-			throw new IllegalStateException();
-		} else if (CompensableTransaction.class.isInstance(transaction) == false) {
-			throw new IllegalStateException();
-		}
-
-		TransactionContext transactionContext = transaction.getTransactionContext();
+		TransactionContext transactionContext = compensable.getTransactionContext();
 		if (transactionContext.isCoordinator() == false) {
 			throw new IllegalStateException();
 		}
-
-		this.invokeCompensableCommit((CompensableTransaction) transaction);
+		this.invokeCompensableCommit(compensable);
 	}
 
 	public void compensableCommit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException,
 			SecurityException, IllegalStateException, SystemException {
 		CompensableManager tompensableManager = this.beanFactory.getCompensableManager();
 
-		CompensableTransaction compensable = (CompensableTransaction) tompensableManager
-				.getCompensableTransactionQuietly();
+		CompensableTransaction compensable = (CompensableTransaction) tompensableManager.getCompensableTransactionQuietly();
 		if (compensable == null) {
 			throw new IllegalStateException();
 		}
@@ -176,9 +163,8 @@ public class UserCompensableImpl implements UserCompensable, Referenceable, Seri
 		this.invokeCompensableCommit(compensable);
 	}
 
-	private void invokeCompensableCommit(CompensableTransaction compensable)
-			throws RollbackException, HeuristicMixedException, HeuristicRollbackException, SecurityException,
-			IllegalStateException, SystemException {
+	private void invokeCompensableCommit(CompensableTransaction compensable) throws RollbackException, HeuristicMixedException,
+			HeuristicRollbackException, SecurityException, IllegalStateException, SystemException {
 		RemoteCoordinator compensableCoordinator = this.beanFactory.getCompensableCoordinator();
 
 		TransactionContext compensableContext = compensable.getTransactionContext();
@@ -235,37 +221,24 @@ public class UserCompensableImpl implements UserCompensable, Referenceable, Seri
 		this.transactionManager.rollback();
 	}
 
-	public void compensableRecoveryRollback(Xid xid) throws IllegalStateException, SecurityException, SystemException {
-		TransactionRepository transactionRepository = this.beanFactory.getCompensableRepository();
-		if (xid == null) {
-			throw new IllegalStateException();
-		} else if (TransactionXid.class.isInstance(xid) == false) {
-			throw new IllegalStateException();
-		} else if (xid.getFormatId() != XidFactory.TCC_FORMAT_ID) {
+	public void compensableRecoveryRollback() throws IllegalStateException, SecurityException, SystemException {
+		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
+		CompensableTransaction compensable = compensableManager.getCompensableTransactionQuietly();
+		if (compensable == null) {
 			throw new IllegalStateException();
 		}
 
-		TransactionXid compensableXid = (TransactionXid) xid;
-		Transaction transaction = transactionRepository.getTransaction(compensableXid);
-		if (transaction == null) {
-			throw new IllegalStateException();
-		} else if (CompensableTransaction.class.isInstance(transaction) == false) {
-			throw new IllegalStateException();
-		}
-
-		TransactionContext transactionContext = transaction.getTransactionContext();
+		TransactionContext transactionContext = compensable.getTransactionContext();
 		if (transactionContext.isCoordinator() == false) {
 			throw new IllegalStateException();
 		}
-
-		this.invokeCompensableRollback((CompensableTransaction) transaction);
+		this.invokeCompensableRollback(compensable);
 	}
 
 	public void compensableRollback() throws IllegalStateException, SecurityException, SystemException {
 		CompensableManager tompensableManager = this.beanFactory.getCompensableManager();
 
-		CompensableTransaction compensable = (CompensableTransaction) tompensableManager
-				.getCompensableTransactionQuietly();
+		CompensableTransaction compensable = (CompensableTransaction) tompensableManager.getCompensableTransactionQuietly();
 		if (compensable == null) {
 			throw new IllegalStateException();
 		}

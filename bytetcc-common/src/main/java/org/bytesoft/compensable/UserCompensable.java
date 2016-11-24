@@ -33,9 +33,9 @@ public interface UserCompensable extends javax.transaction.UserTransaction {
 
 	public void compensableRecoveryBegin(Xid xid) throws NotSupportedException, SystemException;
 
-	public void compensableRecoveryCommit(Xid xid) throws RollbackException, HeuristicMixedException,
-			HeuristicRollbackException, SecurityException, IllegalStateException, SystemException;
+	public void compensableRecoveryCommit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException,
+			SecurityException, IllegalStateException, SystemException;
 
-	public void compensableRecoveryRollback(Xid xid) throws IllegalStateException, SecurityException, SystemException;
+	public void compensableRecoveryRollback() throws IllegalStateException, SecurityException, SystemException;
 
 }
