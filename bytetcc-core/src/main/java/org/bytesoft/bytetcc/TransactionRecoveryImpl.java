@@ -31,13 +31,13 @@ import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.common.utils.CommonUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableManager;
+import org.bytesoft.compensable.TransactionContext;
 import org.bytesoft.compensable.archive.CompensableArchive;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 import org.bytesoft.compensable.logging.CompensableLogger;
 import org.bytesoft.transaction.CommitRequiredException;
 import org.bytesoft.transaction.RollbackRequiredException;
 import org.bytesoft.transaction.Transaction;
-import org.bytesoft.transaction.TransactionContext;
 import org.bytesoft.transaction.TransactionRecovery;
 import org.bytesoft.transaction.TransactionRepository;
 import org.bytesoft.transaction.archive.TransactionArchive;
@@ -50,8 +50,7 @@ import org.bytesoft.transaction.xa.XidFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class TransactionRecoveryImpl
-		implements TransactionRecovery, TransactionRecoveryListener, CompensableBeanFactoryAware {
+public class TransactionRecoveryImpl implements TransactionRecovery, TransactionRecoveryListener, CompensableBeanFactoryAware {
 	static final Logger logger = LoggerFactory.getLogger(TransactionRecoveryImpl.class);
 
 	private CompensableBeanFactory beanFactory;
@@ -59,7 +58,7 @@ public class TransactionRecoveryImpl
 	private final Map<TransactionXid, Transaction> recovered = new HashMap<TransactionXid, Transaction>();
 
 	public void onRecovery(Transaction transaction) {
-		TransactionContext transactionContext = transaction.getTransactionContext();
+		org.bytesoft.transaction.TransactionContext transactionContext = transaction.getTransactionContext();
 		TransactionXid xid = transactionContext.getXid();
 
 		XidFactory xidFactory = this.beanFactory.getCompensableXidFactory();
@@ -147,7 +146,7 @@ public class TransactionRecoveryImpl
 	}
 
 	public void recoverStatusIfNecessary(Transaction transaction) {
-		TransactionContext transactionContext = transaction.getTransactionContext();
+		org.bytesoft.transaction.TransactionContext transactionContext = transaction.getTransactionContext();
 		CompensableTransactionImpl compensable = (CompensableTransactionImpl) transaction;
 		List<CompensableArchive> archiveList = compensable.getCompensableArchiveList();
 
@@ -244,7 +243,7 @@ public class TransactionRecoveryImpl
 		int value = 0;
 		for (int i = 0; transactions != null && i < transactions.size(); i++) {
 			Transaction transaction = transactions.get(i);
-			TransactionContext transactionContext = transaction.getTransactionContext();
+			org.bytesoft.transaction.TransactionContext transactionContext = transaction.getTransactionContext();
 			TransactionXid xid = transactionContext.getXid();
 			try {
 				this.recoverTransaction(transaction);
@@ -259,13 +258,11 @@ public class TransactionRecoveryImpl
 						ByteUtils.byteArrayToString(xid.getBranchQualifier()));
 				continue;
 			} catch (SystemException ex) {
-				logger.debug("{}| recover: branch={}, message= {}",
-						ByteUtils.byteArrayToString(xid.getGlobalTransactionId()),
+				logger.debug("{}| recover: branch={}, message= {}", ByteUtils.byteArrayToString(xid.getGlobalTransactionId()),
 						ByteUtils.byteArrayToString(xid.getBranchQualifier()), ex.getMessage());
 				continue;
 			} catch (RuntimeException ex) {
-				logger.debug("{}| recover: branch={}, message= {}",
-						ByteUtils.byteArrayToString(xid.getGlobalTransactionId()),
+				logger.debug("{}| recover: branch={}, message= {}", ByteUtils.byteArrayToString(xid.getGlobalTransactionId()),
 						ByteUtils.byteArrayToString(xid.getBranchQualifier()), ex.getMessage());
 				continue;
 			}
@@ -276,7 +273,7 @@ public class TransactionRecoveryImpl
 	public synchronized void recoverTransaction(Transaction transaction)
 			throws CommitRequiredException, RollbackRequiredException, SystemException {
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
-		TransactionContext transactionContext = transaction.getTransactionContext();
+		org.bytesoft.transaction.TransactionContext transactionContext = transaction.getTransactionContext();
 
 		if (transactionContext.isCoordinator()) {
 			try {
@@ -292,7 +289,7 @@ public class TransactionRecoveryImpl
 	public synchronized void recoverCoordinator(Transaction transaction)
 			throws CommitRequiredException, RollbackRequiredException, SystemException {
 
-		TransactionContext transactionContext = transaction.getTransactionContext();
+		org.bytesoft.transaction.TransactionContext transactionContext = transaction.getTransactionContext();
 		switch (transaction.getTransactionStatus()) {
 		case Status.STATUS_ACTIVE:
 		case Status.STATUS_MARKED_ROLLBACK:

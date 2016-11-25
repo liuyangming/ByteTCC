@@ -68,7 +68,7 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 		TransactionXid globalXid = transactionContext.getXid();
 		Transaction transaction = compensableRepository.getTransaction(globalXid);
 		if (transaction == null) {
-			transaction = new CompensableTransactionImpl(transactionContext);
+			transaction = new CompensableTransactionImpl((org.bytesoft.compensable.TransactionContext) transactionContext);
 			((CompensableTransactionImpl) transaction).setBeanFactory(this.beanFactory);
 
 			compensableRepository.putTransaction(globalXid, transaction);

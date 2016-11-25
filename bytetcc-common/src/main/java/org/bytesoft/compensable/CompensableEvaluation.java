@@ -15,23 +15,17 @@
  */
 package org.bytesoft.compensable;
 
-import org.bytesoft.compensable.archive.CompensableArchive;
-import org.bytesoft.compensable.archive.TransactionArchive;
-import org.bytesoft.transaction.Transaction;
-import org.bytesoft.transaction.supports.TransactionListener;
-import org.bytesoft.transaction.supports.TransactionResourceListener;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-public interface CompensableTransaction
-		extends Transaction, CompensableContext, TransactionListener, TransactionResourceListener {
+@Retention(RetentionPolicy.RUNTIME)
+@Target({ ElementType.METHOD })
+public @interface CompensableEvaluation {
 
-	public TransactionContext getTransactionContext();
+	public int failurePossibility() default 0;
 
-	public Transaction getTransaction();
-
-	public CompensableArchive getCompensableArchive();
-
-	public TransactionArchive getTransactionArchive();
-
-	public void registerCompensable(CompensableInvocation invocation);
+	public int recoveryDifficulty() default 0;
 
 }

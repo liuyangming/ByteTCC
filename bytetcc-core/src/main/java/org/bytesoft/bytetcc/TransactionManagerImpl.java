@@ -53,7 +53,7 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 			if (transaction == null) {
 				this.beginInTryingPhaseForCoordinator(invocation);
 			} else {
-				TransactionContext transactionContext = transaction.getTransactionContext();
+				org.bytesoft.compensable.TransactionContext transactionContext = transaction.getTransactionContext();
 				if (transactionContext.isCompensating()) {
 					this.beginInCompensatingPhaseForCoordinator();
 				} else {
@@ -100,40 +100,48 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 		compensableManager.begin();
 	}
 
-	public void commit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException,
-			SecurityException, IllegalStateException, SystemException {
+	public void commit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException, SecurityException,
+			IllegalStateException, SystemException {
 		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 
 		Transaction transaction = transactionManager.getTransactionQuietly();
 		Transaction compensable = compensableManager.getCompensableTransactionQuietly();
 
-		TransactionContext compensableContext = null;
+		TransactionContext transactionContext = null;
 		if (transaction == null && compensable == null) {
 			throw new IllegalStateException();
 		} else if (compensable == null) {
-			compensableContext = transaction.getTransactionContext();
+			transactionContext = transaction.getTransactionContext();
 		} else {
-			compensableContext = compensable.getTransactionContext();
+			transactionContext = compensable.getTransactionContext();
 		}
 
-		if (compensableContext.isRecoveried()) {
-			if (compensableContext.isCompensable() == false) {
-				throw new IllegalStateException();
-			}
-			compensableManager.commit();
-		} else if (compensableContext.isCompensable() == false) {
-			transactionManager.commit();
-		} else if (compensableContext.isCompensating()) {
-			compensableManager.commit();
-		} else if (compensableContext.isCoordinator()) {
-			if (compensableContext.isPropagated()) {
+		if (org.bytesoft.compensable.TransactionContext.class.isInstance(transactionContext)) {
+			org.bytesoft.compensable.TransactionContext compensableContext = //
+					(org.bytesoft.compensable.TransactionContext) transactionContext;
+			if (compensableContext.isRecoveried()) {
+				if (compensableContext.isCompensable() == false) {
+					throw new IllegalStateException();
+				}
 				compensableManager.commit();
+			} else if (compensableContext.isCompensable() == false) {
+				transactionManager.commit();
+			} else if (compensableContext.isCompensating()) {
+				compensableManager.commit();
+			} else if (transactionContext.isCoordinator()) {
+				if (transactionContext.isPropagated()) {
+					compensableManager.commit();
+				} else if (compensableContext.getPropagationLevel() > 0) {
+					compensableManager.commit();
+				} else {
+					compensableManager.compensableCommit();
+				}
 			} else {
-				compensableManager.compensableCommit();
+				compensableManager.commit();
 			}
 		} else {
-			compensableManager.commit();
+			transactionManager.commit();
 		}
 
 	}
@@ -145,30 +153,38 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 		Transaction transaction = transactionManager.getTransactionQuietly();
 		Transaction compensable = compensableManager.getCompensableTransactionQuietly();
 
-		TransactionContext compensableContext = null;
+		TransactionContext transactionContext = null;
 		if (transaction == null && compensable == null) {
 			throw new IllegalStateException();
 		} else if (compensable == null) {
-			compensableContext = transaction.getTransactionContext();
+			transactionContext = transaction.getTransactionContext();
 		} else {
-			compensableContext = compensable.getTransactionContext();
+			transactionContext = compensable.getTransactionContext();
 		}
 
-		if (compensableContext.isRecoveried()) {
-			if (compensableContext.isCompensable() == false) {
-				throw new IllegalStateException();
-			}
-			compensableManager.rollback();
-		} else if (compensableContext.isCompensable() == false) {
-			transactionManager.rollback();
-		} else if (compensableContext.isCoordinator()) {
-			if (compensableContext.isPropagated()) {
+		if (org.bytesoft.compensable.TransactionContext.class.isInstance(transactionContext)) {
+			org.bytesoft.compensable.TransactionContext compensableContext = //
+					(org.bytesoft.compensable.TransactionContext) transactionContext;
+			if (compensableContext.isRecoveried()) {
+				if (compensableContext.isCompensable() == false) {
+					throw new IllegalStateException();
+				}
 				compensableManager.rollback();
+			} else if (compensableContext.isCompensable() == false) {
+				transactionManager.rollback();
+			} else if (compensableContext.isCoordinator()) {
+				if (compensableContext.isPropagated()) {
+					compensableManager.rollback();
+				} else if (compensableContext.getPropagationLevel() > 0) {
+					compensableManager.rollback();
+				} else {
+					compensableManager.compensableRollback();
+				}
 			} else {
-				compensableManager.compensableRollback();
+				compensableManager.rollback();
 			}
 		} else {
-			compensableManager.rollback();
+			transactionManager.rollback();
 		}
 
 	}
@@ -187,7 +203,13 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 		} else {
 			transactionContext = compensable.getTransactionContext();
 		}
-		boolean isCompensableTransaction = transactionContext.isCompensable();
+
+		boolean isCompensableTransaction = false;
+		if (org.bytesoft.compensable.TransactionContext.class.isInstance(transactionContext)) {
+			org.bytesoft.compensable.TransactionContext compensableContext = //
+					(org.bytesoft.compensable.TransactionContext) transactionContext;
+			isCompensableTransaction = compensableContext.isCompensable();
+		}
 		return (isCompensableTransaction ? compensableManager : transactionManager).suspend();
 	}
 
@@ -196,8 +218,23 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 
-		TransactionContext transactionContext = ((Transaction) tobj).getTransactionContext();
-		boolean isCompensableTransaction = transactionContext.isCompensable();
+		TransactionContext transactionContext = null;
+		Transaction transaction = transactionManager.getTransactionQuietly();
+		Transaction compensable = compensableManager.getCompensableTransactionQuietly();
+		if (transaction == null && compensable == null) {
+			throw new SystemException();
+		} else if (compensable == null) {
+			transactionContext = transaction.getTransactionContext();
+		} else {
+			transactionContext = compensable.getTransactionContext();
+		}
+
+		boolean isCompensableTransaction = false;
+		if (org.bytesoft.compensable.TransactionContext.class.isInstance(transactionContext)) {
+			org.bytesoft.compensable.TransactionContext compensableContext = //
+					(org.bytesoft.compensable.TransactionContext) transactionContext;
+			isCompensableTransaction = compensableContext.isCompensable();
+		}
 		(isCompensableTransaction ? compensableManager : transactionManager).resume(tobj);
 	}
 
@@ -215,7 +252,13 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 		} else {
 			transactionContext = compensable.getTransactionContext();
 		}
-		boolean isCompensableTransaction = transactionContext.isCompensable();
+
+		boolean isCompensableTransaction = false;
+		if (org.bytesoft.compensable.TransactionContext.class.isInstance(transactionContext)) {
+			org.bytesoft.compensable.TransactionContext compensableContext = //
+					(org.bytesoft.compensable.TransactionContext) transactionContext;
+			isCompensableTransaction = compensableContext.isCompensable();
+		}
 		(isCompensableTransaction ? compensableManager : transactionManager).setRollbackOnly();
 	}
 
@@ -233,7 +276,13 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 		} else {
 			transactionContext = compensable.getTransactionContext();
 		}
-		boolean isCompensableTransaction = transactionContext.isCompensable();
+
+		boolean isCompensableTransaction = false;
+		if (org.bytesoft.compensable.TransactionContext.class.isInstance(transactionContext)) {
+			org.bytesoft.compensable.TransactionContext compensableContext = //
+					(org.bytesoft.compensable.TransactionContext) transactionContext;
+			isCompensableTransaction = compensableContext.isCompensable();
+		}
 		(isCompensableTransaction ? compensableManager : transactionManager).setTransactionTimeout(seconds);
 	}
 

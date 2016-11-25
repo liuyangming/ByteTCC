@@ -35,8 +35,7 @@ import org.springframework.context.ApplicationContextAware;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-public class CompensableMethodInterceptor implements MethodInterceptor, ApplicationContextAware,
-		CompensableBeanFactoryAware {
+public class CompensableMethodInterceptor implements MethodInterceptor, ApplicationContextAware, CompensableBeanFactoryAware {
 	static final Logger logger = LoggerFactory.getLogger(CompensableMethodInterceptor.class);
 
 	private CompensableBeanFactory beanFactory;
@@ -50,19 +49,19 @@ public class CompensableMethodInterceptor implements MethodInterceptor, Applicat
 			identifier = config.getBeanName();
 			if (StringUtils.isBlank(identifier)) {
 				logger.error("BeanId(class= {}) should not be null!", bean.getClass().getName());
-				throw new IllegalStateException(String.format("BeanId(class= %s) should not be null!", bean.getClass()
-						.getName()));
+				throw new IllegalStateException(
+						String.format("BeanId(class= %s) should not be null!", bean.getClass().getName()));
 			}
 		} else {
 			String[] beanNameArray = this.applicationContext.getBeanNamesForType(bean.getClass());
 			if (beanNameArray.length == 1) {
 				identifier = beanNameArray[0];
 			} else {
-				logger.error("Class {} does not implement interface {}, and there are multiple bean definitions!", bean
-						.getClass().getName(), CompensableBeanNameAware.class.getName());
-				throw new IllegalStateException(String.format(
-						"Class %s does not implement interface %s, and there are multiple bean definitions!", bean
-								.getClass().getName(), CompensableBeanNameAware.class.getName()));
+				logger.error("Class {} does not implement interface {}, and there are multiple bean definitions!",
+						bean.getClass().getName(), CompensableBeanNameAware.class.getName());
+				throw new IllegalStateException(
+						String.format("Class %s does not implement interface %s, and there are multiple bean definitions!",
+								bean.getClass().getName(), CompensableBeanNameAware.class.getName()));
 			}
 		}
 
@@ -93,6 +92,8 @@ public class CompensableMethodInterceptor implements MethodInterceptor, Applicat
 				} else if (propagation == null) {
 					transaction.registerCompensable(invocation);
 				} else if (Propagation.REQUIRED.equals(propagation)) {
+					transaction.registerCompensable(invocation);
+				} else if (Propagation.REQUIRES_NEW.equals(propagation)) {
 					transaction.registerCompensable(invocation);
 				} else if (Propagation.MANDATORY.equals(propagation)) {
 					transaction.registerCompensable(invocation);

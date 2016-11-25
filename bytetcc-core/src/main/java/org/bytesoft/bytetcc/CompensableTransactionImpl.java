@@ -42,13 +42,13 @@ import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableInvocation;
 import org.bytesoft.compensable.CompensableTransaction;
 import org.bytesoft.compensable.ContainerContext;
+import org.bytesoft.compensable.TransactionContext;
 import org.bytesoft.compensable.archive.CompensableArchive;
 import org.bytesoft.compensable.archive.TransactionArchive;
 import org.bytesoft.compensable.logging.CompensableLogger;
 import org.bytesoft.transaction.CommitRequiredException;
 import org.bytesoft.transaction.RollbackRequiredException;
 import org.bytesoft.transaction.Transaction;
-import org.bytesoft.transaction.TransactionContext;
 import org.bytesoft.transaction.TransactionRepository;
 import org.bytesoft.transaction.archive.XAResourceArchive;
 import org.bytesoft.transaction.supports.TransactionListener;
@@ -79,6 +79,8 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 
 	/* current compensable-archive list in try phase. */
 	private final transient List<CompensableArchive> transientArchiveList = new ArrayList<CompensableArchive>();
+	// TODO private final transient Map<Xid, List<CompensableArchive>> transientArchiveList =
+	// new HashMap<Xid, List<CompensableArchive>>();
 
 	private boolean participantStickyRequired;
 
@@ -499,11 +501,9 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 	}
 
 	public void resume() throws SystemException {
-		throw new SystemException();
 	}
 
 	public void suspend() throws SystemException {
-		throw new SystemException();
 	}
 
 	public void registerCompensable(CompensableInvocation invocation) {
@@ -600,6 +600,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 						compensableArchive.getTransactionResourceKey(), compensableArchive.getTransactionXid());
 			}
 
+			// TODO
 			TransactionArchive transactionArchive = this.getTransactionArchive();
 			transactionArchive.setCompensableStatus(Status.STATUS_COMMITTING);
 			compensableLogger.updateTransaction(transactionArchive);

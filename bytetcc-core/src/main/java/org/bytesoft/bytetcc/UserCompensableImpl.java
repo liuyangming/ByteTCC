@@ -33,10 +33,9 @@ import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableManager;
 import org.bytesoft.compensable.CompensableTransaction;
+import org.bytesoft.compensable.TransactionContext;
 import org.bytesoft.compensable.UserCompensable;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
-import org.bytesoft.transaction.Transaction;
-import org.bytesoft.transaction.TransactionContext;
 import org.bytesoft.transaction.TransactionManager;
 import org.bytesoft.transaction.TransactionRepository;
 import org.bytesoft.transaction.internal.TransactionException;
@@ -104,7 +103,7 @@ public class UserCompensableImpl implements UserCompensable, Referenceable, Seri
 		}
 
 		TransactionXid compensableXid = (TransactionXid) xid;
-		Transaction transaction = transactionRepository.getTransaction(compensableXid);
+		CompensableTransaction transaction = (CompensableTransaction) transactionRepository.getTransaction(compensableXid);
 		if (transaction == null) {
 			throw new IllegalStateException();
 		} else if (CompensableTransaction.class.isInstance(transaction) == false) {
