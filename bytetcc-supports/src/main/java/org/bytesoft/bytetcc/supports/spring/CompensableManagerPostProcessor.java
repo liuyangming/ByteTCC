@@ -18,8 +18,6 @@ package org.bytesoft.bytetcc.supports.spring;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.bytesoft.compensable.CompensableBeanFactory;
-import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.FatalBeanException;
 import org.springframework.beans.MutablePropertyValues;
@@ -28,13 +26,16 @@ import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.config.RuntimeBeanReference;
 
-public class CompensableBeanFactoryPostProcessor implements BeanFactoryPostProcessor {
+public class CompensableManagerPostProcessor implements BeanFactoryPostProcessor {
 
 	public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
 		ClassLoader cl = Thread.currentThread().getContextClassLoader();
 
-		String beanFactoryBeanId = null;
-		List<BeanDefinition> beanFactoryAwareBeanIdList = new ArrayList<BeanDefinition>();
+		String compensableManagerBeanName = null;
+		String userCompensableBeanName = null;
+		String transactionManagerBeanName = null;
+		final List<String> beanNameList = new ArrayList<String>();
+
 		String[] beanNameArray = beanFactory.getBeanDefinitionNames();
 		for (int i = 0; i < beanNameArray.length; i++) {
 			String beanName = beanNameArray[i];
@@ -48,27 +49,41 @@ public class CompensableBeanFactoryPostProcessor implements BeanFactoryPostProce
 				continue;
 			}
 
-			if (CompensableBeanFactoryAware.class.isAssignableFrom(beanClass)) {
-				beanFactoryAwareBeanIdList.add(beanDef);
-			}
-
-			if (CompensableBeanFactory.class.isAssignableFrom(beanClass)) {
-				if (beanFactoryBeanId == null) {
-					beanFactoryBeanId = beanName;
-				} else {
-					throw new FatalBeanException("Duplicated compensable-bean-factory defined.");
-				}
+			if (org.bytesoft.bytejta.supports.jdbc.LocalXADataSource.class.equals(beanClass)) {
+				beanNameList.add(beanName);
+			} else if (org.bytesoft.bytetcc.UserCompensableImpl.class.equals(beanClass)) {
+				beanNameList.add(beanName);
+				userCompensableBeanName = beanName;
+			} else if (org.bytesoft.bytetcc.TransactionManagerImpl.class.equals(beanClass)) {
+				compensableManagerBeanName = beanName;
+			} else if (org.springframework.transaction.jta.JtaTransactionManager.class.equals(beanClass)) {
+				beanNameList.add(beanName);
+				transactionManagerBeanName = beanName;
 			}
 
 		}
 
-		for (int i = 0; beanFactoryBeanId != null && i < beanFactoryAwareBeanIdList.size(); i++) {
-			BeanDefinition beanDef = beanFactoryAwareBeanIdList.get(i);
+		if (compensableManagerBeanName == null) {
+			throw new FatalBeanException("No configuration of class org.bytesoft.bytetcc.TransactionManagerImpl was found.");
+		}
+
+		if (transactionManagerBeanName == null) {
+			throw new FatalBeanException(
+					"No configuration of org.springframework.transaction.jta.JtaTransactionManager was found.");
+		}
+
+		for (int i = 0; i < beanNameList.size(); i++) {
+			String beanName = beanNameList.get(i);
+			BeanDefinition beanDef = beanFactory.getBeanDefinition(beanName);
 			MutablePropertyValues mpv = beanDef.getPropertyValues();
-			RuntimeBeanReference beanRef = new RuntimeBeanReference(beanFactoryBeanId);
-			mpv.addPropertyValue(CompensableBeanFactoryAware.BEAN_FACTORY_FIELD_NAME, beanRef);
+			RuntimeBeanReference beanRef = new RuntimeBeanReference(compensableManagerBeanName);
+			mpv.addPropertyValue("transactionManager", beanRef);
 		}
 
+		BeanDefinition transactionManagerBeanDef = beanFactory.getBeanDefinition(transactionManagerBeanName);
+		MutablePropertyValues transactionManagerMPV = transactionManagerBeanDef.getPropertyValues();
+		RuntimeBeanReference userCompensableBeanRef = new RuntimeBeanReference(userCompensableBeanName);
+		transactionManagerMPV.addPropertyValue("userTransaction", userCompensableBeanRef);
 	}
 
 }

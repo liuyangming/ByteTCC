@@ -16,12 +16,14 @@
 	<bean class="org.bytesoft.bytetcc.supports.spring.TransactionConfigPostProcessor" />
 	<bean class="org.bytesoft.bytetcc.supports.spring.CompensableContextPostProcessor" />
 	<bean class="org.bytesoft.bytetcc.supports.spring.CompensableEndpointPostProcessor" />
+	<bean class="org.bytesoft.bytetcc.supports.spring.CompensableManagerPostProcessor" />
 
 	<bean class="org.bytesoft.bytetcc.supports.dubbo.DubboConfigPostProcessor" />
 	<bean class="org.bytesoft.bytetcc.supports.dubbo.CompensableConfigPostProcessor" />
 
 	<bean class="org.bytesoft.bytetcc.supports.dubbo.CompensableBeanRegistry" factory-method="getInstance" />
 
+	<bean id="bytetccUserTransaction" class="org.bytesoft.bytetcc.UserCompensableImpl" />
 	<bean id="bytetccCompensableManager" class="org.bytesoft.bytetcc.CompensableManagerImpl" />
 	<bean id="bytetccTransactionManager" class="org.bytesoft.bytetcc.TransactionManagerImpl" />
 
