@@ -16,6 +16,7 @@
 package org.bytesoft.bytetcc;
 
 import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
+import org.bytesoft.bytetcc.supports.CompensableSynchronization;
 import org.bytesoft.bytetcc.supports.resource.LocalResourceCleaner;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableContext;
@@ -49,6 +50,7 @@ public final class TransactionBeanFactoryImpl implements CompensableBeanFactory 
 	private XAResourceDeserializer resourceDeserializer;
 	private LocalResourceCleaner localResourceCleaner;
 	private CompensableContext compensableContext;
+	private CompensableSynchronization compensableSynchronization;
 
 	public TransactionManager getTransactionManager() {
 		return transactionManager;
@@ -184,6 +186,14 @@ public final class TransactionBeanFactoryImpl implements CompensableBeanFactory 
 
 	public void setCompensableContext(CompensableContext compensableContext) {
 		this.compensableContext = compensableContext;
+	}
+
+	public CompensableSynchronization getCompensableSynchronization() {
+		return compensableSynchronization;
+	}
+
+	public void setCompensableSynchronization(CompensableSynchronization compensableSynchronization) {
+		this.compensableSynchronization = compensableSynchronization;
 	}
 
 }

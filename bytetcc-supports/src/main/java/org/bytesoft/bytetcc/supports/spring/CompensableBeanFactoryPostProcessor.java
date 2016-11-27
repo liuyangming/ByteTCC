@@ -34,6 +34,7 @@ public class CompensableBeanFactoryPostProcessor implements BeanFactoryPostProce
 		ClassLoader cl = Thread.currentThread().getContextClassLoader();
 
 		String beanFactoryBeanId = null;
+		String interceptorBeanId = null;
 		List<BeanDefinition> beanFactoryAwareBeanIdList = new ArrayList<BeanDefinition>();
 		String[] beanNameArray = beanFactory.getBeanDefinitionNames();
 		for (int i = 0; i < beanNameArray.length; i++) {
@@ -56,19 +57,39 @@ public class CompensableBeanFactoryPostProcessor implements BeanFactoryPostProce
 				if (beanFactoryBeanId == null) {
 					beanFactoryBeanId = beanName;
 				} else {
-					throw new FatalBeanException("Duplicated compensable-bean-factory defined.");
+					throw new FatalBeanException("Duplicated org.bytesoft.compensable.CompensableBeanFactory defined.");
+				}
+			} else if (CompensableMethodInterceptor.class.equals(beanClass)) {
+				if (interceptorBeanId == null) {
+					interceptorBeanId = beanName;
+				} else {
+					throw new IllegalStateException(
+							"Duplicated org.bytesoft.bytetcc.supports.spring.CompensableMethodInterceptor defined.");
 				}
 			}
 
 		}
 
-		for (int i = 0; beanFactoryBeanId != null && i < beanFactoryAwareBeanIdList.size(); i++) {
+		if (beanFactoryBeanId == null) {
+			throw new IllegalStateException(
+					"No configuration of class org.bytesoft.compensable.CompensableBeanFactory was found.");
+		}
+		if (interceptorBeanId == null) {
+			throw new IllegalStateException(
+					"No configuration of class org.bytesoft.bytetcc.supports.spring.CompensableMethodInterceptor was found.");
+		}
+
+		for (int i = 0; i < beanFactoryAwareBeanIdList.size(); i++) {
 			BeanDefinition beanDef = beanFactoryAwareBeanIdList.get(i);
 			MutablePropertyValues mpv = beanDef.getPropertyValues();
 			RuntimeBeanReference beanRef = new RuntimeBeanReference(beanFactoryBeanId);
 			mpv.addPropertyValue(CompensableBeanFactoryAware.BEAN_FACTORY_FIELD_NAME, beanRef);
 		}
 
+		BeanDefinition beanDef = beanFactory.getBeanDefinition(beanFactoryBeanId);
+		MutablePropertyValues mpv = beanDef.getPropertyValues();
+		RuntimeBeanReference synchronization = new RuntimeBeanReference(interceptorBeanId);
+		mpv.addPropertyValue("compensableSynchronization", synchronization);
 	}
 
 }

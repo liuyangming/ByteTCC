@@ -49,65 +49,14 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 		CompensableInvocationRegistry registry = CompensableInvocationRegistry.getInstance();
 		CompensableInvocation invocation = registry.getCurrent();
 
-		if (invocation != null) {
-			if (transaction == null) {
-				this.beginGlobalTxInTryingPhaseForCoordinator(invocation);
-			} else {
-				org.bytesoft.compensable.TransactionContext transactionContext = transaction.getTransactionContext();
-				if (transactionContext.isCompensating()) {
-					this.beginInCompensatingPhaseForCoordinator();
-				} else if (transactionContext.isCoordinator()) {
-					this.beginBranchTxInTryingPhaseForCoordinator(invocation);
-				} else {
-					this.beginInTryingPhaseForParticipant();
-				}
-			}
-		} else if (transaction == null) {
-			transactionManager.begin();
-		} else if (transaction.getTransactionContext().isRecoveried()) {
-			this.beginInCompensatingPhaseForRecovery(); // recovery
+		if (transaction != null) {
+			compensableManager.begin();
+		} else if (invocation != null) {
+			compensableManager.compensableBegin();
 		} else {
-			this.beginInCompensatingPhaseForParticipant();
+			transactionManager.begin();
 		}
 
-	}
-
-	protected void beginGlobalTxInTryingPhaseForCoordinator(CompensableInvocation invocation)
-			throws NotSupportedException, SystemException {
-		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
-		compensableManager.compensableBegin();
-
-		CompensableTransaction transaction = compensableManager.getCompensableTransactionQuietly();
-		transaction.registerCompensable(invocation);
-	}
-
-	protected void beginBranchTxInTryingPhaseForCoordinator(CompensableInvocation invocation)
-			throws NotSupportedException, SystemException {
-		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
-		compensableManager.begin();
-
-		CompensableTransaction transaction = compensableManager.getCompensableTransactionQuietly();
-		transaction.registerCompensable(invocation);
-	}
-
-	protected void beginInTryingPhaseForParticipant() throws NotSupportedException, SystemException {
-		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
-		compensableManager.begin();
-	}
-
-	protected void beginInCompensatingPhaseForCoordinator() throws NotSupportedException, SystemException {
-		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
-		compensableManager.begin();
-	}
-
-	protected void beginInCompensatingPhaseForParticipant() throws NotSupportedException, SystemException {
-		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
-		compensableManager.begin();
-	}
-
-	protected void beginInCompensatingPhaseForRecovery() throws NotSupportedException, SystemException {
-		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
-		compensableManager.begin();
 	}
 
 	public void commit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException,
