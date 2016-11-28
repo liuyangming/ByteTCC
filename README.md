@@ -1,4 +1,4 @@
-ByteTCC是一个基于TCC（Try/Confirm/Cancel）、事务补偿机制的分布式事务管理器。兼容JTA，可以很好的与EJB、Spring等容器（本文档下文说明中将以Spring容器为例）进行集成。
+ByteTCC是一个基于TCC（Try/Confirm/Cancel）机制的分布式事务管理器。兼容JTA，可以很好的与EJB、Spring等容器（本文档下文说明中将以Spring容器为例）进行集成。
 
 ## 一、Try/Confirm/Cancel模式
 // TODO
