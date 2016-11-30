@@ -11,7 +11,8 @@
 	<packaging>jar</packaging>
 
 	<name>bytetcc-supports</name>
-	<url>http://maven.apache.org</url>
+	<description>The bytetcc-supports project the module of ByteTCC for integrating with third-party open source project.</description>
+	<url>http://www.bytesoft.org</url>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
