@@ -65,10 +65,10 @@ public class AccountServiceCancel implements IAccountService {
 * 4、支持dubbo服务框架；
 
 ## 四、历史版本
-##### 4.1. v0.1.2
+#### 4.1. v0.1.2
 * 地址：http://code.google.com/p/bytetcc
 
-##### 4.2. v0.2.0-alpha
+#### 4.2. v0.2.0-alpha
 * 地址：http://code.taobao.org/p/openjtcc
 * 文档：http://code.taobao.org/p/openjtcc/wiki/index/
 
