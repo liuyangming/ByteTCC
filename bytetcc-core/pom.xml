@@ -11,7 +11,8 @@
 	<packaging>jar</packaging>
 
 	<name>bytetcc-core</name>
-	<url>http://maven.apache.org</url>
+	<description>The bytetcc-core project is the core module of ByteTCC.</description>
+	<url>http://www.bytesoft.org</url>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

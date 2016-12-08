@@ -7,7 +7,33 @@
 	<version>0.3.0-beta</version>
 	<packaging>pom</packaging>
 	<name>bytetcc-parent</name>
-	<url>http://maven.apache.org</url>
+	<description>ByteTCC is a transaction manager based on the TCC(Try/Confirm/Cancel) mechanism.</description>
+	<url>http://www.bytesoft.org</url>
+
+	<licenses>
+		<license>
+			<name>The GNU Lesser General Public License, Version 3.0</name>
+			<url>http://www.gnu.org/licenses/lgpl-3.0.txt</url>
+		</license>
+	</licenses>
+
+	<developers>
+		<developer>
+			<name>liuyangming</name>
+			<email>bytefox@126.com</email>
+		</developer>
+	</developers>
+
+	<scm>
+		<connection>scm:git:git@github.com:liuyangming/ByteTCC.git</connection>
+		<developerConnection>scm:git:git@github.com:liuyangming/ByteTCC.git</developerConnection>
+		<url>git@github.com:liuyangming/ByteTCC.git</url>
+	</scm>
+
+	<issueManagement>
+		<system>Github Issue</system>
+		<url>https://github.com/liuyangming/ByteTCC/issues</url>
+	</issueManagement>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
