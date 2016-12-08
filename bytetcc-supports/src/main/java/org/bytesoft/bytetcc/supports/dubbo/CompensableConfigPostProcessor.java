@@ -142,6 +142,7 @@ public class CompensableConfigPostProcessor implements BeanFactoryPostProcessor 
 		mpv.addPropertyValue("cluster", "failfast");
 		mpv.addPropertyValue("loadbalance", "compensable");
 		mpv.addPropertyValue("group", "org.bytesoft.bytetcc");
+		mpv.addPropertyValue("check", "false");
 
 		String stubBeanId = String.format("stub@%s", RemoteCoordinator.class.getName());
 		registry.registerBeanDefinition(stubBeanId, beanDef);
