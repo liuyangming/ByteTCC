@@ -22,7 +22,7 @@ import java.lang.reflect.Proxy;
 
 import org.apache.commons.lang3.StringUtils;
 import org.bytesoft.bytejta.supports.dubbo.DubboRemoteCoordinator;
-import org.bytesoft.bytejta.supports.invoke.InvocationContext;
+import org.bytesoft.bytejta.supports.dubbo.InvocationContext;
 import org.bytesoft.bytejta.supports.rpc.TransactionRequestImpl;
 import org.bytesoft.bytejta.supports.rpc.TransactionResponseImpl;
 import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
@@ -78,9 +78,8 @@ public class CompensableServiceFilter implements Filter {
 			dubboCoordinator.setInvocationContext(invocationContext);
 			dubboCoordinator.setRemoteCoordinator(consumeCoordinator);
 
-			remoteCoordinator = (RemoteCoordinator) Proxy.newProxyInstance(
-					DubboRemoteCoordinator.class.getClassLoader(), new Class[] { RemoteCoordinator.class },
-					dubboCoordinator);
+			remoteCoordinator = (RemoteCoordinator) Proxy.newProxyInstance(DubboRemoteCoordinator.class.getClassLoader(),
+					new Class[] { RemoteCoordinator.class }, dubboCoordinator);
 			remoteCoordinatorRegistry.putTransactionManagerStub(address, remoteCoordinator);
 		}
 
@@ -103,8 +102,8 @@ public class CompensableServiceFilter implements Filter {
 
 	}
 
-	private void beforeProviderInvoke(Invocation invocation, TransactionRequestImpl request,
-			TransactionResponseImpl response) throws RpcException {
+	private void beforeProviderInvoke(Invocation invocation, TransactionRequestImpl request, TransactionResponseImpl response)
+			throws RpcException {
 		CompensableBeanRegistry beanRegistry = CompensableBeanRegistry.getInstance();
 		CompensableBeanFactory beanFactory = beanRegistry.getBeanFactory();
 		TransactionInterceptor transactionInterceptor = beanFactory.getTransactionInterceptor();
@@ -139,8 +138,8 @@ public class CompensableServiceFilter implements Filter {
 
 	}
 
-	private void afterProviderInvoke(Invocation invocation, TransactionRequestImpl request,
-			TransactionResponseImpl response) throws RpcException {
+	private void afterProviderInvoke(Invocation invocation, TransactionRequestImpl request, TransactionResponseImpl response)
+			throws RpcException {
 		CompensableBeanRegistry beanRegistry = CompensableBeanRegistry.getInstance();
 		CompensableBeanFactory beanFactory = beanRegistry.getBeanFactory();
 		TransactionInterceptor transactionInterceptor = beanFactory.getTransactionInterceptor();
@@ -195,9 +194,8 @@ public class CompensableServiceFilter implements Filter {
 			dubboCoordinator.setInvocationContext(invocationContext);
 			dubboCoordinator.setRemoteCoordinator(consumeCoordinator);
 
-			remoteCoordinator = (RemoteCoordinator) Proxy.newProxyInstance(
-					DubboRemoteCoordinator.class.getClassLoader(), new Class[] { RemoteCoordinator.class },
-					dubboCoordinator);
+			remoteCoordinator = (RemoteCoordinator) Proxy.newProxyInstance(DubboRemoteCoordinator.class.getClassLoader(),
+					new Class[] { RemoteCoordinator.class }, dubboCoordinator);
 			remoteCoordinatorRegistry.putTransactionManagerStub(address, remoteCoordinator);
 		}
 
@@ -221,8 +219,8 @@ public class CompensableServiceFilter implements Filter {
 
 	}
 
-	private void beforeConsumerInvoke(Invocation invocation, TransactionRequestImpl request,
-			TransactionResponseImpl response) throws RpcException {
+	private void beforeConsumerInvoke(Invocation invocation, TransactionRequestImpl request, TransactionResponseImpl response)
+			throws RpcException {
 		CompensableBeanRegistry beanRegistry = CompensableBeanRegistry.getInstance();
 		CompensableBeanFactory beanFactory = beanRegistry.getBeanFactory();
 		TransactionInterceptor transactionInterceptor = beanFactory.getTransactionInterceptor();
@@ -244,8 +242,8 @@ public class CompensableServiceFilter implements Filter {
 		}
 	}
 
-	private void afterConsumerInvoke(Invocation invocation, TransactionRequestImpl request,
-			TransactionResponseImpl response) throws RpcException {
+	private void afterConsumerInvoke(Invocation invocation, TransactionRequestImpl request, TransactionResponseImpl response)
+			throws RpcException {
 		CompensableBeanRegistry beanRegistry = CompensableBeanRegistry.getInstance();
 		CompensableBeanFactory beanFactory = beanRegistry.getBeanFactory();
 		TransactionInterceptor transactionInterceptor = beanFactory.getTransactionInterceptor();

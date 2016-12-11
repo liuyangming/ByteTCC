@@ -30,7 +30,7 @@ import javax.sql.XADataSource;
 import javax.transaction.xa.XAResource;
 
 import org.bytesoft.bytejta.supports.dubbo.DubboRemoteCoordinator;
-import org.bytesoft.bytejta.supports.invoke.InvocationContext;
+import org.bytesoft.bytejta.supports.dubbo.InvocationContext;
 import org.bytesoft.bytejta.supports.jdbc.DataSourceHolder;
 import org.bytesoft.bytejta.supports.jdbc.RecoveredResource;
 import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
