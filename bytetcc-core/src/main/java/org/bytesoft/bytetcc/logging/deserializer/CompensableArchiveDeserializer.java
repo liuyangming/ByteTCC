@@ -58,7 +58,7 @@ public class CompensableArchiveDeserializer implements ArchiveDeserializer, Comp
 		byte[] transactionResourceKeyByteArray = transactionResourceKey == null ? new byte[0]
 				: transactionResourceKey.getBytes();
 		byte[] compensableResourceKeyByteArray = compensableResourceKey == null ? new byte[0]
-				: transactionResourceKey.getBytes();
+				: compensableResourceKey.getBytes();
 
 		byte[] resultArray = new byte[XidFactory.GLOBAL_TRANSACTION_LENGTH + XidFactory.BRANCH_QUALIFIER_LENGTH
 				+ LENGTH_OF_XID * 2 + 1 //
