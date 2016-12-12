@@ -56,9 +56,9 @@ public final class CompensableLoadBalance implements LoadBalance {
 		CompensableManager compensableManager = beanFactory.getCompensableManager();
 		CompensableTransactionImpl compensable = //
 				(CompensableTransactionImpl) compensableManager.getCompensableTransactionQuietly();
-		List<XAResourceArchive> participantList = compensable.getParticipantArchiveList();
+		List<XAResourceArchive> participantList = compensable == null ? null : compensable.getParticipantArchiveList();
 
-		for (int i = 0; invokers != null && i < invokers.size(); i++) {
+		for (int i = 0; invokers != null && participantList != null && i < invokers.size(); i++) {
 			Invoker<T> invoker = invokers.get(i);
 			URL invokerUrl = invoker.getUrl();
 			String invokerHost = invokerUrl.getHost();
