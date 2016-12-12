@@ -88,7 +88,7 @@ public class CompensableServiceFilter implements Filter {
 
 		Class<?>[] parameterTypeArray = invocation.getParameterTypes();
 		Class<?> parameterType = (parameterTypeArray == null || parameterTypeArray.length == 0) ? null : parameterTypeArray[0];
-		if (parameterTypeArray == null || parameterTypeArray.length != 1) {
+		if (parameterTypeArray == null || parameterTypeArray.length == 0) {
 			return invoker.invoke(invocation);
 		} else if (Xid.class.equals(parameterType) == false) {
 			return invoker.invoke(invocation);
@@ -102,9 +102,7 @@ public class CompensableServiceFilter implements Filter {
 		TransactionContext transactionContext = transaction.getTransactionContext();
 		String propagatedBy = String.valueOf(transactionContext.getPropagatedBy());
 
-		String remoteHost = RpcContext.getContext().getRemoteHost();
-		int remotePort = RpcContext.getContext().getRemotePort();
-		String remoteAddr = String.format("%s:%s", remoteHost, remotePort);
+		String remoteAddr = invocation.getAttachment(CompensableCoordinator.class.getName());
 
 		if (StringUtils.equals(propagatedBy, remoteAddr)) {
 			return invoker.invoke(invocation);
@@ -113,6 +111,8 @@ public class CompensableServiceFilter implements Filter {
 		TransactionException error = new TransactionException(XAException.XAER_PROTO);
 		RpcResult result = new RpcResult();
 		result.setException(error);
+
+		logger.warn("{}| branch should be invoked by its own coordinator.", globalXid);
 
 		return result;
 	}
@@ -264,6 +264,12 @@ public class CompensableServiceFilter implements Filter {
 	}
 
 	public Result consumerInvokeForTCC(Invoker<?> invoker, Invocation invocation) throws RpcException, RemotingException {
+		CompensableBeanRegistry beanRegistry = CompensableBeanRegistry.getInstance();
+		CompensableBeanFactory beanFactory = beanRegistry.getBeanFactory();
+		RemoteCoordinator compensableCoordinator = beanFactory.getCompensableCoordinator();
+
+		Map<String, String> attachments = invocation.getAttachments();
+		attachments.put(CompensableCoordinator.class.getName(), compensableCoordinator.getIdentifier());
 		return invoker.invoke(invocation);
 	}
 
