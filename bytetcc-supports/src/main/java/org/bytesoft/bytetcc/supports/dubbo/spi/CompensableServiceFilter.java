@@ -229,24 +229,12 @@ public class CompensableServiceFilter implements Filter {
 		TransactionInterceptor transactionInterceptor = beanFactory.getTransactionInterceptor();
 		CompensableManager transactionManager = beanFactory.getCompensableManager();
 
-		String transactionContextContent = invocation.getAttachment(TransactionContext.class.getName());
-
 		CompensableTransaction transaction = transactionManager.getCompensableTransactionQuietly();
 		TransactionContext nativeTransactionContext = transaction == null ? null : transaction.getTransactionContext();
 
 		response.setTransactionContext(nativeTransactionContext);
 		try {
 			transactionInterceptor.beforeSendResponse(response);
-			if (StringUtils.isNotBlank(transactionContextContent)) {
-				ByteArrayOutputStream baos = new ByteArrayOutputStream();
-				HessianOutput output = new HessianOutput(baos);
-				output.writeObject(nativeTransactionContext);
-				String nativeTansactionContextContent = ByteUtils.byteArrayToString(baos.toByteArray());
-				invocation.getAttachments().put(TransactionContext.class.getName(), nativeTansactionContextContent);
-			}
-		} catch (IOException ex) {
-			logger.error("Error occurred in remote call!", ex);
-			throw new RemotingException(ex.getMessage());
 		} catch (RuntimeException rex) {
 			logger.error("Error occurred in remote call!", rex);
 			throw new RemotingException(rex.getMessage());
