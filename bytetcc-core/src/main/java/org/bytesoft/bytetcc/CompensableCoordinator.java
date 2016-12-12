@@ -31,6 +31,7 @@ import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableManager;
 import org.bytesoft.compensable.CompensableTransaction;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
+import org.bytesoft.compensable.aware.CompensableEndpointAware;
 import org.bytesoft.compensable.logging.CompensableLogger;
 import org.bytesoft.transaction.CommitRequiredException;
 import org.bytesoft.transaction.RollbackRequiredException;
@@ -43,14 +44,11 @@ import org.bytesoft.transaction.xa.XidFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class CompensableCoordinator implements RemoteCoordinator, CompensableBeanFactoryAware {
+public class CompensableCoordinator implements RemoteCoordinator, CompensableBeanFactoryAware, CompensableEndpointAware {
 	static final Logger logger = LoggerFactory.getLogger(CompensableCoordinator.class);
 
+	private String endpoint;
 	private CompensableBeanFactory beanFactory;
-
-	public String getIdentifier() {
-		throw new IllegalStateException();
-	}
 
 	public Transaction getTransactionQuietly() {
 		CompensableManager transactionManager = this.beanFactory.getCompensableManager();
@@ -406,6 +404,14 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 
 	public boolean setTransactionTimeout(int seconds) throws XAException {
 		return false;
+	}
+
+	public void setEndpoint(String identifier) {
+		this.endpoint = identifier;
+	}
+
+	public String getIdentifier() {
+		return this.endpoint;
 	}
 
 	public void setBeanFactory(CompensableBeanFactory tbf) {

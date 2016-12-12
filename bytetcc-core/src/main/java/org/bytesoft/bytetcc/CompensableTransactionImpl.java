@@ -51,6 +51,7 @@ import org.bytesoft.transaction.RollbackRequiredException;
 import org.bytesoft.transaction.Transaction;
 import org.bytesoft.transaction.TransactionRepository;
 import org.bytesoft.transaction.archive.XAResourceArchive;
+import org.bytesoft.transaction.internal.TransactionException;
 import org.bytesoft.transaction.supports.TransactionListener;
 import org.bytesoft.transaction.supports.TransactionListenerAdapter;
 import org.bytesoft.transaction.supports.TransactionResourceListener;
@@ -100,6 +101,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 		transactionArchive.setXid(this.transactionContext.getXid());
 		transactionArchive.getRemoteResources().addAll(this.resourceList);
 		transactionArchive.getCompensableResourceList().addAll(this.archiveList);
+		transactionArchive.setPropagatedBy(this.transactionContext.getPropagatedBy());
 		return transactionArchive;
 	}
 
@@ -230,6 +232,11 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 				transactionLogger.updateCoordinator(current);
 
 				logger.info("{}| confirm remote branch: {}", ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()),
+						current.getDescriptor().getIdentifier());
+			} catch (TransactionException transactionEx) {
+				// TransactionException is thrown only by CompensableServiceFilter.
+				logger.warn("{}| branch({}) should be confirmed by its own coordinator.",
+						ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()),
 						current.getDescriptor().getIdentifier());
 			} catch (XAException ex) {
 				switch (ex.errorCode) {
@@ -426,6 +433,11 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 				transactionLogger.updateCoordinator(current);
 
 				logger.info("{}| cancel remote branch: {}", ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()),
+						current.getDescriptor().getIdentifier());
+			} catch (TransactionException transactionEx) {
+				// TransactionException is thrown only by CompensableServiceFilter.
+				logger.warn("{}| branch({}) should be cancelled by its own coordinator.",
+						ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()),
 						current.getDescriptor().getIdentifier());
 			} catch (XAException ex) {
 				switch (ex.errorCode) {
@@ -804,6 +816,11 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 				logger.info("{}| recovery-confirm remote branch: {}",
 						ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()),
 						current.getDescriptor().getIdentifier());
+			} catch (TransactionException transactionEx) {
+				// TransactionException is thrown only by CompensableServiceFilter.
+				logger.warn("{}| branch({}) should be confirmed by its own coordinator.",
+						ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()),
+						current.getDescriptor().getIdentifier());
 			} catch (XAException ex) {
 				switch (ex.errorCode) {
 				case XAException.XAER_NOTA:
@@ -1035,6 +1052,11 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 				logger.info("{}| recovery-cancel remote branch: {}",
 						ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()),
 						current.getDescriptor().getIdentifier());
+			} catch (TransactionException transactionEx) {
+				// TransactionException is thrown only by CompensableServiceFilter.
+				logger.warn("{}| branch({}) should be cancelled by its own coordinator.",
+						ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()),
+						current.getDescriptor().getIdentifier());
 			} catch (XAException ex) {
 				switch (ex.errorCode) {
 				case XAException.XAER_NOTA:
@@ -1097,6 +1119,9 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 			TransactionXid globalXid = xidFactory.createGlobalXid(branchXid.getGlobalTransactionId());
 			try {
 				current.forget(globalXid);
+			} catch (TransactionException transactionEx) {
+				// TransactionException is thrown only by CompensableServiceFilter.
+				logger.warn("forget-transaction: branch({}) should be forgot by its own coordinator.", branchXid);
 			} catch (XAException ex) {
 				switch (ex.errorCode) {
 				case XAException.XAER_NOTA:
@@ -1167,6 +1192,9 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 			TransactionXid globalXid = xidFactory.createGlobalXid(branchXid.getGlobalTransactionId());
 			try {
 				current.recoveryForget(globalXid);
+			} catch (TransactionException transactionEx) {
+				// TransactionException is thrown only by CompensableServiceFilter.
+				logger.warn("forget-transaction: branch({}) should be forgot by its own coordinator.", branchXid);
 			} catch (XAException ex) {
 				switch (ex.errorCode) {
 				case XAException.XAER_NOTA:

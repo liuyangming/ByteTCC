@@ -158,11 +158,11 @@ public class TransactionCoordinator implements RemoteCoordinator, CompensableBea
 	}
 
 	public void start(Xid xid, int flags) throws XAException {
-		throw new TransactionException(XAException.XAER_RMERR);
+		throw new XAException(XAException.XAER_RMERR);
 	}
 
 	public void end(Xid xid, int flags) throws XAException {
-		throw new TransactionException(XAException.XAER_RMERR);
+		throw new XAException(XAException.XAER_RMERR);
 	}
 
 	public Transaction start(TransactionContext transactionContext, int flags) throws TransactionException {

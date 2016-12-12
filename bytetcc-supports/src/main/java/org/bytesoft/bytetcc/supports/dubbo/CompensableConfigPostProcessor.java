@@ -58,8 +58,7 @@ public class CompensableConfigPostProcessor implements BeanFactoryPostProcessor 
 					throw new FatalBeanException(
 							"There are more than one org.bytesoft.bytetcc.TransactionCoordinator was found!");
 				}
-			} else if (org.bytesoft.bytetcc.supports.dubbo.CompensableBeanRegistry.class.getName()
-					.equals(beanClassName)) {
+			} else if (org.bytesoft.bytetcc.supports.dubbo.CompensableBeanRegistry.class.getName().equals(beanClassName)) {
 				if (StringUtils.isBlank(registryBeanId)) {
 					registryBeanId = beanName;
 				} else {
@@ -89,11 +88,9 @@ public class CompensableConfigPostProcessor implements BeanFactoryPostProcessor 
 		}
 
 		if (StringUtils.isBlank(compensableBeanId)) {
-			throw new FatalBeanException(
-					"No configuration of class org.bytesoft.bytetcc.CompensableCoordinator was found.");
+			throw new FatalBeanException("No configuration of class org.bytesoft.bytetcc.CompensableCoordinator was found.");
 		} else if (StringUtils.isBlank(transactionBeanId)) {
-			throw new FatalBeanException(
-					"No configuration of class org.bytesoft.bytetcc.TransactionCoordinator was found.");
+			throw new FatalBeanException("No configuration of class org.bytesoft.bytetcc.TransactionCoordinator was found.");
 		} else if (registryBeanId == null) {
 			throw new FatalBeanException(
 					"No configuration of class org.bytesoft.bytetcc.supports.dubbo.CompensableBeanRegistry was found.");
@@ -104,12 +101,12 @@ public class CompensableConfigPostProcessor implements BeanFactoryPostProcessor 
 		this.initializeForConsumer(beanFactory, application, registryBeanId);
 	}
 
-	public void initializeForProvider(ConfigurableListableBeanFactory beanFactory, String application,
-			String refBeanName) throws BeansException {
+	public void initializeForProvider(ConfigurableListableBeanFactory beanFactory, String application, String refBeanName)
+			throws BeansException {
 		BeanDefinitionRegistry registry = (BeanDefinitionRegistry) beanFactory;
 
-		// <dubbo:service interface="org.bytesoft.bytejta.supports.wire.RemoteCoordinator"
-		// ref="dispatcherCoordinator" group="org.bytesoft.bytetcc" loadbalance="compensable" cluster="failfast" />
+		// <dubbo:service interface="org.bytesoft.bytejta.supports.wire.RemoteCoordinator" group="org.bytesoft.bytetcc"
+		// ref="dispatcherCoordinator" filter="compensable" loadbalance="compensable" cluster="failfast" />
 		GenericBeanDefinition beanDef = new GenericBeanDefinition();
 		beanDef.setBeanClass(com.alibaba.dubbo.config.spring.ServiceBean.class);
 
@@ -118,6 +115,7 @@ public class CompensableConfigPostProcessor implements BeanFactoryPostProcessor 
 		mpv.addPropertyValue("ref", new RuntimeBeanReference(refBeanName));
 		mpv.addPropertyValue("cluster", "failfast");
 		mpv.addPropertyValue("loadbalance", "compensable");
+		mpv.addPropertyValue("filter", "compensable");
 		mpv.addPropertyValue("group", "org.bytesoft.bytetcc");
 		mpv.addPropertyValue("retries", "0");
 		mpv.addPropertyValue("timeout", String.valueOf(1000L * 6));
@@ -126,13 +124,13 @@ public class CompensableConfigPostProcessor implements BeanFactoryPostProcessor 
 		registry.registerBeanDefinition(skeletonBeanId, beanDef);
 	}
 
-	public void initializeForConsumer(ConfigurableListableBeanFactory beanFactory, String application,
-			String targetBeanName) throws BeansException {
+	public void initializeForConsumer(ConfigurableListableBeanFactory beanFactory, String application, String targetBeanName)
+			throws BeansException {
 		BeanDefinitionRegistry registry = (BeanDefinitionRegistry) beanFactory;
 
 		// <dubbo:reference id="yyy"
-		// interface="org.bytesoft.bytejta.supports.wire.RemoteCoordinator"
-		// timeout="3000" group="org.bytesoft.bytetcc" loadbalance="compensable" cluster="failfast" />
+		// interface="org.bytesoft.bytejta.supports.wire.RemoteCoordinator" group="org.bytesoft.bytetcc"
+		// timeout="3000" filter="compensable" loadbalance="compensable" cluster="failfast" />
 		GenericBeanDefinition beanDef = new GenericBeanDefinition();
 		beanDef.setBeanClass(com.alibaba.dubbo.config.spring.ReferenceBean.class);
 
@@ -141,6 +139,7 @@ public class CompensableConfigPostProcessor implements BeanFactoryPostProcessor 
 		mpv.addPropertyValue("timeout", "3000");
 		mpv.addPropertyValue("cluster", "failfast");
 		mpv.addPropertyValue("loadbalance", "compensable");
+		mpv.addPropertyValue("filter", "compensable");
 		mpv.addPropertyValue("group", "org.bytesoft.bytetcc");
 		mpv.addPropertyValue("check", "false");
 

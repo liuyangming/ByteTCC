@@ -83,6 +83,7 @@ public class CompensableInterceptorImpl implements TransactionInterceptor, Compe
 
 		RemoteCoordinator compensableCoordinator = this.beanFactory.getCompensableCoordinator();
 		TransactionContext transactionContext = srcTransactionContext.clone();
+		transactionContext.setPropagatedBy(srcTransactionContext.getPropagatedBy());
 		try {
 			compensableCoordinator.start(transactionContext, XAResource.TMNOFLAGS);
 		} catch (TransactionException ex) {

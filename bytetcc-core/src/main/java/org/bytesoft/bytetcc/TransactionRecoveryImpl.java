@@ -123,6 +123,7 @@ public class TransactionRecoveryImpl implements TransactionRecovery, Transaction
 		transactionContext.setCompensating(archive.isPropagated() == false);
 		transactionContext.setRecoveried(true);
 		transactionContext.setXid(xidFactory.createGlobalXid(archive.getXid().getGlobalTransactionId()));
+		transactionContext.setPropagatedBy(transactionArchive.getPropagatedBy());
 
 		CompensableTransactionImpl transaction = new CompensableTransactionImpl(transactionContext);
 		transaction.setBeanFactory(this.beanFactory);

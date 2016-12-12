@@ -31,8 +31,8 @@ import org.bytesoft.transaction.xa.TransactionXid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class TransactionArchiveDeserializer extends
-		org.bytesoft.bytejta.logging.deserializer.TransactionArchiveDeserializer implements ArchiveDeserializer {
+public class TransactionArchiveDeserializer extends org.bytesoft.bytejta.logging.deserializer.TransactionArchiveDeserializer
+		implements ArchiveDeserializer {
 	static final Logger logger = LoggerFactory.getLogger(TransactionArchiveDeserializer.class);
 
 	private ArchiveDeserializer resourceArchiveDeserializer;
@@ -40,6 +40,32 @@ public class TransactionArchiveDeserializer extends
 
 	public byte[] serialize(TransactionXid xid, Object obj) {
 		TransactionArchive archive = (TransactionArchive) obj;
+
+		String propagatedBy = String.valueOf(archive.getPropagatedBy());
+		String[] address = propagatedBy.split("\\s*\\:\\s*");
+		byte[] hostByteArray = new byte[4];
+		byte[] portByteArray = new byte[2];
+		if (address.length == 2) {
+			String hostStr = address[0];
+			String portStr = address[1];
+
+			String[] hostArray = hostStr.split("\\s*\\.\\s*");
+			for (int i = 0; hostArray.length == 4 && i < hostArray.length; i++) {
+				try {
+					hostByteArray[i] = (byte) Byte.valueOf(hostArray[i]);
+				} catch (RuntimeException rex) {
+					logger.debug(rex.getMessage(), rex);
+				}
+			}
+
+			try {
+				short port = Short.valueOf(portStr);
+				byte[] byteArray = ByteUtils.shortToByteArray(port);
+				System.arraycopy(byteArray, 0, portByteArray, 0, 2);
+			} catch (RuntimeException rex) {
+				logger.debug(rex.getMessage(), rex);
+			}
+		}
 
 		List<CompensableArchive> nativeArchiveList = archive.getCompensableResourceList();
 		List<XAResourceArchive> remoteArchiveList = archive.getRemoteResources();
@@ -63,7 +89,7 @@ public class TransactionArchiveDeserializer extends
 			}
 		}
 
-		int length = 6 + varByteArray.length + 2;
+		int length = 6 + 4 + 2 + varByteArray.length + 2;
 		byte[][] nativeByteArray = new byte[nativeArchiveNumber][];
 		for (int i = 0; i < nativeArchiveNumber; i++) {
 			CompensableArchive compensableArchive = nativeArchiveList.get(i);
@@ -103,6 +129,11 @@ public class TransactionArchiveDeserializer extends
 		byteArray[position++] = archive.isPropagated() ? (byte) 0x1 : (byte) 0x0;
 		byteArray[position++] = archive.isCompensable() ? (byte) 0x1 : (byte) 0x0;
 		byteArray[position++] = (byte) archive.getCompensableStatus();
+
+		System.arraycopy(hostByteArray, 0, byteArray, position, 4);
+		position = position + 4;
+		System.arraycopy(portByteArray, 0, byteArray, position, 2);
+		position = position + 2;
 
 		System.arraycopy(varByteArray, 0, byteArray, position, varByteArray.length);
 		position = position + varByteArray.length;
@@ -147,6 +178,22 @@ public class TransactionArchiveDeserializer extends
 		archive.setCompensable(compensableValue != 0);
 		archive.setCompensableStatus(compensableStatus);
 
+		byte[] hostByteArray = new byte[4];
+		buffer.get(hostByteArray);
+		StringBuilder ber = new StringBuilder();
+		for (int i = 0; i < hostByteArray.length; i++) {
+			int value = hostByteArray[i];
+			if (i == 0) {
+				ber.append(value);
+			} else {
+				ber.append(".");
+				ber.append(value);
+			}
+		}
+		String host = ber.toString();
+		int port = buffer.getShort();
+		archive.setPropagatedBy(String.format("%s:%s", host, port));
+
 		short sizeOfVar = buffer.getShort();
 		if (sizeOfVar > 0) {
 			byte[] varByteArray = new byte[sizeOfVar];
@@ -171,7 +218,7 @@ public class TransactionArchiveDeserializer extends
 			buffer.get(compensableByteArray);
 
 			CompensableArchive compensableArchive = //
-			(CompensableArchive) this.compensableArchiveDeserializer.deserialize(xid, compensableByteArray);
+					(CompensableArchive) this.compensableArchiveDeserializer.deserialize(xid, compensableByteArray);
 
 			archive.getCompensableResourceList().add(compensableArchive);
 		}
@@ -182,7 +229,7 @@ public class TransactionArchiveDeserializer extends
 			buffer.get(resourceByteArray);
 
 			XAResourceArchive resourceArchive = //
-			(XAResourceArchive) this.resourceArchiveDeserializer.deserialize(xid, resourceByteArray);
+					(XAResourceArchive) this.resourceArchiveDeserializer.deserialize(xid, resourceByteArray);
 
 			archive.getRemoteResources().add(resourceArchive);
 		}
