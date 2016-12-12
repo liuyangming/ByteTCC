@@ -21,6 +21,12 @@ import java.util.Random;
 import org.apache.commons.lang3.StringUtils;
 import org.bytesoft.bytejta.supports.dubbo.InvocationContext;
 import org.bytesoft.bytejta.supports.dubbo.InvocationContextRegistry;
+import org.bytesoft.bytetcc.CompensableTransactionImpl;
+import org.bytesoft.bytetcc.supports.dubbo.CompensableBeanRegistry;
+import org.bytesoft.compensable.CompensableBeanFactory;
+import org.bytesoft.compensable.CompensableManager;
+import org.bytesoft.transaction.archive.XAResourceArchive;
+import org.bytesoft.transaction.supports.resource.XAResourceDescriptor;
 
 import com.alibaba.dubbo.common.URL;
 import com.alibaba.dubbo.rpc.Invocation;
@@ -35,26 +41,48 @@ public final class CompensableLoadBalance implements LoadBalance {
 		InvocationContextRegistry registry = InvocationContextRegistry.getInstance();
 		InvocationContext invocationContext = registry.getInvocationContext();
 		if (invocationContext == null) {
-			return this.selectRandomInvoker(invokers, url, invocation);
+			return this.selectInvokerForSVC(invokers, url, invocation);
 		} else {
-			return this.selectSpecificInvoker(invokers, url, invocation, invocationContext);
+			return this.selectInvokerForTCC(invokers, url, invocation);
 		}
 	}
 
-	public <T> Invoker<T> selectRandomInvoker(List<Invoker<T>> invokers, URL url, Invocation invocation)
-			throws RpcException {
-		int lengthOfInvokerList = invokers == null ? 0 : invokers.size();
-		if (lengthOfInvokerList == 0) {
+	public <T> Invoker<T> selectInvokerForSVC(List<Invoker<T>> invokers, URL url, Invocation invocation) throws RpcException {
+		if (invokers == null || invokers.isEmpty()) {
 			throw new RpcException("No invoker is found!");
-		} else {
-			return invokers.get(random.nextInt(lengthOfInvokerList));
 		}
+
+		CompensableBeanFactory beanFactory = CompensableBeanRegistry.getInstance().getBeanFactory();
+		CompensableManager compensableManager = beanFactory.getCompensableManager();
+		CompensableTransactionImpl compensable = //
+				(CompensableTransactionImpl) compensableManager.getCompensableTransactionQuietly();
+		List<XAResourceArchive> participantList = compensable.getParticipantArchiveList();
+
+		for (int i = 0; invokers != null && i < invokers.size(); i++) {
+			Invoker<T> invoker = invokers.get(i);
+			URL invokerUrl = invoker.getUrl();
+			String invokerHost = invokerUrl.getHost();
+			int invokerPort = invokerUrl.getPort();
+			String invokerAddr = String.format("%s:%s", invokerHost, invokerPort);
+			for (int j = 0; participantList != null && j < participantList.size(); j++) {
+				XAResourceArchive archive = participantList.get(j);
+				XAResourceDescriptor descriptor = archive.getDescriptor();
+				String identifier = descriptor.getIdentifier();
+				if (StringUtils.equals(invokerAddr, identifier)) {
+					return invoker;
+				}
+			}
+		}
+
+		return invokers.get(random.nextInt(invokers.size()));
 	}
 
-	public <T> Invoker<T> selectSpecificInvoker(List<Invoker<T>> invokers, URL url, Invocation invocation,
-			InvocationContext context) throws RpcException {
-		String serverHost = context.getServerHost();
-		int serverPort = context.getServerPort();
+	public <T> Invoker<T> selectInvokerForTCC(List<Invoker<T>> invokers, URL url, Invocation invocation) throws RpcException {
+		InvocationContextRegistry registry = InvocationContextRegistry.getInstance();
+		InvocationContext invocationContext = registry.getInvocationContext();
+
+		String serverHost = invocationContext.getServerHost();
+		int serverPort = invocationContext.getServerPort();
 		for (int i = 0; invokers != null && i < invokers.size(); i++) {
 			Invoker<T> invoker = invokers.get(i);
 			URL targetUrl = invoker.getUrl();
@@ -64,6 +92,7 @@ public final class CompensableLoadBalance implements LoadBalance {
 				return invoker;
 			}
 		}
+
 		throw new RpcException(String.format("Invoker(%s:%s) is not found!", serverHost, serverPort));
 	}
 }
