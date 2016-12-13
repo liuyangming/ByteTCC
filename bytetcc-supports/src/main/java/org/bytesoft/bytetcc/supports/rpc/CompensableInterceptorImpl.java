@@ -20,6 +20,8 @@ import javax.transaction.SystemException;
 import javax.transaction.xa.XAResource;
 
 import org.bytesoft.bytejta.supports.resource.RemoteResourceDescriptor;
+import org.bytesoft.bytejta.supports.rpc.TransactionRequestImpl;
+import org.bytesoft.bytejta.supports.rpc.TransactionResponseImpl;
 import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableManager;
@@ -61,7 +63,8 @@ public class CompensableInterceptorImpl implements TransactionInterceptor, Compe
 			descriptor.setDelegate(resource);
 			descriptor.setIdentifier(resource.getIdentifier());
 
-			transaction.enlistResource(descriptor);
+			boolean participantEnlisted = transaction.enlistResource(descriptor);
+			((TransactionRequestImpl) request).setParticipantEnlisted(participantEnlisted);
 		} catch (IllegalStateException ex) {
 			logger.error("CompensableInterceptorImpl.beforeSendRequest({})", request, ex);
 			throw ex;
@@ -121,7 +124,13 @@ public class CompensableInterceptorImpl implements TransactionInterceptor, Compe
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 		TransactionContext remoteTransactionContext = response.getTransactionContext();
 		CompensableTransaction transaction = compensableManager.getCompensableTransactionQuietly();
+
+		boolean enlistedByRequest = ((TransactionResponseImpl) response).isParticipantEnlistedByRequest();
+		boolean propagatedByMySelf = ((TransactionResponseImpl) response).isParticipantPropagatedByMySelf();
+
 		if (transaction == null || remoteTransactionContext == null) {
+			return;
+		} else if (enlistedByRequest == false) {
 			return;
 		}
 
@@ -132,7 +141,7 @@ public class CompensableInterceptorImpl implements TransactionInterceptor, Compe
 			descriptor.setDelegate(resource);
 			descriptor.setIdentifier(resource.getIdentifier());
 
-			transaction.delistResource(descriptor, XAResource.TMSUCCESS);
+			transaction.delistResource(descriptor, propagatedByMySelf ? XAResource.TMSUCCESS : XAResource.TMFAIL);
 		} catch (IllegalStateException ex) {
 			logger.error("CompensableInterceptorImpl.afterReceiveResponse({})", response, ex);
 			throw ex;

@@ -481,6 +481,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 				break;
 			}
 		}
+
 		if (resourceArchive == null) {
 			XidFactory xidFactory = this.beanFactory.getCompensableXidFactory();
 			TransactionXid globalXid = this.transactionContext.getXid();
@@ -494,12 +495,32 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 
 			logger.info("{}| enlist remote resource: {}.", ByteUtils.byteArrayToString(globalXid.getGlobalTransactionId()),
 					identifier);
+
+			return true;
+		} else {
+			return false;
 		}
 
-		return true;
 	}
 
 	public boolean delistResource(XAResource xaRes, int flag) throws IllegalStateException, SystemException {
+		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
+
+		if (flag == XAResource.TMFAIL && RemoteResourceDescriptor.class.isInstance(xaRes)) {
+			RemoteResourceDescriptor descriptor = (RemoteResourceDescriptor) xaRes;
+			String identifier = descriptor.getIdentifier();
+			for (Iterator<XAResourceArchive> itr = this.resourceList.iterator(); itr.hasNext();) {
+				XAResourceArchive resource = itr.next();
+				String resourceKey = resource.getDescriptor().getIdentifier();
+				if (CommonUtils.equals(identifier, resourceKey)) {
+					itr.remove();
+					break;
+				}
+			}
+
+			compensableLogger.updateTransaction(this.getTransactionArchive());
+		}
+
 		return true;
 	}
 
