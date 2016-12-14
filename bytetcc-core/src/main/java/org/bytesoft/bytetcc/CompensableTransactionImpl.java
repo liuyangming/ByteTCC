@@ -1112,10 +1112,10 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 			CompensableArchive current = this.archiveList.get(i);
 			Xid transactionXid = current.getTransactionXid();
 			Xid compensableXid = current.getCompensableXid();
-			if (transactionXid != null) {
+			if (transactionXid != null && current.isTried()) {
 				xidMap.put(transactionXid, current.getTransactionResourceKey());
 			}
-			if (compensableXid != null) {
+			if (compensableXid != null && (current.isConfirmed() || current.isCancelled())) {
 				xidMap.put(compensableXid, current.getCompensableResourceKey());
 			}
 		}
