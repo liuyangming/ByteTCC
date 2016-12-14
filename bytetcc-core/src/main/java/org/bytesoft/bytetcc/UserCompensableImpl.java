@@ -68,6 +68,7 @@ public class UserCompensableImpl implements UserCompensable, Referenceable, Seri
 		compensableContext.setPropagated(true);
 		compensableContext.setCompensable(true);
 		compensableContext.setXid(compensableXid);
+		compensableContext.setPropagatedBy(compensableCoordinator.getIdentifier());
 		compensable = new CompensableTransactionImpl(compensableContext);
 		compensable.setBeanFactory(this.beanFactory);
 

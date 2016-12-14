@@ -79,8 +79,8 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 		return (CompensableTransaction) this.compensableMap.get(Thread.currentThread());
 	}
 
-	public void resume(javax.transaction.Transaction tobj) throws InvalidTransactionException, IllegalStateException,
-			SystemException {
+	public void resume(javax.transaction.Transaction tobj)
+			throws InvalidTransactionException, IllegalStateException, SystemException {
 		if (Transaction.class.isInstance(tobj)) {
 			TransactionManager transactionManager = this.beanFactory.getTransactionManager();
 			Transaction transaction = (Transaction) tobj;
@@ -133,8 +133,8 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 		this.invokeBegin(transactionContext, false);
 	}
 
-	protected void invokeBegin(TransactionContext transactionContext, boolean createFlag) throws NotSupportedException,
-			SystemException {
+	protected void invokeBegin(TransactionContext transactionContext, boolean createFlag)
+			throws NotSupportedException, SystemException {
 		RemoteCoordinator transactionCoordinator = this.beanFactory.getTransactionCoordinator();
 
 		CompensableTransaction compensable = this.getCompensableTransactionQuietly();
@@ -172,6 +172,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 
 		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
 		TransactionRepository compensableRepository = this.beanFactory.getCompensableRepository();
+		RemoteCoordinator compensableCoordinator = this.beanFactory.getCompensableCoordinator();
 
 		XidFactory transactionXidFactory = this.beanFactory.getTransactionXidFactory();
 		XidFactory compensableXidFactory = this.beanFactory.getCompensableXidFactory();
@@ -183,6 +184,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 		compensableContext.setCoordinator(true);
 		compensableContext.setCompensable(true);
 		compensableContext.setXid(compensableXid);
+		compensableContext.setPropagatedBy(compensableCoordinator.getIdentifier());
 		CompensableTransactionImpl compensable = new CompensableTransactionImpl(compensableContext);
 		compensable.setBeanFactory(this.beanFactory);
 
@@ -341,8 +343,8 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 
 	}
 
-	protected void invokeTransactionRollback(CompensableTransaction compensable) throws IllegalStateException,
-			SecurityException, SystemException {
+	protected void invokeTransactionRollback(CompensableTransaction compensable)
+			throws IllegalStateException, SecurityException, SystemException {
 
 		Transaction transaction = compensable.getTransaction();
 		org.bytesoft.transaction.TransactionContext transactionContext = transaction.getTransactionContext();
@@ -358,8 +360,8 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 		}
 	}
 
-	public void fireCompensableRollback(CompensableTransaction transaction) throws IllegalStateException, SecurityException,
-			SystemException {
+	public void fireCompensableRollback(CompensableTransaction transaction)
+			throws IllegalStateException, SecurityException, SystemException {
 		try {
 			this.associateThread(transaction);
 
@@ -409,7 +411,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 
 		boolean isLocalTransaction = transaction.isLocalTransaction();
 		try {
-			if (isLocalTransaction) /* jta-transaction in try-phase cannot be xa transaction. */{
+			if (isLocalTransaction) /* jta-transaction in try-phase cannot be xa transaction. */ {
 				this.invokeCompensableCommitIfLocalTransaction(compensable);
 				commitExists = true;
 			} else {
@@ -519,8 +521,8 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 
 	}
 
-	protected void invokeCompensableRollback(CompensableTransaction compensable) throws IllegalStateException,
-			SecurityException, SystemException {
+	protected void invokeCompensableRollback(CompensableTransaction compensable)
+			throws IllegalStateException, SecurityException, SystemException {
 
 		TransactionRepository compensableRepository = this.beanFactory.getCompensableRepository();
 		RemoteCoordinator transactionCoordinator = this.beanFactory.getTransactionCoordinator();
