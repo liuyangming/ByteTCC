@@ -64,7 +64,7 @@ public class CompensableInterceptorImpl implements TransactionInterceptor, Compe
 			descriptor.setIdentifier(resource.getIdentifier());
 
 			boolean participantEnlisted = transaction.enlistResource(descriptor);
-			((TransactionRequestImpl) request).setParticipantEnlisted(participantEnlisted);
+			((TransactionRequestImpl) request).setParticipantEnlistFlag(participantEnlisted);
 		} catch (IllegalStateException ex) {
 			logger.error("CompensableInterceptorImpl.beforeSendRequest({})", request, ex);
 			throw ex;
@@ -125,12 +125,12 @@ public class CompensableInterceptorImpl implements TransactionInterceptor, Compe
 		TransactionContext remoteTransactionContext = response.getTransactionContext();
 		CompensableTransaction transaction = compensableManager.getCompensableTransactionQuietly();
 
-		boolean enlistedByRequest = ((TransactionResponseImpl) response).isParticipantEnlistedByRequest();
-		boolean propagatedByMySelf = ((TransactionResponseImpl) response).isParticipantPropagatedByMySelf();
+		boolean participantEnlistFlag = ((TransactionResponseImpl) response).isParticipantEnlistFlag();
+		boolean participantDelistFlag = ((TransactionResponseImpl) response).isParticipantDelistFlag();
 
 		if (transaction == null || remoteTransactionContext == null) {
 			return;
-		} else if (enlistedByRequest == false) {
+		} else if (participantEnlistFlag == false) {
 			return;
 		}
 
@@ -141,7 +141,7 @@ public class CompensableInterceptorImpl implements TransactionInterceptor, Compe
 			descriptor.setDelegate(resource);
 			descriptor.setIdentifier(resource.getIdentifier());
 
-			transaction.delistResource(descriptor, propagatedByMySelf ? XAResource.TMSUCCESS : XAResource.TMFAIL);
+			transaction.delistResource(descriptor, participantDelistFlag ? XAResource.TMFAIL : XAResource.TMSUCCESS);
 		} catch (IllegalStateException ex) {
 			logger.error("CompensableInterceptorImpl.afterReceiveResponse({})", response, ex);
 			throw ex;

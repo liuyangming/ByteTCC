@@ -372,9 +372,9 @@ public class CompensableServiceFilter implements Filter {
 
 				String propagatedBy = (String) wrapped.getVariable(RemoteCoordinator.class.getName());
 				String identifier = compensableCoordinator.getIdentifier();
-				boolean participantPropagatedByMySelf = StringUtils.equals(propagatedBy, identifier);
-				response.setParticipantPropagatedByMySelf(participantPropagatedByMySelf);
-				response.setParticipantEnlistedByRequest(request.isParticipantEnlisted());
+				boolean participantDelistRequired = StringUtils.equals(propagatedBy, identifier) == false;
+				response.setParticipantDelistFlag(participantDelistRequired);
+				response.setParticipantEnlistFlag(request.isParticipantEnlistFlag());
 			}
 			return result;
 		} catch (RemotingException rex) {
