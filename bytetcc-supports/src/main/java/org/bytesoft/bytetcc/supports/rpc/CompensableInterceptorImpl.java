@@ -109,6 +109,7 @@ public class CompensableInterceptorImpl implements TransactionInterceptor, Compe
 
 		TransactionContext srcTransactionContext = transaction.getTransactionContext();
 		TransactionContext transactionContext = srcTransactionContext.clone();
+		transactionContext.setPropagatedBy(srcTransactionContext.getPropagatedBy());
 		response.setTransactionContext(transactionContext);
 		try {
 			compensableCoordinator.end(transactionContext, XAResource.TMSUCCESS);

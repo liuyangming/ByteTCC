@@ -50,6 +50,7 @@ import org.bytesoft.transaction.xa.XidFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.alibaba.com.caucho.hessian.io.HessianHandle;
 import com.alibaba.dubbo.common.URL;
 import com.alibaba.dubbo.rpc.Filter;
 import com.alibaba.dubbo.rpc.Invocation;
@@ -470,7 +471,7 @@ public class CompensableServiceFilter implements Filter {
 
 	}
 
-	static class InvocationResult implements Serializable {
+	static class InvocationResult implements HessianHandle, Serializable {
 		private static final long serialVersionUID = 1L;
 
 		private boolean failure;

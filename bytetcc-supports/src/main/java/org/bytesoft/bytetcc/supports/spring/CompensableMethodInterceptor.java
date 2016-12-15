@@ -40,8 +40,8 @@ import org.springframework.context.ApplicationContextAware;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-public class CompensableMethodInterceptor implements MethodInterceptor, CompensableSynchronization, ApplicationContextAware,
-		CompensableBeanFactoryAware {
+public class CompensableMethodInterceptor
+		implements MethodInterceptor, CompensableSynchronization, ApplicationContextAware, CompensableBeanFactoryAware {
 	static final Logger logger = LoggerFactory.getLogger(CompensableMethodInterceptor.class);
 
 	private CompensableBeanFactory beanFactory;
@@ -70,19 +70,19 @@ public class CompensableMethodInterceptor implements MethodInterceptor, Compensa
 			identifier = config.getBeanName();
 			if (StringUtils.isBlank(identifier)) {
 				logger.error("BeanId(class= {}) should not be null!", bean.getClass().getName());
-				throw new IllegalStateException(String.format("BeanId(class= %s) should not be null!", bean.getClass()
-						.getName()));
+				throw new IllegalStateException(
+						String.format("BeanId(class= %s) should not be null!", bean.getClass().getName()));
 			}
 		} else {
 			String[] beanNameArray = this.applicationContext.getBeanNamesForType(bean.getClass());
 			if (beanNameArray.length == 1) {
 				identifier = beanNameArray[0];
 			} else {
-				logger.error("Class {} does not implement interface {}, and there are multiple bean definitions!", bean
-						.getClass().getName(), CompensableBeanNameAware.class.getName());
-				throw new IllegalStateException(String.format(
-						"Class %s does not implement interface %s, and there are multiple bean definitions!", bean.getClass()
-								.getName(), CompensableBeanNameAware.class.getName()));
+				logger.error("Class {} does not implement interface {}, and there are multiple bean definitions!",
+						bean.getClass().getName(), CompensableBeanNameAware.class.getName());
+				throw new IllegalStateException(
+						String.format("Class %s does not implement interface %s, and there are multiple bean definitions!",
+								bean.getClass().getName(), CompensableBeanNameAware.class.getName()));
 			}
 		}
 
@@ -100,6 +100,7 @@ public class CompensableMethodInterceptor implements MethodInterceptor, Compensa
 
 		Transaction transaction = transactionManager.getTransactionQuietly();
 		CompensableTransaction compensable = compensableManager.getCompensableTransactionQuietly();
+		Transaction currentTx = (compensable == null) ? null : compensable.getTransaction();
 
 		try {
 			CompensableInvocationImpl invocation = new CompensableInvocationImpl();
@@ -110,7 +111,7 @@ public class CompensableMethodInterceptor implements MethodInterceptor, Compensa
 			invocation.setConfirmableKey(annotation.confirmableKey());
 			invocation.setIdentifier(identifier);
 
-			if (transactional != null && transaction != null && compensable != null) {
+			if (transactional != null && compensable != null && (transaction != null || currentTx != null)) {
 				Propagation propagation = transactional == null ? null : transactional.propagation();
 				if (propagation == null) {
 					compensable.registerCompensable(invocation);
