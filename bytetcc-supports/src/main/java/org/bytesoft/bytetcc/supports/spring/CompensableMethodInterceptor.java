@@ -98,10 +98,7 @@ public class CompensableMethodInterceptor
 		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 
-		Transaction transaction = transactionManager.getTransactionQuietly();
-		CompensableTransaction compensable = compensableManager.getCompensableTransactionQuietly();
-		Transaction currentTx = (compensable == null) ? null : compensable.getTransaction();
-
+		boolean desociateRequired = false;
 		try {
 			CompensableInvocationImpl invocation = new CompensableInvocationImpl();
 			Method method = mi.getMethod();
@@ -111,7 +108,17 @@ public class CompensableMethodInterceptor
 			invocation.setConfirmableKey(annotation.confirmableKey());
 			invocation.setIdentifier(identifier);
 
-			if (transactional != null && compensable != null && (transaction != null || currentTx != null)) {
+			Transaction transaction = transactionManager.getTransactionQuietly();
+			CompensableTransaction compensable = compensableManager.getCompensableTransactionQuietly();
+			Transaction existingTxn = (compensable == null) ? null : compensable.getTransaction();
+
+			if (transaction == null && existingTxn != null) {
+				transaction = existingTxn;
+				transactionManager.associateThread(existingTxn);
+				desociateRequired = true;
+			}
+
+			if (transactional != null && compensable != null && transaction != null) {
 				Propagation propagation = transactional == null ? null : transactional.propagation();
 				if (propagation == null) {
 					compensable.registerCompensable(invocation);
@@ -128,6 +135,11 @@ public class CompensableMethodInterceptor
 			return mi.proceed();
 		} finally {
 			registry.unegister();
+
+			if (desociateRequired) {
+				transactionManager.desociateThread();
+			} // end-if (associated)
+
 		}
 	}
 

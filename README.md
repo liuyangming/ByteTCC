@@ -6,7 +6,7 @@ ByteTCC是一个基于TCC（Try/Confirm/Cancel）机制的分布式事务管理�
 <dependency>
 	<groupId>org.bytesoft</groupId>
 	<artifactId>bytetcc-supports</artifactId>
-	<version>0.3.0-beta</version>
+	<version>0.3.0-RC1</version>
 </dependency>
 ```
 #### 1.2. 编写业务服务
@@ -19,9 +19,12 @@ ByteTCC是一个基于TCC（Try/Confirm/Cancel）机制的分布式事务管理�
 )
 public class AccountServiceImpl implements IAccountService {
 
+	@Resource(name = "jdbcTemplate")
+	private JdbcTemplate jdbcTemplate;
+
 	@Transactional
 	public void increaseAmount(String accountId, double amount) throws ServiceException {
-	    // TODO ...
+	    this.jdbcTemplate.update("update tb_account set frozen = frozen + ? where acct_id = ?", amount, acctId);
 	}
 
 }
@@ -32,9 +35,12 @@ public class AccountServiceImpl implements IAccountService {
 @Service("accountServiceConfirm")
 public class AccountServiceConfirm implements IAccountService {
 
+	@Resource(name = "jdbcTemplate")
+	private JdbcTemplate jdbcTemplate;
+
 	@Transactional
 	public void increaseAmount(String accountId, double amount) throws ServiceException {
-	    // TODO ...
+	    this.jdbcTemplate.update("update tb_account set amount = amount + ?, frozen = frozen - ? where acct_id = ?", amount, amount, acctId);
 	}
 
 }
@@ -45,9 +51,12 @@ public class AccountServiceConfirm implements IAccountService {
 @Service("accountServiceCancel")
 public class AccountServiceCancel implements IAccountService {
 
+	@Resource(name = "jdbcTemplate")
+	private JdbcTemplate jdbcTemplate;
+
 	@Transactional
 	public void increaseAmount(String accountId, double amount) throws ServiceException {
-	    // TODO ...
+	    this.jdbcTemplate.update("update tb_account set frozen = frozen - ? where acct_id = ?", amount, acctId);
 	}
 
 }
