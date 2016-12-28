@@ -98,31 +98,41 @@ public class CompensableServiceFilter implements Filter {
 			return this.wrapResultForProvider(invoker, invocation, false);
 		}
 
+		RpcResult result = new RpcResult();
+
 		Object[] arguments = invocation.getArguments();
 		Xid xid = (Xid) arguments[0];
 
 		TransactionXid globalXid = xidFactory.createGlobalXid(xid.getGlobalTransactionId());
 		CompensableTransaction transaction = (CompensableTransaction) compensableRepository.getTransaction(globalXid);
-		TransactionContext transactionContext = transaction.getTransactionContext();
-		String propagatedBy = String.valueOf(transactionContext.getPropagatedBy());
+		if (transaction == null) {
+			InvocationResult wrapped = new InvocationResult();
+			wrapped.setFailure(true);
+			wrapped.setValue(new TransactionException(XAException.XAER_NOTA));
+			wrapped.setVariable(CompensableCoordinator.class.getName(), compensableCoordinator.getIdentifier());
 
-		String remoteAddr = invocation.getAttachment(CompensableCoordinator.class.getName());
+			result.setException(null);
+			result.setValue(wrapped);
+		} else {
+			TransactionContext transactionContext = transaction.getTransactionContext();
+			String propagatedBy = String.valueOf(transactionContext.getPropagatedBy());
 
-		if (StringUtils.equals(propagatedBy, remoteAddr)) {
-			return this.wrapResultForProvider(invoker, invocation, false);
+			String remoteAddr = invocation.getAttachment(CompensableCoordinator.class.getName());
+
+			if (StringUtils.equals(propagatedBy, remoteAddr)) {
+				return this.wrapResultForProvider(invoker, invocation, false);
+			}
+
+			InvocationResult wrapped = new InvocationResult();
+			wrapped.setFailure(true);
+			wrapped.setValue(new TransactionException(XAException.XAER_PROTO));
+			wrapped.setVariable(CompensableCoordinator.class.getName(), compensableCoordinator.getIdentifier());
+
+			result.setException(null);
+			result.setValue(wrapped);
+
+			logger.warn("{}| branch should be invoked by its own coordinator.", globalXid);
 		}
-
-		RpcResult result = new RpcResult();
-
-		InvocationResult wrapped = new InvocationResult();
-		wrapped.setFailure(true);
-		wrapped.setValue(new TransactionException(XAException.XAER_PROTO));
-		wrapped.setVariable(CompensableCoordinator.class.getName(), compensableCoordinator.getIdentifier());
-
-		result.setException(null);
-		result.setValue(wrapped);
-
-		logger.warn("{}| branch should be invoked by its own coordinator.", globalXid);
 
 		return result;
 	}
