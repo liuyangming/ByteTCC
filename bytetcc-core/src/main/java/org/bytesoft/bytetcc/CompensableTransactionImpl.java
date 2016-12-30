@@ -21,10 +21,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 import javax.transaction.HeuristicMixedException;
 import javax.transaction.HeuristicRollbackException;
@@ -87,10 +83,6 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 	private transient final Map<Xid, List<CompensableArchive>> archiveMap = new HashMap<Xid, List<CompensableArchive>>();
 
 	private boolean participantStickyRequired;
-
-	private boolean markRollbackOnly; // used by participant only
-	private Lock lock = new ReentrantLock();
-	private Condition condition = this.lock.newCondition();
 
 	private Map<String, Serializable> variables = new HashMap<String, Serializable>();
 
@@ -214,8 +206,8 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 
 	}
 
-	private synchronized void fireRemoteParticipantConfirm()
-			throws HeuristicMixedException, HeuristicRollbackException, SystemException {
+	private synchronized void fireRemoteParticipantConfirm() throws HeuristicMixedException, HeuristicRollbackException,
+			SystemException {
 		boolean commitExists = false;
 		boolean rollbackExists = false;
 		boolean errorExists = false;
@@ -243,15 +235,13 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 						current.getDescriptor().getIdentifier());
 			} catch (TransactionException transactionEx) {
 				// TransactionException is thrown only by CompensableServiceFilter.
-				logger.warn("{}| branch({}) should be confirmed by its own coordinator.",
-						ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()),
-						current.getDescriptor().getIdentifier());
+				logger.warn("{}| branch({}) should be confirmed by its own coordinator.", ByteUtils.byteArrayToString(branchXid
+						.getGlobalTransactionId()), current.getDescriptor().getIdentifier());
 			} catch (XAException ex) {
 				switch (ex.errorCode) {
 				case XAException.XAER_NOTA:
-					logger.warn("{}| error occurred while confirming remote branch: {}, transaction is not exists!",
-							ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()),
-							current.getDescriptor().getIdentifier());
+					logger.warn("{}| error occurred while confirming remote branch: {}, transaction is not exists!", ByteUtils
+							.byteArrayToString(branchXid.getGlobalTransactionId()), current.getDescriptor().getIdentifier());
 					break;
 				case XAException.XA_HEURCOM:
 					commitExists = true;
@@ -262,8 +252,8 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 					transactionLogger.updateCoordinator(current);
 
 					logger.info("{}| confirm remote branch: {}",
-							ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()),
-							current.getDescriptor().getIdentifier());
+							ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()), current.getDescriptor()
+									.getIdentifier());
 					break;
 				case XAException.XA_HEURRB:
 					rollbackExists = true;
@@ -325,11 +315,13 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 	public synchronized void rollback() throws IllegalStateException, SystemException {
 		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
 
-		if (this.transaction != null) /* used by participant only. */ {
+		this.transactionStatus = Status.STATUS_ROLLING_BACK;
+
+		Transaction branch = this.transaction;
+		if (branch != null) /* used by participant only. */{
 			try {
-				transaction.setRollbackOnly();
+				branch.setRollbackOnly();
 			} catch (IllegalStateException ex) {
-				this.waitingForOperationDone();
 				logger.warn("The local transaction is not active.", ex);
 			} catch (SystemException ex) {
 				logger.warn("The local transaction is not active.", ex); // should never happen
@@ -338,7 +330,6 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 			}
 		}
 
-		this.transactionStatus = Status.STATUS_ROLLING_BACK;
 		this.transactionContext.setCompensating(true);
 
 		compensableLogger.updateTransaction(this.getTransactionArchive());
@@ -377,50 +368,6 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 			compensableLogger.updateTransaction(this.getTransactionArchive());
 			logger.info("{}| compensable transaction rolled back!",
 					ByteUtils.byteArrayToString(transactionContext.getXid().getGlobalTransactionId()));
-		}
-
-	}
-
-	private void wakeUpRollbackOperation() {
-		try {
-			this.lock.lock();
-			this.markRollbackOnly = false;
-			this.condition.signalAll();
-		} finally {
-			this.lock.unlock();
-		}
-	}
-
-	private void waitingForOperationDone() {
-		try {
-			this.lock.lock();
-			this.markRollbackOnly = true;
-			while (this.hasTransactionDone(this.transaction)) {
-				try {
-					this.condition.await(10, TimeUnit.MILLISECONDS);
-				} catch (InterruptedException ex) {
-					logger.debug(ex.getMessage());
-				}
-			}
-		} finally {
-			this.lock.unlock();
-		}
-	}
-
-	private boolean hasTransactionDone(Transaction transaction) {
-		if (transaction == null) {
-			return true;
-		}
-
-		switch (transaction.getTransactionStatus()) {
-		case Status.STATUS_COMMITTED:
-		case Status.STATUS_ROLLEDBACK:
-			return true;
-		case Status.STATUS_ACTIVE:
-		case Status.STATUS_MARKED_ROLLBACK:
-			return false; // should never happen
-		default:
-			return false;
 		}
 
 	}
@@ -501,15 +448,13 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 						current.getDescriptor().getIdentifier());
 			} catch (TransactionException transactionEx) {
 				// TransactionException is thrown only by CompensableServiceFilter.
-				logger.warn("{}| branch({}) should be cancelled by its own coordinator.",
-						ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()),
-						current.getDescriptor().getIdentifier());
+				logger.warn("{}| branch({}) should be cancelled by its own coordinator.", ByteUtils.byteArrayToString(branchXid
+						.getGlobalTransactionId()), current.getDescriptor().getIdentifier());
 			} catch (XAException ex) {
 				switch (ex.errorCode) {
 				case XAException.XAER_NOTA:
-					logger.warn("{}| error occurred while cancelling remote branch: {}, transaction is not exists!",
-							ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()),
-							current.getDescriptor().getIdentifier());
+					logger.warn("{}| error occurred while cancelling remote branch: {}, transaction is not exists!", ByteUtils
+							.byteArrayToString(branchXid.getGlobalTransactionId()), current.getDescriptor().getIdentifier());
 					break;
 				default:
 					errorExists = true;
@@ -707,8 +652,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 			transactionArchive.setCompensableStatus(Status.STATUS_COMMITTING);
 			compensableLogger.updateTransaction(transactionArchive);
 
-			logger.info("{}| try completed.",
-					ByteUtils.byteArrayToString(transactionContext.getXid().getGlobalTransactionId()));
+			logger.info("{}| try completed.", ByteUtils.byteArrayToString(transactionContext.getXid().getGlobalTransactionId()));
 		} else {
 			for (Iterator<CompensableArchive> itr = this.currentArchiveList.iterator(); itr.hasNext();) {
 				CompensableArchive compensableArchive = itr.next();
@@ -723,36 +667,6 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 			}
 		}
 
-		if (this.markRollbackOnly) /* used by participant only */ {
-			this.wakeUpRollbackOperation();
-		}
-
-	}
-
-	public void onCommitHeuristicMixed(TransactionXid xid) {
-		this.onCommitFailure(xid); // should never happen
-	}
-
-	public void onCommitHeuristicRolledback(TransactionXid xid) {
-		this.onCommitFailure(xid); // should never happen
-	}
-
-	public void onCommitFailure(TransactionXid xid) {
-		if (this.markRollbackOnly) /* used by participant only */ {
-			this.wakeUpRollbackOperation();
-		}
-	}
-
-	public void onRollbackSuccess(TransactionXid xid) {
-		if (this.markRollbackOnly) /* used by participant only */ {
-			this.wakeUpRollbackOperation();
-		}
-	}
-
-	public void onRollbackFailure(TransactionXid xid) {
-		if (this.markRollbackOnly) /* used by participant only */ {
-			this.wakeUpRollbackOperation();
-		}
 	}
 
 	public synchronized void recoveryCommit() throws CommitRequiredException, SystemException {
@@ -850,8 +764,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 						case XAException.XAER_NOTA:
 							break;
 						case XAException.XAER_RMERR:
-							logger.warn(
-									"The database table 'bytejta' cannot found, the status of the current branch transaction is unknown!");
+							logger.warn("The database table 'bytejta' cannot found, the status of the current branch transaction is unknown!");
 							break;
 						case XAException.XAER_RMFAIL:
 							errorExists = true;
@@ -904,8 +817,8 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 
 	}
 
-	private synchronized void fireRemoteParticipantRecoveryConfirm()
-			throws HeuristicMixedException, HeuristicRollbackException, SystemException {
+	private synchronized void fireRemoteParticipantRecoveryConfirm() throws HeuristicMixedException,
+			HeuristicRollbackException, SystemException {
 		boolean commitExists = false;
 		boolean rollbackExists = false;
 		boolean errorExists = false;
@@ -929,20 +842,17 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 				current.setCompleted(true);
 				transactionLogger.updateCoordinator(current);
 
-				logger.info("{}| recovery-confirm remote branch: {}",
-						ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()),
-						current.getDescriptor().getIdentifier());
+				logger.info("{}| recovery-confirm remote branch: {}", ByteUtils.byteArrayToString(branchXid
+						.getGlobalTransactionId()), current.getDescriptor().getIdentifier());
 			} catch (TransactionException transactionEx) {
 				// TransactionException is thrown only by CompensableServiceFilter.
-				logger.warn("{}| branch({}) should be confirmed by its own coordinator.",
-						ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()),
-						current.getDescriptor().getIdentifier());
+				logger.warn("{}| branch({}) should be confirmed by its own coordinator.", ByteUtils.byteArrayToString(branchXid
+						.getGlobalTransactionId()), current.getDescriptor().getIdentifier());
 			} catch (XAException ex) {
 				switch (ex.errorCode) {
 				case XAException.XAER_NOTA:
-					logger.warn("{}| error occurred while confirming remote branch: {}, transaction is not exists!",
-							ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()),
-							current.getDescriptor().getIdentifier());
+					logger.warn("{}| error occurred while confirming remote branch: {}, transaction is not exists!", ByteUtils
+							.byteArrayToString(branchXid.getGlobalTransactionId()), current.getDescriptor().getIdentifier());
 					break;
 				case XAException.XA_HEURCOM:
 					current.setCommitted(true);
@@ -950,9 +860,8 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 					current.setCompleted(true);
 					transactionLogger.updateCoordinator(current);
 
-					logger.info("{}| recovery-confirm remote branch: {}",
-							ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()),
-							current.getDescriptor().getIdentifier());
+					logger.info("{}| recovery-confirm remote branch: {}", ByteUtils.byteArrayToString(branchXid
+							.getGlobalTransactionId()), current.getDescriptor().getIdentifier());
 					break;
 				case XAException.XA_HEURRB:
 					rollbackExists = true;
@@ -1094,8 +1003,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 						case XAException.XAER_NOTA:
 							break;
 						case XAException.XAER_RMERR:
-							logger.warn(
-									"The database table 'bytejta' cannot found, the status of the current branch transaction is unknown!");
+							logger.warn("The database table 'bytejta' cannot found, the status of the current branch transaction is unknown!");
 							break;
 						case XAException.XAER_RMFAIL:
 							errorExists = true;
@@ -1165,20 +1073,18 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 				current.setCompleted(true);
 				transactionLogger.updateCoordinator(current);
 
-				logger.info("{}| recovery-cancel remote branch: {}",
-						ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()),
-						current.getDescriptor().getIdentifier());
+				logger.info("{}| recovery-cancel remote branch: {}", ByteUtils.byteArrayToString(branchXid
+						.getGlobalTransactionId()), current.getDescriptor().getIdentifier());
 			} catch (TransactionException transactionEx) {
 				// TransactionException is thrown only by CompensableServiceFilter.
-				logger.warn("{}| branch({}) should be cancelled by its own coordinator.",
-						ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()),
-						current.getDescriptor().getIdentifier());
+				logger.warn("{}| branch({}) should be cancelled by its own coordinator.", ByteUtils.byteArrayToString(branchXid
+						.getGlobalTransactionId()), current.getDescriptor().getIdentifier());
 			} catch (XAException ex) {
 				switch (ex.errorCode) {
 				case XAException.XAER_NOTA:
 					logger.warn("{}| error occurred while recovery-cancelling remote branch: {}, transaction is not exists!",
-							ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()),
-							current.getDescriptor().getIdentifier());
+							ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()), current.getDescriptor()
+									.getIdentifier());
 					break;
 				default:
 					errorExists = true;
