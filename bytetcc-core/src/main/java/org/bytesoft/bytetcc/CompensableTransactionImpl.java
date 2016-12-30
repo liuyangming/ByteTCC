@@ -21,6 +21,10 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import javax.transaction.HeuristicMixedException;
 import javax.transaction.HeuristicRollbackException;
@@ -83,6 +87,10 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 	private transient final Map<Xid, List<CompensableArchive>> archiveMap = new HashMap<Xid, List<CompensableArchive>>();
 
 	private boolean participantStickyRequired;
+
+	private boolean markRollbackOnly; // used by participant only
+	private Lock lock = new ReentrantLock();
+	private Condition condition = this.lock.newCondition();
 
 	private Map<String, Serializable> variables = new HashMap<String, Serializable>();
 
@@ -317,15 +325,16 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 	public synchronized void rollback() throws IllegalStateException, SystemException {
 		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
 
-		if (this.transaction != null) {
+		if (this.transaction != null) /* used by participant only. */ {
 			try {
 				transaction.setRollbackOnly();
 			} catch (IllegalStateException ex) {
-				logger.debug("The local transaction is not active.", ex);
+				this.waitingForOperationDone();
+				logger.warn("The local transaction is not active.", ex);
 			} catch (SystemException ex) {
-				logger.error("The local transaction is not active.", ex); // should never happen
+				logger.warn("The local transaction is not active.", ex); // should never happen
 			} catch (RuntimeException ex) {
-				logger.error("The local transaction is not active.", ex); // should never happen
+				logger.warn("The local transaction is not active.", ex); // should never happen
 			}
 		}
 
@@ -368,6 +377,50 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 			compensableLogger.updateTransaction(this.getTransactionArchive());
 			logger.info("{}| compensable transaction rolled back!",
 					ByteUtils.byteArrayToString(transactionContext.getXid().getGlobalTransactionId()));
+		}
+
+	}
+
+	private void wakeUpRollbackOperation() {
+		try {
+			this.lock.lock();
+			this.markRollbackOnly = false;
+			this.condition.signalAll();
+		} finally {
+			this.lock.unlock();
+		}
+	}
+
+	private void waitingForOperationDone() {
+		try {
+			this.lock.lock();
+			this.markRollbackOnly = true;
+			while (this.hasTransactionDone(this.transaction)) {
+				try {
+					this.condition.await(10, TimeUnit.MILLISECONDS);
+				} catch (InterruptedException ex) {
+					logger.debug(ex.getMessage());
+				}
+			}
+		} finally {
+			this.lock.unlock();
+		}
+	}
+
+	private boolean hasTransactionDone(Transaction transaction) {
+		if (transaction == null) {
+			return true;
+		}
+
+		switch (transaction.getTransactionStatus()) {
+		case Status.STATUS_COMMITTED:
+		case Status.STATUS_ROLLEDBACK:
+			return true;
+		case Status.STATUS_ACTIVE:
+		case Status.STATUS_MARKED_ROLLBACK:
+			return false; // should never happen
+		default:
+			return false;
 		}
 
 	}
@@ -583,7 +636,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 	public void registerTransactionResourceListener(TransactionResourceListener listener) {
 	}
 
-	public synchronized void onEnlistResource(Xid xid, XAResource xares) {
+	public void onEnlistResource(Xid xid, XAResource xares) {
 		String resourceKey = null;
 		if (XAResourceDescriptor.class.isInstance(xares)) {
 			XAResourceDescriptor descriptor = (XAResourceDescriptor) xares;
@@ -611,10 +664,10 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 
 	}
 
-	public synchronized void onDelistResource(Xid xid, XAResource xares) {
+	public void onDelistResource(Xid xid, XAResource xares) {
 	}
 
-	public synchronized void onCommitSuccess(TransactionXid xid) {
+	public void onCommitSuccess(TransactionXid xid) {
 		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
 
 		if (this.transactionContext.isCompensating()) {
@@ -670,6 +723,36 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 			}
 		}
 
+		if (this.markRollbackOnly) /* used by participant only */ {
+			this.wakeUpRollbackOperation();
+		}
+
+	}
+
+	public void onCommitHeuristicMixed(TransactionXid xid) {
+		this.onCommitFailure(xid); // should never happen
+	}
+
+	public void onCommitHeuristicRolledback(TransactionXid xid) {
+		this.onCommitFailure(xid); // should never happen
+	}
+
+	public void onCommitFailure(TransactionXid xid) {
+		if (this.markRollbackOnly) /* used by participant only */ {
+			this.wakeUpRollbackOperation();
+		}
+	}
+
+	public void onRollbackSuccess(TransactionXid xid) {
+		if (this.markRollbackOnly) /* used by participant only */ {
+			this.wakeUpRollbackOperation();
+		}
+	}
+
+	public void onRollbackFailure(TransactionXid xid) {
+		if (this.markRollbackOnly) /* used by participant only */ {
+			this.wakeUpRollbackOperation();
+		}
 	}
 
 	public synchronized void recoveryCommit() throws CommitRequiredException, SystemException {
@@ -1341,7 +1424,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 		return transaction;
 	}
 
-	public synchronized void setTransactionalExtra(Object transactionalExtra) {
+	public void setTransactionalExtra(Object transactionalExtra) {
 		this.transaction = (Transaction) transactionalExtra;
 	}
 
