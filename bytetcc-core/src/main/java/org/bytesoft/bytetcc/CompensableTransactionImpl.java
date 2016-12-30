@@ -317,6 +317,18 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 	public synchronized void rollback() throws IllegalStateException, SystemException {
 		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
 
+		if (this.transaction != null) {
+			try {
+				transaction.setRollbackOnly();
+			} catch (IllegalStateException ex) {
+				logger.debug("The local transaction is not active.", ex);
+			} catch (SystemException ex) {
+				logger.error("The local transaction is not active.", ex); // should never happen
+			} catch (RuntimeException ex) {
+				logger.error("The local transaction is not active.", ex); // should never happen
+			}
+		}
+
 		this.transactionStatus = Status.STATUS_ROLLING_BACK;
 		this.transactionContext.setCompensating(true);
 
@@ -367,42 +379,11 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 		for (int i = this.archiveList.size() - 1; i >= 0; i--) {
 			CompensableArchive current = this.archiveList.get(i);
 			if (current.isTried() == false) {
-				TransactionXid transactionXid = (TransactionXid) current.getTransactionXid();
-				if (this.transaction == null) {
-					logger.info(
-							"{}| The operation in try phase is rolled back, so the cancel operation is ignored, compensable service: {}.",
-							ByteUtils.byteArrayToString(transactionContext.getXid().getGlobalTransactionId()),
-							ByteUtils.byteArrayToString(current.getIdentifier().getGlobalTransactionId()));
-					continue;
-				} else {
-					XidFactory xidFactory = this.beanFactory.getTransactionXidFactory();
-					TransactionXid xid = this.transaction.getTransactionContext().getXid();
-
-					TransactionXid branchXid = xidFactory.createGlobalXid(xid.getGlobalTransactionId());
-					TransactionXid archveXid = transactionXid == null ? null
-							: xidFactory.createGlobalXid(transactionXid.getGlobalTransactionId());
-
-					if (archveXid == null || branchXid.equals(branchXid)) {
-						try {
-							transaction.setRollbackOnly();
-							continue;
-						} catch (IllegalStateException ex) {
-							logger.debug("The local transaction is not active.", ex);
-						} catch (SystemException ex) {
-							logger.error("The local transaction is not active.", ex);
-							continue; // should never happen
-						} catch (RuntimeException ex) {
-							logger.error("The local transaction is not active.", ex);
-							continue; // should never happen
-						}
-					} else {
-						logger.info(
-								"{}| The operation in try phase is rolled back, so the cancel operation is ignored, compensable service: {}.",
-								ByteUtils.byteArrayToString(transactionContext.getXid().getGlobalTransactionId()),
-								ByteUtils.byteArrayToString(current.getIdentifier().getGlobalTransactionId()));
-						continue;
-					}
-				}
+				logger.info(
+						"{}| The operation in try phase is rolled back, so the cancel operation is ignored, compensable service: {}.",
+						ByteUtils.byteArrayToString(transactionContext.getXid().getGlobalTransactionId()),
+						ByteUtils.byteArrayToString(current.getIdentifier().getGlobalTransactionId()));
+				continue;
 			} else if (current.isCancelled()) {
 				continue;
 			}
@@ -602,7 +583,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 	public void registerTransactionResourceListener(TransactionResourceListener listener) {
 	}
 
-	public void onEnlistResource(Xid xid, XAResource xares) {
+	public synchronized void onEnlistResource(Xid xid, XAResource xares) {
 		String resourceKey = null;
 		if (XAResourceDescriptor.class.isInstance(xares)) {
 			XAResourceDescriptor descriptor = (XAResourceDescriptor) xares;
@@ -630,10 +611,10 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 
 	}
 
-	public void onDelistResource(Xid xid, XAResource xares) {
+	public synchronized void onDelistResource(Xid xid, XAResource xares) {
 	}
 
-	public void onCommitSuccess(TransactionXid xid) {
+	public synchronized void onCommitSuccess(TransactionXid xid) {
 		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
 
 		if (this.transactionContext.isCompensating()) {
