@@ -367,11 +367,42 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 		for (int i = this.archiveList.size() - 1; i >= 0; i--) {
 			CompensableArchive current = this.archiveList.get(i);
 			if (current.isTried() == false) {
-				logger.info(
-						"{}| The operation in try phase is rolled back, so the cancel operation is ignored, compensable service: {}.",
-						ByteUtils.byteArrayToString(transactionContext.getXid().getGlobalTransactionId()),
-						ByteUtils.byteArrayToString(current.getIdentifier().getGlobalTransactionId()));
-				continue;
+				TransactionXid transactionXid = (TransactionXid) current.getTransactionXid();
+				if (this.transaction == null) {
+					logger.info(
+							"{}| The operation in try phase is rolled back, so the cancel operation is ignored, compensable service: {}.",
+							ByteUtils.byteArrayToString(transactionContext.getXid().getGlobalTransactionId()),
+							ByteUtils.byteArrayToString(current.getIdentifier().getGlobalTransactionId()));
+					continue;
+				} else {
+					XidFactory xidFactory = this.beanFactory.getTransactionXidFactory();
+					TransactionXid xid = this.transaction.getTransactionContext().getXid();
+
+					TransactionXid branchXid = xidFactory.createGlobalXid(xid.getGlobalTransactionId());
+					TransactionXid archveXid = transactionXid == null ? null
+							: xidFactory.createGlobalXid(transactionXid.getGlobalTransactionId());
+
+					if (archveXid == null || branchXid.equals(branchXid)) {
+						try {
+							transaction.setRollbackOnly();
+							continue;
+						} catch (IllegalStateException ex) {
+							logger.debug("The local transaction is not active.", ex);
+						} catch (SystemException ex) {
+							logger.error("The local transaction is not active.", ex);
+							continue; // should never happen
+						} catch (RuntimeException ex) {
+							logger.error("The local transaction is not active.", ex);
+							continue; // should never happen
+						}
+					} else {
+						logger.info(
+								"{}| The operation in try phase is rolled back, so the cancel operation is ignored, compensable service: {}.",
+								ByteUtils.byteArrayToString(transactionContext.getXid().getGlobalTransactionId()),
+								ByteUtils.byteArrayToString(current.getIdentifier().getGlobalTransactionId()));
+						continue;
+					}
+				}
 			} else if (current.isCancelled()) {
 				continue;
 			}
@@ -1329,7 +1360,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 		return transaction;
 	}
 
-	public void setTransactionalExtra(Object transactionalExtra) {
+	public synchronized void setTransactionalExtra(Object transactionalExtra) {
 		this.transaction = (Transaction) transactionalExtra;
 	}
 
