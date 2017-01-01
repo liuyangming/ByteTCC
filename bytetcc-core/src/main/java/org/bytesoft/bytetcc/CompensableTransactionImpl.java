@@ -322,7 +322,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 			try {
 				branch.setRollbackOnly();
 			} catch (IllegalStateException ex) {
-				logger.warn("The local transaction is not active.", ex);
+				logger.info("The local transaction is not active.", ex); // tx in try-phase has been completed already.
 			} catch (SystemException ex) {
 				logger.warn("The local transaction is not active.", ex); // should never happen
 			} catch (RuntimeException ex) {
@@ -476,6 +476,12 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 	}
 
 	public boolean enlistResource(XAResource xaRes) throws RollbackException, IllegalStateException, SystemException {
+		if (this.transactionStatus == Status.STATUS_MARKED_ROLLBACK) {
+			throw new RollbackException();
+		} else if (this.transactionStatus != Status.STATUS_ACTIVE) {
+			throw new IllegalStateException();
+		}
+
 		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
 		if (RemoteResourceDescriptor.class.isInstance(xaRes) == false) {
 			throw new SystemException("Invalid resource!");
