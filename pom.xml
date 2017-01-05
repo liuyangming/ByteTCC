@@ -4,7 +4,7 @@
 
 	<groupId>org.bytesoft</groupId>
 	<artifactId>bytetcc-parent</artifactId>
-	<version>0.3.0-RC2</version>
+	<version>0.3.0-RC3</version>
 	<packaging>pom</packaging>
 	<name>bytetcc-parent</name>
 	<description>ByteTCC is a transaction manager based on the TCC(Try/Confirm/Cancel) mechanism.</description>

@@ -6,7 +6,7 @@ ByteTCC是一个基于TCC（Try/Confirm/Cancel）机制的分布式事务管理�
 <dependency>
 	<groupId>org.bytesoft</groupId>
 	<artifactId>bytetcc-supports</artifactId>
-	<version>0.3.0-RC2</version>
+	<version>0.3.0-RC3</version>
 </dependency>
 ```
 #### 1.2. 编写业务服务
@@ -71,7 +71,8 @@ public class AccountServiceCancel implements IAccountService {
 * 1、支持Spring容器的声明式事务管理；
 * 2、支持普通事务、TCC事务、业务补偿型事务等事务机制；
 * 3、支持多数据源、跨应用、跨服务器等分布式事务场景；
-* 4、支持dubbo服务框架；
+* 4、支持长事务；
+* 5、支持dubbo服务框架；
 
 ## 四、历史版本
 #### 4.1. v0.1.2

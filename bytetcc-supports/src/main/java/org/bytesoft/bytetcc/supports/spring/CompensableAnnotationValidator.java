@@ -23,6 +23,8 @@ import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
 import org.bytesoft.compensable.Compensable;
 import org.bytesoft.compensable.RemotingException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.FatalBeanException;
 import org.springframework.beans.factory.config.BeanDefinition;
@@ -32,6 +34,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 public class CompensableAnnotationValidator implements BeanFactoryPostProcessor {
+	static final Logger logger = LoggerFactory.getLogger(CompensableAnnotationValidator.class);
 
 	public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
 		Map<String, Class<?>> otherServiceMap = new HashMap<String, Class<?>>();
@@ -48,6 +51,10 @@ public class CompensableAnnotationValidator implements BeanFactoryPostProcessor 
 			try {
 				clazz = cl.loadClass(className);
 			} catch (ClassNotFoundException ex) {
+				logger.warn("Cannot load class {}, beanId= {}!", className, beanName, ex);
+				continue;
+			} catch (RuntimeException rex) {
+				logger.warn("Cannot load class {}, beanId= {}!", className, beanName, rex);
 				continue;
 			}
 
@@ -94,8 +101,7 @@ public class CompensableAnnotationValidator implements BeanFactoryPostProcessor 
 				}
 				Class<?> clazz = otherServiceMap.get(confirmableKey);
 				if (clazz == null) {
-					throw new IllegalStateException(
-							String.format("The confirm bean(id= %s) is not exists!", confirmableKey));
+					throw new IllegalStateException(String.format("The confirm bean(id= %s) is not exists!", confirmableKey));
 				}
 
 				try {
@@ -123,8 +129,7 @@ public class CompensableAnnotationValidator implements BeanFactoryPostProcessor 
 				}
 				Class<?> clazz = otherServiceMap.get(cancellableKey);
 				if (clazz == null) {
-					throw new IllegalStateException(
-							String.format("The cancel bean(id= %s) is not exists!", cancellableKey));
+					throw new IllegalStateException(String.format("The cancel bean(id= %s) is not exists!", cancellableKey));
 				}
 
 				try {
@@ -176,8 +181,7 @@ public class CompensableAnnotationValidator implements BeanFactoryPostProcessor 
 		}
 
 		if (transactional == null) {
-			throw new IllegalStateException(
-					String.format("Method(%s) must be specificed a Transactional annotation!", method));
+			throw new IllegalStateException(String.format("Method(%s) must be specificed a Transactional annotation!", method));
 		}
 		Propagation propagation = transactional.propagation();
 		if (Propagation.REQUIRED.equals(propagation) == false //
@@ -188,8 +192,7 @@ public class CompensableAnnotationValidator implements BeanFactoryPostProcessor 
 		}
 	}
 
-	private void validateTransactionalRollbackFor(Method method, Class<?> clazz, String beanName)
-			throws IllegalStateException {
+	private void validateTransactionalRollbackFor(Method method, Class<?> clazz, String beanName) throws IllegalStateException {
 		Transactional transactional = method.getAnnotation(Transactional.class);
 		if (transactional == null) {
 			Class<?> declaringClass = method.getDeclaringClass();
@@ -197,8 +200,7 @@ public class CompensableAnnotationValidator implements BeanFactoryPostProcessor 
 		}
 
 		if (transactional == null) {
-			throw new IllegalStateException(
-					String.format("Method(%s) must be specificed a Transactional annotation!", method));
+			throw new IllegalStateException(String.format("Method(%s) must be specificed a Transactional annotation!", method));
 		}
 
 		String[] rollbackForClassNameArray = transactional.rollbackForClassName();
@@ -227,9 +229,9 @@ public class CompensableAnnotationValidator implements BeanFactoryPostProcessor 
 			}
 
 			if (matched == false) {
-				throw new IllegalStateException(String.format(
-						"The value of Transactional.rollbackFor annotated on method(%s) must includes %s!", method,
-						errorType.getName()));
+				throw new IllegalStateException(
+						String.format("The value of Transactional.rollbackFor annotated on method(%s) must includes %s!",
+								method, errorType.getName()));
 			}
 		}
 	}
