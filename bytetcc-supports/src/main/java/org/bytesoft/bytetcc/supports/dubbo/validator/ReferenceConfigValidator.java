@@ -62,7 +62,7 @@ public class ReferenceConfigValidator implements DubboConfigValidator {
 		Class<?> clazz = null;
 		try {
 			clazz = cl.loadClass(clazzName);
-		} catch (ClassNotFoundException ex) {
+		} catch (Exception ex) {
 			throw new FatalBeanException(String.format("Cannot load class %s.", clazzName));
 		}
 

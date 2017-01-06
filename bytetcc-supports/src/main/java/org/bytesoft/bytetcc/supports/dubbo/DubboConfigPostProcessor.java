@@ -29,6 +29,8 @@ import org.bytesoft.bytetcc.supports.dubbo.validator.ProviderConfigValidator;
 import org.bytesoft.bytetcc.supports.dubbo.validator.ReferenceConfigValidator;
 import org.bytesoft.bytetcc.supports.dubbo.validator.ServiceConfigValidator;
 import org.bytesoft.compensable.Compensable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.FatalBeanException;
 import org.springframework.beans.MutablePropertyValues;
@@ -39,6 +41,7 @@ import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.config.RuntimeBeanReference;
 
 public class DubboConfigPostProcessor implements BeanFactoryPostProcessor {
+	static final Logger logger = LoggerFactory.getLogger(DubboConfigPostProcessor.class);
 
 	public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
 		ClassLoader cl = Thread.currentThread().getContextClassLoader();
@@ -64,9 +67,11 @@ public class DubboConfigPostProcessor implements BeanFactoryPostProcessor {
 			Class<?> beanClass = null;
 			try {
 				beanClass = cl.loadClass(beanClassName);
-			} catch (ClassNotFoundException ex) {
+			} catch (Exception ex) {
+				logger.warn("Cannot load class {}, beanId= {}!", beanClassName, beanName, ex);
 				continue;
 			}
+
 			clazzMap.put(beanClassName, beanClass);
 
 			if (beanClass.getAnnotation(Compensable.class) != null) {

@@ -22,6 +22,8 @@ import org.bytesoft.bytetcc.supports.spring.aware.CompensableContextAware;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableContext;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.FatalBeanException;
 import org.springframework.beans.MutablePropertyValues;
@@ -31,6 +33,8 @@ import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.config.RuntimeBeanReference;
 
 public class CompensableContextPostProcessor implements BeanPostProcessor, CompensableBeanFactoryAware {
+	static final Logger logger = LoggerFactory.getLogger(CompensableBeanFactoryPostProcessor.class);
+
 	private CompensableBeanFactory beanFactory;
 
 	public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
@@ -61,6 +65,7 @@ public class CompensableContextPostProcessor implements BeanPostProcessor, Compe
 			try {
 				beanClass = cl.loadClass(beanClassName);
 			} catch (Exception ex) {
+				logger.debug("Cannot load class {}, beanId= {}!", beanClassName, beanName, ex);
 				continue;
 			}
 

@@ -50,11 +50,8 @@ public class CompensableAnnotationValidator implements BeanFactoryPostProcessor 
 
 			try {
 				clazz = cl.loadClass(className);
-			} catch (ClassNotFoundException ex) {
-				logger.warn("Cannot load class {}, beanId= {}!", className, beanName, ex);
-				continue;
-			} catch (RuntimeException rex) {
-				logger.warn("Cannot load class {}, beanId= {}!", className, beanName, rex);
+			} catch (Exception ex) {
+				logger.debug("Cannot load class {}, beanId= {}!", className, beanName, ex);
 				continue;
 			}
 

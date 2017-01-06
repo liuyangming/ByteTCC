@@ -18,6 +18,8 @@ package org.bytesoft.bytetcc.supports.spring;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.FatalBeanException;
 import org.springframework.beans.MutablePropertyValues;
@@ -27,6 +29,7 @@ import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.config.RuntimeBeanReference;
 
 public class CompensableManagerPostProcessor implements BeanFactoryPostProcessor {
+	static final Logger logger = LoggerFactory.getLogger(CompensableManagerPostProcessor.class);
 
 	public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
 		ClassLoader cl = Thread.currentThread().getContextClassLoader();
@@ -46,6 +49,7 @@ public class CompensableManagerPostProcessor implements BeanFactoryPostProcessor
 			try {
 				beanClass = cl.loadClass(beanClassName);
 			} catch (Exception ex) {
+				logger.debug("Cannot load class {}, beanId= {}!", beanClassName, beanName, ex);
 				continue;
 			}
 
