@@ -68,7 +68,7 @@ public class DubboConfigPostProcessor implements BeanFactoryPostProcessor {
 			try {
 				beanClass = cl.loadClass(beanClassName);
 			} catch (Exception ex) {
-				logger.warn("Cannot load class {}, beanId= {}!", beanClassName, beanName, ex);
+				logger.debug("Cannot load class {}, beanId= {}!", beanClassName, beanName, ex);
 				continue;
 			}
 
