@@ -107,8 +107,7 @@ public class CompensableServiceFilter implements Filter {
 		CompensableTransaction transaction = (CompensableTransaction) compensableRepository.getTransaction(globalXid);
 		if (transaction == null) {
 			InvocationResult wrapped = new InvocationResult();
-			wrapped.setFailure(true);
-			wrapped.setValue(new TransactionException(XAException.XAER_NOTA));
+			wrapped.setError(new TransactionException(XAException.XAER_NOTA));
 			wrapped.setVariable(CompensableCoordinator.class.getName(), compensableCoordinator.getIdentifier());
 
 			result.setException(null);
@@ -124,8 +123,7 @@ public class CompensableServiceFilter implements Filter {
 			}
 
 			InvocationResult wrapped = new InvocationResult();
-			wrapped.setFailure(true);
-			wrapped.setValue(new TransactionException(XAException.XAER_PROTO));
+			wrapped.setError(new TransactionException(XAException.XAER_PROTO));
 			wrapped.setVariable(CompensableCoordinator.class.getName(), compensableCoordinator.getIdentifier());
 
 			result.setException(null);
@@ -244,8 +242,7 @@ public class CompensableServiceFilter implements Filter {
 		RpcResult result = new RpcResult();
 
 		InvocationResult wrapped = new InvocationResult();
-		wrapped.setFailure(true);
-		wrapped.setValue(throwable);
+		wrapped.setError(throwable);
 		if (attachRequired) {
 			wrapped.setVariable(CompensableCoordinator.class.getName(), compensableCoordinator.getIdentifier());
 		}
@@ -374,9 +371,10 @@ public class CompensableServiceFilter implements Filter {
 			if (InvocationResult.class.isInstance(value)) {
 				InvocationResult wrapped = (InvocationResult) value;
 				result.setValue(null);
+				result.setException(null);
 
 				if (wrapped.isFailure()) {
-					result.setException((Throwable) wrapped.getValue());
+					result.setException(wrapped.getError());
 				} else {
 					result.setValue(wrapped.getValue());
 				}
@@ -484,16 +482,12 @@ public class CompensableServiceFilter implements Filter {
 	static class InvocationResult implements HessianHandle, Serializable {
 		private static final long serialVersionUID = 1L;
 
-		private boolean failure;
+		private Throwable error;
 		private Object value;
 		private final Map<String, Serializable> variables = new HashMap<String, Serializable>();
 
 		public boolean isFailure() {
-			return failure;
-		}
-
-		public void setFailure(boolean failure) {
-			this.failure = failure;
+			return this.error != null;
 		}
 
 		public Object getValue() {
@@ -510,6 +504,14 @@ public class CompensableServiceFilter implements Filter {
 
 		public Serializable getVariable(String key) {
 			return this.variables.get(key);
+		}
+
+		public Throwable getError() {
+			return error;
+		}
+
+		public void setError(Throwable error) {
+			this.error = error;
 		}
 
 	}
