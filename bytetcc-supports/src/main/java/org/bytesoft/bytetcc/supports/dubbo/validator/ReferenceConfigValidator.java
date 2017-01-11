@@ -35,12 +35,19 @@ public class ReferenceConfigValidator implements DubboConfigValidator {
 
 	public void validate() throws BeansException {
 		MutablePropertyValues mpv = this.beanDefinition.getPropertyValues();
+		PropertyValue group = mpv.getPropertyValue("group");
 		PropertyValue retries = mpv.getPropertyValue("retries");
 		PropertyValue loadbalance = mpv.getPropertyValue("loadbalance");
 		PropertyValue cluster = mpv.getPropertyValue("cluster");
 		PropertyValue filter = mpv.getPropertyValue("filter");
 
-		if (retries == null || retries.getValue() == null || "0".equals(retries.getValue()) == false) {
+		if (group == null || group.getValue() == null //
+				|| ("org.bytesoft.bytetcc".equals(group.getValue())
+						|| String.valueOf(group.getValue()).startsWith("org.bytesoft.bytetcc-")) == false) {
+			throw new FatalBeanException(String.format(
+					"The value of attr 'group'(beanId= %s) should be 'org.bytesoft.bytetcc' or starts with 'org.bytesoft.bytetcc-'.",
+					this.beanName));
+		} else if (retries == null || retries.getValue() == null || "0".equals(retries.getValue()) == false) {
 			throw new FatalBeanException(
 					String.format("The value of attr 'retries'(beanId= %s) should be '0'.", this.beanName));
 		} else if (loadbalance == null || loadbalance.getValue() == null
