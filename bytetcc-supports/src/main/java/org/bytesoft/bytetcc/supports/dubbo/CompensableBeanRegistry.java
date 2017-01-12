@@ -55,6 +55,14 @@ public final class CompensableBeanRegistry implements CompensableBeanFactoryAwar
 	}
 
 	public RemoteCoordinator getConsumeCoordinator() {
+		if (this.consumeCoordinator != null) {
+			return this.consumeCoordinator;
+		} else {
+			return this.doGetConsumeCoordinator();
+		}
+	}
+
+	private RemoteCoordinator doGetConsumeCoordinator() {
 		try {
 			this.lock.lock();
 			while (this.consumeCoordinator == null) {
