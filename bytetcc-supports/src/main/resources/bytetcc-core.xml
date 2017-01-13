@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context" xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans    
+           http://www.springframework.org/schema/beans/spring-beans-3.0.xsd    
+           http://www.springframework.org/schema/context    
+           http://www.springframework.org/schema/context/spring-context-3.0.xsd    
+           http://www.springframework.org/schema/aop    
+           http://www.springframework.org/schema/aop/spring-aop-3.0.xsd    
+           http://www.springframework.org/schema/tx 
+           http://www.springframework.org/schema/tx/spring-tx-3.0.xsd">
+
+	<description>The bytetcc transaction manager module</description>
+
+	<import resource="classpath:jta-transaction-config.xml" />
+	<import resource="classpath:tcc-transaction-config.xml" />
+
+	<bean id="compensableMethodInterceptor" class="org.bytesoft.bytetcc.supports.spring.CompensableMethodInterceptor" />
+	<aop:config proxy-target-class="true">
+		<aop:pointcut id="compensableMethodPointcut" expression="@within(org.bytesoft.compensable.Compensable)" />
+		<aop:advisor advice-ref="compensableMethodInterceptor" pointcut-ref="compensableMethodPointcut" />
+	</aop:config>
+
+	<tx:annotation-driven transaction-manager="transactionManager" />
+	<bean id="transactionManager" class="org.springframework.transaction.jta.JtaTransactionManager" />
+
+	<bean id="compensableWork" class="org.bytesoft.bytetcc.work.CompensableWork" init-method="initialize" />
+
+	<bean id="compensableWorkManager" class="org.bytesoft.transaction.work.SimpleWorkManager" />
+	<bean id="compensableResourceAdapter" class="org.bytesoft.transaction.adapter.ResourceAdapterImpl">
+		<property name="workList">
+			<list>
+				<ref bean="compensableWork" />
+				<ref bean="bytetccCompensableLogger" />
+				<ref bean="bytetccCleanupWork" />
+			</list>
+		</property>
+	</bean>
+	<bean id="resourceAdapter" class="org.springframework.jca.support.ResourceAdapterFactoryBean">
+		<property name="workManager" ref="compensableWorkManager" />
+		<property name="resourceAdapter" ref="compensableResourceAdapter" />
+	</bean>
+
+</beans>
