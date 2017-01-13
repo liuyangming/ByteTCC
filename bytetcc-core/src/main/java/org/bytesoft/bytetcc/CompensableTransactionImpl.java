@@ -312,11 +312,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 		throw new SystemException("Not supported!");
 	}
 
-	public synchronized void rollback() throws IllegalStateException, SystemException {
-		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
-
-		this.transactionStatus = Status.STATUS_ROLLING_BACK;
-
+	private void markCurrentBranchTransactionRollbackIfNecessary() {
 		Transaction branch = this.transaction;
 		if (branch != null) /* used by participant only. */{
 			try {
@@ -329,6 +325,14 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 				logger.warn("The local transaction is not active.", ex); // should never happen
 			}
 		}
+	}
+
+	public synchronized void rollback() throws IllegalStateException, SystemException {
+		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
+
+		this.transactionStatus = Status.STATUS_ROLLING_BACK;
+
+		this.markCurrentBranchTransactionRollbackIfNecessary();
 
 		this.transactionContext.setCompensating(true);
 
