@@ -31,23 +31,36 @@ public class CompensableWork implements Work, CompensableBeanFactoryAware {
 	private long delayOfStoping = SECOND_MILLIS * 15;
 	private long recoveryInterval = SECOND_MILLIS * 60;
 
+	private boolean initialized = false;
+
 	private CompensableBeanFactory beanFactory;
 
-	public void initialize() {
+	private void initializeIfNecessary() {
 		TransactionRecovery compensableRecovery = this.beanFactory.getCompensableRecovery();
-		compensableRecovery.startRecovery();
+		if (this.initialized == false) {
+			try {
+				compensableRecovery.startRecovery();
+				this.initialized = true;
+			} catch (RuntimeException rex) {
+				logger.error("Error occurred while initializing the compensable work.", rex);
+			}
+		}
 	}
 
 	public void run() {
 		TransactionRecovery compensableRecovery = this.beanFactory.getCompensableRecovery();
 
+		this.initializeIfNecessary();
+
 		long nextRecoveryTime = 0;
 		while (this.currentActive()) {
 
-			long current = System.currentTimeMillis();
+			this.initializeIfNecessary();
 
+			long current = System.currentTimeMillis();
 			if (current >= nextRecoveryTime) {
 				nextRecoveryTime = current + this.recoveryInterval;
+
 				try {
 					compensableRecovery.timingRecover();
 				} catch (RuntimeException rex) {

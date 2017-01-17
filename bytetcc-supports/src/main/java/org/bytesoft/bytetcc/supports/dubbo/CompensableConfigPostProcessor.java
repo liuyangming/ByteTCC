@@ -147,7 +147,7 @@ public class CompensableConfigPostProcessor implements BeanFactoryPostProcessor 
 		String stubBeanId = String.format("stub@%s", RemoteCoordinator.class.getName());
 		registry.registerBeanDefinition(stubBeanId, beanDef);
 
-		// <bean id="xxx" class="org.bytesoft.bytetcc.supports.dubbo.CompensableBeanRegistry"
+		// <bean class="org.bytesoft.bytetcc.supports.dubbo.CompensableBeanRegistry"
 		// factory-method="getInstance">
 		// <property name="consumeCoordinator" ref="yyy" />
 		// </bean>

@@ -46,14 +46,6 @@ public final class CompensableBeanRegistry implements CompensableBeanFactoryAwar
 		return instance;
 	}
 
-	public void setBeanFactory(CompensableBeanFactory tbf) {
-		this.beanFactory = tbf;
-	}
-
-	public CompensableBeanFactory getBeanFactory() {
-		return beanFactory;
-	}
-
 	public RemoteCoordinator getConsumeCoordinator() {
 		if (this.consumeCoordinator != null) {
 			return this.consumeCoordinator;
@@ -88,6 +80,14 @@ public final class CompensableBeanRegistry implements CompensableBeanFactoryAwar
 		} finally {
 			this.lock.unlock();
 		}
+	}
+
+	public void setBeanFactory(CompensableBeanFactory tbf) {
+		this.beanFactory = tbf;
+	}
+
+	public CompensableBeanFactory getBeanFactory() {
+		return beanFactory;
 	}
 
 }

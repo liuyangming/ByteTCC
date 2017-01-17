@@ -25,7 +25,7 @@
 	<tx:annotation-driven transaction-manager="transactionManager" />
 	<bean id="transactionManager" class="org.springframework.transaction.jta.JtaTransactionManager" />
 
-	<bean id="compensableWork" class="org.bytesoft.bytetcc.work.CompensableWork" init-method="initialize" />
+	<bean id="compensableWork" class="org.bytesoft.bytetcc.work.CompensableWork" />
 
 	<bean id="compensableWorkManager" class="org.bytesoft.transaction.work.SimpleWorkManager" />
 	<bean id="compensableResourceAdapter" class="org.bytesoft.transaction.adapter.ResourceAdapterImpl">
