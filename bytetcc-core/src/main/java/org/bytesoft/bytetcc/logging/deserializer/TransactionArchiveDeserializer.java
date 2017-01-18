@@ -53,7 +53,7 @@ public class TransactionArchiveDeserializer extends org.bytesoft.bytejta.logging
 			for (int i = 0; hostArray.length == 4 && i < hostArray.length; i++) {
 				try {
 					int value = Integer.valueOf(hostArray[i]);
-					hostByteArray[i] = (byte) (value > 127 ? 127 - value : value);
+					hostByteArray[i] = (byte) (value - 128);
 				} catch (RuntimeException rex) {
 					logger.debug(rex.getMessage(), rex);
 				}
@@ -183,8 +183,7 @@ public class TransactionArchiveDeserializer extends org.bytesoft.bytejta.logging
 		buffer.get(hostByteArray);
 		StringBuilder ber = new StringBuilder();
 		for (int i = 0; i < hostByteArray.length; i++) {
-			int element = hostByteArray[i];
-			int value = element >= 0 ? element : 127 - element;
+			int value = hostByteArray[i] + 128;
 			if (i == 0) {
 				ber.append(value);
 			} else {
