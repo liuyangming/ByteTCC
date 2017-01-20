@@ -6,7 +6,7 @@ ByteTCC是一个基于TCC（Try/Confirm/Cancel）机制的分布式事务管理�
 <dependency>
 	<groupId>org.bytesoft</groupId>
 	<artifactId>bytetcc-supports</artifactId>
-	<version>0.3.0-RC3</version>
+	<version>0.3.0-RC4</version>
 </dependency>
 ```
 #### 1.2. 编写业务服务
@@ -75,10 +75,13 @@ public class AccountServiceCancel implements IAccountService {
 * 5、支持dubbo服务框架；
 
 ## 四、历史版本
-#### 4.1. v0.1.2
+#### 4.1. v0.1
+* 地址：http://pan.baidu.com/s/1hq3ffxU
+
+#### 4.2. v0.1.2
 * 地址：http://code.google.com/p/bytetcc
 
-#### 4.2. v0.2.0-alpha
+#### 4.3. v0.2.0-alpha
 * 地址：http://code.taobao.org/p/openjtcc
 * 文档：http://code.taobao.org/p/openjtcc/wiki/index/
 
