@@ -189,16 +189,9 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 		if (compensable == null) {
 			transactionManager.resume(tobj);
 		} else {
-			TransactionContext transactionContext = compensable.getTransactionContext();
-
-			boolean isCompensableTransaction = false;
-			if (org.bytesoft.compensable.TransactionContext.class.isInstance(transactionContext)) {
-				org.bytesoft.compensable.TransactionContext compensableContext = //
-						(org.bytesoft.compensable.TransactionContext) transactionContext;
-				isCompensableTransaction = compensableContext.isCompensable();
-			}
-
-			(isCompensableTransaction ? compensableManager : transactionManager).resume(tobj);
+			org.bytesoft.compensable.TransactionContext compensableContext = //
+					(org.bytesoft.compensable.TransactionContext) compensable.getTransactionContext();
+			(compensableContext.isCompensable() ? compensableManager : transactionManager).resume(tobj);
 		}
 	}
 
