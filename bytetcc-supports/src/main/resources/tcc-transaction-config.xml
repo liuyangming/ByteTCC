@@ -13,7 +13,6 @@
 
 	<bean class="org.bytesoft.bytetcc.supports.spring.CompensableBeanFactoryPostProcessor" />
 	<bean class="org.bytesoft.bytetcc.supports.spring.CompensableAnnotationValidator" />
-	<bean class="org.bytesoft.bytetcc.supports.spring.TransactionConfigPostProcessor" />
 	<bean class="org.bytesoft.bytetcc.supports.spring.CompensableContextPostProcessor" />
 	<bean class="org.bytesoft.bytetcc.supports.spring.CompensableManagerPostProcessor" />
 
