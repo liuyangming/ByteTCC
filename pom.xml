@@ -4,7 +4,7 @@
 
 	<groupId>org.bytesoft</groupId>
 	<artifactId>bytetcc-parent</artifactId>
-	<version>0.3.0</version>
+	<version>0.4.0-SNAPSHOT</version>
 	<packaging>pom</packaging>
 	<name>bytetcc-parent</name>
 	<description>ByteTCC is a transaction manager based on the TCC(Try/Confirm/Cancel) mechanism.</description>
@@ -46,6 +46,8 @@
 		<module>bytetcc-common</module>
 		<module>bytetcc-core</module>
 		<module>bytetcc-supports</module>
+		<module>bytetcc-supports-springcloud</module>
+		<module>bytetcc-supports-dubbo</module>
 	</modules>
 
 </project>

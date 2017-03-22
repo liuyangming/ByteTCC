@@ -7,11 +7,10 @@
 		<artifactId>bytetcc-parent</artifactId>
 		<version>0.4.0-SNAPSHOT</version>
 	</parent>
-	<artifactId>bytetcc-supports</artifactId>
+	<artifactId>bytetcc-supports-dubbo</artifactId>
 	<packaging>jar</packaging>
 
-	<name>bytetcc-supports</name>
-	<description>The bytetcc-supports project is the module of ByteTCC for integrating with third-party open source project.</description>
+	<name>bytetcc-supports-dubbo</name>
 	<url>http://www.bytesoft.org</url>
 
 	<properties>
@@ -26,7 +25,7 @@
 		</dependency>
 		<dependency>
 			<groupId>org.bytesoft</groupId>
-			<artifactId>bytejta-supports</artifactId>
+			<artifactId>bytejta-supports-dubbo</artifactId>
 			<version>0.4.0-SNAPSHOT</version>
 		</dependency>
 		<dependency>

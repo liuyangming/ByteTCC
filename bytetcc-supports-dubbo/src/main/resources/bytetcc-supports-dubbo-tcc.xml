@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context" xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+           http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+           http://www.springframework.org/schema/context
+           http://www.springframework.org/schema/context/spring-context-3.0.xsd
+           http://www.springframework.org/schema/aop
+           http://www.springframework.org/schema/aop/spring-aop-3.0.xsd
+           http://www.springframework.org/schema/tx
+           http://www.springframework.org/schema/tx/spring-tx-3.0.xsd">
+
+	<bean class="org.bytesoft.bytetcc.supports.spring.CompensableBeanFactoryPostProcessor" />
+	<bean class="org.bytesoft.bytetcc.supports.spring.CompensableAnnotationValidator" />
+	<bean class="org.bytesoft.bytetcc.supports.spring.TransactionConfigPostProcessor" />
+	<bean class="org.bytesoft.bytetcc.supports.spring.CompensableContextPostProcessor" />
+	<bean class="org.bytesoft.bytetcc.supports.spring.CompensableManagerPostProcessor" />
+
+	<bean class="org.bytesoft.bytetcc.supports.dubbo.CompensableEndpointPostProcessor" />
+	<bean class="org.bytesoft.bytetcc.supports.dubbo.DubboConfigPostProcessor" />
+	<bean class="org.bytesoft.bytetcc.supports.dubbo.CompensableConfigPostProcessor" />
+	<bean class="org.bytesoft.bytetcc.supports.dubbo.CompensableBeanRegistry" factory-method="getInstance" />
+
+	<bean id="bytetccUserTransaction" class="org.bytesoft.bytetcc.UserCompensableImpl" />
+	<bean id="bytetccCompensableManager" class="org.bytesoft.bytetcc.CompensableManagerImpl" />
+	<bean id="bytetccTransactionManager" class="org.bytesoft.bytetcc.TransactionManagerImpl" />
+
+	<bean id="bytetccCompensableCoordinator" class="org.bytesoft.bytetcc.CompensableCoordinator" />
+	<bean id="bytetccTransactionCoordinator" class="org.bytesoft.bytetcc.TransactionCoordinator" />
+
+	<bean id="bytetccTransactionRecovery" class="org.bytesoft.bytetcc.TransactionRecoveryImpl" />
+	<bean id="bytetccTransactionRepository" class="org.bytesoft.bytejta.TransactionRepositoryImpl" />
+
+	<bean id="bytetccXidFactory" class="org.bytesoft.bytetcc.xa.XidFactoryImpl" />
+
+	<bean id="bytetccCompensableInterceptor" class="org.bytesoft.bytetcc.supports.rpc.CompensableInterceptorImpl" />
+	<bean id="bytetccTransactionInterceptor" class="org.bytesoft.bytetcc.supports.rpc.TransactionInterceptorImpl">
+		<property name="compensableInterceptor" ref="bytetccCompensableInterceptor" />
+	</bean>
+
+	<bean id="bytetccCompensableLogger" class="org.bytesoft.bytetcc.logging.SampleCompensableLogger" init-method="construct" />
+	<bean id="bytetccResourceDeserializer" class="org.bytesoft.bytetcc.supports.dubbo.serialize.XAResourceDeserializerImpl" />
+
+	<bean id="springContainerContext" class="org.bytesoft.bytetcc.supports.spring.SpringContainerContextImpl" />
+
+	<bean id="bytetccTransactionArchiveDeserializer" class="org.bytesoft.bytetcc.logging.deserializer.TransactionArchiveDeserializer">
+		<property name="resourceArchiveDeserializer" ref="bytetccXAResourceArchiveDeserializer" />
+		<property name="compensableArchiveDeserializer" ref="bytetccCompensableArchiveDeserializer" />
+	</bean>
+	<bean id="bytetccXAResourceArchiveDeserializer" class="org.bytesoft.bytetcc.logging.deserializer.XAResourceArchiveDeserializer">
+		<property name="deserializer" ref="bytetccResourceDeserializer" />
+	</bean>
+	<bean id="bytetccCompensableArchiveDeserializer" class="org.bytesoft.bytetcc.logging.deserializer.CompensableArchiveDeserializer" />
+	<bean id="bytetccArchiveDeserializer" class="org.bytesoft.bytetcc.logging.ArchiveDeserializerImpl">
+		<property name="compensableArchiveDeserializer" ref="bytetccCompensableArchiveDeserializer" />
+		<property name="xaResourceArchiveDeserializer" ref="bytetccXAResourceArchiveDeserializer" />
+		<property name="transactionArchiveDeserializer" ref="bytetccTransactionArchiveDeserializer" />
+	</bean>
+
+	<bean id="bytetccCleanupWork" class="org.bytesoft.bytetcc.work.CleanupWork" init-method="initialize" />
+	<bean id="bytetccCompensableContext" class="org.bytesoft.bytetcc.CompensableContextImpl" />
+
+	<bean id="bytetccBeanFactory" class="org.bytesoft.bytetcc.TransactionBeanFactoryImpl">
+		<property name="transactionManager" ref="bytejtaTransactionManager" />
+		<property name="compensableManager" ref="bytetccCompensableManager" />
+		<property name="transactionXidFactory" ref="bytejtaXidFactory" />
+		<property name="compensableXidFactory" ref="bytetccXidFactory" />
+		<property name="transactionRepository" ref="bytejtaTransactionRepository" />
+		<property name="compensableRepository" ref="bytetccTransactionRepository" />
+		<property name="transactionRecovery" ref="bytejtaTransactionRecovery" />
+		<property name="compensableRecovery" ref="bytetccTransactionRecovery" />
+		<property name="transactionCoordinator" ref="bytejtaTransactionCoordinator" />
+		<property name="compensableCoordinator" ref="bytetccCompensableCoordinator" />
+		<property name="containerContext" ref="springContainerContext" />
+		<property name="transactionInterceptor" ref="bytetccTransactionInterceptor" />
+		<property name="compensableLogger" ref="bytetccCompensableLogger" />
+		<property name="archiveDeserializer" ref="bytetccArchiveDeserializer" />
+		<property name="resourceDeserializer" ref="bytetccResourceDeserializer" />
+		<property name="localResourceCleaner" ref="bytetccCleanupWork" />
+		<property name="compensableContext" ref="bytetccCompensableContext" />
+	</bean>
+
+</beans>

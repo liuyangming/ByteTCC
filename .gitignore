@@ -21,3 +21,7 @@ hs_err_pid*
 /bytetcc-supports/.gitignore
 /bytetcc-supports/.project
 target
+/bytetcc-supports-dubbo/.classpath
+/bytetcc-supports-dubbo/.project
+/bytetcc-supports-springcloud/.classpath
+/bytetcc-supports-springcloud/.project
