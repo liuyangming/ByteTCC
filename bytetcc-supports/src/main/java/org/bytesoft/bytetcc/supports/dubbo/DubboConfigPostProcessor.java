@@ -99,9 +99,17 @@ public class DubboConfigPostProcessor implements BeanFactoryPostProcessor {
 			} else if (com.alibaba.dubbo.config.spring.ServiceBean.class.equals(beanClass)) {
 				MutablePropertyValues mpv = beanDef.getPropertyValues();
 				PropertyValue ref = mpv.getPropertyValue("ref");
+				PropertyValue group = mpv.getPropertyValue("group");
+
 				RuntimeBeanReference beanRef = (RuntimeBeanReference) ref.getValue();
 				String refBeanName = beanRef.getBeanName();
 				if (compensableMap.containsKey(refBeanName) == false) {
+					continue;
+				}
+
+				if (group == null || group.getValue() == null //
+						|| ("org.bytesoft.bytetcc".equals(group.getValue())
+								|| String.valueOf(group.getValue()).startsWith("org.bytesoft.bytetcc-")) == false) {
 					continue;
 				}
 
