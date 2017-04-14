@@ -12,7 +12,6 @@
            http://www.springframework.org/schema/tx/spring-tx-3.0.xsd">
 
 	<import resource="classpath:bytetcc-disable-tx-advice.xml" />
-	<import resource="classpath:bytetcc-supports-task.xml" />
 
 	<import resource="classpath:bytetcc-supports-dubbo-core.xml" />
 

@@ -16,20 +16,14 @@
 
 	<import resource="classpath:bytetcc-supports-task.xml" />
 
-	<bean class="org.bytesoft.bytetcc.supports.dubbo.CompensableEndpointPostProcessor" />
-	<bean class="org.bytesoft.bytetcc.supports.dubbo.DubboConfigPostProcessor" />
-	<bean class="org.bytesoft.bytetcc.supports.dubbo.CompensableConfigPostProcessor" />
-
-	<bean class="org.bytesoft.bytetcc.supports.dubbo.CompensableBeanRegistry" factory-method="getInstance" />
-
-	<bean id="bytetccResourceDeserializer" class="org.bytesoft.bytetcc.supports.dubbo.serialize.XAResourceDeserializerImpl" />
+	<!-- <bean id="bytetccResourceDeserializer" class="org.bytesoft.bytetcc.supports.serialize.XAResourceDeserializerImpl" /> -->
 
 	<bean id="bytetccTransactionArchiveDeserializer" class="org.bytesoft.bytetcc.logging.deserializer.TransactionArchiveDeserializer">
 		<property name="resourceArchiveDeserializer" ref="bytetccXAResourceArchiveDeserializer" />
 		<property name="compensableArchiveDeserializer" ref="bytetccCompensableArchiveDeserializer" />
 	</bean>
 	<bean id="bytetccXAResourceArchiveDeserializer" class="org.bytesoft.bytetcc.logging.deserializer.XAResourceArchiveDeserializer">
-		<property name="deserializer" ref="bytetccResourceDeserializer" />
+		<!-- <property name="deserializer" ref="bytetccResourceDeserializer" /> -->
 	</bean>
 	<bean id="bytetccCompensableArchiveDeserializer" class="org.bytesoft.bytetcc.logging.deserializer.CompensableArchiveDeserializer" />
 	<bean id="bytetccArchiveDeserializer" class="org.bytesoft.bytetcc.logging.ArchiveDeserializerImpl">
@@ -64,7 +58,7 @@
 		<property name="transactionInterceptor" ref="bytetccTransactionInterceptor" />
 		<property name="compensableLogger" ref="bytetccCompensableLogger" />
 		<property name="archiveDeserializer" ref="bytetccArchiveDeserializer" />
-		<property name="resourceDeserializer" ref="bytetccResourceDeserializer" />
+		<!-- <property name="resourceDeserializer" ref="bytetccResourceDeserializer" /> -->
 		<property name="localResourceCleaner" ref="bytetccCleanupWork" />
 		<property name="compensableContext" ref="bytetccCompensableContext" />
 	</bean>
