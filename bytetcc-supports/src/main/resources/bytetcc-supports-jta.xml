@@ -25,15 +25,4 @@
 
 	<bean id="bytejtaTransactionLogger" class="org.bytesoft.bytetcc.logging.SampleTransactionLogger" />
 
-	<bean id="bytejtaBeanFactory" class="org.bytesoft.bytejta.TransactionBeanFactoryImpl">
-		<property name="transactionManager" ref="bytejtaTransactionManager" />
-		<property name="xidFactory" ref="bytejtaXidFactory" />
-		<property name="transactionTimer" ref="bytejtaTransactionManager" />
-		<property name="transactionLogger" ref="bytejtaTransactionLogger" />
-		<property name="transactionRepository" ref="bytejtaTransactionRepository" />
-		<property name="transactionInterceptor" ref="bytejtaTransactionInterceptor" />
-		<property name="transactionRecovery" ref="bytejtaTransactionRecovery" />
-		<property name="transactionCoordinator" ref="bytejtaTransactionCoordinator" />
-	</bean>
-
 </beans>
