@@ -1,5 +1,5 @@
 /**
- * Copyright 2014-2016 yangming.liu<bytefox@126.com>.
+ * Copyright 2014-2017 yangming.liu<bytefox@126.com>.
  *
  * This copyrighted material is made available to anyone wishing to use, modify,
  * copy, or redistribute it subject to the terms and conditions of the GNU
