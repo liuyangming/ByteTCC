@@ -22,11 +22,25 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter;
 
+import feign.Feign;
+import feign.Feign.Builder;
+import feign.InvocationHandlerFactory;
+
 @Configuration
 public class CompensableConfiguration extends WebMvcConfigurerAdapter {
 
 	public void addInterceptors(InterceptorRegistry registry) {
-		registry.addInterceptor(new CompensableInterceptor());
+		registry.addInterceptor(this.getCompensableInterceptor());
+	}
+
+	@org.springframework.context.annotation.Bean
+	public InvocationHandlerFactory getInvocationHandlerFactory() {
+		return this.getCompensableInterceptor();
+	}
+
+	@org.springframework.context.annotation.Bean
+	public Builder getFeignBuilder() {
+		return Feign.builder().invocationHandlerFactory(this.getInvocationHandlerFactory());
 	}
 
 	@org.springframework.context.annotation.Bean

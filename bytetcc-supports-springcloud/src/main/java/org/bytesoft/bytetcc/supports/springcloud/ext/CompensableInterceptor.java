@@ -16,10 +16,16 @@
 package org.bytesoft.bytetcc.supports.springcloud.ext;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.bytesoft.bytetcc.supports.springcloud.CompensableBeanRegistry;
+import org.bytesoft.compensable.CompensableBeanFactory;
+import org.bytesoft.transaction.supports.rpc.TransactionInterceptor;
 import org.springframework.http.HttpRequest;
 import org.springframework.http.client.ClientHttpRequestExecution;
 import org.springframework.http.client.ClientHttpRequestInterceptor;
@@ -27,34 +33,93 @@ import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.ModelAndView;
 
-import feign.RequestInterceptor;
-import feign.RequestTemplate;
+import feign.InvocationHandlerFactory;
+import feign.Target;
 
-public class CompensableInterceptor implements HandlerInterceptor, ClientHttpRequestInterceptor, RequestInterceptor {
+public class CompensableInterceptor
+		implements HandlerInterceptor, ClientHttpRequestInterceptor, InvocationHandlerFactory, InvocationHandler {
+
+	private Target<?> target;
+	private Map<Method, MethodHandler> handlers;
+
+	@SuppressWarnings("rawtypes")
+	public InvocationHandler create(Target target, Map<Method, MethodHandler> dispatch) {
+		CompensableInterceptor handler = new CompensableInterceptor();
+		handler.setTarget(target);
+		handler.setHandlers(dispatch);
+		return handler;
+	}
+
+	public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+		if (Object.class.equals(method.getDeclaringClass())) {
+			return method.invoke(this, args);
+		} else {
+			CompensableBeanRegistry beanRegistry = CompensableBeanRegistry.getInstance();
+			CompensableBeanFactory beanFactory = beanRegistry.getBeanFactory();
+			TransactionInterceptor transactionInterceptor = beanFactory.getTransactionInterceptor();
+			try {
+				transactionInterceptor.beforeSendRequest(null); // TODO
+				MethodHandler methodHandler = this.handlers.get(method);
+				return methodHandler.invoke(args);
+			} finally {
+				transactionInterceptor.afterReceiveResponse(null); // TODO
+			}
+		}
+	}
 
 	public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-		System.out.printf(" pre : handler= %s%n", handler);
+
+		CompensableBeanRegistry beanRegistry = CompensableBeanRegistry.getInstance();
+		CompensableBeanFactory beanFactory = beanRegistry.getBeanFactory();
+		TransactionInterceptor transactionInterceptor = beanFactory.getTransactionInterceptor();
+		transactionInterceptor.afterReceiveRequest(null); // TODO
+
 		return true;
 	}
 
 	public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, ModelAndView modelAndView)
 			throws Exception {
-		System.out.printf(" post: handler= %s%n", handler);
+
+		CompensableBeanRegistry beanRegistry = CompensableBeanRegistry.getInstance();
+		CompensableBeanFactory beanFactory = beanRegistry.getBeanFactory();
+		TransactionInterceptor transactionInterceptor = beanFactory.getTransactionInterceptor();
+		transactionInterceptor.beforeSendResponse(null); // TODO
+
 	}
 
 	public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex)
 			throws Exception {
-		System.out.printf("after: handler= %s%n", handler);
 	}
 
 	public ClientHttpResponse intercept(HttpRequest request, byte[] body, ClientHttpRequestExecution execution)
 			throws IOException {
-		System.out.printf(" exec: request= %s, body= %s, execution= %s%n", request, body, execution);
-		return null;
+
+		CompensableBeanRegistry beanRegistry = CompensableBeanRegistry.getInstance();
+		CompensableBeanFactory beanFactory = beanRegistry.getBeanFactory();
+		TransactionInterceptor transactionInterceptor = beanFactory.getTransactionInterceptor();
+		transactionInterceptor.beforeSendRequest(null); // TODO
+		try {
+			return execution.execute(request, body);
+		} finally {
+			transactionInterceptor.afterReceiveResponse(null); // TODO
+		}
+
 	}
 
-	public void apply(RequestTemplate template) {
-		System.out.printf("apply: template= %s", template);
+	public Target<?> getTarget() {
+		return target;
+	}
+
+	public void setTarget(Target<?> target) {
+		this.target = target;
+	}
+
+	public Map<Method, MethodHandler> getHandlers() {
+		return handlers;
+	}
+
+	public void setHandlers(Map<Method, MethodHandler> handlers) {
+		this.handlers = handlers;
 	}
 
 }

@@ -16,6 +16,8 @@
 
 	<import resource="classpath:bytetcc-supports-task.xml" />
 
+	<bean class="org.bytesoft.bytetcc.supports.springcloud.CompensableBeanRegistry" factory-method="getInstance" />
+
 	<bean id="bytetccResourceDeserializer" class="org.bytesoft.bytetcc.supports.springcloud.serialize.XAResourceDeserializerImpl" />
 
 	<bean id="bytetccTransactionArchiveDeserializer" class="org.bytesoft.bytetcc.logging.deserializer.TransactionArchiveDeserializer">
