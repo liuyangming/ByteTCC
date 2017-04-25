@@ -18,6 +18,7 @@ package org.bytesoft.bytetcc.supports.springcloud;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.bytesoft.common.utils.CommonUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 import org.bytesoft.compensable.aware.CompensableEndpointAware;
@@ -28,11 +29,19 @@ import org.springframework.beans.MutablePropertyValues;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
+import org.springframework.context.EnvironmentAware;
+import org.springframework.core.env.Environment;
 
-public class CompensableEndpointPostProcessor implements BeanFactoryPostProcessor, CompensableBeanFactoryAware {
-	static final Logger logger = LoggerFactory.getLogger(CompensableEndpointPostProcessor.class);
+public class SpringCloudEndpointPostProcessor
+		implements BeanFactoryPostProcessor, CompensableBeanFactoryAware, EnvironmentAware {
+	static final Logger logger = LoggerFactory.getLogger(SpringCloudEndpointPostProcessor.class);
 
 	private CompensableBeanFactory beanFactory;
+	private Environment environment;
+
+	public void setEnvironment(Environment environment) {
+		this.environment = environment;
+	}
 
 	public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
 		ClassLoader cl = Thread.currentThread().getContextClassLoader();
@@ -57,8 +66,8 @@ public class CompensableEndpointPostProcessor implements BeanFactoryPostProcesso
 			}
 		}
 
-		String host = null; // CommonUtils.getInetAddress();
-		String port = null; // TODO
+		String host = CommonUtils.getInetAddress();
+		String port = this.environment.getProperty("server.port");
 		String identifier = String.format("%s:%s", host, port);
 
 		for (int i = 0; i < beanDefList.size(); i++) {

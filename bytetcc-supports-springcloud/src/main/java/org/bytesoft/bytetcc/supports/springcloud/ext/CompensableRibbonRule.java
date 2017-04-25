@@ -18,6 +18,9 @@ package org.bytesoft.bytetcc.supports.springcloud.ext;
 import java.util.List;
 import java.util.Random;
 
+import org.bytesoft.bytetcc.supports.springcloud.CompensableRibbonInterceptor;
+import org.bytesoft.bytetcc.supports.springcloud.SpringCloudBeanRegistry;
+
 import com.netflix.client.config.IClientConfig;
 import com.netflix.loadbalancer.AbstractLoadBalancerRule;
 import com.netflix.loadbalancer.ILoadBalancer;
@@ -31,6 +34,24 @@ public class CompensableRibbonRule extends AbstractLoadBalancerRule implements I
 	private IClientConfig clientConfig;
 
 	public Server choose(Object key) {
+		ILoadBalancer loadBalancer = this.getLoadBalancer();
+		List<Server> servers = loadBalancer.getReachableServers();
+
+		SpringCloudBeanRegistry registry = SpringCloudBeanRegistry.getInstance();
+		CompensableRibbonInterceptor interceptor = registry.getRibbonInterceptor();
+		Server server = null;
+		try {
+			server = interceptor.beforeCompletion(servers);
+			if (server == null) {
+				server = this.invokeChoose(key);
+			}
+		} finally {
+			interceptor.afterCompletion(server);
+		}
+		return server;
+	}
+
+	public Server invokeChoose(Object key) {
 		boolean flags = false; // TODO
 		if (flags) {
 			return this.processChoose(key);

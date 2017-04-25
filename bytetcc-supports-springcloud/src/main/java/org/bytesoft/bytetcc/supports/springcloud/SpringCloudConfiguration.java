@@ -17,6 +17,7 @@ package org.bytesoft.bytetcc.supports.springcloud;
 
 import org.bytesoft.bytetcc.supports.springcloud.ext.CompensableInterceptor;
 import org.bytesoft.bytetcc.supports.springcloud.ext.CompensableRibbonRule;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
@@ -27,10 +28,17 @@ import feign.Feign.Builder;
 import feign.InvocationHandlerFactory;
 
 @Configuration
-public class CompensableConfiguration extends WebMvcConfigurerAdapter {
+public class SpringCloudConfiguration extends WebMvcConfigurerAdapter {
 
 	public void addInterceptors(InterceptorRegistry registry) {
 		registry.addInterceptor(this.getCompensableInterceptor());
+		// registry.addWebRequestInterceptor(this.getCompensableInterceptor());
+	}
+
+	// @org.springframework.context.annotation.Bean
+	public FilterRegistrationBean filterRegistrationBean() {
+		FilterRegistrationBean registration = new FilterRegistrationBean();
+		return registration;
 	}
 
 	@org.springframework.context.annotation.Bean
@@ -53,9 +61,19 @@ public class CompensableConfiguration extends WebMvcConfigurerAdapter {
 		return new CompensableInterceptor();
 	}
 
+	@org.springframework.context.annotation.Bean("transactionTemplate")
+	public RestTemplate transactionTemplate() {
+		RestTemplate restTemplate = new RestTemplate();
+
+		CompensableInterceptor interceptor = this.getCompensableInterceptor();
+		restTemplate.getInterceptors().add(interceptor);
+
+		return restTemplate;
+	}
+
 	@org.springframework.cloud.client.loadbalancer.LoadBalanced
 	@org.springframework.context.annotation.Bean
-	public RestTemplate restTemplate() {
+	public RestTemplate defaultRestTemplate() {
 		RestTemplate restTemplate = new RestTemplate();
 
 		CompensableInterceptor interceptor = this.getCompensableInterceptor();

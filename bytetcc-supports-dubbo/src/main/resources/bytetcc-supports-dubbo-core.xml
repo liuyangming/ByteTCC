@@ -22,6 +22,10 @@
 
 	<bean class="org.bytesoft.bytetcc.supports.dubbo.CompensableBeanRegistry" factory-method="getInstance" />
 
+	<bean id="bytetccTransactionInterceptor" class="org.bytesoft.bytetcc.supports.dubbo.CompensableInterceptorImpl">
+		<property name="compensableInterceptor" ref="bytetccCompensableInterceptor" />
+	</bean>
+
 	<bean id="bytetccResourceDeserializer" class="org.bytesoft.bytetcc.supports.dubbo.serialize.XAResourceDeserializerImpl" />
 
 	<bean id="bytetccTransactionArchiveDeserializer" class="org.bytesoft.bytetcc.logging.deserializer.TransactionArchiveDeserializer">

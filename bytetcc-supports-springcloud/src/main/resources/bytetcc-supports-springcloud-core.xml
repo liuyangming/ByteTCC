@@ -16,7 +16,14 @@
 
 	<import resource="classpath:bytetcc-supports-task.xml" />
 
-	<bean class="org.bytesoft.bytetcc.supports.springcloud.CompensableBeanRegistry" factory-method="getInstance" />
+	<bean class="org.bytesoft.bytetcc.supports.springcloud.SpringCloudEndpointPostProcessor" />
+	<bean class="org.bytesoft.bytetcc.supports.springcloud.SpringCloudBeanRegistry" factory-method="getInstance" />
+
+	<bean class="org.bytesoft.bytetcc.supports.springcloud.controller.CompensableCoordinatorController" />
+
+	<bean id="bytetccTransactionInterceptor" class="org.bytesoft.bytetcc.supports.springcloud.CompensableInterceptorImpl">
+		<property name="compensableInterceptor" ref="bytetccCompensableInterceptor" />
+	</bean>
 
 	<bean id="bytetccResourceDeserializer" class="org.bytesoft.bytetcc.supports.springcloud.serialize.XAResourceDeserializerImpl" />
 
