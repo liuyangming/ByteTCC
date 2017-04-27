@@ -15,8 +15,11 @@
  */
 package org.bytesoft.bytetcc.supports.springcloud.serialize;
 
+import java.lang.reflect.Proxy;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.jms.XAConnectionFactory;
 import javax.jms.XASession;
@@ -28,6 +31,9 @@ import javax.transaction.xa.XAResource;
 
 import org.bytesoft.bytejta.supports.jdbc.DataSourceHolder;
 import org.bytesoft.bytejta.supports.jdbc.RecoveredResource;
+import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
+import org.bytesoft.bytejta.supports.wire.RemoteCoordinatorRegistry;
+import org.bytesoft.bytetcc.supports.springcloud.SpringCloudCoordinator;
 import org.bytesoft.transaction.supports.serialize.XAResourceDeserializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,6 +43,7 @@ import org.springframework.context.ApplicationContextAware;
 
 public class XAResourceDeserializerImpl implements XAResourceDeserializer, ApplicationContextAware {
 	static final Logger logger = LoggerFactory.getLogger(XAResourceDeserializerImpl.class);
+	static Pattern pattern = Pattern.compile("^[^:]+\\s*:\\s*[^:]+\\s*:\\s*\\d+$");
 
 	private ApplicationContext applicationContext;
 
@@ -54,8 +61,24 @@ public class XAResourceDeserializerImpl implements XAResourceDeserializer, Appli
 			}
 			return cachedResource;
 		} catch (BeansException bex) {
-			// TODO
-			return null;
+			Matcher matcher = pattern.matcher(identifier);
+			if (matcher.find() == false) {
+				logger.error("can not find a matching xa-resource(identifier= {})!", identifier);
+				return null;
+			}
+
+			RemoteCoordinatorRegistry registry = RemoteCoordinatorRegistry.getInstance();
+			RemoteCoordinator coordinator = registry.getTransactionManagerStub(identifier);
+			if (coordinator == null) {
+				SpringCloudCoordinator springCloudCoordinator = new SpringCloudCoordinator();
+				springCloudCoordinator.setIdentifier(identifier);
+
+				coordinator = (RemoteCoordinator) Proxy.newProxyInstance(SpringCloudCoordinator.class.getClassLoader(),
+						new Class[] { RemoteCoordinator.class }, springCloudCoordinator);
+				registry.putTransactionManagerStub(identifier, coordinator);
+			}
+
+			return registry.getTransactionManagerStub(identifier);
 		} catch (Exception ex) {
 			logger.error("can not find a matching xa-resource(identifier= {})!", identifier);
 			return null;
