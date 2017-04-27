@@ -52,19 +52,6 @@ public class CompensableRibbonRule extends AbstractLoadBalancerRule implements I
 	}
 
 	public Server invokeChoose(Object key) {
-		boolean flags = false; // TODO
-		if (flags) {
-			return this.processChoose(key);
-		} else {
-			return this.delegateChoose(key);
-		}
-	}
-
-	public Server processChoose(Object key) {
-		return null;
-	}
-
-	public Server delegateChoose(Object key) {
 		if (this.delegateRule != null) {
 			return this.delegateRule.choose(key);
 		} else {
