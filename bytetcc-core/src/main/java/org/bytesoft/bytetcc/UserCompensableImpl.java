@@ -38,7 +38,6 @@ import org.bytesoft.compensable.UserCompensable;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 import org.bytesoft.transaction.TransactionManager;
 import org.bytesoft.transaction.TransactionRepository;
-import org.bytesoft.transaction.internal.TransactionException;
 import org.bytesoft.transaction.xa.TransactionXid;
 import org.bytesoft.transaction.xa.XidFactory;
 import org.slf4j.Logger;
@@ -74,7 +73,7 @@ public class UserCompensableImpl implements UserCompensable, Referenceable, Seri
 
 		try {
 			compensableCoordinator.start(compensableContext, XAResource.TMNOFLAGS);
-		} catch (TransactionException ex) {
+		} catch (XAException ex) {
 			logger.error("Error occurred while beginning an compensable transaction!", ex);
 			throw new SystemException(ex.getMessage());
 		}
@@ -119,7 +118,7 @@ public class UserCompensableImpl implements UserCompensable, Referenceable, Seri
 		} else if (transactionContext.isRecoveried()) {
 			try {
 				compensableCoordinator.start(transactionContext, XAResource.TMNOFLAGS);
-			} catch (TransactionException ex) {
+			} catch (XAException ex) {
 				logger.error("Error occurred while beginning an compensable transaction!", ex);
 				throw new SystemException(ex.getMessage());
 			}
@@ -170,7 +169,7 @@ public class UserCompensableImpl implements UserCompensable, Referenceable, Seri
 		TransactionContext compensableContext = compensable.getTransactionContext();
 		try {
 			compensableCoordinator.end(compensableContext, XAResource.TMSUCCESS);
-		} catch (TransactionException ex) {
+		} catch (XAException ex) {
 			logger.error("Error occurred while beginning an compensable transaction!", ex);
 			throw new SystemException(ex.getMessage());
 		}
@@ -258,7 +257,7 @@ public class UserCompensableImpl implements UserCompensable, Referenceable, Seri
 
 		try {
 			compensableCoordinator.end(compensableContext, XAResource.TMSUCCESS);
-		} catch (TransactionException ex) {
+		} catch (XAException ex) {
 			logger.error("Error occurred while beginning an compensable transaction!", ex);
 			throw new SystemException(ex.getMessage());
 		}

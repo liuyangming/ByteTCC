@@ -111,7 +111,10 @@ public class CompensableRequestInterceptor
 		} finally {
 			beanRegistry.removeRibbonInterceptor();
 
-			this.invokeAfterRecvResponse(httpResponse, serverFlag);
+			if (httpResponse != null) {
+				this.invokeAfterRecvResponse(httpResponse, serverFlag);
+			} // end-if (httpResponse != null)
+
 		}
 
 	}

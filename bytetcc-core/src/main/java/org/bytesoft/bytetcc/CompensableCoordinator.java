@@ -38,7 +38,6 @@ import org.bytesoft.transaction.RollbackRequiredException;
 import org.bytesoft.transaction.Transaction;
 import org.bytesoft.transaction.TransactionContext;
 import org.bytesoft.transaction.TransactionRepository;
-import org.bytesoft.transaction.internal.TransactionException;
 import org.bytesoft.transaction.xa.TransactionXid;
 import org.bytesoft.transaction.xa.XidFactory;
 import org.slf4j.Logger;
@@ -55,13 +54,13 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 		return transactionManager.getTransactionQuietly();
 	}
 
-	public Transaction start(TransactionContext transactionContext, int flags) throws TransactionException {
+	public Transaction start(TransactionContext transactionContext, int flags) throws XAException {
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
 		TransactionRepository compensableRepository = this.beanFactory.getCompensableRepository();
 
 		if (compensableManager.getTransactionQuietly() != null) {
-			throw new TransactionException(XAException.XAER_PROTO);
+			throw new XAException(XAException.XAER_PROTO);
 		}
 		TransactionXid globalXid = transactionContext.getXid();
 		Transaction transaction = compensableRepository.getTransaction(globalXid);
@@ -80,11 +79,11 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 		return transaction;
 	}
 
-	public Transaction end(TransactionContext transactionContext, int flags) throws TransactionException {
+	public Transaction end(TransactionContext transactionContext, int flags) throws XAException {
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 		CompensableTransaction transaction = compensableManager.getCompensableTransactionQuietly();
 		if (transaction == null) {
-			throw new TransactionException(XAException.XAER_PROTO);
+			throw new XAException(XAException.XAER_PROTO);
 		}
 
 		// clear CompensableTransactionImpl.transientArchiveList in CompensableTransactionImpl.onCommitSuccess().

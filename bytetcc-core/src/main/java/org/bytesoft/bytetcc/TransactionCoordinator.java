@@ -24,7 +24,6 @@ import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 import org.bytesoft.transaction.Transaction;
 import org.bytesoft.transaction.TransactionContext;
-import org.bytesoft.transaction.internal.TransactionException;
 import org.bytesoft.transaction.xa.XidFactory;
 
 public class TransactionCoordinator implements RemoteCoordinator, CompensableBeanFactoryAware {
@@ -165,12 +164,12 @@ public class TransactionCoordinator implements RemoteCoordinator, CompensableBea
 		throw new XAException(XAException.XAER_RMERR);
 	}
 
-	public Transaction start(TransactionContext transactionContext, int flags) throws TransactionException {
-		throw new TransactionException(XAException.XAER_RMERR);
+	public Transaction start(TransactionContext transactionContext, int flags) throws XAException {
+		throw new XAException(XAException.XAER_RMERR);
 	}
 
-	public Transaction end(TransactionContext transactionContext, int flags) throws TransactionException {
-		throw new TransactionException(XAException.XAER_RMERR);
+	public Transaction end(TransactionContext transactionContext, int flags) throws XAException {
+		throw new XAException(XAException.XAER_RMERR);
 	}
 
 	public boolean isSameRM(XAResource xares) throws XAException {

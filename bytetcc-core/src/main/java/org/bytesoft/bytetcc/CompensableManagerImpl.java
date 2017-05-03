@@ -40,7 +40,6 @@ import org.bytesoft.compensable.logging.CompensableLogger;
 import org.bytesoft.transaction.Transaction;
 import org.bytesoft.transaction.TransactionManager;
 import org.bytesoft.transaction.TransactionRepository;
-import org.bytesoft.transaction.internal.TransactionException;
 import org.bytesoft.transaction.xa.TransactionXid;
 import org.bytesoft.transaction.xa.XidFactory;
 import org.slf4j.Logger;
@@ -152,14 +151,14 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 
 			CompensableSynchronization synchronization = this.beanFactory.getCompensableSynchronization();
 			synchronization.afterBegin(compensable.getTransaction(), createFlag);
-		} catch (TransactionException tex) {
+		} catch (XAException tex) {
 			logger.info("[{}] begin-transaction: error occurred while starting jta-transaction: {}",
 					ByteUtils.byteArrayToString(compensableXid.getGlobalTransactionId()),
 					ByteUtils.byteArrayToString(transactionXid.getGlobalTransactionId()));
 			try {
 				transactionCoordinator.end(transactionContext, XAResource.TMFAIL);
 				throw new SystemException("Error occurred while beginning a compensable-transaction!");
-			} catch (TransactionException ignore) {
+			} catch (XAException ignore) {
 				throw new SystemException("Error occurred while beginning a compensable-transaction!");
 			}
 		}
