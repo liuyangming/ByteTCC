@@ -104,6 +104,11 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 		return transactionArchive;
 	}
 
+	public synchronized void participantCommit(boolean opc) throws RollbackException, HeuristicMixedException,
+			HeuristicRollbackException, SecurityException, IllegalStateException, CommitRequiredException, SystemException {
+		this.commit(); // TODO
+	}
+
 	public synchronized void commit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException,
 			SecurityException, IllegalStateException, SystemException {
 
@@ -303,11 +308,6 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 		throw new RuntimeException("Not supported!");
 	}
 
-	public void participantCommit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException,
-			SecurityException, IllegalStateException, CommitRequiredException, SystemException {
-		throw new SystemException("Not supported!");
-	}
-
 	private void markCurrentBranchTransactionRollbackIfNecessary() {
 		Transaction branch = this.transaction;
 		if (branch != null) /* used by participant only. */ {
@@ -321,6 +321,10 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 				logger.warn("The local transaction is not active.", ex); // should never happen
 			}
 		}
+	}
+
+	public synchronized void participantRollback() throws IllegalStateException, SystemException {
+		this.rollback(); // TODO
 	}
 
 	public synchronized void rollback() throws IllegalStateException, SystemException {
@@ -840,7 +844,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 			TransactionXid branchXid = (TransactionXid) current.getXid();
 			TransactionXid globalXid = xidFactory.createGlobalXid(branchXid.getGlobalTransactionId());
 			try {
-				current.recoveryCommit(globalXid);
+				current.commit(globalXid, true);
 				commitExists = true;
 
 				current.setCommitted(true);
@@ -858,6 +862,8 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 							current.getDescriptor().getIdentifier());
 					break;
 				case XAException.XA_HEURCOM:
+					commitExists = true;
+
 					current.setCommitted(true);
 					current.setHeuristic(false);
 					current.setCompleted(true);
@@ -912,6 +918,9 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 			throw new SystemException();
 		}
 
+	}
+
+	public synchronized void recover() throws SystemException {
 	}
 
 	public synchronized void recoveryRollback() throws RollbackRequiredException, SystemException {
@@ -1073,7 +1082,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 			TransactionXid branchXid = (TransactionXid) current.getXid();
 			TransactionXid globalXid = xidFactory.createGlobalXid(branchXid.getGlobalTransactionId());
 			try {
-				current.recoveryRollback(globalXid);
+				current.rollback(globalXid);
 				current.setRolledback(true);
 				current.setCompleted(true);
 				transactionLogger.updateCoordinator(current);
@@ -1212,7 +1221,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 			TransactionXid branchXid = (TransactionXid) current.getXid();
 			TransactionXid globalXid = xidFactory.createGlobalXid(branchXid.getGlobalTransactionId());
 			try {
-				current.recoveryForget(globalXid);
+				current.forget(globalXid);
 			} catch (XAException ex) {
 				switch (ex.errorCode) {
 				case XAException.XAER_NOTA:

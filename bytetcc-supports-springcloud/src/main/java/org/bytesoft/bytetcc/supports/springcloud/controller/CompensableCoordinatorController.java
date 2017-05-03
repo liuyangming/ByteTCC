@@ -81,26 +81,6 @@ public class CompensableCoordinatorController extends PropertyEditorSupport impl
 		}
 	}
 
-	@RequestMapping(value = "/org/bytesoft/bytetcc/recoveryCommit/{xid}/{opc}", method = RequestMethod.POST)
-	@ResponseBody
-	public void recoveryCommit(@PathVariable("xid") String identifier, @PathVariable("opc") boolean onePhase,
-			HttpServletResponse response) {
-		try {
-			XidFactory xidFactory = this.beanFactory.getCompensableXidFactory();
-			byte[] byteArray = ByteUtils.stringToByteArray(identifier);
-			Xid xid = xidFactory.createGlobalXid(byteArray);
-
-			this.compensableCoordinator.recoveryCommit(xid, onePhase);
-		} catch (XAException ex) {
-			response.addHeader("failure", "true");
-			response.addHeader("XA_XAER", String.valueOf(ex.errorCode));
-			response.setStatus(500);
-		} catch (RuntimeException ex) {
-			response.addHeader("failure", "true");
-			response.setStatus(500);
-		}
-	}
-
 	@RequestMapping(value = "/org/bytesoft/bytetcc/rollback/{xid}", method = RequestMethod.POST)
 	@ResponseBody
 	public void rollback(@PathVariable("xid") String identifier, HttpServletResponse response) {
@@ -110,25 +90,6 @@ public class CompensableCoordinatorController extends PropertyEditorSupport impl
 			Xid xid = xidFactory.createGlobalXid(byteArray);
 
 			this.compensableCoordinator.rollback(xid);
-		} catch (XAException ex) {
-			response.addHeader("failure", "true");
-			response.addHeader("XA_XAER", String.valueOf(ex.errorCode));
-			response.setStatus(500);
-		} catch (RuntimeException ex) {
-			response.addHeader("failure", "true");
-			response.setStatus(500);
-		}
-	}
-
-	@RequestMapping(value = "/org/bytesoft/bytetcc/recoveryRollback/{xid}", method = RequestMethod.POST)
-	@ResponseBody
-	public void recoveryRollback(@PathVariable("xid") String identifier, HttpServletResponse response) {
-		try {
-			XidFactory xidFactory = this.beanFactory.getCompensableXidFactory();
-			byte[] byteArray = ByteUtils.stringToByteArray(identifier);
-			Xid xid = xidFactory.createGlobalXid(byteArray);
-
-			this.compensableCoordinator.recoveryRollback(xid);
 		} catch (XAException ex) {
 			response.addHeader("failure", "true");
 			response.addHeader("XA_XAER", String.valueOf(ex.errorCode));
@@ -165,25 +126,6 @@ public class CompensableCoordinatorController extends PropertyEditorSupport impl
 			Xid xid = xidFactory.createGlobalXid(byteArray);
 
 			this.compensableCoordinator.forget(xid);
-		} catch (XAException ex) {
-			response.addHeader("failure", "true");
-			response.addHeader("XA_XAER", String.valueOf(ex.errorCode));
-			response.setStatus(500);
-		} catch (RuntimeException ex) {
-			response.addHeader("failure", "true");
-			response.setStatus(500);
-		}
-	}
-
-	@RequestMapping(value = "/org/bytesoft/bytetcc/recoveryForget/{xid}", method = RequestMethod.POST)
-	@ResponseBody
-	public void recoveryForget(@PathVariable("xid") String identifier, HttpServletResponse response) {
-		try {
-			XidFactory xidFactory = this.beanFactory.getCompensableXidFactory();
-			byte[] byteArray = ByteUtils.stringToByteArray(identifier);
-			Xid xid = xidFactory.createGlobalXid(byteArray);
-
-			this.compensableCoordinator.recoveryForget(xid);
 		} catch (XAException ex) {
 			response.addHeader("failure", "true");
 			response.addHeader("XA_XAER", String.valueOf(ex.errorCode));

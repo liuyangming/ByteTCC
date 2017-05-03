@@ -45,12 +45,6 @@ public class SpringCloudCoordinator implements InvocationHandler {
 		} else if (RemoteCoordinator.class.equals(clazz)) {
 			if ("getIdentifier".equals(methodName)) {
 				return this.identifier;
-			} else if ("recoveryCommit".equals(methodName)) {
-				return this.invokePostCoordinator(proxy, method, args);
-			} else if ("recoveryRollback".equals(methodName)) {
-				return this.invokePostCoordinator(proxy, method, args);
-			} else if ("recoveryForget".equals(methodName)) {
-				return this.invokePostCoordinator(proxy, method, args);
 			} else {
 				throw new XAException(XAException.XAER_RMFAIL);
 			}

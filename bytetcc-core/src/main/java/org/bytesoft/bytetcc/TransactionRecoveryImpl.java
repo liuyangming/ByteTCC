@@ -317,20 +317,20 @@ public class TransactionRecoveryImpl implements TransactionRecovery, Transaction
 		case Status.STATUS_ACTIVE:
 		case Status.STATUS_MARKED_ROLLBACK:
 		case Status.STATUS_PREPARING:
-		case Status.STATUS_UNKNOWN:
+		case Status.STATUS_UNKNOWN: // TODO
 			if (transactionContext.isPropagated() == false) {
-				transaction.recoveryRollback();
-				transaction.recoveryForget();
+				((CompensableTransactionImpl) transaction).recoveryRollback();
+				((CompensableTransactionImpl) transaction).recoveryForget();
 			}
 			break;
 		case Status.STATUS_ROLLING_BACK:
-			transaction.recoveryRollback();
-			transaction.recoveryForget();
+			((CompensableTransactionImpl) transaction).recoveryRollback();
+			((CompensableTransactionImpl) transaction).recoveryForget();
 			break;
 		case Status.STATUS_PREPARED:
 		case Status.STATUS_COMMITTING:
-			transaction.recoveryCommit();
-			transaction.recoveryForget();
+			((CompensableTransactionImpl) transaction).recoveryCommit();
+			((CompensableTransactionImpl) transaction).recoveryForget();
 			break;
 		case Status.STATUS_COMMITTED:
 		case Status.STATUS_ROLLEDBACK:

@@ -176,11 +176,7 @@ public class UserCompensableImpl implements UserCompensable, Referenceable, Seri
 
 		boolean success = false;
 		try {
-			if (compensableContext.isRecoveried()) {
-				compensableCoordinator.recoveryCommit(compensableContext.getXid(), true);
-			} else {
-				compensableCoordinator.commit(compensableContext.getXid(), true);
-			}
+			compensableCoordinator.commit(compensableContext.getXid(), true);
 			success = true;
 		} catch (XAException xaex) {
 			switch (xaex.errorCode) {
@@ -264,11 +260,7 @@ public class UserCompensableImpl implements UserCompensable, Referenceable, Seri
 
 		boolean success = false;
 		try {
-			if (compensableContext.isRecoveried()) {
-				compensableCoordinator.recoveryRollback(compensableContext.getXid());
-			} else {
-				compensableCoordinator.rollback(compensableContext.getXid());
-			}
+			compensableCoordinator.rollback(compensableContext.getXid());
 			success = true;
 		} catch (XAException xaex) {
 			switch (xaex.errorCode) {
