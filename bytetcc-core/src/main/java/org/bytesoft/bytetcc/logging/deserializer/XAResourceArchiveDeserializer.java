@@ -106,25 +106,37 @@ public class XAResourceArchiveDeserializer implements ArchiveDeserializer, Compe
 
 		if (resourceType == 0x01) {
 			archive.setIdentified(true);
-			CommonResourceDescriptor resourceDescriptor = new CommonResourceDescriptor();
-			XAResource resource = this.deserializer.deserialize(identifier);
-			resourceDescriptor.setDelegate(resource);
-			resourceDescriptor.setIdentifier(identifier);
-			descriptor = resourceDescriptor;
+			XAResource resource = deserializer.deserialize(identifier);
+			if (XAResourceDescriptor.class.isInstance(resource)) {
+				descriptor = (XAResourceDescriptor) resource;
+			} else {
+				CommonResourceDescriptor resourceDescriptor = new CommonResourceDescriptor();
+				resourceDescriptor.setDelegate(resource);
+				resourceDescriptor.setIdentifier(identifier);
+				descriptor = resourceDescriptor;
+			}
 		} else if (resourceType == 0x02) {
 			archive.setIdentified(true);
-			RemoteResourceDescriptor resourceDescriptor = new RemoteResourceDescriptor();
-			XAResource resource = this.deserializer.deserialize(identifier);
-			resourceDescriptor.setDelegate((RemoteCoordinator) resource);
-			resourceDescriptor.setIdentifier(identifier);
-			descriptor = resourceDescriptor;
+			XAResource resource = deserializer.deserialize(identifier);
+			if (XAResourceDescriptor.class.isInstance(resource)) {
+				descriptor = (XAResourceDescriptor) resource;
+			} else {
+				RemoteResourceDescriptor resourceDescriptor = new RemoteResourceDescriptor();
+				resourceDescriptor.setDelegate((RemoteCoordinator) resource);
+				resourceDescriptor.setIdentifier(identifier);
+				descriptor = resourceDescriptor;
+			}
 		} else if (resourceType == 0x03) {
 			archive.setIdentified(true);
-			XAResource resource = this.deserializer.deserialize(identifier);
-			LocalXAResourceDescriptor resourceDescriptor = new LocalXAResourceDescriptor();
-			resourceDescriptor.setDelegate(resource);
-			resourceDescriptor.setIdentifier(identifier);
-			descriptor = resourceDescriptor;
+			XAResource resource = deserializer.deserialize(identifier);
+			if (XAResourceDescriptor.class.isInstance(resource)) {
+				descriptor = (XAResourceDescriptor) resource;
+			} else {
+				LocalXAResourceDescriptor resourceDescriptor = new LocalXAResourceDescriptor();
+				resourceDescriptor.setDelegate(resource);
+				resourceDescriptor.setIdentifier(identifier);
+				descriptor = resourceDescriptor;
+			}
 		} else {
 			UnidentifiedResourceDescriptor resourceDescriptor = new UnidentifiedResourceDescriptor();
 			descriptor = resourceDescriptor;
