@@ -15,11 +15,15 @@
  */
 package org.bytesoft.bytetcc;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import javax.transaction.HeuristicMixedException;
 import javax.transaction.HeuristicRollbackException;
 import javax.transaction.RollbackException;
+import javax.transaction.Status;
 import javax.transaction.SystemException;
 import javax.transaction.xa.XAException;
 import javax.transaction.xa.XAResource;
@@ -44,8 +48,11 @@ import org.slf4j.LoggerFactory;
 public class CompensableCoordinator implements RemoteCoordinator, CompensableBeanFactoryAware, CompensableEndpointAware {
 	static final Logger logger = LoggerFactory.getLogger(CompensableCoordinator.class);
 
-	private String endpoint;
 	private CompensableBeanFactory beanFactory;
+	private String endpoint;
+
+	private transient boolean inited = false;
+	private final Lock lock = new ReentrantLock();
 
 	public Transaction getTransactionQuietly() {
 		CompensableManager transactionManager = this.beanFactory.getCompensableManager();
@@ -100,6 +107,8 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 	}
 
 	public void commit(Xid xid, boolean onePhase) throws XAException {
+		this.checkAvailableIfNecessary();
+
 		if (xid == null) {
 			throw new XAException(XAException.XAER_INVAL);
 		} else if (onePhase == false) {
@@ -137,6 +146,8 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 	}
 
 	public void forget(Xid xid) throws XAException {
+		this.checkAvailableIfNecessary();
+
 		if (xid == null) {
 			throw new XAException(XAException.XAER_INVAL);
 		}
@@ -170,18 +181,47 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 	}
 
 	public Xid[] recover(int flag) throws XAException {
-		TransactionRepository compensableRepository = this.beanFactory.getCompensableRepository();
-		List<Transaction> transactionList = compensableRepository.getErrorTransactionList();
-		Xid[] xidArray = new Xid[transactionList == null ? 0 : transactionList.size()];
-		for (int i = 0; i < xidArray.length; i++) {
-			Transaction transaction = transactionList.get(i);
-			TransactionContext transactionContext = transaction.getTransactionContext();
-			xidArray[i] = transactionContext.getXid();
+		this.checkAvailableIfNecessary();
+
+		TransactionRepository repository = beanFactory.getTransactionRepository();
+		List<Transaction> activeTransactionList = repository.getActiveTransactionList();
+		List<Transaction> errorTransactionList = repository.getErrorTransactionList();
+
+		List<Transaction> transactions = new ArrayList<Transaction>();
+		for (int i = 0; i < activeTransactionList.size(); i++) {
+			Transaction transaction = activeTransactionList.get(i);
+			int transactionStatus = transaction.getTransactionStatus();
+			if (transactionStatus == Status.STATUS_PREPARED || transactionStatus == Status.STATUS_COMMITTING
+					|| transactionStatus == Status.STATUS_ROLLING_BACK || transactionStatus == Status.STATUS_COMMITTED
+					|| transactionStatus == Status.STATUS_ROLLEDBACK) {
+				transactions.add(transaction);
+			}
 		}
+
+		for (int i = 0; i < errorTransactionList.size(); i++) {
+			Transaction transaction = errorTransactionList.get(i);
+			int transactionStatus = transaction.getTransactionStatus();
+			if (transactionStatus == Status.STATUS_PREPARED || transactionStatus == Status.STATUS_COMMITTING
+					|| transactionStatus == Status.STATUS_ROLLING_BACK || transactionStatus == Status.STATUS_COMMITTED
+					|| transactionStatus == Status.STATUS_ROLLEDBACK) {
+				transactions.add(transaction);
+			} else if (transaction.getTransactionContext().isRecoveried()) {
+				transactions.add(transaction);
+			}
+		}
+
+		TransactionXid[] xidArray = new TransactionXid[transactions.size()];
+		for (int i = 0; i < transactions.size(); i++) {
+			Transaction transaction = transactions.get(i);
+			xidArray[i] = transaction.getTransactionContext().getXid();
+		}
+
 		return xidArray;
 	}
 
 	public void rollback(Xid xid) throws XAException {
+		this.checkAvailableIfNecessary();
+
 		if (xid == null) {
 			throw new XAException(XAException.XAER_INVAL);
 		}
@@ -205,6 +245,32 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 			throw new XAException(XAException.XAER_RMERR);
 		} finally {
 			compensableManager.desociateThread();
+		}
+	}
+
+	public void markAvailable() {
+		try {
+			this.lock.lock();
+			this.inited = true;
+		} finally {
+			this.lock.unlock();
+		}
+	}
+
+	private void checkAvailableIfNecessary() throws XAException {
+		if (this.inited == false) {
+			this.checkAvailable();
+		}
+	}
+
+	private void checkAvailable() throws XAException {
+		try {
+			this.lock.lock();
+			if (this.inited == false) {
+				throw new XAException(XAException.XAER_RMFAIL);
+			}
+		} finally {
+			this.lock.unlock();
 		}
 	}
 
