@@ -444,6 +444,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 		} finally {
 			TransactionXid xid = compensableContext.getXid();
 			if (success) {
+				compensableRepository.removeErrorTransaction(xid);
 				compensableRepository.removeTransaction(xid);
 			} else {
 				compensableRepository.putErrorTransaction(xid, compensable);
@@ -548,6 +549,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 		} finally {
 			TransactionXid xid = compensableContext.getXid();
 			if (success) {
+				compensableRepository.removeErrorTransaction(xid);
 				compensableRepository.removeTransaction(xid);
 			} else {
 				compensableRepository.putErrorTransaction(xid, compensable);

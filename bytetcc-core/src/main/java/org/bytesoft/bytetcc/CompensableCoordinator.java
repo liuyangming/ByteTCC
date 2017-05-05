@@ -184,22 +184,11 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 		this.checkAvailableIfNecessary();
 
 		TransactionRepository repository = beanFactory.getTransactionRepository();
-		List<Transaction> activeTransactionList = repository.getActiveTransactionList();
-		List<Transaction> errorTransactionList = repository.getErrorTransactionList();
+		List<Transaction> allTransactionList = repository.getActiveTransactionList();
 
 		List<Transaction> transactions = new ArrayList<Transaction>();
-		for (int i = 0; i < activeTransactionList.size(); i++) {
-			Transaction transaction = activeTransactionList.get(i);
-			int transactionStatus = transaction.getTransactionStatus();
-			if (transactionStatus == Status.STATUS_PREPARED || transactionStatus == Status.STATUS_COMMITTING
-					|| transactionStatus == Status.STATUS_ROLLING_BACK || transactionStatus == Status.STATUS_COMMITTED
-					|| transactionStatus == Status.STATUS_ROLLEDBACK) {
-				transactions.add(transaction);
-			}
-		}
-
-		for (int i = 0; i < errorTransactionList.size(); i++) {
-			Transaction transaction = errorTransactionList.get(i);
+		for (int i = 0; i < allTransactionList.size(); i++) {
+			Transaction transaction = allTransactionList.get(i);
 			int transactionStatus = transaction.getTransactionStatus();
 			if (transactionStatus == Status.STATUS_PREPARED || transactionStatus == Status.STATUS_COMMITTING
 					|| transactionStatus == Status.STATUS_ROLLING_BACK || transactionStatus == Status.STATUS_COMMITTED
