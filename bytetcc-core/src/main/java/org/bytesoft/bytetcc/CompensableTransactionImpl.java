@@ -374,7 +374,6 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 		} else if (rolledbackExists) {
 			throw new HeuristicRollbackException();
 		}
-
 		// else if (committedExists == false) { throw new XAException(XAException.XA_RDONLY); }
 
 	}
