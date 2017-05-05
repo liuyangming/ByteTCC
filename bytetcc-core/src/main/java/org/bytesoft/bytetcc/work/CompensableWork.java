@@ -43,6 +43,7 @@ public class CompensableWork implements Work, CompensableBeanFactoryAware {
 			try {
 				compensableRecovery.startRecovery();
 				this.initialized = true;
+				compensableRecovery.timingRecover();
 			} catch (RuntimeException rex) {
 				logger.error("Error occurred while initializing the compensable work.", rex);
 			}

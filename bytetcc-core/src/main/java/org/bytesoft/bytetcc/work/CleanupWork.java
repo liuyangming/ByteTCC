@@ -41,6 +41,7 @@ import javax.transaction.xa.Xid;
 
 import org.apache.commons.lang3.StringUtils;
 import org.bytesoft.bytejta.supports.jdbc.RecoveredResource;
+import org.bytesoft.bytejta.supports.resource.LocalXAResourceDescriptor;
 import org.bytesoft.bytetcc.supports.resource.LocalResourceCleaner;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
@@ -448,7 +449,9 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableEndpo
 		if (StringUtils.isNotBlank(resourceId)) {
 			Xid[] xidArray = new Xid[xidList.size()];
 			xidList.toArray(xidArray);
-			RecoveredResource resource = (RecoveredResource) resourceDeserializer.deserialize(resourceId);
+			LocalXAResourceDescriptor descriptor = //
+					(LocalXAResourceDescriptor) resourceDeserializer.deserialize(resourceId);
+			RecoveredResource resource = (RecoveredResource) descriptor.getDelegate();
 			try {
 				resource.forget(xidArray);
 			} catch (XAException xaex) {

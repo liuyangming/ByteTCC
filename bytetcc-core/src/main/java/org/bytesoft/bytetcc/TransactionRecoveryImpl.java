@@ -22,11 +22,11 @@ import java.util.Map;
 import javax.transaction.Status;
 import javax.transaction.SystemException;
 import javax.transaction.xa.XAException;
-import javax.transaction.xa.XAResource;
 import javax.transaction.xa.Xid;
 
 import org.apache.commons.lang3.StringUtils;
 import org.bytesoft.bytejta.supports.jdbc.RecoveredResource;
+import org.bytesoft.bytejta.supports.resource.LocalXAResourceDescriptor;
 import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.common.utils.CommonUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;
@@ -233,8 +233,9 @@ public class TransactionRecoveryImpl implements TransactionRecovery, Transaction
 
 		Xid transactionXid = recordKey.xid;
 		try {
-			XAResource xares = resourceDeserializer.deserialize(recordKey.resource);
-			RecoveredResource resource = (RecoveredResource) xares;
+			LocalXAResourceDescriptor descriptor = //
+					(LocalXAResourceDescriptor) resourceDeserializer.deserialize(recordKey.resource);
+			RecoveredResource resource = (RecoveredResource) descriptor.getDelegate();
 			resource.recoverable(transactionXid);
 			return true;
 		} catch (XAException xaex) {
@@ -295,47 +296,51 @@ public class TransactionRecoveryImpl implements TransactionRecovery, Transaction
 
 	public synchronized void recoverTransaction(Transaction transaction)
 			throws CommitRequiredException, RollbackRequiredException, SystemException {
-		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 		org.bytesoft.transaction.TransactionContext transactionContext = transaction.getTransactionContext();
 
 		if (transactionContext.isCoordinator()) {
-			try {
-				compensableManager.associateThread(transaction);
-				this.recoverCoordinator(transaction);
-			} finally {
-				compensableManager.desociateThread();
-			}
-		} // end-if (coordinator)
+			transaction.recover();
+			this.recoverCoordinator(transaction);
+		} else {
+			transaction.recover();
+		}
 
 	}
 
 	public synchronized void recoverCoordinator(Transaction transaction)
 			throws CommitRequiredException, RollbackRequiredException, SystemException {
+		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 
 		org.bytesoft.transaction.TransactionContext transactionContext = transaction.getTransactionContext();
-		switch (transaction.getTransactionStatus()) {
-		case Status.STATUS_ACTIVE:
-		case Status.STATUS_MARKED_ROLLBACK:
-		case Status.STATUS_PREPARING:
-		case Status.STATUS_UNKNOWN: // TODO
-			if (transactionContext.isPropagated() == false) {
-				((CompensableTransactionImpl) transaction).recoveryRollback();
-				((CompensableTransactionImpl) transaction).recoveryForget();
+		try {
+			compensableManager.associateThread(transaction);
+
+			switch (transaction.getTransactionStatus()) {
+			case Status.STATUS_ACTIVE:
+			case Status.STATUS_MARKED_ROLLBACK:
+			case Status.STATUS_PREPARING:
+			case Status.STATUS_UNKNOWN: // TODO
+				if (transactionContext.isPropagated() == false) {
+					transaction.recoveryRollback();
+					transaction.forget();
+				}
+				break;
+			case Status.STATUS_ROLLING_BACK:
+				transaction.recoveryRollback();
+				transaction.forget();
+				break;
+			case Status.STATUS_PREPARED:
+			case Status.STATUS_COMMITTING:
+				transaction.recoveryCommit();
+				transaction.forget();
+				break;
+			case Status.STATUS_COMMITTED:
+			case Status.STATUS_ROLLEDBACK:
+			default:
+				// ignore
 			}
-			break;
-		case Status.STATUS_ROLLING_BACK:
-			((CompensableTransactionImpl) transaction).recoveryRollback();
-			((CompensableTransactionImpl) transaction).recoveryForget();
-			break;
-		case Status.STATUS_PREPARED:
-		case Status.STATUS_COMMITTING:
-			((CompensableTransactionImpl) transaction).recoveryCommit();
-			((CompensableTransactionImpl) transaction).recoveryForget();
-			break;
-		case Status.STATUS_COMMITTED:
-		case Status.STATUS_ROLLEDBACK:
-		default:
-			// ignore
+		} finally {
+			compensableManager.desociateThread();
 		}
 
 	}

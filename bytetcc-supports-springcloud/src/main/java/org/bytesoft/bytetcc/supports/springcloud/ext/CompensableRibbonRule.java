@@ -56,11 +56,12 @@ public class CompensableRibbonRule extends AbstractLoadBalancerRule implements I
 			return this.delegateRule.choose(key);
 		} else {
 			ILoadBalancer loadBalancer = this.getLoadBalancer();
-			List<Server> servers = loadBalancer.getReachableServers();
-			if (servers == null || servers.isEmpty()) {
+			// List<Server> allServers = loadBalancer.getAllServers();
+			List<Server> reachableServers = loadBalancer.getReachableServers();
+			if (reachableServers == null || reachableServers.isEmpty()) {
 				return null;
 			} else {
-				return servers.get(random.nextInt(servers.size()));
+				return reachableServers.get(random.nextInt(reachableServers.size()));
 			}
 		}
 	}
