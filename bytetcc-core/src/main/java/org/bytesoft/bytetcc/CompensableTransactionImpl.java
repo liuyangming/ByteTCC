@@ -246,8 +246,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 			} catch (RuntimeException rex) {
 				errorExists = true;
 				logger.error("{}| error occurred while confirming service: {}",
-						ByteUtils.byteArrayToString(this.transactionContext.getXid().getGlobalTransactionId()), this.archive,
-						rex);
+						ByteUtils.byteArrayToString(this.transactionContext.getXid().getGlobalTransactionId()), current, rex);
 			} finally {
 				this.archive = null;
 				this.positive = null;
@@ -508,7 +507,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 				} else if (StringUtils.isNotBlank(invocation.getCancellableKey())) {
 					container.cancel(invocation);
 				} else {
-					this.archive.setCancelled(true);
+					current.setCancelled(true);
 					logger.info("{}| cancel: identifier= {}, resourceKey= {}, resourceXid= {}.",
 							ByteUtils.byteArrayToString(this.transactionContext.getXid().getGlobalTransactionId()),
 							ByteUtils.byteArrayToString(current.getIdentifier().getGlobalTransactionId()),
@@ -517,8 +516,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 			} catch (RuntimeException rex) {
 				errorExists = true;
 				logger.error("{}| error occurred while cancelling service: {}",
-						ByteUtils.byteArrayToString(this.transactionContext.getXid().getGlobalTransactionId()), this.archive,
-						rex);
+						ByteUtils.byteArrayToString(this.transactionContext.getXid().getGlobalTransactionId()), current, rex);
 			} finally {
 				this.archive = null;
 				this.positive = null;
@@ -894,8 +892,8 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 				errorExists = true;
 
 				TransactionXid transactionXid = this.transactionContext.getXid();
-				logger.error("{}| error occurred while confirming service: {}",
-						ByteUtils.byteArrayToString(transactionXid.getGlobalTransactionId()), this.archive, rex);
+				logger.error("{}| error occurred while recovering the branch transaction service: {}",
+						ByteUtils.byteArrayToString(transactionXid.getGlobalTransactionId()), current, rex);
 			}
 		} // end-for
 
