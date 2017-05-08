@@ -25,4 +25,6 @@
 
 	<bean id="bytejtaTransactionLogger" class="org.bytesoft.bytetcc.logging.SampleTransactionLogger" />
 
+	<bean id="bytejtaTransactionLock" class="org.bytesoft.bytejta.VacantTransactionLock" />
+
 </beans>

@@ -50,6 +50,7 @@
 		<property name="transactionInterceptor" ref="bytejtaTransactionInterceptor" />
 		<property name="transactionRecovery" ref="bytejtaTransactionRecovery" />
 		<property name="transactionCoordinator" ref="bytejtaTransactionCoordinator" />
+		<property name="transactionLock" ref="bytejtaTransactionLock" />
 	</bean>
 
 	<bean id="bytetccBeanFactory" class="org.bytesoft.bytetcc.TransactionBeanFactoryImpl">
@@ -70,6 +71,7 @@
 		<property name="resourceDeserializer" ref="bytetccResourceDeserializer" />
 		<property name="localResourceCleaner" ref="bytetccCleanupWork" />
 		<property name="compensableContext" ref="bytetccCompensableContext" />
+		<property name="compensableLock" ref="bytejtaTransactionLock" />
 	</bean>
 
 </beans>

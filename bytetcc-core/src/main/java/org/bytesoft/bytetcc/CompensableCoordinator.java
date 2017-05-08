@@ -39,6 +39,7 @@ import org.bytesoft.compensable.aware.CompensableEndpointAware;
 import org.bytesoft.compensable.logging.CompensableLogger;
 import org.bytesoft.transaction.Transaction;
 import org.bytesoft.transaction.TransactionContext;
+import org.bytesoft.transaction.TransactionLock;
 import org.bytesoft.transaction.TransactionRepository;
 import org.bytesoft.transaction.xa.TransactionXid;
 import org.bytesoft.transaction.xa.XidFactory;
@@ -63,6 +64,7 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
 		TransactionRepository compensableRepository = this.beanFactory.getCompensableRepository();
+		TransactionLock compensableLock = this.beanFactory.getCompensableLock();
 
 		if (compensableManager.getTransactionQuietly() != null) {
 			throw new XAException(XAException.XAER_PROTO);
@@ -77,6 +79,11 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 
 			compensableLogger.createTransaction(((CompensableTransactionImpl) transaction).getTransactionArchive());
 			logger.info("{}| compensable transaction begin!", ByteUtils.byteArrayToString(globalXid.getGlobalTransactionId()));
+		} else {
+			boolean locked = compensableLock.lockTransaction(globalXid, this.endpoint);
+			if (locked == false) {
+				throw new XAException(XAException.XAER_PROTO);
+			}
 		}
 
 		compensableManager.associateThread(transaction);
@@ -86,14 +93,16 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 
 	public Transaction end(TransactionContext transactionContext, int flags) throws XAException {
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
+		TransactionLock compensableLock = this.beanFactory.getCompensableLock();
+
 		CompensableTransaction transaction = compensableManager.getCompensableTransactionQuietly();
 		if (transaction == null) {
 			throw new XAException(XAException.XAER_PROTO);
 		}
 
-		// clear CompensableTransactionImpl.transientArchiveList in CompensableTransactionImpl.onCommitSuccess().
-		// ((CompensableTransactionImpl) transaction).participantComplete();
 		compensableManager.desociateThread();
+
+		compensableLock.unlockTransaction(transactionContext.getXid(), this.endpoint);
 
 		return transaction;
 	}

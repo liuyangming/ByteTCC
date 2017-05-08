@@ -36,8 +36,10 @@ import org.bytesoft.compensable.CompensableManager;
 import org.bytesoft.compensable.CompensableTransaction;
 import org.bytesoft.compensable.TransactionContext;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
+import org.bytesoft.compensable.aware.CompensableEndpointAware;
 import org.bytesoft.compensable.logging.CompensableLogger;
 import org.bytesoft.transaction.Transaction;
+import org.bytesoft.transaction.TransactionLock;
 import org.bytesoft.transaction.TransactionManager;
 import org.bytesoft.transaction.TransactionRepository;
 import org.bytesoft.transaction.xa.TransactionXid;
@@ -45,10 +47,12 @@ import org.bytesoft.transaction.xa.XidFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class CompensableManagerImpl implements CompensableManager, CompensableBeanFactoryAware {
+public class CompensableManagerImpl implements CompensableManager, CompensableBeanFactoryAware, CompensableEndpointAware {
 	static final Logger logger = LoggerFactory.getLogger(CompensableManagerImpl.class);
 
 	private CompensableBeanFactory beanFactory;
+	private String endpoint;
+
 	private final Map<Thread, Transaction> compensableMap = new ConcurrentHashMap<Thread, Transaction>();
 
 	public void associateThread(Transaction transaction) {
@@ -170,6 +174,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 		}
 
 		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
+		TransactionLock compensableLock = this.beanFactory.getCompensableLock();
 		TransactionRepository compensableRepository = this.beanFactory.getCompensableRepository();
 		RemoteCoordinator compensableCoordinator = this.beanFactory.getCompensableCoordinator();
 
@@ -204,6 +209,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 
 		compensableRepository.putTransaction(compensableXid, compensable);
 
+		compensableLock.lockTransaction(compensableXid, this.endpoint);
 		compensableLogger.createTransaction(compensable.getTransactionArchive());
 		logger.info("{}| compensable transaction begin!", ByteUtils.byteArrayToString(compensableXid.getGlobalTransactionId()));
 	}
@@ -392,8 +398,14 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 			throw new IllegalStateException();
 		}
 
-		this.desociateThread();
-		this.invokeCompensableCommit(transaction);
+		TransactionLock compensableLock = this.beanFactory.getCompensableLock();
+		TransactionXid xid = transactionContext.getXid();
+		try {
+			this.desociateThread();
+			this.invokeCompensableCommit(transaction);
+		} finally {
+			compensableLock.unlockTransaction(xid, this.endpoint);
+		}
 
 	}
 
@@ -516,8 +528,14 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 			throw new IllegalStateException();
 		}
 
-		this.desociateThread();
-		this.invokeCompensableRollback(transaction);
+		TransactionLock compensableLock = this.beanFactory.getCompensableLock();
+		TransactionXid xid = transactionContext.getXid();
+		try {
+			this.desociateThread();
+			this.invokeCompensableRollback(transaction);
+		} finally {
+			compensableLock.unlockTransaction(xid, this.endpoint);
+		}
 
 	}
 
@@ -573,6 +591,10 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 
 	public void setBeanFactory(CompensableBeanFactory tbf) {
 		this.beanFactory = tbf;
+	}
+
+	public void setEndpoint(String identifier) {
+		this.endpoint = identifier;
 	}
 
 }
