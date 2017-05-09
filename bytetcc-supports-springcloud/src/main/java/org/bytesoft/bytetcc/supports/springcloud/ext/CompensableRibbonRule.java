@@ -39,15 +39,22 @@ public class CompensableRibbonRule extends AbstractLoadBalancerRule implements I
 
 		SpringCloudBeanRegistry registry = SpringCloudBeanRegistry.getInstance();
 		CompensableRibbonInterceptor interceptor = registry.getRibbonInterceptor();
+		if (interceptor == null) {
+			return this.invokeChoose(key);
+		}
+
 		Server server = null;
 		try {
 			server = interceptor.beforeCompletion(servers);
-			if (server == null) {
-				server = this.invokeChoose(key);
+			if (server != null) {
+				return server;
 			}
+
+			server = this.invokeChoose(key);
 		} finally {
 			interceptor.afterCompletion(server);
 		}
+
 		return server;
 	}
 

@@ -15,11 +15,25 @@
  */
 package org.bytesoft.bytetcc.supports.springcloud;
 
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+import java.util.Map;
+
+import org.bytesoft.bytetcc.supports.springcloud.ext.CompensableFeignContract;
+import org.bytesoft.bytetcc.supports.springcloud.ext.CompensableFeignDecoder;
+import org.bytesoft.bytetcc.supports.springcloud.ext.CompensableFeignHandler;
 import org.bytesoft.bytetcc.supports.springcloud.ext.CompensableFeignInterceptor;
 import org.bytesoft.bytetcc.supports.springcloud.ext.CompensableHandlerInterceptor;
 import org.bytesoft.bytetcc.supports.springcloud.ext.CompensableRequestInterceptor;
 import org.bytesoft.bytetcc.supports.springcloud.ext.CompensableRibbonRule;
+import org.bytesoft.compensable.aware.CompensableEndpointAware;
+import org.springframework.beans.factory.ObjectFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.web.HttpMessageConverters;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
+import org.springframework.cloud.netflix.feign.support.ResponseEntityDecoder;
+import org.springframework.cloud.netflix.feign.support.SpringDecoder;
+import org.springframework.cloud.netflix.feign.support.SpringMvcContract;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
@@ -28,13 +42,18 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter
 import feign.Feign;
 import feign.Feign.Builder;
 import feign.InvocationHandlerFactory;
+import feign.Target;
 
 @Configuration
-public class SpringCloudConfiguration extends WebMvcConfigurerAdapter {
+public class SpringCloudConfiguration extends WebMvcConfigurerAdapter implements CompensableEndpointAware {
+
+	private String endpoint;
+
+	@Autowired
+	private ObjectFactory<HttpMessageConverters> messageConverters;
 
 	public void addInterceptors(InterceptorRegistry registry) {
 		registry.addInterceptor(this.getCompensableHandlerInterceptor());
-		// registry.addWebRequestInterceptor(this.getCompensableInterceptor());
 	}
 
 	// @org.springframework.context.annotation.Bean
@@ -45,7 +64,15 @@ public class SpringCloudConfiguration extends WebMvcConfigurerAdapter {
 
 	@org.springframework.context.annotation.Bean
 	public InvocationHandlerFactory getInvocationHandlerFactory() {
-		return this.getCompensableFeignInterceptor();
+		return new InvocationHandlerFactory() {
+			@SuppressWarnings("rawtypes")
+			public InvocationHandler create(Target target, Map<Method, MethodHandler> dispatch) {
+				CompensableFeignHandler handler = new CompensableFeignHandler();
+				handler.setTarget(target);
+				handler.setHandlers(dispatch);
+				return handler;
+			}
+		};
 	}
 
 	@org.springframework.context.annotation.Bean
@@ -58,19 +85,32 @@ public class SpringCloudConfiguration extends WebMvcConfigurerAdapter {
 		return new CompensableRibbonRule();
 	}
 
-	// @org.springframework.context.annotation.Bean
-	// public CompensableInterceptor getCompensableInterceptor() {
-	// return new CompensableInterceptor();
-	// }
-
 	@org.springframework.context.annotation.Bean
 	public CompensableFeignInterceptor getCompensableFeignInterceptor() {
 		return new CompensableFeignInterceptor();
 	}
 
 	@org.springframework.context.annotation.Bean
+	public feign.Contract getCompensableFeignContract() {
+		SpringMvcContract springContract = new SpringMvcContract();
+		CompensableFeignContract contract = new CompensableFeignContract();
+		contract.setDelegate(springContract);
+		return contract;
+	}
+
+	@org.springframework.context.annotation.Bean
+	public feign.codec.Decoder getCompensableFeignDecoder() {
+		SpringDecoder stringDecoder = new SpringDecoder(this.messageConverters);
+		CompensableFeignDecoder decoder = new CompensableFeignDecoder();
+		decoder.setDelegate(stringDecoder);
+		return new ResponseEntityDecoder(decoder);
+	}
+
+	@org.springframework.context.annotation.Bean
 	public CompensableHandlerInterceptor getCompensableHandlerInterceptor() {
-		return new CompensableHandlerInterceptor();
+		CompensableHandlerInterceptor interceptor = new CompensableHandlerInterceptor();
+		interceptor.setEndpoint(this.endpoint);
+		return interceptor;
 	}
 
 	@org.springframework.context.annotation.Bean
@@ -97,6 +137,10 @@ public class SpringCloudConfiguration extends WebMvcConfigurerAdapter {
 		restTemplate.getInterceptors().add(interceptor);
 
 		return restTemplate;
+	}
+
+	public void setEndpoint(String identifier) {
+		this.endpoint = identifier;
 	}
 
 }
