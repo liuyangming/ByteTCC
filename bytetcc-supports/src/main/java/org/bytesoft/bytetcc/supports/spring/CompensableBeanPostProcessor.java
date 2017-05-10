@@ -23,7 +23,7 @@ import org.springframework.beans.factory.config.BeanPostProcessor;
 
 public class CompensableBeanPostProcessor implements BeanPostProcessor {
 
-	public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
+	public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
 		if (org.springframework.aop.framework.Advised.class.isInstance(bean) == false) {
 			return bean;
 		}
@@ -59,7 +59,7 @@ public class CompensableBeanPostProcessor implements BeanPostProcessor {
 		return bean;
 	}
 
-	public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
+	public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
 		return bean;
 	}
 
