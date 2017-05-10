@@ -1,4 +1,4 @@
-package org.bytesoft.bytetcc.supports.springcloud;
+package org.bytesoft.bytetcc.supports.springcloud.ribbon;
 
 import java.util.List;
 

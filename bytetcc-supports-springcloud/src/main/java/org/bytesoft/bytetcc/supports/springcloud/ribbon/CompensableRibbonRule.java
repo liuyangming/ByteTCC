@@ -13,12 +13,11 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this distribution; if not, see <http://www.gnu.org/licenses/>.
  */
-package org.bytesoft.bytetcc.supports.springcloud.ext;
+package org.bytesoft.bytetcc.supports.springcloud.ribbon;
 
 import java.util.List;
 import java.util.Random;
 
-import org.bytesoft.bytetcc.supports.springcloud.CompensableRibbonInterceptor;
 import org.bytesoft.bytetcc.supports.springcloud.SpringCloudBeanRegistry;
 
 import com.netflix.client.config.IClientConfig;

@@ -13,7 +13,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this distribution; if not, see <http://www.gnu.org/licenses/>.
  */
-package org.bytesoft.bytetcc.supports.springcloud.ext;
+package org.bytesoft.bytetcc.supports.springcloud.feign;
 
 import java.io.IOException;
 import java.lang.reflect.Type;

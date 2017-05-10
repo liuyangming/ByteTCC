@@ -20,6 +20,7 @@ import java.lang.reflect.Proxy;
 import org.apache.commons.lang3.StringUtils;
 import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
 import org.bytesoft.bytejta.supports.wire.RemoteCoordinatorRegistry;
+import org.bytesoft.bytetcc.supports.springcloud.ribbon.CompensableRibbonInterceptor;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 import org.slf4j.Logger;
@@ -29,8 +30,6 @@ public final class SpringCloudBeanRegistry implements CompensableBeanFactoryAwar
 	static final Logger logger = LoggerFactory.getLogger(SpringCloudBeanRegistry.class);
 	private static final SpringCloudBeanRegistry instance = new SpringCloudBeanRegistry();
 
-	// @org.springframework.beans.factory.annotation.Autowired
-	// private RestTemplate restTemplate;
 	private CompensableBeanFactory beanFactory;
 
 	private ThreadLocal<CompensableRibbonInterceptor> interceptors = new ThreadLocal<CompensableRibbonInterceptor>();

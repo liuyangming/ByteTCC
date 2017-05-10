@@ -24,8 +24,18 @@ import org.springframework.beans.factory.config.BeanPostProcessor;
 public class CompensableBeanPostProcessor implements BeanPostProcessor {
 
 	public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
+		this.switchAdvisorOrderIfNecessary(bean);
+		return bean;
+	}
+
+	public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
+		this.switchAdvisorOrderIfNecessary(bean);
+		return bean;
+	}
+
+	private void switchAdvisorOrderIfNecessary(Object bean) {
 		if (org.springframework.aop.framework.Advised.class.isInstance(bean) == false) {
-			return bean;
+			return;
 		}
 
 		org.springframework.aop.framework.Advised advised = (org.springframework.aop.framework.Advised) bean;
@@ -33,7 +43,7 @@ public class CompensableBeanPostProcessor implements BeanPostProcessor {
 		Class<?> targetClass = advised.getTargetClass();
 		Compensable annotation = targetClass.getAnnotation(Compensable.class);
 		if (annotation == null) {
-			return bean;
+			return;
 		}
 
 		Advisor[] advisors = advised.getAdvisors();
@@ -50,17 +60,12 @@ public class CompensableBeanPostProcessor implements BeanPostProcessor {
 			}
 		}
 
-		if (transactionIndex != -1 && compensableIndex != -1 && transactionIndex > compensableIndex) {
+		if (transactionIndex != -1 && compensableIndex != -1 && transactionIndex < compensableIndex) {
 			Advisor advisor = advisors[transactionIndex];
 			advisors[transactionIndex] = advisors[compensableIndex];
 			advisors[compensableIndex] = advisor;
 		}
 
-		return bean;
-	}
-
-	public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
-		return bean;
 	}
 
 }

@@ -13,7 +13,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this distribution; if not, see <http://www.gnu.org/licenses/>.
  */
-package org.bytesoft.bytetcc.supports.springcloud.ext;
+package org.bytesoft.bytetcc.supports.springcloud.web;
 
 import java.io.IOException;
 import java.util.List;
@@ -23,8 +23,8 @@ import org.bytesoft.bytejta.supports.rpc.TransactionRequestImpl;
 import org.bytesoft.bytejta.supports.rpc.TransactionResponseImpl;
 import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
 import org.bytesoft.bytetcc.CompensableTransactionImpl;
-import org.bytesoft.bytetcc.supports.springcloud.CompensableRibbonInterceptor;
 import org.bytesoft.bytetcc.supports.springcloud.SpringCloudBeanRegistry;
+import org.bytesoft.bytetcc.supports.springcloud.ribbon.CompensableRibbonInterceptor;
 import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.common.utils.CommonUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;
