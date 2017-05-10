@@ -119,7 +119,7 @@ public class CompensableMethodInterceptor
 			}
 
 			if (transactional != null && compensable != null && transaction != null) {
-				Propagation propagation = transactional == null ? null : transactional.propagation();
+				Propagation propagation = transactional.propagation();
 				if (propagation == null) {
 					compensable.registerCompensable(invocation);
 				} else if (Propagation.REQUIRED.equals(propagation)) {

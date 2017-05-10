@@ -264,7 +264,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 					transactionLogger.updateCoordinator(current);
 
 					logger.error("{}| error occurred while confirming remote branch: {}",
-							ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()), this.archive, ex);
+							ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()), current, ex);
 					break;
 				case XAException.XA_HEURMIX:
 					// should never happen
@@ -278,18 +278,18 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 					transactionLogger.updateCoordinator(current);
 
 					logger.error("{}| error occurred while confirming remote branch: {}",
-							ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()), this.archive, ex);
+							ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()), current, ex);
 					break;
 				default:
 					errorExists = false;
 					logger.error("{}| error occurred while confirming remote branch: {}",
-							ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()), this.archive, ex);
+							ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()), current, ex);
 				}
 
 			} catch (RuntimeException rex) {
 				errorExists = false;
 				logger.error("{}| error occurred while confirming branch: {}",
-						ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()), this.archive, rex);
+						ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()), current, rex);
 			}
 		}
 
