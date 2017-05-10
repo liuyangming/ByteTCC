@@ -28,7 +28,7 @@ public class CompensableFeignContract implements feign.Contract {
 		for (int i = 0; i < metas.size(); i++) {
 			MethodMetadata meta = metas.get(i);
 			if (meta.returnType() == void.class) {
-				meta.returnType(Object.class);
+				meta.returnType(Void.class);
 			}
 		}
 		return metas;

@@ -100,10 +100,9 @@ public class SpringCloudConfiguration extends WebMvcConfigurerAdapter implements
 
 	@org.springframework.context.annotation.Bean
 	public feign.codec.Decoder getCompensableFeignDecoder() {
-		SpringDecoder stringDecoder = new SpringDecoder(this.messageConverters);
-		CompensableFeignDecoder decoder = new CompensableFeignDecoder();
-		decoder.setDelegate(stringDecoder);
-		return new ResponseEntityDecoder(decoder);
+		ResponseEntityDecoder responseEntityecoder = //
+				new ResponseEntityDecoder(new SpringDecoder(this.messageConverters));
+		return new CompensableFeignDecoder(responseEntityecoder);
 	}
 
 	@org.springframework.context.annotation.Bean

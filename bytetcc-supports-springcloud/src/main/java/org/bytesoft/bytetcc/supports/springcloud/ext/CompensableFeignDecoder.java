@@ -27,7 +27,6 @@ import org.bytesoft.bytetcc.supports.springcloud.SpringCloudBeanRegistry;
 import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.common.utils.CommonUtils;
 import org.bytesoft.compensable.TransactionContext;
-import org.springframework.cloud.netflix.feign.support.SpringDecoder;
 
 import feign.FeignException;
 import feign.Response;
@@ -37,7 +36,14 @@ public class CompensableFeignDecoder implements feign.codec.Decoder {
 	static final String HEADER_TRANCACTION_KEY = "org.bytesoft.bytetcc.transaction";
 	static final String HEADER_PROPAGATION_KEY = "org.bytesoft.bytetcc.propagation";
 
-	private SpringDecoder delegate;
+	private feign.codec.Decoder delegate;
+
+	public CompensableFeignDecoder() {
+	}
+
+	public CompensableFeignDecoder(feign.codec.Decoder decoder) {
+		this.delegate = decoder;
+	}
 
 	public Object decode(Response resp, Type type) throws IOException, DecodeException, FeignException {
 		String transactionStr = this.getHeaderValue(resp, HEADER_TRANCACTION_KEY);
@@ -74,11 +80,11 @@ public class CompensableFeignDecoder implements feign.codec.Decoder {
 		return value;
 	}
 
-	public SpringDecoder getDelegate() {
+	public feign.codec.Decoder getDelegate() {
 		return delegate;
 	}
 
-	public void setDelegate(SpringDecoder delegate) {
+	public void setDelegate(feign.codec.Decoder delegate) {
 		this.delegate = delegate;
 	}
 
