@@ -49,11 +49,8 @@ public class SpringCloudConfiguration extends WebMvcConfigurerAdapter implements
 
 	private String endpoint;
 
-	@Autowired
-	private ObjectFactory<HttpMessageConverters> messageConverters;
-
 	public void addInterceptors(InterceptorRegistry registry) {
-		registry.addInterceptor(this.getCompensableHandlerInterceptor());
+		registry.addInterceptor(this.compensableHandlerInterceptor());
 	}
 
 	// @org.springframework.context.annotation.Bean
@@ -63,7 +60,7 @@ public class SpringCloudConfiguration extends WebMvcConfigurerAdapter implements
 	}
 
 	@org.springframework.context.annotation.Bean
-	public InvocationHandlerFactory getInvocationHandlerFactory() {
+	public InvocationHandlerFactory compensableInvocationHandlerFactory() {
 		return new InvocationHandlerFactory() {
 			@SuppressWarnings("rawtypes")
 			public InvocationHandler create(Target target, Map<Method, MethodHandler> dispatch) {
@@ -75,45 +72,56 @@ public class SpringCloudConfiguration extends WebMvcConfigurerAdapter implements
 		};
 	}
 
+	@org.springframework.context.annotation.Primary
 	@org.springframework.context.annotation.Bean
-	public Builder getFeignBuilder() {
-		return Feign.builder().invocationHandlerFactory(this.getInvocationHandlerFactory());
+	public Builder compensableFeignBuilder() {
+		return Feign.builder().invocationHandlerFactory(this.compensableInvocationHandlerFactory());
 	}
 
+	@org.springframework.context.annotation.Primary
 	@org.springframework.context.annotation.Bean
-	public CompensableRibbonRule getCompensableRibbonRule() {
+	public CompensableRibbonRule compensableRibbonRule() {
 		return new CompensableRibbonRule();
 	}
 
 	@org.springframework.context.annotation.Bean
-	public CompensableFeignInterceptor getCompensableFeignInterceptor() {
+	public CompensableFeignInterceptor compensableFeignInterceptor() {
 		return new CompensableFeignInterceptor();
 	}
 
+	@org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean(feign.Contract.class)
 	@org.springframework.context.annotation.Bean
-	public feign.Contract getCompensableFeignContract() {
-		SpringMvcContract springContract = new SpringMvcContract();
-		CompensableFeignContract contract = new CompensableFeignContract();
-		contract.setDelegate(springContract);
-		return contract;
+	public feign.Contract feignContract() {
+		return new SpringMvcContract();
+	}
+
+	@org.springframework.context.annotation.Primary
+	@org.springframework.context.annotation.Bean
+	public feign.Contract compensableFeignContract(@Autowired feign.Contract contract) {
+		return new CompensableFeignContract(contract);
+	}
+
+	@org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean(feign.codec.Decoder.class)
+	@org.springframework.context.annotation.Bean
+	public feign.codec.Decoder feignDecoder(@Autowired ObjectFactory<HttpMessageConverters> messageConverters) {
+		return new ResponseEntityDecoder(new SpringDecoder(messageConverters));
+	}
+
+	@org.springframework.context.annotation.Primary
+	@org.springframework.context.annotation.Bean
+	public feign.codec.Decoder compensableFeignDecoder(@Autowired feign.codec.Decoder decoder) {
+		return new CompensableFeignDecoder(decoder);
 	}
 
 	@org.springframework.context.annotation.Bean
-	public feign.codec.Decoder getCompensableFeignDecoder() {
-		ResponseEntityDecoder responseEntityecoder = //
-				new ResponseEntityDecoder(new SpringDecoder(this.messageConverters));
-		return new CompensableFeignDecoder(responseEntityecoder);
-	}
-
-	@org.springframework.context.annotation.Bean
-	public CompensableHandlerInterceptor getCompensableHandlerInterceptor() {
+	public CompensableHandlerInterceptor compensableHandlerInterceptor() {
 		CompensableHandlerInterceptor interceptor = new CompensableHandlerInterceptor();
 		interceptor.setEndpoint(this.endpoint);
 		return interceptor;
 	}
 
 	@org.springframework.context.annotation.Bean
-	public CompensableRequestInterceptor getCompensableRequestInterceptor() {
+	public CompensableRequestInterceptor compensableRequestInterceptor() {
 		return new CompensableRequestInterceptor();
 	}
 
@@ -121,18 +129,19 @@ public class SpringCloudConfiguration extends WebMvcConfigurerAdapter implements
 	public RestTemplate transactionTemplate() {
 		RestTemplate restTemplate = new RestTemplate();
 
-		CompensableRequestInterceptor interceptor = this.getCompensableRequestInterceptor();
+		CompensableRequestInterceptor interceptor = this.compensableRequestInterceptor();
 		restTemplate.getInterceptors().add(interceptor);
 
 		return restTemplate;
 	}
 
+	@org.springframework.context.annotation.Primary
 	@org.springframework.cloud.client.loadbalancer.LoadBalanced
 	@org.springframework.context.annotation.Bean
 	public RestTemplate defaultRestTemplate() {
 		RestTemplate restTemplate = new RestTemplate();
 
-		CompensableRequestInterceptor interceptor = this.getCompensableRequestInterceptor();
+		CompensableRequestInterceptor interceptor = this.compensableRequestInterceptor();
 		restTemplate.getInterceptors().add(interceptor);
 
 		return restTemplate;

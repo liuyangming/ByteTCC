@@ -23,6 +23,13 @@ public class CompensableFeignContract implements feign.Contract {
 
 	private feign.Contract delegate;
 
+	public CompensableFeignContract() {
+	}
+
+	public CompensableFeignContract(feign.Contract contract) {
+		this.delegate = contract;
+	}
+
 	public List<MethodMetadata> parseAndValidatateMetadata(Class<?> targetType) {
 		List<MethodMetadata> metas = this.delegate.parseAndValidatateMetadata(targetType);
 		for (int i = 0; i < metas.size(); i++) {
