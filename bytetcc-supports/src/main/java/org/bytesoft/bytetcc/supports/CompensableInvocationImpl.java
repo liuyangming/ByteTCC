@@ -28,6 +28,8 @@ public class CompensableInvocationImpl implements CompensableInvocation {
 	private String cancellableKey;
 	private Object identifier;
 
+	private boolean simplified;
+
 	protected Object writeReplace() throws ObjectStreamException {
 		CompensableInvocationInfo that = new CompensableInvocationInfo();
 
@@ -35,6 +37,7 @@ public class CompensableInvocationImpl implements CompensableInvocation {
 		that.setConfirmableKey(this.confirmableKey);
 		that.setCancellableKey(this.cancellableKey);
 		that.setIdentifier(this.identifier);
+		that.setSimplified(this.simplified);
 
 		that.setDeclaringClass(this.method.getDeclaringClass().getName());
 		that.setMethodName(this.method.getName());
@@ -89,6 +92,14 @@ public class CompensableInvocationImpl implements CompensableInvocation {
 
 	public void setIdentifier(Object identifier) {
 		this.identifier = identifier;
+	}
+
+	public boolean isSimplified() {
+		return simplified;
+	}
+
+	public void setSimplified(boolean simplified) {
+		this.simplified = simplified;
 	}
 
 }

@@ -28,6 +28,8 @@ public interface CompensableInvocation extends Serializable {
 
 	public String getCancellableKey();
 
+	public boolean isSimplified();
+
 	public Object getIdentifier();
 
 	public void setIdentifier(Object identifier);

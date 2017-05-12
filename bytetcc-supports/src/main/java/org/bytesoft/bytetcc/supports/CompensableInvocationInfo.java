@@ -34,6 +34,8 @@ public class CompensableInvocationInfo implements Serializable {
 	private String cancellableKey;
 	private Object identifier;
 
+	private boolean simplified;
+
 	protected Object readResolve() throws ObjectStreamException {
 		CompensableInvocationImpl that = new CompensableInvocationImpl();
 
@@ -41,6 +43,7 @@ public class CompensableInvocationInfo implements Serializable {
 		that.setConfirmableKey(this.confirmableKey);
 		that.setCancellableKey(this.cancellableKey);
 		that.setIdentifier(this.identifier);
+		that.setSimplified(this.simplified);
 
 		Class<?> clazz = null;
 		ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
@@ -147,6 +150,14 @@ public class CompensableInvocationInfo implements Serializable {
 
 	public void setIdentifier(Object identifier) {
 		this.identifier = identifier;
+	}
+
+	public boolean isSimplified() {
+		return simplified;
+	}
+
+	public void setSimplified(boolean simplified) {
+		this.simplified = simplified;
 	}
 
 }

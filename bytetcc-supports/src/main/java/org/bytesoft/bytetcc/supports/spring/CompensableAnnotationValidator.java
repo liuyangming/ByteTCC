@@ -16,12 +16,15 @@
 package org.bytesoft.bytetcc.supports.spring;
 
 import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
 import org.bytesoft.compensable.Compensable;
+import org.bytesoft.compensable.CompensableCancel;
+import org.bytesoft.compensable.CompensableConfirm;
 import org.bytesoft.compensable.RemotingException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -72,6 +75,7 @@ public class CompensableAnnotationValidator implements BeanFactoryPostProcessor 
 				for (int j = 0; j < methodArray.length; j++) {
 					Method interfaceMethod = methodArray[j];
 					Method method = clazz.getMethod(interfaceMethod.getName(), interfaceMethod.getParameterTypes());
+					this.validateSimplifiedCompensable(method, clazz);
 					this.validateDeclaredRemotingException(method, clazz);
 					this.validateTransactionalPropagation(method, clazz);
 				}
@@ -148,6 +152,58 @@ public class CompensableAnnotationValidator implements BeanFactoryPostProcessor 
 
 			}
 		}
+	}
+
+	private void validateSimplifiedCompensable(Method method, Class<?> clazz) throws IllegalStateException {
+		Compensable compensable = clazz.getAnnotation(Compensable.class);
+		Class<?> interfaceClass = compensable.interfaceClass();
+		Method[] methods = interfaceClass.getDeclaredMethods();
+		if (compensable.simplified() == false) {
+			return;
+		} else if (method.getAnnotation(CompensableConfirm.class) != null) {
+			throw new FatalBeanException(
+					String.format("The try method(%s) can not be the same as the confirm method!", method));
+		} else if (method.getAnnotation(CompensableCancel.class) != null) {
+			throw new FatalBeanException(String.format("The try method(%s) can not be the same as the cancel method!", method));
+		} else if (methods != null && methods.length > 1) {
+			throw new FatalBeanException(String.format(
+					"The interface bound by @Compensable(simplified= true) supports only one method, class= %s!", clazz));
+		}
+
+		Class<?>[] parameterTypes = method.getParameterTypes();
+		Method[] methodArray = clazz.getDeclaredMethods();
+
+		CompensableConfirm confirmable = null;
+		CompensableCancel cancellable = null;
+		for (int i = 0; i < methodArray.length; i++) {
+			Method element = methodArray[i];
+			Class<?>[] paramTypes = element.getParameterTypes();
+			CompensableConfirm confirm = element.getAnnotation(CompensableConfirm.class);
+			CompensableCancel cancel = element.getAnnotation(CompensableCancel.class);
+			if (confirm == null && cancel == null) {
+				continue;
+			} else if (Arrays.equals(parameterTypes, paramTypes) == false) {
+				throw new FatalBeanException(
+						String.format("The parameter types of confirm/cancel method({}) is different from the try method({})!",
+								element, method));
+			} else if (confirm != null) {
+				if (confirmable != null) {
+					throw new FatalBeanException(
+							String.format("There are more than one confirm method specified, class= %s!", clazz));
+				} else {
+					confirmable = confirm;
+				}
+			} else if (cancel != null) {
+				if (cancellable != null) {
+					throw new FatalBeanException(
+							String.format("There are more than one cancel method specified, class= %s!", clazz));
+				} else {
+					cancellable = cancel;
+				}
+			}
+
+		}
+
 	}
 
 	private void validateDeclaredRemotingException(Method method, Class<?> clazz) throws IllegalStateException {
