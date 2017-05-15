@@ -28,6 +28,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
 import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.common.utils.CommonUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.HttpClientErrorException;
@@ -35,6 +37,8 @@ import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
 
 public class SpringCloudCoordinator implements InvocationHandler {
+	static final Logger logger = LoggerFactory.getLogger(SpringCloudCoordinator.class);
+
 	private String identifier;
 
 	public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
@@ -98,7 +102,12 @@ public class SpringCloudCoordinator implements InvocationHandler {
 			String errorText = StringUtils.trimToNull(headers.getFirst("XA_XAER"));
 
 			Boolean failure = failureText == null ? null : Boolean.parseBoolean(failureText);
-			Integer errorCode = errorText == null || errorText.matches("\\-?[\\d]+") == false ? null : Integer.parseInt(errorText);
+			Integer errorCode = null;
+			try {
+				errorCode = errorText == null ? null : Integer.parseInt(errorText);
+			} catch (Exception ignore) {
+				logger.debug(ignore.getMessage());
+			}
 
 			if (failure != null && errorCode != null) {
 				throw new XAException(errorCode);
@@ -133,7 +142,12 @@ public class SpringCloudCoordinator implements InvocationHandler {
 			String errorText = StringUtils.trimToNull(headers.getFirst("XA_XAER"));
 
 			Boolean failure = failureText == null ? null : Boolean.parseBoolean(failureText);
-			Integer errorCode = errorText == null || errorText.matches("\\d+") == false ? null : Integer.parseInt(errorText);
+			Integer errorCode = null;
+			try {
+				errorCode = errorText == null ? null : Integer.parseInt(errorText);
+			} catch (Exception ignore) {
+				logger.debug(ignore.getMessage());
+			}
 
 			if (failure != null && errorCode != null) {
 				throw new XAException(errorCode);
