@@ -98,7 +98,7 @@ public class SpringCloudCoordinator implements InvocationHandler {
 			String errorText = StringUtils.trimToNull(headers.getFirst("XA_XAER"));
 
 			Boolean failure = failureText == null ? null : Boolean.parseBoolean(failureText);
-			Integer errorCode = errorText == null || errorText.matches("\\d+") == false ? null : Integer.parseInt(errorText);
+			Integer errorCode = errorText == null || errorText.matches("\\-?[\\d]+") == false ? null : Integer.parseInt(errorText);
 
 			if (failure != null && errorCode != null) {
 				throw new XAException(errorCode);

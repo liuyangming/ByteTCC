@@ -288,7 +288,6 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 
 				current.setCommitted(true);
 				current.setCompleted(true);
-				transactionLogger.updateCoordinator(current);
 
 				logger.info("{}| confirm remote branch: {}", ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()),
 						current.getDescriptor().getIdentifier());
@@ -332,6 +331,10 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 							current.getDescriptor().getIdentifier());
 					break;
 				case XAException.XAER_NOTA:
+					rolledbackExists = true; // TODO
+					current.setRolledback(true);
+					current.setCompleted(true);
+					break;
 				case XAException.XAER_INVAL:
 				case XAException.XAER_PROTO:
 					errorExists = false;
@@ -361,6 +364,10 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 				logger.warn("{}| error occurred while confirming remote branch: {}, transaction is not exists!",
 						ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()),
 						current.getDescriptor().getIdentifier());
+			} finally {
+				if (current.isCompleted()) {
+					transactionLogger.updateCoordinator(current);
+				}
 			}
 		}
 
@@ -537,7 +544,13 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 
 		for (int i = 0; i < this.resourceList.size(); i++) {
 			XAResourceArchive current = this.resourceList.get(i);
-			if (current.isRolledback()) {
+			if (current.isCommitted()) {
+				committedExists = true;
+				continue;
+			} else if (current.isRolledback()) {
+				rolledbackExists = true;
+				continue;
+			} else if (current.isReadonly()) {
 				continue;
 			}
 
@@ -547,10 +560,10 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 			TransactionXid globalXid = xidFactory.createGlobalXid(branchXid.getGlobalTransactionId());
 			try {
 				current.rollback(globalXid);
+				rolledbackExists = true;
 
 				current.setRolledback(true);
 				current.setCompleted(true);
-				transactionLogger.updateCoordinator(current);
 
 				logger.info("{}| cancel remote branch: {}", ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()),
 						current.getDescriptor().getIdentifier());
@@ -564,7 +577,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 					break;
 				case XAException.XA_HEURMIX:
 					committedExists = true;
-					committedExists = true;
+					rolledbackExists = true;
 					current.setCommitted(true);
 					current.setRolledback(true);
 					current.setHeuristic(true);
@@ -577,7 +590,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 					current.setCompleted(true);
 					break;
 				case XAException.XA_HEURRB:
-					committedExists = true;
+					rolledbackExists = true;
 					current.setRolledback(true);
 					current.setHeuristic(true);
 					current.setCompleted(true);
@@ -591,6 +604,11 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 					logger.error("{}| error occurred while cancelling remote branch: {}",
 							ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()), current, xaex);
 					break;
+				case XAException.XAER_NOTA:
+					rolledbackExists = true;
+					current.setRolledback(true);
+					current.setCompleted(true);
+					break;
 				case XAException.XAER_RMERR:
 				default:
 					errorExists = true;
@@ -601,6 +619,10 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 				errorExists = true;
 				logger.error("{}| error occurred while cancelling remote branch: {}",
 						ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()), current, rex);
+			} finally {
+				if (current.isCompleted()) {
+					transactionLogger.updateCoordinator(current);
+				}
 			}
 		}
 

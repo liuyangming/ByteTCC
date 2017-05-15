@@ -116,8 +116,10 @@ public class CompensableMethodInterceptor
 			invocation.setIdentifier(identifier);
 			invocation.setSimplified(annotation.simplified());
 
+			Class<?> interfaceClass = annotation.interfaceClass();
+			String methodName = method.getName();
+			Class<?>[] parameterTypes = method.getParameterTypes();
 			if (annotation.simplified()) {
-				// invocation.setMethod(annotation.interfaceClass().getMethod(method.getName(), method.getParameterTypes()));
 				invocation.setMethod(method); // class-method
 
 				Class<?> currentClazz = mi.getThis().getClass();
@@ -137,7 +139,7 @@ public class CompensableMethodInterceptor
 					}
 				}
 			} else {
-				invocation.setMethod(annotation.interfaceClass().getMethod(method.getName(), method.getParameterTypes()));
+				invocation.setMethod(interfaceClass.getMethod(methodName, parameterTypes));
 				invocation.setConfirmableKey(annotation.confirmableKey());
 				invocation.setCancellableKey(annotation.cancellableKey());
 			}
