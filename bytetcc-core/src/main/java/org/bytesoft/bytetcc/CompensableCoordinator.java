@@ -15,7 +15,6 @@
  */
 package org.bytesoft.bytetcc;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -23,7 +22,6 @@ import java.util.concurrent.locks.ReentrantLock;
 import javax.transaction.HeuristicMixedException;
 import javax.transaction.HeuristicRollbackException;
 import javax.transaction.RollbackException;
-import javax.transaction.Status;
 import javax.transaction.SystemException;
 import javax.transaction.xa.XAException;
 import javax.transaction.xa.XAResource;
@@ -135,15 +133,20 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 		try {
 			compensableManager.associateThread(transaction);
 			transaction.participantCommit(onePhase);
+
+			transaction.forgetQuietly(); // forget
 		} catch (SecurityException ex) {
 			throw new XAException(XAException.XAER_RMERR);
 		} catch (IllegalStateException ex) {
 			throw new XAException(XAException.XAER_RMERR);
 		} catch (RollbackException ex) {
+			transaction.forgetQuietly(); // forget
 			throw new XAException(XAException.XA_HEURRB);
 		} catch (HeuristicMixedException ex) {
+			transaction.forgetQuietly(); // forget
 			throw new XAException(XAException.XA_HEURMIX);
 		} catch (HeuristicRollbackException ex) {
+			transaction.forgetQuietly(); // forget
 			throw new XAException(XAException.XA_HEURRB);
 		} catch (SystemException ex) {
 			throw new XAException(XAException.XAER_RMERR);
@@ -193,24 +196,12 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 		this.checkAvailableIfNecessary();
 
 		TransactionRepository repository = beanFactory.getTransactionRepository();
-		List<Transaction> allTransactionList = repository.getActiveTransactionList();
+		List<Transaction> transactionList = repository.getActiveTransactionList();
 
-		List<Transaction> transactions = new ArrayList<Transaction>();
-		for (int i = 0; i < allTransactionList.size(); i++) {
-			Transaction transaction = allTransactionList.get(i);
-			int transactionStatus = transaction.getTransactionStatus();
-			if (transactionStatus == Status.STATUS_PREPARED || transactionStatus == Status.STATUS_COMMITTING
-					|| transactionStatus == Status.STATUS_ROLLING_BACK || transactionStatus == Status.STATUS_COMMITTED
-					|| transactionStatus == Status.STATUS_ROLLEDBACK) {
-				transactions.add(transaction);
-			} else if (transaction.getTransactionContext().isRecoveried()) {
-				transactions.add(transaction);
-			}
-		}
+		TransactionXid[] xidArray = new TransactionXid[transactionList.size()];
 
-		TransactionXid[] xidArray = new TransactionXid[transactions.size()];
-		for (int i = 0; i < transactions.size(); i++) {
-			Transaction transaction = transactions.get(i);
+		for (int i = 0; i < transactionList.size(); i++) {
+			Transaction transaction = transactionList.get(i);
 			xidArray[i] = transaction.getTransactionContext().getXid();
 		}
 
@@ -235,6 +226,8 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 		try {
 			compensableManager.associateThread(transaction);
 			transaction.participantRollback();
+
+			transaction.forgetQuietly(); // forget
 		} catch (IllegalStateException ex) {
 			throw new XAException(XAException.XAER_RMERR);
 		} catch (SystemException ex) {

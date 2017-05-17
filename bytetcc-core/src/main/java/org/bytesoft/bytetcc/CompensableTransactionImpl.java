@@ -335,6 +335,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 					current.setRolledback(true);
 					current.setCompleted(true);
 					break;
+				case XAException.XAER_RMERR:
 				case XAException.XAER_INVAL:
 				case XAException.XAER_PROTO:
 					errorExists = false;
@@ -343,7 +344,6 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 							ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()),
 							current.getDescriptor().getIdentifier());
 					break;
-				case XAException.XAER_RMERR:
 				case XAException.XA_RBCOMMFAIL:
 				case XAException.XA_RBDEADLOCK:
 				case XAException.XA_RBINTEGRITY:
@@ -937,17 +937,14 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 	//
 	// Xid thisXid = archive.getXid();
 	// byte[] thisGlobalTransactionId = thisXid.getGlobalTransactionId();
-	// byte[] thisBranchQualifier = thisXid.getBranchQualifier();
 	// try {
 	// Xid[] array = archive.recover(XAResource.TMSTARTRSCAN | XAResource.TMENDRSCAN);
 	// for (int j = 0; xidRecovered == false && array != null && j < array.length; j++) {
 	// Xid thatXid = array[j];
 	// byte[] thatGlobalTransactionId = thatXid.getGlobalTransactionId();
-	// byte[] thatBranchQualifier = thatXid.getBranchQualifier();
 	// boolean formatIdEquals = thisXid.getFormatId() == thatXid.getFormatId();
 	// boolean transactionIdEquals = Arrays.equals(thisGlobalTransactionId, thatGlobalTransactionId);
-	// boolean qualifierEquals = Arrays.equals(thisBranchQualifier, thatBranchQualifier);
-	// xidRecovered = formatIdEquals && transactionIdEquals && qualifierEquals;
+	// xidRecovered = formatIdEquals && transactionIdEquals;
 	// }
 	// } catch (Exception ex) {
 	// TransactionXid globalXid = this.transactionContext.getXid();
@@ -961,6 +958,19 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 	//
 	// return xidRecovered;
 	// }
+
+	public synchronized void forgetQuietly() {
+		TransactionXid xid = this.transactionContext.getXid();
+		try {
+			this.forget();
+		} catch (SystemException ex) {
+			logger.error("Error occurred while forgetting transaction: {}",
+					ByteUtils.byteArrayToInt(xid.getGlobalTransactionId()), ex);
+		} catch (RuntimeException ex) {
+			logger.error("Error occurred while forgetting transaction: {}",
+					ByteUtils.byteArrayToInt(xid.getGlobalTransactionId()), ex);
+		}
+	}
 
 	public synchronized void forget() throws SystemException {
 		LocalResourceCleaner resourceCleaner = this.beanFactory.getLocalResourceCleaner();
@@ -993,6 +1003,10 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 
 		for (int i = 0; i < this.resourceList.size(); i++) {
 			XAResourceArchive current = this.resourceList.get(i);
+
+			if (current.isCompleted()) /* current.isHeuristic() */ {
+				continue; // ignore
+			}
 
 			XidFactory xidFactory = this.beanFactory.getCompensableXidFactory();
 			TransactionXid branchXid = (TransactionXid) current.getXid();

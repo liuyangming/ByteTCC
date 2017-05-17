@@ -442,17 +442,20 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 		try {
 			if (errorExists) {
 				this.fireCompensableRollback(compensable);
-				compensable.forget(); // forget transaction
+				success = true;
+				compensable.forgetQuietly(); // forget transaction
 			} else if (commitExists) {
 				this.fireCompensableCommit(compensable);
-				compensable.forget(); // forget transaction
+				success = true;
+				compensable.forgetQuietly(); // forget transaction
 			} else if (rollbackExists) {
 				this.fireCompensableRollback(compensable);
-				compensable.forget(); // forget transaction
 				success = true;
+				compensable.forgetQuietly(); // forget transaction
 				throw new HeuristicRollbackException();
+			} else {
+				success = true;
 			}
-			success = true;
 		} finally {
 			TransactionXid xid = compensableContext.getXid();
 			if (success) {
@@ -562,8 +565,8 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 		boolean success = false;
 		try {
 			this.fireCompensableRollback(compensable);
-			compensable.forget(); // forget transaction
 			success = true;
+			compensable.forgetQuietly(); // forget transaction
 		} finally {
 			TransactionXid xid = compensableContext.getXid();
 			if (success) {

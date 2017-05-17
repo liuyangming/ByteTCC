@@ -64,7 +64,7 @@ public class CompensableFeignInterceptor
 			}
 
 		} catch (IOException ex) {
-			ex.printStackTrace(); // TODO
+			throw new RuntimeException("Error occurred while preparing the transaction context!", ex);
 		}
 	}
 

@@ -260,7 +260,7 @@ public class TransactionRecoveryImpl implements TransactionRecovery, Transaction
 		return null;
 	}
 
-	public void timingRecover() {
+	public synchronized void timingRecover() {
 		TransactionRepository transactionRepository = beanFactory.getCompensableRepository();
 		List<Transaction> transactions = transactionRepository.getErrorTransactionList();
 		int total = transactions == null ? 0 : transactions.size();
@@ -294,7 +294,7 @@ public class TransactionRecoveryImpl implements TransactionRecovery, Transaction
 		logger.debug("transaction-recovery: total= {}, success= {}", total, value);
 	}
 
-	public synchronized void recoverTransaction(Transaction transaction)
+	public void recoverTransaction(Transaction transaction)
 			throws CommitRequiredException, RollbackRequiredException, SystemException {
 		org.bytesoft.transaction.TransactionContext transactionContext = transaction.getTransactionContext();
 
@@ -303,11 +303,12 @@ public class TransactionRecoveryImpl implements TransactionRecovery, Transaction
 			this.recoverCoordinator(transaction);
 		} else {
 			transaction.recover();
+			this.recoverParticipant(transaction);
 		}
 
 	}
 
-	public synchronized void recoverCoordinator(Transaction transaction)
+	private void recoverCoordinator(Transaction transaction)
 			throws CommitRequiredException, RollbackRequiredException, SystemException {
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 
@@ -322,22 +323,43 @@ public class TransactionRecoveryImpl implements TransactionRecovery, Transaction
 			case Status.STATUS_UNKNOWN: // TODO
 				if (transactionContext.isPropagated() == false) {
 					transaction.recoveryRollback();
-					transaction.forget();
+					transaction.forgetQuietly();
 				}
 				break;
 			case Status.STATUS_ROLLING_BACK:
 				transaction.recoveryRollback();
-				transaction.forget();
+				transaction.forgetQuietly();
 				break;
 			case Status.STATUS_PREPARED:
 			case Status.STATUS_COMMITTING:
 				transaction.recoveryCommit();
-				transaction.forget();
+				transaction.forgetQuietly();
 				break;
 			case Status.STATUS_COMMITTED:
 			case Status.STATUS_ROLLEDBACK:
-			default:
-				// ignore
+				transaction.forgetQuietly();
+				break;
+			default: // ignore
+			}
+		} finally {
+			compensableManager.desociateThread();
+		}
+
+	}
+
+	private void recoverParticipant(Transaction transaction)
+			throws CommitRequiredException, RollbackRequiredException, SystemException {
+		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
+
+		try {
+			compensableManager.associateThread(transaction);
+
+			switch (transaction.getTransactionStatus()) {
+			case Status.STATUS_COMMITTED:
+			case Status.STATUS_ROLLEDBACK:
+				transaction.forgetQuietly();
+				break;
+			default: // ignore
 			}
 		} finally {
 			compensableManager.desociateThread();
