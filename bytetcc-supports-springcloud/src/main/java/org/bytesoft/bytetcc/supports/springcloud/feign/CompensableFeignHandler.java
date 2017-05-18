@@ -95,13 +95,7 @@ public class CompensableFeignHandler implements InvocationHandler {
 				}
 			});
 
-			// TransactionResponseImpl response = new TransactionResponseImpl();
-			// try {
-			MethodHandler methodHandler = this.handlers.get(method);
-			Object result = methodHandler.invoke(args);
-			System.out.printf("result= %s%n", result);
-			return result;
-			// } finally { transactionInterceptor.afterReceiveResponse(response); }
+			return this.handlers.get(method).invoke(args);
 		}
 	}
 
