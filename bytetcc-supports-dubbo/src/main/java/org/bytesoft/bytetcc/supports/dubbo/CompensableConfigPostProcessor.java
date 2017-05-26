@@ -118,7 +118,7 @@ public class CompensableConfigPostProcessor implements BeanFactoryPostProcessor 
 		mpv.addPropertyValue("filter", "compensable");
 		mpv.addPropertyValue("group", "org.bytesoft.bytetcc");
 		mpv.addPropertyValue("retries", "0");
-		mpv.addPropertyValue("timeout", "60000");
+		mpv.addPropertyValue("timeout", "6000");
 
 		String skeletonBeanId = String.format("skeleton@%s", RemoteCoordinator.class.getName());
 		registry.registerBeanDefinition(skeletonBeanId, beanDef);
@@ -136,7 +136,7 @@ public class CompensableConfigPostProcessor implements BeanFactoryPostProcessor 
 
 		MutablePropertyValues mpv = beanDef.getPropertyValues();
 		mpv.addPropertyValue("interface", RemoteCoordinator.class.getName());
-		mpv.addPropertyValue("timeout", "60000");
+		mpv.addPropertyValue("timeout", "6000");
 		mpv.addPropertyValue("cluster", "failfast");
 		mpv.addPropertyValue("loadbalance", "compensable");
 		mpv.addPropertyValue("filter", "compensable");
