@@ -104,6 +104,14 @@ public class CompensableWork implements Work, CompensableBeanFactoryAware {
 		return delayOfStoping;
 	}
 
+	public long getRecoveryInterval() {
+		return recoveryInterval;
+	}
+
+	public void setRecoveryInterval(long recoveryInterval) {
+		this.recoveryInterval = recoveryInterval;
+	}
+
 	public void setDelayOfStoping(long delayOfStoping) {
 		this.delayOfStoping = delayOfStoping;
 	}
