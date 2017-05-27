@@ -338,7 +338,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 				case XAException.XAER_RMERR:
 				case XAException.XAER_INVAL:
 				case XAException.XAER_PROTO:
-					errorExists = false;
+					errorExists = true;
 
 					logger.warn("{}| error occurred while confirming remote branch: {}, transaction is not exists!",
 							ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()),
@@ -360,7 +360,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 				}
 
 			} catch (RuntimeException rex) {
-				errorExists = false;
+				errorExists = true;
 				logger.warn("{}| error occurred while confirming remote branch: {}, transaction is not exists!",
 						ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()),
 						current.getDescriptor().getIdentifier());
