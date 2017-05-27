@@ -1,4 +1,4 @@
-
+﻿
 **ByteTCC** is an implementation of Distributed Transaction Manager, based on Try-Confirm-Cancel (TCC) mechanism. 
 
 **ByteTCC** is comptible with JTA and could be seamlessly integrated with Spring and other Java containers.
@@ -11,7 +11,7 @@
 <dependency>
 	<groupId>org.bytesoft</groupId>
 	<artifactId>bytetcc-supports</artifactId>
-	<version>0.3.2</version>
+	<version>0.3.3</version>
 </dependency>
 ```
 
