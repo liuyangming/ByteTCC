@@ -331,8 +331,8 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 							current.getDescriptor().getIdentifier());
 					break;
 				case XAException.XAER_NOTA:
-					rolledbackExists = true; // TODO
-					current.setRolledback(true);
+					committedExists = true; // TODO 1) tried & committed; 2) have not tried
+					current.setCommitted(true);
 					current.setCompleted(true);
 					break;
 				case XAException.XAER_RMERR:
