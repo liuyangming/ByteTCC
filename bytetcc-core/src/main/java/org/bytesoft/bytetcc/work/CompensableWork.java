@@ -17,8 +17,6 @@ package org.bytesoft.bytetcc.work;
 
 import javax.resource.spi.work.Work;
 
-import org.bytesoft.bytejta.TransactionCoordinator;
-import org.bytesoft.bytetcc.CompensableCoordinator;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 import org.bytesoft.transaction.TransactionRecovery;
@@ -47,14 +45,6 @@ public class CompensableWork implements Work, CompensableBeanFactoryAware {
 			} catch (RuntimeException rex) {
 				logger.error("Error occurred while initializing the compensable work.", rex);
 			}
-
-			TransactionCoordinator transactionCoordinator = //
-					(TransactionCoordinator) this.beanFactory.getTransactionCoordinator();
-			transactionCoordinator.markAvailable();
-
-			CompensableCoordinator compensableCoordinator = //
-					(CompensableCoordinator) this.beanFactory.getCompensableCoordinator();
-			compensableCoordinator.markAvailable();
 		}
 	}
 

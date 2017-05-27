@@ -109,6 +109,10 @@ public class TransactionRecoveryImpl implements TransactionRecovery, Transaction
 				transactionRepository.putErrorTransaction(compensableXid, transaction);
 			}
 		});
+
+		CompensableCoordinator compensableCoordinator = //
+				(CompensableCoordinator) this.beanFactory.getCompensableCoordinator();
+		compensableCoordinator.markParticipantReady();
 	}
 
 	public CompensableTransactionImpl reconstructTransaction(TransactionArchive transactionArchive) {
