@@ -131,6 +131,8 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 				compensableManager.rollback();
 			} else if (compensableContext.isCompensable() == false) {
 				transactionManager.rollback();
+			} else if (compensableContext.isCompensating()) {
+				compensableManager.rollback();
 			} else if (compensableContext.isCoordinator()) {
 				if (compensableContext.isPropagated()) {
 					compensableManager.rollback();
