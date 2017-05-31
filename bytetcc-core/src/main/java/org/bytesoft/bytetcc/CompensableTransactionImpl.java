@@ -880,8 +880,8 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 
 			try {
 				try {
-					XAResource xares = resourceDeserializer.deserialize(identifier);
-					RecoveredResource resource = (RecoveredResource) xares;
+					XAResourceDescriptor descriptor = resourceDeserializer.deserialize(identifier);
+					RecoveredResource resource = (RecoveredResource) descriptor.getDelegate();
 					resource.recoverable(current.getCompensableXid());
 
 					if (positive) {
