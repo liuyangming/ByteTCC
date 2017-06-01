@@ -847,16 +847,18 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 	}
 
 	public synchronized void recover() throws SystemException {
-		if (this.transactionStatus == Status.STATUS_COMMITTING) {
+		if (this.transactionStatus == Status.STATUS_PREPARED //
+				|| this.transactionStatus == Status.STATUS_COMMITTING) {
 			this.recoverNativeResource(true);
 			this.recoverRemoteResource(true);
-		} else if (this.transactionStatus == Status.STATUS_ROLLING_BACK) {
+		} else if (this.transactionStatus == Status.STATUS_PREPARING //
+				|| this.transactionStatus == Status.STATUS_ROLLING_BACK) {
 			this.recoverNativeResource(false);
 			this.recoverRemoteResource(false);
 		}
 	}
 
-	private void recoverNativeResource(boolean positive) throws SystemException {
+	private void recoverNativeResource(boolean positiveFlag) throws SystemException {
 		XAResourceDeserializer resourceDeserializer = this.beanFactory.getResourceDeserializer();
 		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
 
@@ -884,7 +886,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 					RecoveredResource resource = (RecoveredResource) descriptor.getDelegate();
 					resource.recoverable(current.getCompensableXid());
 
-					if (positive) {
+					if (positiveFlag) {
 						current.setConfirmed(true);
 					} else {
 						current.setCancelled(true);
@@ -925,7 +927,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 
 	}
 
-	private void recoverRemoteResource(boolean positive) throws SystemException {
+	private void recoverRemoteResource(boolean positiveFlag) throws SystemException {
 		// for (int i = 0; i < this.resourceList.size(); i++) {
 		// XAResourceArchive archive = this.resourceList.get(i);
 		// boolean xidExists = this.recover(archive);
