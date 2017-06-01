@@ -11,7 +11,7 @@
 <dependency>
 	<groupId>org.bytesoft</groupId>
 	<artifactId>bytetcc-supports</artifactId>
-	<version>0.3.3</version>
+	<version>0.3.4</version>
 </dependency>
 ```
 
