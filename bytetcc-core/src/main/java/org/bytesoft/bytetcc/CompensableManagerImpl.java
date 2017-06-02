@@ -443,15 +443,12 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 			if (errorExists) {
 				this.fireCompensableRollback(compensable);
 				success = true;
-				compensable.forgetQuietly(); // forget transaction
 			} else if (commitExists) {
 				this.fireCompensableCommit(compensable);
 				success = true;
-				compensable.forgetQuietly(); // forget transaction
 			} else if (rollbackExists) {
 				this.fireCompensableRollback(compensable);
 				success = true;
-				compensable.forgetQuietly(); // forget transaction
 				throw new HeuristicRollbackException();
 			} else {
 				success = true;
@@ -459,8 +456,9 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 		} finally {
 			TransactionXid xid = compensableContext.getXid();
 			if (success) {
-				compensableRepository.removeErrorTransaction(xid);
-				compensableRepository.removeTransaction(xid);
+				// compensableRepository.removeErrorTransaction(xid);
+				// compensableRepository.removeTransaction(xid);
+				compensable.forgetQuietly(); // forget transaction
 			} else {
 				compensableRepository.putErrorTransaction(xid, compensable);
 			}
@@ -566,12 +564,12 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 		try {
 			this.fireCompensableRollback(compensable);
 			success = true;
-			compensable.forgetQuietly(); // forget transaction
 		} finally {
 			TransactionXid xid = compensableContext.getXid();
 			if (success) {
-				compensableRepository.removeErrorTransaction(xid);
-				compensableRepository.removeTransaction(xid);
+				// compensableRepository.removeErrorTransaction(xid);
+				// compensableRepository.removeTransaction(xid);
+				compensable.forgetQuietly(); // forget transaction
 			} else {
 				compensableRepository.putErrorTransaction(xid, compensable);
 			}
