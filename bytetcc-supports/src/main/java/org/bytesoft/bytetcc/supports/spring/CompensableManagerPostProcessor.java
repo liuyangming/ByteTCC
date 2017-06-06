@@ -87,14 +87,14 @@ public class CompensableManagerPostProcessor implements BeanFactoryPostProcessor
 
 			this.jtaTransactionManager = (JtaTransactionManager) bean;
 
+			this.configureUserTransactionIfNecessary();
+
 			if (this.jtaTransactionManager.getTransactionManager() != null
 					&& this.jtaTransactionManager.getUserTransaction() != null) {
 				return bean;
 			} else if (this.transactionManager == null) {
 				this.beanList.add(bean);
-				this.configureUserTransactionIfNecessary();
 			} else {
-				this.configureTransactionManager();
 				this.jtaTransactionManager.setTransactionManager(this.transactionManager);
 			}
 
