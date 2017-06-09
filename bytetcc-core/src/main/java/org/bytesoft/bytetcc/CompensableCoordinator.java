@@ -77,11 +77,11 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 
 			compensableLogger.createTransaction(((CompensableTransactionImpl) transaction).getTransactionArchive());
 			logger.info("{}| compensable transaction begin!", ByteUtils.byteArrayToString(globalXid.getGlobalTransactionId()));
-		} else {
-			boolean locked = compensableLock.lockTransaction(globalXid, this.endpoint);
-			if (locked == false) {
-				throw new XAException(XAException.XAER_PROTO);
-			}
+		}
+
+		boolean locked = compensableLock.lockTransaction(globalXid, this.endpoint);
+		if (locked == false) {
+			throw new XAException(XAException.XAER_PROTO);
 		}
 
 		compensableManager.associateThread(transaction);
@@ -130,11 +130,17 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 		}
 
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
+		TransactionLock compensableLock = this.beanFactory.getCompensableLock();
+
+		boolean locked = false;
 		try {
 			compensableManager.associateThread(transaction);
-			transaction.participantCommit(onePhase);
+			locked = compensableLock.lockTransaction(globalXid, this.endpoint);
+			if (locked == false) {
+				throw new XAException(XAException.XAER_RMERR);
+			}
 
-			transaction.forgetQuietly(); // forget
+			transaction.participantCommit(onePhase);
 		} catch (SecurityException ex) {
 			throw new XAException(XAException.XAER_RMERR);
 		} catch (IllegalStateException ex) {
@@ -154,6 +160,10 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 			throw new XAException(XAException.XAER_RMERR);
 		} finally {
 			compensableManager.desociateThread();
+			if (locked) {
+				compensableLock.unlockTransaction(globalXid, this.endpoint);
+			} // end-if (locked)
+			transaction.forgetQuietly(); // forget transaction
 		}
 	}
 
@@ -223,11 +233,16 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 		}
 
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
+		TransactionLock compensableLock = this.beanFactory.getCompensableLock();
+		boolean locked = false;
 		try {
 			compensableManager.associateThread(transaction);
-			transaction.participantRollback();
+			locked = compensableLock.lockTransaction(globalXid, this.endpoint);
+			if (locked == false) {
+				throw new XAException(XAException.XAER_RMERR);
+			}
 
-			transaction.forgetQuietly(); // forget
+			transaction.participantRollback();
 		} catch (IllegalStateException ex) {
 			throw new XAException(XAException.XAER_RMERR);
 		} catch (SystemException ex) {
@@ -236,6 +251,10 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 			throw new XAException(XAException.XAER_RMERR);
 		} finally {
 			compensableManager.desociateThread();
+			if (locked) {
+				compensableLock.unlockTransaction(globalXid, this.endpoint);
+			} // end-if (locked)
+			transaction.forgetQuietly(); // forget transaction
 		}
 	}
 

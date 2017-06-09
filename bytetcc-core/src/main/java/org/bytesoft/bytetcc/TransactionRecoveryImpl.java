@@ -34,10 +34,12 @@ import org.bytesoft.compensable.CompensableManager;
 import org.bytesoft.compensable.TransactionContext;
 import org.bytesoft.compensable.archive.CompensableArchive;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
+import org.bytesoft.compensable.aware.CompensableEndpointAware;
 import org.bytesoft.compensable.logging.CompensableLogger;
 import org.bytesoft.transaction.CommitRequiredException;
 import org.bytesoft.transaction.RollbackRequiredException;
 import org.bytesoft.transaction.Transaction;
+import org.bytesoft.transaction.TransactionLock;
 import org.bytesoft.transaction.TransactionRecovery;
 import org.bytesoft.transaction.TransactionRepository;
 import org.bytesoft.transaction.archive.TransactionArchive;
@@ -50,10 +52,12 @@ import org.bytesoft.transaction.xa.XidFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class TransactionRecoveryImpl implements TransactionRecovery, TransactionRecoveryListener, CompensableBeanFactoryAware {
+public class TransactionRecoveryImpl
+		implements TransactionRecovery, TransactionRecoveryListener, CompensableBeanFactoryAware, CompensableEndpointAware {
 	static final Logger logger = LoggerFactory.getLogger(TransactionRecoveryImpl.class);
 
 	private CompensableBeanFactory beanFactory;
+	private String endpoint;
 
 	private final Map<TransactionXid, Transaction> recovered = new HashMap<TransactionXid, Transaction>();
 
@@ -315,8 +319,12 @@ public class TransactionRecoveryImpl implements TransactionRecovery, Transaction
 	private void recoverCoordinator(Transaction transaction)
 			throws CommitRequiredException, RollbackRequiredException, SystemException {
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
+		TransactionLock compensableLock = this.beanFactory.getCompensableLock();
 
 		org.bytesoft.transaction.TransactionContext transactionContext = transaction.getTransactionContext();
+		TransactionXid xid = transactionContext.getXid();
+
+		boolean locked = false;
 		try {
 			compensableManager.associateThread(transaction);
 
@@ -326,19 +334,36 @@ public class TransactionRecoveryImpl implements TransactionRecovery, Transaction
 			case Status.STATUS_PREPARING:
 			case Status.STATUS_UNKNOWN: // TODO
 				if (transactionContext.isPropagated() == false) {
+					locked = compensableLock.lockTransaction(xid, this.endpoint);
+					if (locked == false) {
+						throw new SystemException();
+					}
+
 					transaction.recoveryRollback();
 					transaction.forgetQuietly();
 				}
 				break;
-			case Status.STATUS_ROLLING_BACK:
+			case Status.STATUS_ROLLING_BACK: {
+				locked = compensableLock.lockTransaction(xid, this.endpoint);
+				if (locked == false) {
+					throw new SystemException();
+				}
+
 				transaction.recoveryRollback();
 				transaction.forgetQuietly();
 				break;
+			}
 			case Status.STATUS_PREPARED:
-			case Status.STATUS_COMMITTING:
+			case Status.STATUS_COMMITTING: {
+				locked = compensableLock.lockTransaction(xid, this.endpoint);
+				if (locked == false) {
+					throw new SystemException();
+				}
+
 				transaction.recoveryCommit();
 				transaction.forgetQuietly();
 				break;
+			}
 			case Status.STATUS_COMMITTED:
 			case Status.STATUS_ROLLEDBACK:
 				transaction.forgetQuietly();
@@ -346,6 +371,9 @@ public class TransactionRecoveryImpl implements TransactionRecovery, Transaction
 			default: // ignore
 			}
 		} finally {
+			if (locked) {
+				compensableLock.unlockTransaction(xid, this.endpoint);
+			} // end-if (locked)
 			compensableManager.desociateThread();
 		}
 
@@ -369,6 +397,10 @@ public class TransactionRecoveryImpl implements TransactionRecovery, Transaction
 			compensableManager.desociateThread();
 		}
 
+	}
+
+	public void setEndpoint(String identifier) {
+		this.endpoint = identifier;
 	}
 
 	public void setBeanFactory(CompensableBeanFactory tbf) {

@@ -209,8 +209,11 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 
 		compensableRepository.putTransaction(compensableXid, compensable);
 
-		compensableLock.lockTransaction(compensableXid, this.endpoint);
 		compensableLogger.createTransaction(compensable.getTransactionArchive());
+		boolean locked = compensableLock.lockTransaction(compensableXid, this.endpoint);
+		if (locked == false) {
+			throw new SystemException(); // should never happen
+		}
 		logger.info("{}| compensable transaction begin!", ByteUtils.byteArrayToString(compensableXid.getGlobalTransactionId()));
 	}
 
@@ -400,11 +403,16 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 
 		TransactionLock compensableLock = this.beanFactory.getCompensableLock();
 		TransactionXid xid = transactionContext.getXid();
+		boolean success = false;
 		try {
 			this.desociateThread();
 			this.invokeCompensableCommit(transaction);
+			success = true;
 		} finally {
 			compensableLock.unlockTransaction(xid, this.endpoint);
+			if (success) {
+				transaction.forgetQuietly(); // forget transaction
+			}
 		}
 
 	}
@@ -438,28 +446,24 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 			compensable.setTransactionalExtra(null);
 		}
 
-		boolean success = false;
+		boolean failure = true;
 		try {
 			if (errorExists) {
 				this.fireCompensableRollback(compensable);
-				success = true;
+				failure = false;
 			} else if (commitExists) {
 				this.fireCompensableCommit(compensable);
-				success = true;
+				failure = false;
 			} else if (rollbackExists) {
 				this.fireCompensableRollback(compensable);
-				success = true;
+				failure = false;
 				throw new HeuristicRollbackException();
 			} else {
-				success = true;
+				failure = false;
 			}
 		} finally {
 			TransactionXid xid = compensableContext.getXid();
-			if (success) {
-				// compensableRepository.removeErrorTransaction(xid);
-				// compensableRepository.removeTransaction(xid);
-				compensable.forgetQuietly(); // forget transaction
-			} else {
+			if (failure) {
 				compensableRepository.putErrorTransaction(xid, compensable);
 			}
 		}
@@ -531,11 +535,16 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 
 		TransactionLock compensableLock = this.beanFactory.getCompensableLock();
 		TransactionXid xid = transactionContext.getXid();
+		boolean success = false;
 		try {
 			this.desociateThread();
 			this.invokeCompensableRollback(transaction);
+			success = true;
 		} finally {
 			compensableLock.unlockTransaction(xid, this.endpoint);
+			if (success) {
+				transaction.forgetQuietly(); // forget transaction
+			}
 		}
 
 	}
@@ -560,17 +569,13 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 			compensable.setTransactionalExtra(null);
 		}
 
-		boolean success = false;
+		boolean failure = true;
 		try {
 			this.fireCompensableRollback(compensable);
-			success = true;
+			failure = false;
 		} finally {
 			TransactionXid xid = compensableContext.getXid();
-			if (success) {
-				// compensableRepository.removeErrorTransaction(xid);
-				// compensableRepository.removeTransaction(xid);
-				compensable.forgetQuietly(); // forget transaction
-			} else {
+			if (failure) {
 				compensableRepository.putErrorTransaction(xid, compensable);
 			}
 		}
