@@ -212,8 +212,10 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 		compensableLogger.createTransaction(compensable.getTransactionArchive());
 		boolean locked = compensableLock.lockTransaction(compensableXid, this.endpoint);
 		if (locked == false) {
+			compensableRepository.putErrorTransaction(compensableXid, compensable);
 			throw new SystemException(); // should never happen
 		}
+
 		logger.info("{}| compensable transaction begin!", ByteUtils.byteArrayToString(compensableXid.getGlobalTransactionId()));
 	}
 
