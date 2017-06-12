@@ -112,12 +112,24 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableEndpo
 		}
 	}
 
+	public void startupRecover() {
+		this.master.startupRecover();
+		this.slaver.startupRecover();
+	}
+
 	public void destroy() {
 		this.resourceOne.destroy();
 		this.resourceTwo.destroy();
 	}
 
 	public void run() {
+
+		try {
+			this.startupRecover();
+		} catch (Exception ex) {
+			logger.error("Error occurred while starting cleanup task!", ex);
+		}
+
 		long swapMillis = System.currentTimeMillis() + 1000L * 60;
 
 		while (this.released == false) {
@@ -128,25 +140,47 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableEndpo
 				continue;
 			} // end-if (System.currentTimeMillis() > swapMillis)
 
+			long startMillis = System.currentTimeMillis();
+
 			long time = System.currentTimeMillis() / 1000L;
 			long mode = time % 30;
 
-			if (mode < 10) {
-			} else if (mode < 20) {
-				this.cleanupSlaver();
+			if (mode < 5 || mode > 24) {
+				this.compressSlaver(10);
+			} else if (mode < 15) {
+				this.cleanupSlaver(10);
 			} else {
+				this.clearSlaverQuietly();
 			}
+
+			long costMillis = System.currentTimeMillis() - startMillis;
+			if (costMillis < (1000L * 10)) {
+				this.waitingFor(1000L * 10 - costMillis);
+			} // end-if (costMillis < (1000L * 10))
 
 		}
 
 		this.destroy();
 	}
 
-	public void compressSlaver() {
+	private void waitingFor(long millis) {
+		try {
+			Thread.sleep(millis);
+		} catch (InterruptedException ex) {
+			logger.error(ex.getMessage());
+		}
 	}
 
-	public void cleanupSlaver() {
-		long stopMillis = System.currentTimeMillis() + 1000L * 30;
+	private void compressSlaver(long seconds) {
+		this.slaver.timingCompress(); // compress
+	}
+
+	private void clearSlaverQuietly() {
+		this.slaver.timingClear(10); // clear
+	}
+
+	private void cleanupSlaver(long seconds) {
+		long stopMillis = System.currentTimeMillis() + 1000L * seconds;
 
 		Map<String, Set<CleanupRecord>> recordMap = this.slaver.getRecordMap();
 		Set<Map.Entry<String, Set<CleanupRecord>>> entrySet = recordMap.entrySet();
@@ -202,7 +236,6 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableEndpo
 					} else {
 						record.setRecordFlag(recordFlag | 0x4);
 					}
-					this.slaver.removeIfNecessary(record);
 				}
 
 			} // end-while (System.currentTimeMillis() < stopMillis && recordItr.hasNext())
@@ -228,7 +261,7 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableEndpo
 
 	private void cleanup(String resourceId, List<Xid> xidList, boolean flag) throws RuntimeException {
 		XAResourceDeserializer resourceDeserializer = this.beanFactory.getResourceDeserializer();
-		if (StringUtils.isNotBlank(resourceId)) {
+		if (StringUtils.isBlank(resourceId)) {
 			throw new IllegalStateException();
 		}
 

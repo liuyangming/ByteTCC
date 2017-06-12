@@ -24,12 +24,11 @@ import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileChannel.MapMode;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.List;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.Set;
 
@@ -44,7 +43,7 @@ import org.bytesoft.transaction.xa.XidFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class CleanupFile implements CompensableEndpointAware, CompensableBeanFactoryAware, CleanupCallback {
+public class CleanupFile implements CompensableEndpointAware, CompensableBeanFactoryAware {
 	static final Logger logger = LoggerFactory.getLogger(CleanupFile.class);
 	static final byte[] IDENTIFIER = "org.bytesoft.bytetcc.resource.cleanup".getBytes();
 
@@ -131,12 +130,6 @@ public class CleanupFile implements CompensableEndpointAware, CompensableBeanFac
 		this.checkStartIndex();
 		this.endIndex = this.checkEndIndex();
 
-		this.traversal(); // initialize
-
-		if (this.lastEnabledRecord != null) {
-			this.updateEndIndex(this.lastEnabledRecord.getStartIndex() + CONSTANTS_RECORD_SIZE + 1);
-		}
-
 		return masterFlag;
 	}
 
@@ -172,13 +165,15 @@ public class CleanupFile implements CompensableEndpointAware, CompensableBeanFac
 	private byte checkMasterFlag(Boolean master) {
 		this.header.position(IDENTIFIER.length + 2);
 		if (master == null) {
-			// ignore
+			return this.header.get();
 		} else if (master) {
 			this.header.put((byte) 0x1);
+			return (byte) 0x1;
 		} else {
 			this.header.put((byte) 0x0);
+			return (byte) 0x0;
 		}
-		return this.header.get();
+
 	}
 
 	public void markMaster() {
@@ -223,40 +218,16 @@ public class CleanupFile implements CompensableEndpointAware, CompensableBeanFac
 		}
 	}
 
-	// public void traversal(CleanupCallback callback) throws RuntimeException {
-	// Set<Entry<String, Set<CleanupRecord>>> entrySet = this.recordMap.entrySet();
-	// Iterator<Map.Entry<String, Set<CleanupRecord>>> itr = entrySet.iterator();
-	//
-	// boolean interrupted = false;
-	// while (interrupted == false && itr.hasNext()) {
-	// Map.Entry<String, Set<CleanupRecord>> entry = itr.next();
-	// Set<CleanupRecord> records = entry.getValue();
-	// if (records == null || records.isEmpty()) {
-	// continue;
-	// } // end-if (records == null || records.isEmpty())
-	//
-	// Iterator<CleanupRecord> recordItr = records.iterator();
-	// while (interrupted == false && recordItr.hasNext()) {
-	// CleanupRecord record = recordItr.next();
-	// try {
-	// callback.callback(record);
-	// } catch (Exception ex) {
-	// interrupted = true;
-	// }
-	// } // end-while (recordItr.hasNext())
-	//
-	// } // end-while (itr.hasNext())
-	// }
-
-	private void traversal() throws RuntimeException {
+	public void traversal(CleanupCallback callback) throws RuntimeException {
 		XidFactory xidFactory = this.beanFactory.getTransactionXidFactory();
 
 		for (int current = CONSTANTS_START_INDEX; current < this.endIndex; current = current + CONSTANTS_RECORD_SIZE + 1) {
 			ByteBuffer buffer = ByteBuffer.allocate(1 + CONSTANTS_RECORD_SIZE);
 
 			try {
-				this.channel.position(this.endIndex);
+				this.channel.position(current);
 				this.channel.read(buffer);
+				buffer.flip();
 			} catch (Exception ex) {
 				throw new IllegalStateException();
 			}
@@ -265,7 +236,6 @@ public class CleanupFile implements CompensableEndpointAware, CompensableBeanFac
 			byte[] globalByteArray = new byte[XidFactory.GLOBAL_TRANSACTION_LENGTH];
 			byte[] branchByteArray = new byte[XidFactory.BRANCH_QUALIFIER_LENGTH];
 
-			buffer.flip();
 			byte recordFlag = buffer.get();
 			buffer.get(resourceByteArray);
 			buffer.get(globalByteArray);
@@ -281,59 +251,169 @@ public class CleanupFile implements CompensableEndpointAware, CompensableBeanFac
 			record.setEnabled((recordFlag & 0x1) == 0x1);
 			record.setResource(StringUtils.trimToNull(new String(resourceByteArray)));
 
-			this.callback(record);
+			callback.callback(record);
 		}
 	}
 
-	private final List<CleanupRecord> disabledList = new ArrayList<CleanupRecord>();
-	private CleanupRecord lastEnabledRecord;
+	public void startupRecover() throws RuntimeException {
+		XidFactory xidFactory = this.beanFactory.getTransactionXidFactory();
 
-	public void callback(CleanupRecord record) throws RuntimeException {
-		if (record.isEnabled() == false) {
-			this.disabledList.add(record);
-		} else {
-			Iterator<CleanupRecord> itr = this.disabledList.iterator();
-			if (itr.hasNext()) {
-				CleanupRecord element = itr.next();
-				element.setEnabled(record.isEnabled());
-				element.setRecordFlag(record.getRecordFlag());
-				element.setResource(record.getResource());
-				// element.setStartIndex(); // dont set startIndex
-				element.setXid(record.getXid());
+		LinkedList<CleanupRecord> removedList = new LinkedList<CleanupRecord>();
+		CleanupRecord lastEnabledRecord = null;
+		for (int current = CONSTANTS_START_INDEX; current < this.endIndex; current = current + CONSTANTS_RECORD_SIZE + 1) {
+			ByteBuffer buffer = ByteBuffer.allocate(1 + CONSTANTS_RECORD_SIZE);
+
+			try {
+				this.channel.position(current);
+				this.channel.read(buffer);
+				buffer.flip();
+			} catch (Exception ex) {
+				throw new IllegalStateException();
+			}
+
+			byte[] resourceByteArray = new byte[CONSTANTS_RES_ID_MAX_SIZE];
+			byte[] globalByteArray = new byte[XidFactory.GLOBAL_TRANSACTION_LENGTH];
+			byte[] branchByteArray = new byte[XidFactory.BRANCH_QUALIFIER_LENGTH];
+
+			byte recordFlag = buffer.get();
+			buffer.get(resourceByteArray);
+			buffer.get(globalByteArray);
+			buffer.get(branchByteArray);
+
+			TransactionXid globalXid = xidFactory.createGlobalXid(globalByteArray);
+			TransactionXid branchXid = xidFactory.createBranchXid(globalXid, branchByteArray);
+
+			CleanupRecord record = new CleanupRecord();
+			record.setStartIndex(current);
+			record.setXid(branchXid);
+			record.setRecordFlag(recordFlag);
+			record.setEnabled((recordFlag & 0x1) == 0x1);
+			record.setResource(StringUtils.trimToNull(new String(resourceByteArray)));
+
+			if (record.isEnabled() == false) {
+				removedList.add(record);
+				continue;
+			}
+
+			CleanupRecord removedRecord = removedList.pollFirst();
+			if (removedRecord == null) {
+				lastEnabledRecord = record;
+				this.registerRecord(record);
+			} else {
+				removedRecord.setEnabled(record.isEnabled());
+				removedRecord.setRecordFlag(record.getRecordFlag());
+				removedRecord.setResource(record.getResource());
+				// removedRecord.setStartIndex(); // dont set startIndex
+				removedRecord.setXid(record.getXid());
 
 				try {
-					ByteBuffer buffer = ByteBuffer.allocate(1);
+					ByteBuffer removingBuffer = ByteBuffer.allocate(1);
 					int startIndex = record.getStartIndex();
 
-					this.forget(element, false);
+					this.forget(removedRecord, false);
 
 					this.channel.position(startIndex);
-					buffer.put((byte) 0x0);
-					buffer.flip();
-					this.channel.write(buffer);
+					removingBuffer.put((byte) 0x0);
+					removingBuffer.flip();
+					this.channel.write(removingBuffer);
 				} catch (IllegalStateException ex) {
 					throw ex;
 				} catch (Exception ex) {
 					throw new IllegalStateException(ex.getMessage());
 				}
 
-				itr.remove();
-
 				record.setRecordFlag(0x0);
 				record.setEnabled(false);
-				this.disabledList.add(record);
+				removedList.add(record);
 
-				this.registerRecord(element);
-
-				if (this.lastEnabledRecord != null //
-						&& this.lastEnabledRecord.getStartIndex() < element.getStartIndex()) {
-					this.lastEnabledRecord = element;
+				if (lastEnabledRecord != null //
+						&& lastEnabledRecord.getStartIndex() < removedRecord.getStartIndex()) {
+					lastEnabledRecord = removedRecord;
 				}
-			} else {
-				this.registerRecord(record);
-				this.lastEnabledRecord = record;
+
+				this.registerRecord(removedRecord);
 			}
 
+		}
+
+		if (lastEnabledRecord != null) {
+			this.updateEndIndex(lastEnabledRecord.getStartIndex() + CONSTANTS_RECORD_SIZE + 1);
+		} // end-if (lastEnabledRecord != null)
+
+	}
+
+	public void timingCompress() throws RuntimeException {
+		XidFactory xidFactory = this.beanFactory.getTransactionXidFactory();
+
+		LinkedList<CleanupRecord> removedList = new LinkedList<CleanupRecord>();
+		for (int current = CONSTANTS_START_INDEX; current < this.endIndex; current = current + CONSTANTS_RECORD_SIZE + 1) {
+			ByteBuffer buffer = ByteBuffer.allocate(1 + CONSTANTS_RECORD_SIZE);
+
+			try {
+				this.channel.position(current);
+				this.channel.read(buffer);
+				buffer.flip();
+			} catch (Exception ex) {
+				logger.error("Error occurred while accessing file {}!", this.resourceName, ex);
+				continue;
+			}
+
+			byte[] resourceByteArray = new byte[CONSTANTS_RES_ID_MAX_SIZE];
+			byte[] globalByteArray = new byte[XidFactory.GLOBAL_TRANSACTION_LENGTH];
+			byte[] branchByteArray = new byte[XidFactory.BRANCH_QUALIFIER_LENGTH];
+
+			byte recordFlag = buffer.get();
+			buffer.get(resourceByteArray);
+			buffer.get(globalByteArray);
+			buffer.get(branchByteArray);
+
+			TransactionXid globalXid = xidFactory.createGlobalXid(globalByteArray);
+			TransactionXid branchXid = xidFactory.createBranchXid(globalXid, branchByteArray);
+
+			CleanupRecord record = new CleanupRecord();
+			record.setStartIndex(current);
+			record.setXid(branchXid);
+			record.setRecordFlag(recordFlag);
+			record.setEnabled((recordFlag & 0x1) == 0x1);
+			record.setResource(StringUtils.trimToNull(new String(resourceByteArray)));
+
+			if (record.isEnabled() == false) {
+				removedList.add(record);
+				continue;
+			}
+
+			CleanupRecord removedRecord = removedList.pollFirst();
+			if (removedRecord == null) {
+				continue;
+			}
+
+			removedRecord.setEnabled(record.isEnabled());
+			removedRecord.setRecordFlag(record.getRecordFlag());
+			removedRecord.setResource(record.getResource());
+			// removedRecord.setStartIndex(); // dont set startIndex
+			removedRecord.setXid(record.getXid());
+
+			try {
+				ByteBuffer removingBuffer = ByteBuffer.allocate(1);
+				int startIndex = record.getStartIndex();
+
+				this.forget(removedRecord, false);
+
+				this.channel.position(startIndex);
+				removingBuffer.put((byte) 0x0);
+				removingBuffer.flip();
+				this.channel.write(removingBuffer);
+			} catch (IllegalStateException ex) {
+				logger.error("Error occurred while compressing file {}!", this.resourceName, ex);
+				continue;
+			} catch (Exception ex) {
+				logger.error("Error occurred while compressing file {}!", this.resourceName, ex);
+				continue;
+			}
+
+			record.setRecordFlag(0x0);
+			record.setEnabled(false);
+			removedList.add(record);
 		}
 	}
 
@@ -404,15 +484,15 @@ public class CleanupFile implements CompensableEndpointAware, CompensableBeanFac
 		int recordIndex = this.endIndex;
 		try {
 			this.channel.position(recordIndex);
-			buffer.flip();
+			buffer.rewind();
 			this.channel.write(buffer);
+			buffer.rewind();
 		} catch (Exception ex) {
 			throw new IllegalStateException(ex.getMessage());
 		}
 
-		buffer.flip();
 		byte recordFlag = buffer.get();
-		buffer.flip();
+		buffer.rewind();
 
 		this.registerRecord(buffer, recordFlag, recordIndex);
 
@@ -422,7 +502,7 @@ public class CleanupFile implements CompensableEndpointAware, CompensableBeanFac
 	private void invokeForget(Xid xid, String resource, ByteBuffer buffer, int position) throws IllegalStateException {
 		try {
 			this.channel.position(position);
-			buffer.flip();
+			buffer.rewind();
 			this.channel.write(buffer);
 		} catch (Exception ex) {
 			throw new IllegalStateException(ex.getMessage());
@@ -436,10 +516,11 @@ public class CleanupFile implements CompensableEndpointAware, CompensableBeanFac
 		byte[] globalByteArray = new byte[XidFactory.GLOBAL_TRANSACTION_LENGTH];
 		byte[] branchByteArray = new byte[XidFactory.BRANCH_QUALIFIER_LENGTH];
 
-		buffer.flip();
-		buffer.get(resourceByteArray);
+		buffer.rewind();
+		buffer.get();
 		buffer.get(globalByteArray);
 		buffer.get(branchByteArray);
+		buffer.get(resourceByteArray);
 
 		TransactionXid globalXid = xidFactory.createGlobalXid(globalByteArray);
 		TransactionXid branchXid = xidFactory.createBranchXid(globalXid, branchByteArray);
@@ -474,7 +555,31 @@ public class CleanupFile implements CompensableEndpointAware, CompensableBeanFac
 		this.header.putInt(position);
 	}
 
-	public void removeIfNecessary(CleanupRecord record) throws RuntimeException {
+	public void timingClear(long seconds) {
+		long stopMillis = System.currentTimeMillis() + 1000L * seconds;
+
+		Set<Map.Entry<String, Set<CleanupRecord>>> entrySet = this.recordMap.entrySet();
+		Iterator<Map.Entry<String, Set<CleanupRecord>>> itr = entrySet.iterator();
+
+		while (System.currentTimeMillis() < stopMillis && itr.hasNext()) {
+			Map.Entry<String, Set<CleanupRecord>> entry = itr.next();
+			Set<CleanupRecord> records = entry.getValue();
+
+			Iterator<CleanupRecord> recordItr = records.iterator();
+			while (System.currentTimeMillis() < stopMillis && recordItr.hasNext()) {
+				CleanupRecord record = recordItr.next();
+				try {
+					this.invokeClear(record);
+				} catch (Exception ex) {
+					logger.debug(ex.getMessage());
+				}
+			} // end-while (System.currentTimeMillis() < stopMillis && recordItr.hasNext())
+
+		}
+
+	}
+
+	private void invokeClear(CleanupRecord record) throws RuntimeException {
 		int recordFlag = record.getRecordFlag();
 		boolean forgetOne = (recordFlag & 0x2) == 0x2;
 		boolean forgetTwo = (recordFlag & 0x4) == 0x4;

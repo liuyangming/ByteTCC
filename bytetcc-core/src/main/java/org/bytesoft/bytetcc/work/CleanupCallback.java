@@ -19,4 +19,6 @@ public interface CleanupCallback {
 
 	public void callback(CleanupRecord record) throws RuntimeException;
 
+	// public void complete(CleanupRecord record) throws RuntimeException;
+
 }
