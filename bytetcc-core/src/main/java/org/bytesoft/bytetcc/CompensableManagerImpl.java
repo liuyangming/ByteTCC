@@ -414,7 +414,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 			compensableLock.unlockTransaction(xid, this.endpoint);
 			if (success) {
 				transaction.forgetQuietly(); // forget transaction
-			}
+			} // end-if (success)
 		}
 
 	}
@@ -546,7 +546,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 			compensableLock.unlockTransaction(xid, this.endpoint);
 			if (success) {
 				transaction.forgetQuietly(); // forget transaction
-			}
+			} // end-if (success)
 		}
 
 	}

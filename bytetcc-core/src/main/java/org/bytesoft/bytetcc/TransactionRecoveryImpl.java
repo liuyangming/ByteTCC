@@ -324,7 +324,7 @@ public class TransactionRecoveryImpl
 		org.bytesoft.transaction.TransactionContext transactionContext = transaction.getTransactionContext();
 		TransactionXid xid = transactionContext.getXid();
 
-		boolean locked = false;
+		boolean forgetRequired = false;
 		try {
 			compensableManager.associateThread(transaction);
 
@@ -332,49 +332,51 @@ public class TransactionRecoveryImpl
 			case Status.STATUS_ACTIVE:
 			case Status.STATUS_MARKED_ROLLBACK:
 			case Status.STATUS_PREPARING:
-			case Status.STATUS_UNKNOWN: // TODO
+			case Status.STATUS_UNKNOWN: /* TODO */ {
 				if (transactionContext.isPropagated() == false) {
-					locked = compensableLock.lockTransaction(xid, this.endpoint);
+					boolean locked = compensableLock.lockTransaction(xid, this.endpoint);
 					if (locked == false) {
 						throw new SystemException();
 					}
 
 					transaction.recoveryRollback();
-					transaction.forgetQuietly();
+					forgetRequired = true;
 				}
 				break;
+			}
 			case Status.STATUS_ROLLING_BACK: {
-				locked = compensableLock.lockTransaction(xid, this.endpoint);
+				boolean locked = compensableLock.lockTransaction(xid, this.endpoint);
 				if (locked == false) {
 					throw new SystemException();
 				}
 
 				transaction.recoveryRollback();
-				transaction.forgetQuietly();
+				forgetRequired = true;
 				break;
 			}
 			case Status.STATUS_PREPARED:
 			case Status.STATUS_COMMITTING: {
-				locked = compensableLock.lockTransaction(xid, this.endpoint);
+				boolean locked = compensableLock.lockTransaction(xid, this.endpoint);
 				if (locked == false) {
 					throw new SystemException();
 				}
 
 				transaction.recoveryCommit();
-				transaction.forgetQuietly();
+				forgetRequired = true;
 				break;
 			}
 			case Status.STATUS_COMMITTED:
 			case Status.STATUS_ROLLEDBACK:
-				transaction.forgetQuietly();
+				forgetRequired = true;
 				break;
 			default: // ignore
 			}
 		} finally {
-			if (locked) {
-				compensableLock.unlockTransaction(xid, this.endpoint);
-			} // end-if (locked)
 			compensableManager.desociateThread();
+			compensableLock.unlockTransaction(xid, this.endpoint);
+			if (forgetRequired) {
+				transaction.forgetQuietly(); // forget transaction
+			} // end-if (forgetRequired)
 		}
 
 	}
