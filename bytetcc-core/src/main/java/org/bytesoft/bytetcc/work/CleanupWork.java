@@ -123,42 +123,20 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableEndpo
 	}
 
 	public void run() {
+		this.startupRecover(); // initialize
 
-		try {
-			this.startupRecover();
-		} catch (Exception ex) {
-			logger.error("Error occurred while starting cleanup task!", ex);
-		}
-
-		long swapMillis = System.currentTimeMillis() + 1000L * 60;
+		long swapMillis = System.currentTimeMillis() + 1000L * 30;
 
 		while (this.released == false) {
-			if (System.currentTimeMillis() > swapMillis) {
-				this.compressSlaverQuietly();
+			if (System.currentTimeMillis() < swapMillis) {
+				this.waitingFor(100);
+			} else {
 				this.switchMasterAndSlaver();
+				swapMillis = System.currentTimeMillis() + 1000L * 30;
 
-				swapMillis = System.currentTimeMillis() + 1000L * 60;
-				continue;
-			} // end-if (System.currentTimeMillis() > swapMillis)
-
-			long startMillis = System.currentTimeMillis();
-
-			long time = System.currentTimeMillis() / 1000L;
-			long mode = time % 30;
-
-			if (mode == 0 || mode == 29) {
-				this.waitingFor(1000L);
-				continue;
+				this.cleanupSlaver();
+				this.compressSlaver();
 			}
-
-			this.cleanupSlaver(29 - mode); // at least 1s
-
-			long costSeconds = (System.currentTimeMillis() - startMillis) / 1000L;
-			long value = (mode + costSeconds) % 30;
-			if (value != 0 && value != 29 && (mode + costSeconds) < 30) {
-				this.waitingFor(1000L * (29 - value));
-			} // end-if (value != 0 && value != 29 && (mode + costSeconds) < 30)
-
 		}
 
 		this.destroy();
@@ -173,55 +151,43 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableEndpo
 		}
 	}
 
-	private void compressSlaverQuietly() {
+	private void compressSlaver() {
 		this.slaver.timingCompress(); // compress
 	}
 
-	private void cleanupSlaver(long seconds) {
-		long stopMillis = System.currentTimeMillis() + 1000L * seconds;
-
+	private void cleanupSlaver() {
 		Map<String, Set<CleanupRecord>> recordMap = this.slaver.getRecordMap();
 		Set<Map.Entry<String, Set<CleanupRecord>>> entrySet = recordMap.entrySet();
 		Iterator<Map.Entry<String, Set<CleanupRecord>>> itr = entrySet.iterator();
 
-		while (System.currentTimeMillis() < stopMillis && itr.hasNext()) {
+		while (itr.hasNext()) {
 			Map.Entry<String, Set<CleanupRecord>> entry = itr.next();
 			String resourceId = entry.getKey();
 			Set<CleanupRecord> records = entry.getValue();
 
-			long value = (stopMillis - System.currentTimeMillis()) / 1000L;
-			if (value <= 0) {
-				break;
-			} // end-if (value <= 0)
-
-			this.cleanupByResource(resourceId, records, value);
+			this.cleanupByResource(resourceId, records);
 		}
 
 	}
 
-	private void cleanupByResource(String resourceId, Set<CleanupRecord> records, long seconds) {
-		long stopMillis = System.currentTimeMillis() + 1000L * seconds;
-
+	private void cleanupByResource(String resourceId, Set<CleanupRecord> records) {
 		int remain = records.size();
 		Iterator<CleanupRecord> recordItr = records.iterator();
-		while (System.currentTimeMillis() < stopMillis && recordItr.hasNext()) {
+		while (recordItr.hasNext()) {
 			List<CleanupRecord> recordList = new ArrayList<CleanupRecord>();
 			List<Xid> xidList = new ArrayList<Xid>();
 
-			int batchSize = remain > 1000 && remain < 1100 ? remain : 1000; // 1000
+			int defaultBatchSize = 2000;
+			int maxBatchSize = defaultBatchSize * 5 / 4;
+			int batchSize = remain > defaultBatchSize && remain < maxBatchSize ? remain : defaultBatchSize;
 			for (int i = 0; i < batchSize && recordItr.hasNext(); i++, remain--) {
 				CleanupRecord record = recordItr.next();
 				recordList.add(record);
 				xidList.add(record.getXid());
 			} // end-for (int i = 0; i < batchSize && recordItr.hasNext(); i++, remain--)
 
-			long time = System.currentTimeMillis() / 1000L;
-			long mode = time % 60;
-
-			// LocalXAResource.end(Xid,int): mode < 30 ? bytejta_one : bytejta_two;
-			boolean flag = mode < 30 ? false : true; // [converse] bytejta_two : bytejta_one
 			try {
-				this.cleanup(resourceId, xidList, flag);
+				this.cleanup(resourceId, xidList);
 			} catch (RuntimeException rex) {
 				logger.error("forget-transaction: error occurred while forgetting branch: resource= {}, xids= {}", resourceId,
 						xidList, rex);
@@ -231,14 +197,10 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableEndpo
 			for (int i = 0; i < recordList.size(); i++) {
 				CleanupRecord record = recordList.get(i);
 				int recordFlag = record.getRecordFlag();
-				if (flag) {
-					record.setRecordFlag(recordFlag | 0x2);
-				} else {
-					record.setRecordFlag(recordFlag | 0x4);
-				}
+				record.setRecordFlag(recordFlag | 0x2);
 			}
 
-		} // end-while (System.currentTimeMillis() < stopMillis && recordItr.hasNext())
+		} // end-while (recordItr.hasNext())
 	}
 
 	public void switchMasterAndSlaver() {
@@ -256,7 +218,7 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableEndpo
 		}
 	}
 
-	private void cleanup(String resourceId, List<Xid> xidList, boolean flag) throws RuntimeException {
+	private void cleanup(String resourceId, List<Xid> xidList) throws RuntimeException {
 		XAResourceDeserializer resourceDeserializer = this.beanFactory.getResourceDeserializer();
 		if (StringUtils.isBlank(resourceId)) {
 			throw new IllegalStateException();
@@ -268,7 +230,7 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableEndpo
 				(LocalXAResourceDescriptor) resourceDeserializer.deserialize(resourceId);
 		RecoveredResource resource = (RecoveredResource) descriptor.getDelegate();
 		try {
-			resource.forget(xidArray, flag);
+			resource.forget(xidArray);
 		} catch (XAException xaex) {
 			switch (xaex.errorCode) {
 			case XAException.XAER_NOTA:
