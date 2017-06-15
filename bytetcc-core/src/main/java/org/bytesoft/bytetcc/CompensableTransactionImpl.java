@@ -214,7 +214,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 
 	}
 
-	private synchronized void fireNativeParticipantConfirm() throws SystemException {
+	private void fireNativeParticipantConfirm() throws SystemException {
 		boolean errorExists = false;
 
 		ContainerContext container = this.beanFactory.getContainerContext();
@@ -259,7 +259,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 
 	}
 
-	private synchronized void fireRemoteParticipantConfirm()
+	private void fireRemoteParticipantConfirm()
 			throws HeuristicMixedException, HeuristicRollbackException, CommitRequiredException, SystemException {
 		boolean committedExists = false;
 		boolean rolledbackExists = false;
@@ -485,7 +485,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 		this.fireRollback();
 	}
 
-	private synchronized void fireNativeParticipantCancel() throws SystemException {
+	private void fireNativeParticipantCancel() throws SystemException {
 		boolean errorExists = false;
 
 		ContainerContext container = this.beanFactory.getContainerContext();
@@ -536,7 +536,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 
 	}
 
-	private synchronized void fireRemoteParticipantCancel() throws RollbackRequiredException, SystemException {
+	private void fireRemoteParticipantCancel() throws RollbackRequiredException, SystemException {
 		boolean committedExists = false;
 		boolean rolledbackExists = false;
 		boolean unFinishExists = false;
