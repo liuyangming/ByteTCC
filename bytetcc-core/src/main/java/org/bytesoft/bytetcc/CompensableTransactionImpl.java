@@ -684,7 +684,9 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 			String identifier = descriptor.getIdentifier();
 
 			XAResourceArchive archive = this.resourceMap.remove(identifier);
-			this.resourceList.remove(archive);
+			if (archive != null) {
+				this.resourceList.remove(archive);
+			} // end-if (archive != null)
 
 			compensableLogger.updateTransaction(this.getTransactionArchive());
 		}
