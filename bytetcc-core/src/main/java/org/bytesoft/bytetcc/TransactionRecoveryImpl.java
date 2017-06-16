@@ -46,6 +46,7 @@ import org.bytesoft.transaction.archive.TransactionArchive;
 import org.bytesoft.transaction.archive.XAResourceArchive;
 import org.bytesoft.transaction.recovery.TransactionRecoveryCallback;
 import org.bytesoft.transaction.recovery.TransactionRecoveryListener;
+import org.bytesoft.transaction.supports.resource.XAResourceDescriptor;
 import org.bytesoft.transaction.supports.serialize.XAResourceDeserializer;
 import org.bytesoft.transaction.xa.TransactionXid;
 import org.bytesoft.transaction.xa.XidFactory;
@@ -142,7 +143,11 @@ public class TransactionRecoveryImpl
 		List<XAResourceArchive> participantList = archive.getRemoteResources();
 		for (int i = 0; i < participantList.size(); i++) {
 			XAResourceArchive participantArchive = participantList.get(i);
+			XAResourceDescriptor descriptor = participantArchive.getDescriptor();
+			String identifier = descriptor.getIdentifier();
+
 			transaction.getParticipantArchiveList().add(participantArchive);
+			transaction.getParticipantArchiveMap().put(identifier, participantArchive);
 		}
 
 		List<CompensableArchive> compensableList = archive.getCompensableResourceList();

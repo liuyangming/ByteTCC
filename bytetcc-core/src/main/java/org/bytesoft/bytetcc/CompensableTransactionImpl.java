@@ -37,7 +37,6 @@ import org.bytesoft.bytejta.supports.jdbc.RecoveredResource;
 import org.bytesoft.bytejta.supports.resource.RemoteResourceDescriptor;
 import org.bytesoft.bytetcc.supports.resource.LocalResourceCleaner;
 import org.bytesoft.common.utils.ByteUtils;
-import org.bytesoft.common.utils.CommonUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableInvocation;
 import org.bytesoft.compensable.CompensableTransaction;
@@ -66,6 +65,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 
 	private final TransactionContext transactionContext;
 	private final List<CompensableArchive> archiveList = new ArrayList<CompensableArchive>();
+	private final Map<String, XAResourceArchive> resourceMap = new HashMap<String, XAResourceArchive>();
 	private final List<XAResourceArchive> resourceList = new ArrayList<XAResourceArchive>();
 	private Transaction transaction;
 	private CompensableBeanFactory beanFactory;
@@ -650,18 +650,10 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 		if (RemoteResourceDescriptor.class.isInstance(xaRes) == false) {
 			throw new SystemException("Invalid resource!");
 		}
-		XAResourceArchive resourceArchive = null;
 		RemoteResourceDescriptor descriptor = (RemoteResourceDescriptor) xaRes;
 		String identifier = descriptor.getIdentifier();
-		for (int i = 0; i < this.resourceList.size(); i++) {
-			XAResourceArchive resource = this.resourceList.get(i);
-			String resourceKey = resource.getDescriptor().getIdentifier();
-			if (CommonUtils.equals(identifier, resourceKey)) {
-				resourceArchive = resource;
-				break;
-			}
-		}
 
+		XAResourceArchive resourceArchive = this.resourceMap.get(identifier);
 		if (resourceArchive == null) {
 			XidFactory xidFactory = this.beanFactory.getCompensableXidFactory();
 			TransactionXid globalXid = this.transactionContext.getXid();
@@ -670,6 +662,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 			resourceArchive.setXid(branchXid);
 			resourceArchive.setDescriptor(descriptor);
 			this.resourceList.add(resourceArchive);
+			this.resourceMap.put(identifier, resourceArchive);
 
 			compensableLogger.createCoordinator(resourceArchive);
 
@@ -689,14 +682,9 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 		if (flag == XAResource.TMFAIL && RemoteResourceDescriptor.class.isInstance(xaRes)) {
 			RemoteResourceDescriptor descriptor = (RemoteResourceDescriptor) xaRes;
 			String identifier = descriptor.getIdentifier();
-			for (Iterator<XAResourceArchive> itr = this.resourceList.iterator(); itr.hasNext();) {
-				XAResourceArchive resource = itr.next();
-				String resourceKey = resource.getDescriptor().getIdentifier();
-				if (CommonUtils.equals(identifier, resourceKey)) {
-					itr.remove();
-					break;
-				}
-			}
+
+			XAResourceArchive archive = this.resourceMap.remove(identifier);
+			this.resourceList.remove(archive);
 
 			compensableLogger.updateTransaction(this.getTransactionArchive());
 		}
@@ -1053,13 +1041,8 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 		}
 
 		if (descriptor == null) {
-			for (int i = 0; descriptor == null && i < this.resourceList.size(); i++) {
-				XAResourceArchive element = this.resourceList.get(i);
-				XAResourceDescriptor xard = element.getDescriptor();
-				if (StringUtils.equals(identifier, xard.getIdentifier())) {
-					descriptor = xard;
-				}
-			}
+			XAResourceArchive archive = this.resourceMap.get(identifier);
+			descriptor = archive == null ? descriptor : archive.getDescriptor();
 		}
 
 		return descriptor;
@@ -1074,6 +1057,13 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 	 */
 	public List<CompensableArchive> getCompensableArchiveList() {
 		return this.archiveList;
+	}
+
+	/**
+	 * only for recovery.
+	 */
+	public Map<String, XAResourceArchive> getParticipantArchiveMap() {
+		return this.resourceMap;
 	}
 
 	/**
