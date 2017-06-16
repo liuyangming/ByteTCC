@@ -253,7 +253,7 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableEndpo
 
 			try {
 				this.channel.position(this.endIndex);
-				buffer.flip();
+				buffer.rewind();
 				this.channel.write(buffer);
 			} catch (Exception ex) {
 				throw new IllegalStateException(ex.getMessage());
@@ -414,18 +414,19 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableEndpo
 							previou.put(current);
 
 							previou.flip();
-							current.flip();
+							current.rewind();
 
 							this.channel.position(position);
 							this.channel.write(current);
 
-							previou.flip();
+							previou.rewind();
 							current.clear();
 						}
 
 						this.channel.position(index);
 						ByteBuffer buffer = ByteBuffer.allocate(1);
 						buffer.put((byte) 0x0);
+						buffer.flip();
 						this.channel.write(buffer);
 					}
 					position = index + CONSTANTS_RECORD_SIZE + 1;
@@ -435,7 +436,7 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableEndpo
 			} finally {
 				this.lock.unlock();
 
-				previou.flip();
+				previou.rewind();
 				current.clear();
 			}
 		}
