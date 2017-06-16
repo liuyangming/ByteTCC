@@ -410,6 +410,8 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableEndpo
 				if (enabled) {
 					if (index != position) {
 						if (previou.equals(current) == false) {
+							previou.clear();
+
 							previou.put((byte) 0x1);
 							previou.put(current);
 
