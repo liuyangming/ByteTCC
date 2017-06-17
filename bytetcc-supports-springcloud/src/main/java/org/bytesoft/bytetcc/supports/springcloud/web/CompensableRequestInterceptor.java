@@ -17,6 +17,7 @@ package org.bytesoft.bytetcc.supports.springcloud.web;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
 import org.bytesoft.bytejta.supports.rpc.TransactionRequestImpl;
@@ -32,8 +33,9 @@ import org.bytesoft.compensable.CompensableManager;
 import org.bytesoft.compensable.TransactionContext;
 import org.bytesoft.compensable.aware.CompensableEndpointAware;
 import org.bytesoft.transaction.archive.XAResourceArchive;
-import org.bytesoft.transaction.supports.resource.XAResourceDescriptor;
 import org.bytesoft.transaction.supports.rpc.TransactionInterceptor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
@@ -45,9 +47,12 @@ import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.web.client.HttpClientErrorException;
 
 import com.netflix.loadbalancer.Server;
+import com.netflix.loadbalancer.Server.MetaInfo;
 
 public class CompensableRequestInterceptor
 		implements ClientHttpRequestInterceptor, CompensableEndpointAware, ApplicationContextAware {
+	static final Logger logger = LoggerFactory.getLogger(CompensableRequestInterceptor.class);
+
 	static final String HEADER_TRANCACTION_KEY = "org.bytesoft.bytetcc.transaction";
 	static final String HEADER_PROPAGATION_KEY = "org.bytesoft.bytetcc.propagation";
 
@@ -73,29 +78,35 @@ public class CompensableRequestInterceptor
 			return execution.execute(httpRequest, body);
 		}
 
-		final List<XAResourceArchive> participantList = compensable.getParticipantArchiveList();
+		final Map<String, XAResourceArchive> participants = compensable.getParticipantArchiveMap();
 		beanRegistry.setRibbonInterceptor(new CompensableRibbonInterceptor() {
 			public Server beforeCompletion(List<Server> servers) {
-				for (int i = 0; servers != null && participantList != null && i < servers.size(); i++) {
+				for (int i = 0; servers != null && i < servers.size(); i++) {
 					Server server = servers.get(i);
-					String instanceId = server.getMetaInfo().getInstanceId();
-					for (int j = 0; participantList != null && j < participantList.size(); j++) {
-						XAResourceArchive archive = participantList.get(j);
-						XAResourceDescriptor descriptor = archive.getDescriptor();
-						String identifier = descriptor.getIdentifier();
-						if (StringUtils.equals(instanceId, identifier)) {
-							return server;
-						}
-					}
+					MetaInfo metaInfo = server.getMetaInfo();
+					String instanceId = metaInfo.getInstanceId();
+					if (participants.containsKey(instanceId)) {
+						return server;
+					} // end-if (participants.containsKey(instanceId))
 				}
+
+				logger.warn("There is no suitable server: expect= {}, actual= {}!", participants.keySet(), servers);
 				return null;
 			}
 
 			public void afterCompletion(Server server) {
-				try {
-					invokeBeforeSendRequest(httpRequest, server.getMetaInfo().getInstanceId());
-				} catch (IOException ex) {
-					throw new RuntimeException(ex);
+				if (server == null) {
+					logger.warn(
+							"There is no suitable server, the TransactionInterceptor.beforeSendRequest() operation is not executed!");
+					return;
+				} else {
+					try {
+						MetaInfo metaInfo = server.getMetaInfo();
+						String instanceId = metaInfo.getInstanceId();
+						invokeBeforeSendRequest(httpRequest, instanceId);
+					} catch (IOException ex) {
+						throw new RuntimeException(ex);
+					}
 				}
 			}
 		});

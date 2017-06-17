@@ -20,7 +20,6 @@ import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.lang.StringUtils;
 import org.bytesoft.bytejta.supports.rpc.TransactionRequestImpl;
 import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
 import org.bytesoft.bytetcc.CompensableTransactionImpl;
@@ -30,15 +29,18 @@ import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableManager;
 import org.bytesoft.compensable.TransactionContext;
 import org.bytesoft.transaction.archive.XAResourceArchive;
-import org.bytesoft.transaction.supports.resource.XAResourceDescriptor;
 import org.bytesoft.transaction.supports.rpc.TransactionInterceptor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.netflix.loadbalancer.Server;
+import com.netflix.loadbalancer.Server.MetaInfo;
 
 import feign.InvocationHandlerFactory.MethodHandler;
 import feign.Target;
 
 public class CompensableFeignHandler implements InvocationHandler {
+	static final Logger logger = LoggerFactory.getLogger(CompensableFeignHandler.class);
 
 	private Target<?> target;
 	private Map<Method, MethodHandler> handlers;
@@ -63,31 +65,36 @@ public class CompensableFeignHandler implements InvocationHandler {
 				return this.handlers.get(method).invoke(args);
 			}
 
-			final List<XAResourceArchive> participantList = compensable.getParticipantArchiveList();
-
+			final Map<String, XAResourceArchive> participants = compensable.getParticipantArchiveMap();
 			beanRegistry.setRibbonInterceptor(new CompensableRibbonInterceptor() {
 				public Server beforeCompletion(List<Server> servers) {
-					for (int i = 0; servers != null && participantList != null && i < servers.size(); i++) {
+					for (int i = 0; servers != null && i < servers.size(); i++) {
 						Server server = servers.get(i);
-						String instanceId = server.getMetaInfo().getInstanceId();
-						for (int j = 0; participantList != null && j < participantList.size(); j++) {
-							XAResourceArchive archive = participantList.get(j);
-							XAResourceDescriptor descriptor = archive.getDescriptor();
-							String identifier = descriptor.getIdentifier();
-							if (StringUtils.equals(instanceId, identifier)) {
-								return server;
-							}
-						}
+						MetaInfo metaInfo = server.getMetaInfo();
+						String instanceId = metaInfo.getInstanceId();
+						if (participants.containsKey(instanceId)) {
+							return server;
+						} // end-if (participants.containsKey(instanceId))
 					}
+
+					logger.warn("There is no suitable server: expect= {}, actual= {}!", participants.keySet(), servers);
 					return null;
 				}
 
 				public void afterCompletion(Server server) {
 					beanRegistry.removeRibbonInterceptor();
 
+					if (server == null) {
+						logger.warn(
+								"There is no suitable server, the TransactionInterceptor.beforeSendRequest() operation is not executed!");
+						return;
+					} // end-if (server == null)
+
 					TransactionRequestImpl request = new TransactionRequestImpl();
 					request.setTransactionContext(transactionContext);
-					String identifier = server.getMetaInfo().getInstanceId();
+
+					MetaInfo metaInfo = server.getMetaInfo();
+					String identifier = metaInfo.getInstanceId();
 					RemoteCoordinator coordinator = beanRegistry.getConsumeCoordinator(identifier);
 					request.setTargetTransactionCoordinator(coordinator);
 
