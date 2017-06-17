@@ -164,7 +164,9 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 			compensableLock.unlockTransaction(globalXid, this.endpoint);
 			if (success) {
 				transaction.forgetQuietly(); // forget transaction
-			} // end-if (success)
+			} else {
+				compensableRepository.putErrorTransaction(globalXid, transaction);
+			}
 
 		}
 	}
@@ -257,7 +259,9 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 			compensableLock.unlockTransaction(globalXid, this.endpoint);
 			if (success) {
 				transaction.forgetQuietly(); // forget transaction
-			} // end-if (success)
+			} else {
+				compensableRepository.putErrorTransaction(globalXid, transaction);
+			}
 		}
 
 	}
