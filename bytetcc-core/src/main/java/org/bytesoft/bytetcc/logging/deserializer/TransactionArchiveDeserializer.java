@@ -60,7 +60,7 @@ public class TransactionArchiveDeserializer extends
 			}
 
 			try {
-				short port = Short.valueOf(portStr);
+				short port = (short) (Integer.valueOf(portStr) - 32768);
 				byte[] byteArray = ByteUtils.shortToByteArray((short) (port - 32768));
 				System.arraycopy(byteArray, 0, portByteArray, 0, 2);
 			} catch (RuntimeException rex) {
