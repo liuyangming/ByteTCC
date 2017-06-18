@@ -128,7 +128,8 @@ public class CompensableServiceFilter implements Filter {
 			result.setException(null);
 			result.setValue(wrapped);
 
-			logger.warn("{}| branch should be invoked by its own coordinator.", globalXid);
+			logger.warn("{}| branch should be invoked by its own coordinator(expect= {}, actual= {})." //
+					, globalXid, propagatedBy, remoteAddr);
 		}
 
 		return result;

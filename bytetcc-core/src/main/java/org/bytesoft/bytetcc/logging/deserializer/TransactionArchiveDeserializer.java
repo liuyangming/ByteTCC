@@ -61,7 +61,7 @@ public class TransactionArchiveDeserializer extends org.bytesoft.bytejta.logging
 
 			try {
 				short port = Short.valueOf(portStr);
-				byte[] byteArray = ByteUtils.shortToByteArray(port);
+				byte[] byteArray = ByteUtils.shortToByteArray((short) (port - 32768));
 				System.arraycopy(byteArray, 0, portByteArray, 0, 2);
 			} catch (RuntimeException rex) {
 				logger.debug(rex.getMessage(), rex);
@@ -192,7 +192,7 @@ public class TransactionArchiveDeserializer extends org.bytesoft.bytejta.logging
 			}
 		}
 		String host = ber.toString();
-		int port = buffer.getShort();
+		int port = 32768 + buffer.getShort();
 		archive.setPropagatedBy(String.format("%s:%s", host, port));
 
 		short sizeOfVar = buffer.getShort();
