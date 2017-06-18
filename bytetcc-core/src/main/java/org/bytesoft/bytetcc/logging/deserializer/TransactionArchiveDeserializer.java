@@ -31,8 +31,8 @@ import org.bytesoft.transaction.xa.TransactionXid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class TransactionArchiveDeserializer extends org.bytesoft.bytejta.logging.deserializer.TransactionArchiveDeserializer
-		implements ArchiveDeserializer {
+public class TransactionArchiveDeserializer extends
+		org.bytesoft.bytejta.logging.deserializer.TransactionArchiveDeserializer implements ArchiveDeserializer {
 	static final Logger logger = LoggerFactory.getLogger(TransactionArchiveDeserializer.class);
 
 	private ArchiveDeserializer resourceArchiveDeserializer;
@@ -60,8 +60,8 @@ public class TransactionArchiveDeserializer extends org.bytesoft.bytejta.logging
 			}
 
 			try {
-				short port = Short.valueOf(portStr);
-				byte[] byteArray = ByteUtils.shortToByteArray((short) (port - 32768));
+				short port = (short) (Integer.valueOf(portStr) - 32768);
+				byte[] byteArray = ByteUtils.shortToByteArray(port);
 				System.arraycopy(byteArray, 0, portByteArray, 0, 2);
 			} catch (RuntimeException rex) {
 				logger.debug(rex.getMessage(), rex);
