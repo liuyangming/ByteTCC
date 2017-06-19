@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.bytesoft</groupId>
 		<artifactId>bytetcc-parent</artifactId>
-		<version>0.3.4</version>
+		<version>0.3.5</version>
 	</parent>
 	<artifactId>bytetcc-supports</artifactId>
 	<packaging>jar</packaging>
@@ -22,7 +22,7 @@
 		<dependency>
 			<groupId>org.bytesoft</groupId>
 			<artifactId>bytetcc-core</artifactId>
-			<version>0.3.4</version>
+			<version>0.3.5</version>
 		</dependency>
 		<dependency>
 			<groupId>org.bytesoft</groupId>
