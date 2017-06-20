@@ -41,10 +41,9 @@ public class CompensableBeanPostProcessor implements BeanPostProcessor {
 		org.springframework.aop.framework.Advised advised = (org.springframework.aop.framework.Advised) bean;
 
 		Class<?> targetClass = advised.getTargetClass();
-		Compensable annotation = targetClass.getAnnotation(Compensable.class);
-		if (annotation == null) {
+		if (targetClass == null || targetClass.getAnnotation(Compensable.class) == null) {
 			return;
-		}
+		} // end-if (targetClass == null || targetClass.getAnnotation(Compensable.class) == null)
 
 		Advisor[] advisors = advised.getAdvisors();
 
