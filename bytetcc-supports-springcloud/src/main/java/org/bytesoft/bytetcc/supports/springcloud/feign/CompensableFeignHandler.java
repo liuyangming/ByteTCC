@@ -25,6 +25,7 @@ import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
 import org.bytesoft.bytetcc.CompensableTransactionImpl;
 import org.bytesoft.bytetcc.supports.springcloud.SpringCloudBeanRegistry;
 import org.bytesoft.bytetcc.supports.springcloud.ribbon.CompensableRibbonInterceptor;
+import org.bytesoft.bytetcc.supports.springcloud.rpc.TransactionResponseImpl;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableManager;
 import org.bytesoft.compensable.TransactionContext;
@@ -65,6 +66,9 @@ public class CompensableFeignHandler implements InvocationHandler {
 				return this.handlers.get(method).invoke(args);
 			}
 
+			final TransactionRequestImpl request = new TransactionRequestImpl();
+			final TransactionResponseImpl response = new TransactionResponseImpl();
+
 			final Map<String, XAResourceArchive> participants = compensable.getParticipantArchiveMap();
 			beanRegistry.setRibbonInterceptor(new CompensableRibbonInterceptor() {
 				public Server beforeCompletion(List<Server> servers) {
@@ -90,7 +94,7 @@ public class CompensableFeignHandler implements InvocationHandler {
 						return;
 					} // end-if (server == null)
 
-					TransactionRequestImpl request = new TransactionRequestImpl();
+					// TransactionRequestImpl request = new TransactionRequestImpl();
 					request.setTransactionContext(transactionContext);
 
 					MetaInfo metaInfo = server.getMetaInfo();
@@ -102,7 +106,25 @@ public class CompensableFeignHandler implements InvocationHandler {
 				}
 			});
 
-			return this.handlers.get(method).invoke(args);
+			try {
+				return this.handlers.get(method).invoke(args);
+
+				// catch (feign.RetryableException ex) {
+				// // Throwable cause = ex.getCause();
+				// // boolean participantDelistFlag = cause != null && java.net.ConnectException.class.isInstance(cause);
+				// // response.setParticipantDelistFlag(participantDelistFlag);
+			} finally {
+				if (response.isIntercepted() == false) {
+					response.setTransactionContext(transactionContext);
+
+					RemoteCoordinator coordinator = request.getTargetTransactionCoordinator();
+					response.setSourceTransactionCoordinator(coordinator);
+					response.setParticipantEnlistFlag(request.isParticipantEnlistFlag());
+
+					transactionInterceptor.afterReceiveResponse(response);
+				} // end-if (response.isIntercepted() == false)
+			}
+
 		}
 	}
 

@@ -21,6 +21,7 @@ import java.util.Map;
 
 import org.bytesoft.bytetcc.supports.springcloud.feign.CompensableFeignContract;
 import org.bytesoft.bytetcc.supports.springcloud.feign.CompensableFeignDecoder;
+import org.bytesoft.bytetcc.supports.springcloud.feign.CompensableFeignErrorDecoder;
 import org.bytesoft.bytetcc.supports.springcloud.feign.CompensableFeignHandler;
 import org.bytesoft.bytetcc.supports.springcloud.feign.CompensableFeignInterceptor;
 import org.bytesoft.bytetcc.supports.springcloud.ribbon.CompensableRibbonRule;
@@ -47,12 +48,13 @@ import feign.Feign;
 import feign.Feign.Builder;
 import feign.InvocationHandlerFactory;
 import feign.Target;
+import feign.codec.ErrorDecoder;
 
 @Configuration
 public class SpringCloudConfiguration extends WebMvcConfigurerAdapter
 		implements CompensableEndpointAware, ApplicationContextAware {
 
-	private String endpoint;
+	private String identifier;
 	private ApplicationContext applicationContext;
 
 	public void addInterceptors(InterceptorRegistry registry) {
@@ -89,7 +91,9 @@ public class SpringCloudConfiguration extends WebMvcConfigurerAdapter
 
 	@org.springframework.context.annotation.Bean
 	public CompensableFeignInterceptor compensableFeignInterceptor() {
-		return new CompensableFeignInterceptor();
+		CompensableFeignInterceptor interceptor = new CompensableFeignInterceptor();
+		interceptor.setEndpoint(this.identifier);
+		return interceptor;
 	}
 
 	@org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean(feign.Contract.class)
@@ -116,17 +120,31 @@ public class SpringCloudConfiguration extends WebMvcConfigurerAdapter
 		return new CompensableFeignDecoder(decoder);
 	}
 
+	@org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean(feign.codec.ErrorDecoder.class)
+	@org.springframework.context.annotation.Bean
+	public feign.codec.ErrorDecoder errorDecoder() {
+		return new ErrorDecoder.Default();
+	}
+
+	@org.springframework.context.annotation.Primary
+	@org.springframework.context.annotation.Bean
+	public feign.codec.ErrorDecoder compensableErrorDecoder(@Autowired feign.codec.ErrorDecoder decoder) {
+		return new CompensableFeignErrorDecoder(decoder);
+	}
+
 	@org.springframework.context.annotation.Bean
 	public CompensableHandlerInterceptor compensableHandlerInterceptor() {
 		CompensableHandlerInterceptor interceptor = new CompensableHandlerInterceptor();
-		interceptor.setEndpoint(this.endpoint);
+		interceptor.setEndpoint(this.identifier);
 		// interceptor.setApplicationContext(this.applicationContext);
 		return interceptor;
 	}
 
 	@org.springframework.context.annotation.Bean
 	public CompensableRequestInterceptor compensableRequestInterceptor() {
-		return new CompensableRequestInterceptor();
+		CompensableRequestInterceptor interceptor = new CompensableRequestInterceptor();
+		interceptor.setEndpoint(this.identifier);
+		return interceptor;
 	}
 
 	@org.springframework.context.annotation.Bean("compensableRestTemplate")
@@ -152,7 +170,7 @@ public class SpringCloudConfiguration extends WebMvcConfigurerAdapter
 	}
 
 	public void setEndpoint(String identifier) {
-		this.endpoint = identifier;
+		this.identifier = identifier;
 	}
 
 	public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {

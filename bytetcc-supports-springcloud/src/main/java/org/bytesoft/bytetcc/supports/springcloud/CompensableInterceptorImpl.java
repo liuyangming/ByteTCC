@@ -15,6 +15,7 @@
  */
 package org.bytesoft.bytetcc.supports.springcloud;
 
+import org.bytesoft.bytetcc.supports.springcloud.rpc.TransactionResponseImpl;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableManager;
 import org.bytesoft.compensable.CompensableTransaction;
@@ -56,6 +57,10 @@ public class CompensableInterceptorImpl implements TransactionInterceptor, Compe
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 		CompensableTransaction compensable = compensableManager.getCompensableTransactionQuietly();
 		if (compensable != null && compensable.getTransactionContext().isCompensable()) {
+			if (TransactionResponseImpl.class.isInstance(response)) {
+				((TransactionResponseImpl) response).setIntercepted(true);
+			} // end-if (TransactionResponseImpl.class.isInstance(response))
+
 			this.compensableInterceptor.afterReceiveResponse(response);
 		}
 	}

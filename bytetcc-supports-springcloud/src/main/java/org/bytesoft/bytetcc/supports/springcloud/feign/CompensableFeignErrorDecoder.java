@@ -16,7 +16,6 @@
 package org.bytesoft.bytetcc.supports.springcloud.feign;
 
 import java.io.IOException;
-import java.lang.reflect.Type;
 import java.util.Collection;
 import java.util.Map;
 
@@ -28,25 +27,23 @@ import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.common.utils.CommonUtils;
 import org.bytesoft.compensable.TransactionContext;
 
-import feign.FeignException;
 import feign.Request;
 import feign.Response;
-import feign.codec.DecodeException;
 
-public class CompensableFeignDecoder implements feign.codec.Decoder {
+public class CompensableFeignErrorDecoder implements feign.codec.ErrorDecoder {
 	static final String HEADER_TRANCACTION_KEY = "org.bytesoft.bytetcc.transaction";
 	static final String HEADER_PROPAGATION_KEY = "org.bytesoft.bytetcc.propagation";
 
-	private feign.codec.Decoder delegate;
+	private feign.codec.ErrorDecoder delegate;
 
-	public CompensableFeignDecoder() {
+	public CompensableFeignErrorDecoder() {
 	}
 
-	public CompensableFeignDecoder(feign.codec.Decoder decoder) {
+	public CompensableFeignErrorDecoder(feign.codec.ErrorDecoder decoder) {
 		this.delegate = decoder;
 	}
 
-	public Object decode(Response resp, Type type) throws IOException, DecodeException, FeignException {
+	public Exception decode(String methodKey, Response resp) {
 		Request request = resp.request();
 
 		String reqTransactionStr = this.getHeaderValue(request, HEADER_TRANCACTION_KEY);
@@ -56,25 +53,30 @@ public class CompensableFeignDecoder implements feign.codec.Decoder {
 		String respPropagationStr = this.getHeaderValue(resp, HEADER_PROPAGATION_KEY);
 
 		if (StringUtils.isBlank(reqTransactionStr)) {
-			return this.delegate.decode(resp, type);
+			return this.delegate.decode(methodKey, resp);
 		} else if (StringUtils.isBlank(reqPropagationStr)) {
-			return this.delegate.decode(resp, type);
+			return this.delegate.decode(methodKey, resp);
 		}
 
 		String transactionStr = StringUtils.isBlank(respTransactionStr) ? reqTransactionStr : respTransactionStr;
 		String propagationStr = StringUtils.isBlank(respPropagationStr) ? reqTransactionStr : respPropagationStr;
 
-		byte[] byteArray = ByteUtils.stringToByteArray(transactionStr);
-		TransactionContext transactionContext = (TransactionContext) CommonUtils.deserializeObject(byteArray);
+		// int status = resp.status();
+		try {
+			byte[] byteArray = ByteUtils.stringToByteArray(transactionStr);
+			TransactionContext transactionContext = (TransactionContext) CommonUtils.deserializeObject(byteArray);
 
-		SpringCloudBeanRegistry beanRegistry = SpringCloudBeanRegistry.getInstance();
-		RemoteCoordinator remoteCoordinator = beanRegistry.getConsumeCoordinator(propagationStr);
+			SpringCloudBeanRegistry beanRegistry = SpringCloudBeanRegistry.getInstance();
+			RemoteCoordinator remoteCoordinator = beanRegistry.getConsumeCoordinator(propagationStr);
 
-		TransactionResponseImpl response = new TransactionResponseImpl();
-		response.setTransactionContext(transactionContext);
-		response.setSourceTransactionCoordinator(remoteCoordinator);
+			TransactionResponseImpl response = new TransactionResponseImpl();
+			response.setTransactionContext(transactionContext);
+			response.setSourceTransactionCoordinator(remoteCoordinator);
+		} catch (IOException ex) {
+			return this.delegate.decode(methodKey, resp);
+		}
 
-		return this.delegate.decode(resp, type);
+		return this.delegate.decode(methodKey, resp);
 	}
 
 	private String getHeaderValue(Request req, String headerName) {
@@ -101,11 +103,11 @@ public class CompensableFeignDecoder implements feign.codec.Decoder {
 		return value;
 	}
 
-	public feign.codec.Decoder getDelegate() {
+	public feign.codec.ErrorDecoder getDelegate() {
 		return delegate;
 	}
 
-	public void setDelegate(feign.codec.Decoder delegate) {
+	public void setDelegate(feign.codec.ErrorDecoder delegate) {
 		this.delegate = delegate;
 	}
 
