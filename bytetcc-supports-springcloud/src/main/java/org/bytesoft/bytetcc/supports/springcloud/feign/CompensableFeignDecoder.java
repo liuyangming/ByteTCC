@@ -27,6 +27,8 @@ import org.bytesoft.bytetcc.supports.springcloud.SpringCloudBeanRegistry;
 import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.common.utils.CommonUtils;
 import org.bytesoft.compensable.TransactionContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import feign.FeignException;
 import feign.Request;
@@ -34,6 +36,8 @@ import feign.Response;
 import feign.codec.DecodeException;
 
 public class CompensableFeignDecoder implements feign.codec.Decoder {
+	static Logger logger = LoggerFactory.getLogger(CompensableFeignDecoder.class);
+
 	static final String HEADER_TRANCACTION_KEY = "org.bytesoft.bytetcc.transaction";
 	static final String HEADER_PROPAGATION_KEY = "org.bytesoft.bytetcc.propagation";
 
@@ -61,18 +65,22 @@ public class CompensableFeignDecoder implements feign.codec.Decoder {
 			return this.delegate.decode(resp, type);
 		}
 
-		String transactionStr = StringUtils.isBlank(respTransactionStr) ? reqTransactionStr : respTransactionStr;
-		String propagationStr = StringUtils.isBlank(respPropagationStr) ? reqTransactionStr : respPropagationStr;
+		try {
+			String transactionStr = StringUtils.isBlank(respTransactionStr) ? reqTransactionStr : respTransactionStr;
+			String propagationStr = StringUtils.isBlank(respPropagationStr) ? reqPropagationStr : respPropagationStr;
 
-		byte[] byteArray = ByteUtils.stringToByteArray(transactionStr);
-		TransactionContext transactionContext = (TransactionContext) CommonUtils.deserializeObject(byteArray);
+			byte[] byteArray = ByteUtils.stringToByteArray(transactionStr);
+			TransactionContext transactionContext = (TransactionContext) CommonUtils.deserializeObject(byteArray);
 
-		SpringCloudBeanRegistry beanRegistry = SpringCloudBeanRegistry.getInstance();
-		RemoteCoordinator remoteCoordinator = beanRegistry.getConsumeCoordinator(propagationStr);
+			SpringCloudBeanRegistry beanRegistry = SpringCloudBeanRegistry.getInstance();
+			RemoteCoordinator remoteCoordinator = beanRegistry.getConsumeCoordinator(propagationStr);
 
-		TransactionResponseImpl response = new TransactionResponseImpl();
-		response.setTransactionContext(transactionContext);
-		response.setSourceTransactionCoordinator(remoteCoordinator);
+			TransactionResponseImpl response = new TransactionResponseImpl();
+			response.setTransactionContext(transactionContext);
+			response.setSourceTransactionCoordinator(remoteCoordinator);
+		} catch (IOException ex) {
+			logger.error("Error occurred while decoding response({})!", resp, ex);
+		}
 
 		return this.delegate.decode(resp, type);
 	}

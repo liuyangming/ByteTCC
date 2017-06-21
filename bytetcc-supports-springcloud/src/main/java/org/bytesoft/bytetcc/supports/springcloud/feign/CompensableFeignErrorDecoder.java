@@ -26,11 +26,15 @@ import org.bytesoft.bytetcc.supports.springcloud.SpringCloudBeanRegistry;
 import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.common.utils.CommonUtils;
 import org.bytesoft.compensable.TransactionContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import feign.Request;
 import feign.Response;
 
 public class CompensableFeignErrorDecoder implements feign.codec.ErrorDecoder {
+	static Logger logger = LoggerFactory.getLogger(CompensableFeignErrorDecoder.class);
+
 	static final String HEADER_TRANCACTION_KEY = "org.bytesoft.bytetcc.transaction";
 	static final String HEADER_PROPAGATION_KEY = "org.bytesoft.bytetcc.propagation";
 
@@ -58,11 +62,11 @@ public class CompensableFeignErrorDecoder implements feign.codec.ErrorDecoder {
 			return this.delegate.decode(methodKey, resp);
 		}
 
-		String transactionStr = StringUtils.isBlank(respTransactionStr) ? reqTransactionStr : respTransactionStr;
-		String propagationStr = StringUtils.isBlank(respPropagationStr) ? reqTransactionStr : respPropagationStr;
-
 		// int status = resp.status();
 		try {
+			String transactionStr = StringUtils.isBlank(respTransactionStr) ? reqTransactionStr : respTransactionStr;
+			String propagationStr = StringUtils.isBlank(respPropagationStr) ? reqPropagationStr : respPropagationStr;
+
 			byte[] byteArray = ByteUtils.stringToByteArray(transactionStr);
 			TransactionContext transactionContext = (TransactionContext) CommonUtils.deserializeObject(byteArray);
 
@@ -73,7 +77,7 @@ public class CompensableFeignErrorDecoder implements feign.codec.ErrorDecoder {
 			response.setTransactionContext(transactionContext);
 			response.setSourceTransactionCoordinator(remoteCoordinator);
 		} catch (IOException ex) {
-			return this.delegate.decode(methodKey, resp);
+			logger.error("Error occurred while decoding response: methodKey= {}, response= {}", methodKey, resp, ex);
 		}
 
 		return this.delegate.decode(methodKey, resp);
