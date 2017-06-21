@@ -90,7 +90,10 @@ public class SpringCloudCoordinator implements InvocationHandler {
 				Serializable arg = (Serializable) args[i];
 				ber.append("/").append(this.serialize(arg));
 			}
-			ResponseEntity<?> response = new RestTemplate().postForEntity(ber.toString(), null, returnType, new Object[0]);
+
+			RestTemplate transactionRestTemplate = SpringCloudBeanRegistry.getInstance().getRestTemplate();
+			RestTemplate restTemplate = transactionRestTemplate == null ? new RestTemplate() : transactionRestTemplate;
+			ResponseEntity<?> response = restTemplate.postForEntity(ber.toString(), null, returnType, new Object[0]);
 
 			return response.getBody();
 		} catch (HttpClientErrorException ex) {
@@ -131,7 +134,10 @@ public class SpringCloudCoordinator implements InvocationHandler {
 				Serializable arg = (Serializable) args[i];
 				ber.append("/").append(this.serialize(arg));
 			}
-			ResponseEntity<?> response = new RestTemplate().getForEntity(ber.toString(), returnType, new Object[0]);
+
+			RestTemplate transactionRestTemplate = SpringCloudBeanRegistry.getInstance().getRestTemplate();
+			RestTemplate restTemplate = transactionRestTemplate == null ? new RestTemplate() : transactionRestTemplate;
+			ResponseEntity<?> response = restTemplate.getForEntity(ber.toString(), returnType, new Object[0]);
 
 			return response.getBody();
 		} catch (HttpClientErrorException ex) {

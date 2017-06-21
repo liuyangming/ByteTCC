@@ -25,13 +25,14 @@ import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.web.client.RestTemplate;
 
 public final class SpringCloudBeanRegistry implements CompensableBeanFactoryAware {
 	static final Logger logger = LoggerFactory.getLogger(SpringCloudBeanRegistry.class);
 	private static final SpringCloudBeanRegistry instance = new SpringCloudBeanRegistry();
 
 	private CompensableBeanFactory beanFactory;
-
+	private RestTemplate restTemplate;
 	private ThreadLocal<CompensableRibbonInterceptor> interceptors = new ThreadLocal<CompensableRibbonInterceptor>();
 
 	private SpringCloudBeanRegistry() {
@@ -75,6 +76,14 @@ public final class SpringCloudBeanRegistry implements CompensableBeanFactoryAwar
 
 	public void removeRibbonInterceptor() {
 		this.interceptors.remove();
+	}
+
+	public RestTemplate getRestTemplate() {
+		return restTemplate;
+	}
+
+	public void setRestTemplate(RestTemplate restTemplate) {
+		this.restTemplate = restTemplate;
 	}
 
 	public void setBeanFactory(CompensableBeanFactory tbf) {
