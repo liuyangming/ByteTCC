@@ -33,23 +33,20 @@ public class CompensableRibbonRule extends AbstractLoadBalancerRule implements I
 	private IClientConfig clientConfig;
 
 	public Server choose(Object key) {
-		ILoadBalancer loadBalancer = this.getLoadBalancer();
-		List<Server> servers = loadBalancer.getReachableServers();
-
 		SpringCloudBeanRegistry registry = SpringCloudBeanRegistry.getInstance();
 		CompensableRibbonInterceptor interceptor = registry.getRibbonInterceptor();
 		if (interceptor == null) {
-			return this.invokeChoose(key);
+			return this.chooseServer(key);
 		}
+
+		ILoadBalancer loadBalancer = this.getLoadBalancer();
+		List<Server> servers = loadBalancer.getAllServers();
 
 		Server server = null;
 		try {
-			server = interceptor.beforeCompletion(servers);
-			if (server != null) {
-				return server;
-			}
+			List<Server> serverList = interceptor.beforeCompletion(servers);
 
-			server = this.invokeChoose(key);
+			server = this.chooseServer(key, serverList);
 		} finally {
 			interceptor.afterCompletion(server);
 		}
@@ -57,22 +54,33 @@ public class CompensableRibbonRule extends AbstractLoadBalancerRule implements I
 		return server;
 	}
 
-	public Server invokeChoose(Object key) {
+	public Server chooseServer(Object key) {
+
 		if (this.delegateRule != null) {
 			return this.delegateRule.choose(key);
+		} // end-if (this.delegateRule != null)
+
+		ILoadBalancer loadBalancer = this.getLoadBalancer();
+		List<Server> reachableServers = loadBalancer.getReachableServers();
+		List<Server> allServers = loadBalancer.getAllServers();
+
+		if (reachableServers != null && reachableServers.isEmpty() == false) {
+			return reachableServers.get(random.nextInt(reachableServers.size()));
+		} else if (allServers != null && allServers.isEmpty() == false) {
+			return allServers.get(random.nextInt(allServers.size()));
 		} else {
-			ILoadBalancer loadBalancer = this.getLoadBalancer();
-			List<Server> reachableServers = loadBalancer.getReachableServers();
-			List<Server> allServers = loadBalancer.getAllServers();
+			return null;
+		}
 
-			if (reachableServers != null && reachableServers.isEmpty() == false) {
-				return reachableServers.get(random.nextInt(reachableServers.size()));
-			} else if (allServers != null && allServers.isEmpty() == false) {
-				return allServers.get(random.nextInt(allServers.size()));
-			} else {
-				return null;
-			}
+	}
 
+	public Server chooseServer(Object key, List<Server> serverList) {
+		if (serverList == null || serverList.isEmpty()) {
+			return null;
+		} else if (serverList.size() == 1) {
+			return serverList.get(0);
+		} else {
+			return serverList.get(random.nextInt(serverList.size()));
 		}
 	}
 

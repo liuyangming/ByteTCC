@@ -16,6 +16,8 @@
 package org.bytesoft.bytetcc.supports.springcloud.web;
 
 import java.io.IOException;
+import java.net.URI;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -69,7 +71,9 @@ public class CompensableRequestInterceptor
 		CompensableTransactionImpl compensable = //
 				(CompensableTransactionImpl) compensableManager.getCompensableTransactionQuietly();
 
-		String path = httpRequest.getURI().getPath();
+		URI uri = httpRequest.getURI();
+
+		String path = uri.getPath();
 		if (path.startsWith("/org/bytesoft/bytetcc")) {
 			return execution.execute(httpRequest, body);
 		} else if (compensable == null) {
@@ -78,20 +82,39 @@ public class CompensableRequestInterceptor
 			return execution.execute(httpRequest, body);
 		}
 
+		final String serviceId = uri.getAuthority();
+
 		final Map<String, XAResourceArchive> participants = compensable.getParticipantArchiveMap();
 		beanRegistry.setRibbonInterceptor(new CompensableRibbonInterceptor() {
-			public Server beforeCompletion(List<Server> servers) {
+			public List<Server> beforeCompletion(List<Server> servers) {
+				final List<Server> readyServerList = new ArrayList<Server>();
+				final List<Server> unReadyServerList = new ArrayList<Server>();
+
 				for (int i = 0; servers != null && i < servers.size(); i++) {
 					Server server = servers.get(i);
 					MetaInfo metaInfo = server.getMetaInfo();
 					String instanceId = metaInfo.getInstanceId();
+					String appName = metaInfo.getAppName();
+					if (StringUtils.equalsIgnoreCase(serviceId, appName) == false) {
+						continue;
+					} // end-if (StringUtils.equalsIgnoreCase(serviceId, appName) == false)
+
 					if (participants.containsKey(instanceId)) {
-						return server;
+						List<Server> serverList = new ArrayList<Server>();
+						serverList.add(server);
+						return serverList;
 					} // end-if (participants.containsKey(instanceId))
+
+					if (server.isReadyToServe()) {
+						readyServerList.add(server);
+					} else {
+						unReadyServerList.add(server);
+					}
+
 				}
 
 				logger.warn("There is no suitable server: expect= {}, actual= {}!", participants.keySet(), servers);
-				return null;
+				return readyServerList.isEmpty() ? unReadyServerList : readyServerList;
 			}
 
 			public void afterCompletion(Server server) {
