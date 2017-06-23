@@ -1,10 +1,10 @@
-package org.bytesoft.bytetcc.supports.springcloud.ribbon;
+package org.bytesoft.bytetcc.supports.springcloud.loadbalancer;
 
 import java.util.List;
 
 import com.netflix.loadbalancer.Server;
 
-public interface CompensableRibbonInterceptor {
+public interface CompensableLoadBalancerInterceptor {
 
 	public List<Server> beforeCompletion(List<Server> servers);
 

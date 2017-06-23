@@ -13,7 +13,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this distribution; if not, see <http://www.gnu.org/licenses/>.
  */
-package org.bytesoft.bytetcc.supports.springcloud.ribbon;
+package org.bytesoft.bytetcc.supports.springcloud.loadbalancer;
 
 import java.util.List;
 import java.util.Random;
@@ -26,18 +26,18 @@ import com.netflix.loadbalancer.ILoadBalancer;
 import com.netflix.loadbalancer.IRule;
 import com.netflix.loadbalancer.Server;
 
-public class CompensableRibbonRule extends AbstractLoadBalancerRule implements IRule {
+public class CompensableLoadBalancerRuleImpl extends AbstractLoadBalancerRule implements IRule {
 	static Random random = new Random();
 
-	private IRule delegateRule;
 	private IClientConfig clientConfig;
 
 	public Server choose(Object key) {
 		SpringCloudBeanRegistry registry = SpringCloudBeanRegistry.getInstance();
-		CompensableRibbonInterceptor interceptor = registry.getRibbonInterceptor();
+		CompensableLoadBalancerInterceptor interceptor = registry.getLoadBalancerInterceptor();
+
 		if (interceptor == null) {
 			return this.chooseServer(key);
-		}
+		} // end-if (interceptor == null)
 
 		ILoadBalancer loadBalancer = this.getLoadBalancer();
 		List<Server> servers = loadBalancer.getAllServers();
@@ -55,11 +55,6 @@ public class CompensableRibbonRule extends AbstractLoadBalancerRule implements I
 	}
 
 	public Server chooseServer(Object key) {
-
-		if (this.delegateRule != null) {
-			return this.delegateRule.choose(key);
-		} // end-if (this.delegateRule != null)
-
 		ILoadBalancer loadBalancer = this.getLoadBalancer();
 		List<Server> reachableServers = loadBalancer.getReachableServers();
 		List<Server> allServers = loadBalancer.getAllServers();
@@ -82,14 +77,6 @@ public class CompensableRibbonRule extends AbstractLoadBalancerRule implements I
 		} else {
 			return serverList.get(random.nextInt(serverList.size()));
 		}
-	}
-
-	public IRule getDelegateRule() {
-		return delegateRule;
-	}
-
-	public void setDelegateRule(IRule delegateRule) {
-		this.delegateRule = delegateRule;
 	}
 
 	public void initWithNiwsConfig(IClientConfig clientConfig) {

@@ -21,12 +21,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.lang3.StringUtils;
 import org.bytesoft.bytejta.supports.rpc.TransactionRequestImpl;
 import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
 import org.bytesoft.bytetcc.CompensableTransactionImpl;
 import org.bytesoft.bytetcc.supports.springcloud.SpringCloudBeanRegistry;
-import org.bytesoft.bytetcc.supports.springcloud.ribbon.CompensableRibbonInterceptor;
+import org.bytesoft.bytetcc.supports.springcloud.loadbalancer.CompensableLoadBalancerInterceptor;
 import org.bytesoft.bytetcc.supports.springcloud.rpc.TransactionResponseImpl;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableManager;
@@ -71,10 +70,10 @@ public class CompensableFeignHandler implements InvocationHandler {
 			final TransactionRequestImpl request = new TransactionRequestImpl();
 			final TransactionResponseImpl response = new TransactionResponseImpl();
 
-			final String serviceId = this.target.name();
+			// final String serviceId = this.target.name();
 
 			final Map<String, XAResourceArchive> participants = compensable.getParticipantArchiveMap();
-			beanRegistry.setRibbonInterceptor(new CompensableRibbonInterceptor() {
+			beanRegistry.setLoadBalancerInterceptor(new CompensableLoadBalancerInterceptor() {
 				public List<Server> beforeCompletion(List<Server> servers) {
 					final List<Server> readyServerList = new ArrayList<Server>();
 					final List<Server> unReadyServerList = new ArrayList<Server>();
@@ -83,10 +82,11 @@ public class CompensableFeignHandler implements InvocationHandler {
 						Server server = servers.get(i);
 						MetaInfo metaInfo = server.getMetaInfo();
 						String instanceId = metaInfo.getInstanceId();
-						String appName = metaInfo.getAppName();
-						if (StringUtils.equalsIgnoreCase(serviceId, appName) == false) {
-							continue;
-						} // end-if (StringUtils.equalsIgnoreCase(serviceId, appName) == false)
+
+						// String appName = metaInfo.getAppName();
+						// if (StringUtils.equalsIgnoreCase(serviceId, appName) == false) {
+						// continue;
+						// } // end-if (StringUtils.equalsIgnoreCase(serviceId, appName) == false)
 
 						if (participants.containsKey(instanceId)) {
 							List<Server> serverList = new ArrayList<Server>();
@@ -107,7 +107,7 @@ public class CompensableFeignHandler implements InvocationHandler {
 				}
 
 				public void afterCompletion(Server server) {
-					beanRegistry.removeRibbonInterceptor();
+					beanRegistry.removeLoadBalancerInterceptor();
 
 					if (server == null) {
 						logger.warn(

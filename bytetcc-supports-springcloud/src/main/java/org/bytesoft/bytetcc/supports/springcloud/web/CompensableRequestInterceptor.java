@@ -27,7 +27,7 @@ import org.bytesoft.bytejta.supports.rpc.TransactionResponseImpl;
 import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
 import org.bytesoft.bytetcc.CompensableTransactionImpl;
 import org.bytesoft.bytetcc.supports.springcloud.SpringCloudBeanRegistry;
-import org.bytesoft.bytetcc.supports.springcloud.ribbon.CompensableRibbonInterceptor;
+import org.bytesoft.bytetcc.supports.springcloud.loadbalancer.CompensableLoadBalancerInterceptor;
 import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.common.utils.CommonUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;
@@ -82,10 +82,10 @@ public class CompensableRequestInterceptor
 			return execution.execute(httpRequest, body);
 		}
 
-		final String serviceId = uri.getAuthority();
+		// final String serviceId = uri.getAuthority();
 
 		final Map<String, XAResourceArchive> participants = compensable.getParticipantArchiveMap();
-		beanRegistry.setRibbonInterceptor(new CompensableRibbonInterceptor() {
+		beanRegistry.setLoadBalancerInterceptor(new CompensableLoadBalancerInterceptor() {
 			public List<Server> beforeCompletion(List<Server> servers) {
 				final List<Server> readyServerList = new ArrayList<Server>();
 				final List<Server> unReadyServerList = new ArrayList<Server>();
@@ -94,10 +94,11 @@ public class CompensableRequestInterceptor
 					Server server = servers.get(i);
 					MetaInfo metaInfo = server.getMetaInfo();
 					String instanceId = metaInfo.getInstanceId();
-					String appName = metaInfo.getAppName();
-					if (StringUtils.equalsIgnoreCase(serviceId, appName) == false) {
-						continue;
-					} // end-if (StringUtils.equalsIgnoreCase(serviceId, appName) == false)
+
+					// String appName = metaInfo.getAppName();
+					// if (StringUtils.equalsIgnoreCase(serviceId, appName) == false) {
+					// continue;
+					// } // end-if (StringUtils.equalsIgnoreCase(serviceId, appName) == false)
 
 					if (participants.containsKey(instanceId)) {
 						List<Server> serverList = new ArrayList<Server>();
@@ -143,7 +144,7 @@ public class CompensableRequestInterceptor
 			serverFlag = false;
 			throw clientEx;
 		} finally {
-			beanRegistry.removeRibbonInterceptor();
+			beanRegistry.removeLoadBalancerInterceptor();
 
 			if (httpResponse != null) {
 				this.invokeAfterRecvResponse(httpResponse, serverFlag);

@@ -24,7 +24,6 @@ import org.bytesoft.bytetcc.supports.springcloud.feign.CompensableFeignDecoder;
 import org.bytesoft.bytetcc.supports.springcloud.feign.CompensableFeignErrorDecoder;
 import org.bytesoft.bytetcc.supports.springcloud.feign.CompensableFeignHandler;
 import org.bytesoft.bytetcc.supports.springcloud.feign.CompensableFeignInterceptor;
-import org.bytesoft.bytetcc.supports.springcloud.ribbon.CompensableRibbonRule;
 import org.bytesoft.bytetcc.supports.springcloud.web.CompensableHandlerInterceptor;
 import org.bytesoft.bytetcc.supports.springcloud.web.CompensableRequestInterceptor;
 import org.bytesoft.compensable.aware.CompensableEndpointAware;
@@ -81,12 +80,6 @@ public class SpringCloudConfiguration extends WebMvcConfigurerAdapter
 	@org.springframework.context.annotation.Bean
 	public Builder compensableFeignBuilder(@Autowired InvocationHandlerFactory invocationHandlerFactory) {
 		return Feign.builder().invocationHandlerFactory(invocationHandlerFactory);
-	}
-
-	@org.springframework.context.annotation.Primary
-	@org.springframework.context.annotation.Bean
-	public CompensableRibbonRule compensableRibbonRule() {
-		return new CompensableRibbonRule();
 	}
 
 	@org.springframework.context.annotation.Bean

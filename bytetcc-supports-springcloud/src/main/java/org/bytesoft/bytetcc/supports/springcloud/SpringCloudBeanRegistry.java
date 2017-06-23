@@ -20,7 +20,7 @@ import java.lang.reflect.Proxy;
 import org.apache.commons.lang3.StringUtils;
 import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
 import org.bytesoft.bytejta.supports.wire.RemoteCoordinatorRegistry;
-import org.bytesoft.bytetcc.supports.springcloud.ribbon.CompensableRibbonInterceptor;
+import org.bytesoft.bytetcc.supports.springcloud.loadbalancer.CompensableLoadBalancerInterceptor;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 import org.slf4j.Logger;
@@ -33,7 +33,7 @@ public final class SpringCloudBeanRegistry implements CompensableBeanFactoryAwar
 
 	private CompensableBeanFactory beanFactory;
 	private RestTemplate restTemplate;
-	private ThreadLocal<CompensableRibbonInterceptor> interceptors = new ThreadLocal<CompensableRibbonInterceptor>();
+	private ThreadLocal<CompensableLoadBalancerInterceptor> interceptors = new ThreadLocal<CompensableLoadBalancerInterceptor>();
 
 	private SpringCloudBeanRegistry() {
 		if (instance != null) {
@@ -66,15 +66,15 @@ public final class SpringCloudBeanRegistry implements CompensableBeanFactoryAwar
 		return coordinator;
 	}
 
-	public CompensableRibbonInterceptor getRibbonInterceptor() {
+	public CompensableLoadBalancerInterceptor getLoadBalancerInterceptor() {
 		return this.interceptors.get();
 	}
 
-	public void setRibbonInterceptor(CompensableRibbonInterceptor interceptor) {
+	public void setLoadBalancerInterceptor(CompensableLoadBalancerInterceptor interceptor) {
 		this.interceptors.set(interceptor);
 	}
 
-	public void removeRibbonInterceptor() {
+	public void removeLoadBalancerInterceptor() {
 		this.interceptors.remove();
 	}
 
