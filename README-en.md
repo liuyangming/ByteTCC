@@ -10,7 +10,7 @@
 ```xml
 <dependency>
 	<groupId>org.bytesoft</groupId>
-	<artifactId>bytetcc-supports</artifactId>
+	<artifactId>bytetcc-supports-dubbo</artifactId>
 	<version>0.4.0-alpha5</version>
 </dependency>
 ```
