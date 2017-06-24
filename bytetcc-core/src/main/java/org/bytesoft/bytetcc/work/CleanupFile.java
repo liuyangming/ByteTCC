@@ -500,6 +500,21 @@ public class CleanupFile implements CompensableEndpointAware, CompensableBeanFac
 		this.endIndex = position;
 		this.header.position(IDENTIFIER.length + 2 + 1 + 4);
 		this.header.putInt(position);
+
+		int recordUnit = (CONSTANTS_RECORD_SIZE + 1) * 1024 * 4;
+		int textLength = this.endIndex - CONSTANTS_START_INDEX;
+		int startIndex = textLength / recordUnit;
+
+		for (int index = this.recordList.size() - 1; index >= startIndex; index--) {
+			CleanupRecord record = this.recordList.remove(index);
+			if (record == null) {
+				continue;
+			} // end-if (record == null)
+
+			this.unRegisterRecord(record);
+
+		} // end-for (int index = this.recordList.size() - 1; index >= startIndex; index--)
+
 	}
 
 	private void decreaseCapacityIfNecessary() {
