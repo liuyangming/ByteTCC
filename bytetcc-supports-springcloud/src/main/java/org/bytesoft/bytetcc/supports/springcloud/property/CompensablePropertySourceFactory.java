@@ -24,6 +24,10 @@ import org.springframework.core.io.support.PropertySourceFactory;
 public class CompensablePropertySourceFactory implements PropertySourceFactory {
 
 	public PropertySource<?> createPropertySource(String name, EncodedResource resource) throws IOException {
+		if (name == null) {
+			name = String.format("%s@%s", CompensablePropertySource.class, System.identityHashCode(resource));
+		} // end-if (name == null)
+
 		return new CompensablePropertySource(name, resource);
 	}
 

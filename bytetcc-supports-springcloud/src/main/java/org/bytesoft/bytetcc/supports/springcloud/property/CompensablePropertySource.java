@@ -24,33 +24,38 @@ import org.springframework.core.io.support.EncodedResource;
 
 public class CompensablePropertySource extends PropertySource<Object> {
 
+	private boolean enabled;
+
 	public CompensablePropertySource(String name, EncodedResource source) {
 		super(name, source);
-	}
-
-	public Object getProperty(String name) {
-		if (name == null || StringUtils.isBlank(name) || name.indexOf(".") < 0) {
-			return null;
-		}
 
 		EncodedResource encoded = (EncodedResource) this.getSource();
 		AbstractResource resource = (AbstractResource) encoded.getResource();
 		String path = resource.getFilename();
+
 		if (StringUtils.isBlank(path)) {
-			return null;
+			return;
 		}
 
 		String[] values = path.split(":");
 		if (values.length != 2) {
-			return null;
+			return;
 		}
 
-		String prefix = values[0];
-		String suffix = values[1];
+		String protocol = values[0];
+		String resName = values[1];
+		if ("bytetcc".equalsIgnoreCase(protocol) == false) {
+			return;
+		} else if ("loadbalancer.config".equalsIgnoreCase(resName) == false) {
+			return;
+		}
 
-		if ("bytetcc".equalsIgnoreCase(prefix) == false) {
-			return null;
-		} else if ("loadbalancer".equalsIgnoreCase(suffix) == false) {
+		this.enabled = true;
+
+	}
+
+	public Object getProperty(String name) {
+		if (this.enabled == false || name == null || StringUtils.isBlank(name) || name.indexOf(".") < 0) {
 			return null;
 		}
 
@@ -58,8 +63,8 @@ public class CompensablePropertySource extends PropertySource<Object> {
 
 		int index = name.indexOf(".");
 		String client = name.substring(0, index);
-		String value = name.substring(index);
-		if (registry.containsClient(client) && ".ribbon.NFLoadBalancerRuleClassName".equals(value)) {
+		String suffix = name.substring(index);
+		if (registry.containsClient(client) && ".ribbon.NFLoadBalancerRuleClassName".equals(suffix)) {
 			return CompensableLoadBalancerRuleImpl.class.getName();
 		}
 
