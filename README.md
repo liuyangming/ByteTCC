@@ -6,7 +6,7 @@
 <dependency>
 	<groupId>org.bytesoft</groupId>
 	<artifactId>bytetcc-supports</artifactId>
-	<version>0.4.0-alpha4</version>
+	<version>0.4.0-alpha5</version>
 </dependency>
 ```
 #### 1.2. 编写业务服务
