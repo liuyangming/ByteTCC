@@ -53,6 +53,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.DependsOn;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.core.env.Environment;
+import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter;
@@ -154,9 +155,17 @@ public class SpringCloudConfiguration extends WebMvcConfigurerAdapter
 		return interceptor;
 	}
 
+	@org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean(ClientHttpRequestFactory.class)
+	@org.springframework.context.annotation.Bean
+	public ClientHttpRequestFactory defaultRequestFactory() {
+		return new org.springframework.http.client.Netty4ClientHttpRequestFactory();
+	}
+
 	@org.springframework.context.annotation.Bean("compensableRestTemplate")
-	public RestTemplate transactionTemplate(@Autowired CompensableRequestInterceptor compensableRequestInterceptor) {
-		return new RestTemplate();
+	public RestTemplate transactionTemplate(@Autowired ClientHttpRequestFactory requestFactory) {
+		RestTemplate restTemplate = new RestTemplate();
+		restTemplate.setRequestFactory(requestFactory);
+		return restTemplate;
 	}
 
 	@DependsOn("compensableRestTemplate")

@@ -72,18 +72,21 @@ public class SpringCloudCoordinator implements InvocationHandler {
 	}
 
 	public Object invokePostCoordinator(Object proxy, Method method, Object[] args) throws Throwable {
+
 		Class<?> returnType = method.getReturnType();
 		try {
+			RestTemplate transactionRestTemplate = SpringCloudBeanRegistry.getInstance().getRestTemplate();
+			RestTemplate restTemplate = transactionRestTemplate == null ? new RestTemplate() : transactionRestTemplate;
+
+			StringBuilder ber = new StringBuilder();
+
 			int firstIndex = this.identifier.indexOf(":");
 			int lastIndex = this.identifier.lastIndexOf(":");
 			String prefix = firstIndex <= 0 ? null : this.identifier.substring(0, firstIndex);
 			String suffix = lastIndex <= 0 ? null : this.identifier.substring(lastIndex + 1);
 
-			String instanceId = prefix == null || suffix == null ? null : prefix + ":" + suffix;
-
-			StringBuilder ber = new StringBuilder();
 			ber.append("http://");
-			ber.append(instanceId);
+			ber.append(prefix == null || suffix == null ? null : prefix + ":" + suffix);
 			ber.append("/org/bytesoft/bytetcc/");
 			ber.append(method.getName());
 			for (int i = 0; i < args.length; i++) {
@@ -91,8 +94,6 @@ public class SpringCloudCoordinator implements InvocationHandler {
 				ber.append("/").append(this.serialize(arg));
 			}
 
-			RestTemplate transactionRestTemplate = SpringCloudBeanRegistry.getInstance().getRestTemplate();
-			RestTemplate restTemplate = transactionRestTemplate == null ? new RestTemplate() : transactionRestTemplate;
 			ResponseEntity<?> response = restTemplate.postForEntity(ber.toString(), null, returnType, new Object[0]);
 
 			return response.getBody();
@@ -120,14 +121,25 @@ public class SpringCloudCoordinator implements InvocationHandler {
 		} catch (Exception ex) {
 			throw new XAException(XAException.XAER_RMERR);
 		}
+
 	}
 
 	public Object invokeGetCoordinator(Object proxy, Method method, Object[] args) throws Throwable {
+
 		Class<?> returnType = method.getReturnType();
 		try {
+			RestTemplate transactionRestTemplate = SpringCloudBeanRegistry.getInstance().getRestTemplate();
+			RestTemplate restTemplate = transactionRestTemplate == null ? new RestTemplate() : transactionRestTemplate;
+
 			StringBuilder ber = new StringBuilder();
+
+			int firstIndex = this.identifier.indexOf(":");
+			int lastIndex = this.identifier.lastIndexOf(":");
+			String prefix = firstIndex <= 0 ? null : this.identifier.substring(0, firstIndex);
+			String suffix = lastIndex <= 0 ? null : this.identifier.substring(lastIndex + 1);
+
 			ber.append("http://");
-			ber.append(this.identifier);
+			ber.append(prefix == null || suffix == null ? null : prefix + ":" + suffix);
 			ber.append("/org/bytesoft/bytetcc/");
 			ber.append(method.getName());
 			for (int i = 0; i < args.length; i++) {
@@ -135,14 +147,13 @@ public class SpringCloudCoordinator implements InvocationHandler {
 				ber.append("/").append(this.serialize(arg));
 			}
 
-			RestTemplate transactionRestTemplate = SpringCloudBeanRegistry.getInstance().getRestTemplate();
-			RestTemplate restTemplate = transactionRestTemplate == null ? new RestTemplate() : transactionRestTemplate;
 			ResponseEntity<?> response = restTemplate.getForEntity(ber.toString(), returnType, new Object[0]);
 
 			return response.getBody();
 		} catch (HttpClientErrorException ex) {
 			throw new XAException(XAException.XAER_RMFAIL);
 		} catch (HttpServerErrorException ex) {
+			// int statusCode = ex.getRawStatusCode();
 			HttpHeaders headers = ex.getResponseHeaders();
 			String failureText = StringUtils.trimToNull(headers.getFirst("failure"));
 			String errorText = StringUtils.trimToNull(headers.getFirst("XA_XAER"));
@@ -163,6 +174,7 @@ public class SpringCloudCoordinator implements InvocationHandler {
 		} catch (Exception ex) {
 			throw new XAException(XAException.XAER_RMERR);
 		}
+
 	}
 
 	private String serialize(Serializable arg) throws IOException {
