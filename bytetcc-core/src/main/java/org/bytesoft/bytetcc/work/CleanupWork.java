@@ -21,6 +21,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -53,7 +55,11 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableEndpo
 			+ XidFactory.BRANCH_QUALIFIER_LENGTH;
 
 	private CompensableBeanFactory beanFactory;
-	private Lock lock = new ReentrantLock();
+	private final Lock lock = new ReentrantLock();
+
+	private final Lock startLock = new ReentrantLock();
+	private final Condition startCond = this.startLock.newCondition();
+	private boolean started;
 
 	private File directory;
 	private boolean released;
@@ -124,6 +130,8 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableEndpo
 
 	public void run() {
 		this.startupRecover(); // initialize
+
+		this.markStartupDone();
 
 		long swapMillis = System.currentTimeMillis() + 1000L * 30;
 
@@ -244,12 +252,42 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableEndpo
 	}
 
 	public void forget(Xid xid, String resourceId) throws RuntimeException {
+		this.waitForStartup();
+
 		try {
 			this.lock.lock();
 			this.master.forget(xid, resourceId);
 		} finally {
 			this.lock.unlock();
 		}
+
+	}
+
+	public void markStartupDone() {
+		try {
+			this.startLock.lock();
+			this.started = true;
+			this.startCond.signalAll();
+		} finally {
+			this.startLock.unlock();
+		}
+	}
+
+	public void waitForStartup() {
+		if (this.started == false) {
+			try {
+				this.startLock.lock();
+				while (this.started == false) {
+					try {
+						this.startCond.await(100, TimeUnit.MILLISECONDS);
+					} catch (InterruptedException ex) {
+						logger.debug(ex.getMessage());
+					}
+				} // end-while (this.started == false)
+			} finally {
+				this.startLock.unlock();
+			}
+		} // end-if (this.started == false)
 	}
 
 	public void release() {

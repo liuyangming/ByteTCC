@@ -469,7 +469,8 @@ public class CleanupFile implements CompensableEndpointAware, CompensableBeanFac
 			this.recordList.add(record);
 			this.registerRecord(record);
 		} else {
-			throw new IllegalStateException();
+			throw new IllegalStateException(String.format("Incorrect position: pos= %s, index= %s, size= %s.", position, index,
+					this.recordList.size()));
 		}
 
 	}
@@ -501,7 +502,7 @@ public class CleanupFile implements CompensableEndpointAware, CompensableBeanFac
 		this.header.position(IDENTIFIER.length + 2 + 1 + 4);
 		this.header.putInt(position);
 
-		int recordUnit = (CONSTANTS_RECORD_SIZE + 1) * 1024 * 4;
+		int recordUnit = CONSTANTS_RECORD_SIZE + 1;
 		int textLength = this.endIndex - CONSTANTS_START_INDEX;
 		int startIndex = textLength / recordUnit;
 
