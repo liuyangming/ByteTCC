@@ -11,7 +11,7 @@
 <dependency>
 	<groupId>org.bytesoft</groupId>
 	<artifactId>bytetcc-supports-dubbo</artifactId>
-	<version>0.4.0-alpha5</version>
+	<version>0.4.0-alpha6</version>
 </dependency>
 ```
 
