@@ -62,15 +62,16 @@ public final class CompensableLoadBalance implements LoadBalance {
 			Invoker<T> invoker = invokers.get(i);
 			URL invokerUrl = invoker.getUrl();
 			String invokerHost = invokerUrl.getHost();
+			String invokerName = invokerUrl.getParameter("application");
 			int invokerPort = invokerUrl.getPort();
-			String invokerAddr = String.format("%s:%s", invokerHost, invokerPort);
+			String invokerAddr = String.format("%s:%s:%s", invokerHost, invokerName, invokerPort);
 			for (int j = 0; participantList != null && j < participantList.size(); j++) {
 				XAResourceArchive archive = participantList.get(j);
 				XAResourceDescriptor descriptor = archive.getDescriptor();
 				String identifier = descriptor.getIdentifier();
-				if (StringUtils.equals(invokerAddr, identifier)) {
+				if (StringUtils.equalsIgnoreCase(invokerAddr, identifier)) {
 					return invoker;
-				}
+				} // end-if (StringUtils.equalsIgnoreCase(invokerAddr, identifier))
 			}
 		}
 
@@ -82,17 +83,20 @@ public final class CompensableLoadBalance implements LoadBalance {
 		InvocationContext invocationContext = registry.getInvocationContext();
 
 		String serverHost = invocationContext.getServerHost();
+		String serviceKey = invocationContext.getServiceKey();
 		int serverPort = invocationContext.getServerPort();
 		for (int i = 0; invokers != null && i < invokers.size(); i++) {
 			Invoker<T> invoker = invokers.get(i);
 			URL targetUrl = invoker.getUrl();
 			String targetAddr = targetUrl.getIp();
+			String targetName = targetUrl.getParameter("application");
 			int targetPort = targetUrl.getPort();
-			if (StringUtils.equals(targetAddr, serverHost) && targetPort == serverPort) {
+			if (StringUtils.equals(targetAddr, serverHost) //
+					&& StringUtils.equalsIgnoreCase(serviceKey, targetName) && targetPort == serverPort) {
 				return invoker;
 			}
 		}
 
-		throw new RpcException(String.format("Invoker(%s:%s) is not found!", serverHost, serverPort));
+		throw new RpcException(String.format("Invoker(%s:%s:%s) is not found!", serverHost, serviceKey, serverPort));
 	}
 }

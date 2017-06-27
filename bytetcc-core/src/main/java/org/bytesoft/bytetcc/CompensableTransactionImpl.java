@@ -35,6 +35,7 @@ import javax.transaction.xa.Xid;
 import org.apache.commons.lang3.StringUtils;
 import org.bytesoft.bytejta.supports.jdbc.RecoveredResource;
 import org.bytesoft.bytejta.supports.resource.RemoteResourceDescriptor;
+import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
 import org.bytesoft.bytetcc.supports.resource.LocalResourceCleaner;
 import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;
@@ -67,6 +68,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 	private final List<CompensableArchive> archiveList = new ArrayList<CompensableArchive>();
 	private final Map<String, XAResourceArchive> resourceMap = new HashMap<String, XAResourceArchive>();
 	private final List<XAResourceArchive> resourceList = new ArrayList<XAResourceArchive>();
+	private final Map<String, XAResourceArchive> applicationMap = new HashMap<String, XAResourceArchive>();
 	private Transaction transaction;
 	private CompensableBeanFactory beanFactory;
 
@@ -679,17 +681,28 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 	public boolean delistResource(XAResource xaRes, int flag) throws IllegalStateException, SystemException {
 		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
 
-		if (flag == XAResource.TMFAIL && RemoteResourceDescriptor.class.isInstance(xaRes)) {
+		if (RemoteResourceDescriptor.class.isInstance(xaRes)) {
 			RemoteResourceDescriptor descriptor = (RemoteResourceDescriptor) xaRes;
+			RemoteCoordinator resource = descriptor.getDelegate();
+
 			String identifier = descriptor.getIdentifier();
-
 			XAResourceArchive archive = this.resourceMap.remove(identifier);
-			if (archive != null) {
-				this.resourceList.remove(archive);
-			} // end-if (archive != null)
+			if (flag == XAResource.TMFAIL) {
 
-			compensableLogger.updateTransaction(this.getTransactionArchive());
-		}
+				if (archive != null) {
+					this.resourceList.remove(archive);
+				} // end-if (archive != null)
+
+				compensableLogger.updateTransaction(this.getTransactionArchive());
+			} else {
+
+				if (archive != null) {
+					this.applicationMap.put(resource.getApplication(), archive);
+				} // end-if (archive != null)
+
+			}
+
+		} // end-if (RemoteResourceDescriptor.class.isInstance(xaRes))
 
 		return true;
 	}
@@ -1050,6 +1063,11 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 		return descriptor;
 	}
 
+	public XAResourceDescriptor getRemoteCoordinator(String application) {
+		XAResourceArchive archive = this.applicationMap.get(application);
+		return archive == null ? null : archive.getDescriptor();
+	}
+
 	public CompensableArchive getCompensableArchive() {
 		return this.archive;
 	}
@@ -1073,6 +1091,13 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 	 */
 	public List<XAResourceArchive> getParticipantArchiveList() {
 		return this.resourceList;
+	}
+
+	/**
+	 * only for recovery.
+	 */
+	public Map<String, XAResourceArchive> getApplicationArchiveMap() {
+		return this.applicationMap;
 	}
 
 	public void setRollbackOnly() throws IllegalStateException, SystemException {

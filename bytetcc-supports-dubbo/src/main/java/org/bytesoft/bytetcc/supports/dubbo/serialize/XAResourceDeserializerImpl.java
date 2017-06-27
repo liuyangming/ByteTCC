@@ -50,7 +50,7 @@ import org.springframework.context.ApplicationContextAware;
 public class XAResourceDeserializerImpl implements XAResourceDeserializer, ApplicationContextAware {
 	static final Logger logger = LoggerFactory.getLogger(XAResourceDeserializerImpl.class);
 
-	private static Pattern pattern = Pattern.compile("^[^:]+\\s*:\\s*\\d+$");
+	private static Pattern pattern = Pattern.compile("^[^:]+\\s*:\\s*[^:]+\\s*:\\s*\\d+$");
 	private ApplicationContext applicationContext;
 
 	private Map<String, XAResourceDescriptor> cachedResourceMap = new ConcurrentHashMap<String, XAResourceDescriptor>();
@@ -75,7 +75,8 @@ public class XAResourceDeserializerImpl implements XAResourceDeserializer, Appli
 					String[] array = identifier.split("\\:");
 					InvocationContext invocationContext = new InvocationContext();
 					invocationContext.setServerHost(array[0]);
-					invocationContext.setServerPort(Integer.valueOf(array[1]));
+					invocationContext.setServiceKey(array[1]);
+					invocationContext.setServerPort(Integer.valueOf(array[2]));
 
 					CompensableBeanRegistry beanRegistry = CompensableBeanRegistry.getInstance();
 					RemoteCoordinator consumeCoordinator = beanRegistry.getConsumeCoordinator();

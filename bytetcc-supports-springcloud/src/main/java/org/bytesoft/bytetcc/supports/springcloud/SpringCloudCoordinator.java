@@ -49,6 +49,11 @@ public class SpringCloudCoordinator implements InvocationHandler {
 		} else if (RemoteCoordinator.class.equals(clazz)) {
 			if ("getIdentifier".equals(methodName)) {
 				return this.identifier;
+			} else if ("getApplication".equals(methodName)) {
+				int firstIndex = this.identifier.indexOf(":");
+				int lastIndex = this.identifier.lastIndexOf(":");
+				return firstIndex <= 0 || lastIndex <= 0 || firstIndex > lastIndex //
+						? null : this.identifier.subSequence(firstIndex + 1, lastIndex);
 			} else {
 				throw new XAException(XAException.XAER_RMFAIL);
 			}

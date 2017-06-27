@@ -74,7 +74,7 @@ public class CleanupFile implements CompensableEndpointAware, CompensableBeanFac
 	public byte initialize(boolean master) {
 		if (this.directory == null) {
 			String address = StringUtils.trimToEmpty(this.endpoint);
-			String dirName = address.replaceAll("\\:|\\.", "_");
+			String dirName = address.replaceAll("[^a-zA-Z0-9]", "_");
 			this.directory = new File(String.format("bytetcc/%s", dirName));
 		}
 

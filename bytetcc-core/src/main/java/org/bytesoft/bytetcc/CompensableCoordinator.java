@@ -308,4 +308,8 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 		this.beanFactory = tbf;
 	}
 
+	public String getApplication() {
+		throw new IllegalStateException();
+	}
+
 }

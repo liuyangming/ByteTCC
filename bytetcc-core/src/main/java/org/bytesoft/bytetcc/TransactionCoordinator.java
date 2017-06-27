@@ -110,6 +110,10 @@ public class TransactionCoordinator implements RemoteCoordinator, CompensableBea
 		}
 	}
 
+	public String getApplication() {
+		throw new IllegalStateException();
+	}
+
 	public String getIdentifier() {
 		throw new IllegalStateException();
 	}

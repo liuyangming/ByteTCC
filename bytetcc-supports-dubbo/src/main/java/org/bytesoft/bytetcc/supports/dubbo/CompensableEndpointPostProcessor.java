@@ -32,6 +32,7 @@ import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 
+import com.alibaba.dubbo.config.ApplicationConfig;
 import com.alibaba.dubbo.config.ProtocolConfig;
 
 public class CompensableEndpointPostProcessor implements BeanFactoryPostProcessor, CompensableBeanFactoryAware {
@@ -42,6 +43,7 @@ public class CompensableEndpointPostProcessor implements BeanFactoryPostProcesso
 	public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
 		ClassLoader cl = Thread.currentThread().getContextClassLoader();
 
+		BeanDefinition applicationDef = null;
 		BeanDefinition protocolDef = null;
 
 		List<BeanDefinition> beanDefList = new ArrayList<BeanDefinition>();
@@ -67,11 +69,26 @@ public class CompensableEndpointPostProcessor implements BeanFactoryPostProcesso
 				} else {
 					throw new FatalBeanException("There are more than one com.alibaba.dubbo.config.ProtocolConfig was found!");
 				}
+			} else if (ApplicationConfig.class.isAssignableFrom(beanClass)) {
+				if (applicationDef == null) {
+					applicationDef = beanDef;
+				} else {
+					throw new FatalBeanException(
+							"There are more than one com.alibaba.dubbo.config.ApplicationConfig was found!");
+				}
 			}
 		}
 
-		if (protocolDef == null) {
+		if (applicationDef == null) {
+			throw new FatalBeanException("No configuration of class com.alibaba.dubbo.config.ApplicationConfig was found.");
+		} else if (protocolDef == null) {
 			throw new FatalBeanException("No configuration of class com.alibaba.dubbo.config.ProtocolConfig was found.");
+		}
+
+		MutablePropertyValues applicationValues = applicationDef.getPropertyValues();
+		PropertyValue applicationValue = applicationValues.getPropertyValue("name");
+		if (applicationValue == null || applicationValue.getValue() == null) {
+			throw new FatalBeanException("Attribute 'name' of <dubbo:application ... /> is null.");
 		}
 
 		MutablePropertyValues protocolValues = protocolDef.getPropertyValues();
@@ -82,7 +99,8 @@ public class CompensableEndpointPostProcessor implements BeanFactoryPostProcesso
 
 		String host = CommonUtils.getInetAddress();
 		String port = String.valueOf(protocolValue.getValue());
-		String identifier = String.format("%s:%s", host, port);
+		String name = String.valueOf(applicationValue.getValue());
+		String identifier = String.format("%s:%s:%s", host, name, port);
 
 		for (int i = 0; i < beanDefList.size(); i++) {
 			BeanDefinition beanDef = beanDefList.get(i);
@@ -92,21 +110,21 @@ public class CompensableEndpointPostProcessor implements BeanFactoryPostProcesso
 
 	}
 
-	public void initializeCoordinator(ConfigurableListableBeanFactory beanFactory, BeanDefinition protocolDef,
-			String compensableBeanId) throws BeansException {
-		MutablePropertyValues mpv = protocolDef.getPropertyValues();
-		PropertyValue pv = mpv.getPropertyValue("port");
-		if (pv == null || pv.getValue() == null) {
-			throw new FatalBeanException("Attribute 'port' of <dubbo:protocol ... /> is null.");
-		}
-
-		String host = CommonUtils.getInetAddress();
-		String port = String.valueOf(pv.getValue());
-		String identifier = String.format("%s:%s", host, port);
-
-		BeanDefinition beanDef = beanFactory.getBeanDefinition(compensableBeanId);
-		beanDef.getPropertyValues().addPropertyValue("identifier", identifier);
-	}
+	// public void initializeCoordinator(ConfigurableListableBeanFactory beanFactory, BeanDefinition protocolDef,
+	// String compensableBeanId) throws BeansException {
+	// MutablePropertyValues mpv = protocolDef.getPropertyValues();
+	// PropertyValue pv = mpv.getPropertyValue("port");
+	// if (pv == null || pv.getValue() == null) {
+	// throw new FatalBeanException("Attribute 'port' of <dubbo:protocol ... /> is null.");
+	// }
+	//
+	// String host = CommonUtils.getInetAddress();
+	// String port = String.valueOf(pv.getValue());
+	// String identifier = String.format("%s:%s", host, port);
+	//
+	// BeanDefinition beanDef = beanFactory.getBeanDefinition(compensableBeanId);
+	// beanDef.getPropertyValues().addPropertyValue("identifier", identifier);
+	// }
 
 	public CompensableBeanFactory getBeanFactory() {
 		return beanFactory;

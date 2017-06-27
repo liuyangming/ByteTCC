@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.lang3.StringUtils;
 import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.common.utils.CommonUtils;
 import org.bytesoft.compensable.archive.CompensableArchive;
@@ -31,8 +32,8 @@ import org.bytesoft.transaction.xa.TransactionXid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class TransactionArchiveDeserializer extends
-		org.bytesoft.bytejta.logging.deserializer.TransactionArchiveDeserializer implements ArchiveDeserializer {
+public class TransactionArchiveDeserializer extends org.bytesoft.bytejta.logging.deserializer.TransactionArchiveDeserializer
+		implements ArchiveDeserializer {
 	static final Logger logger = LoggerFactory.getLogger(TransactionArchiveDeserializer.class);
 
 	private ArchiveDeserializer resourceArchiveDeserializer;
@@ -44,10 +45,12 @@ public class TransactionArchiveDeserializer extends
 		String propagatedBy = String.valueOf(archive.getPropagatedBy());
 		String[] address = propagatedBy.split("\\s*\\:\\s*");
 		byte[] hostByteArray = new byte[4];
+		byte[] nameByteArray = new byte[0];
 		byte[] portByteArray = new byte[2];
-		if (address.length == 2) {
+		if (address.length == 3) {
 			String hostStr = address[0];
-			String portStr = address[1];
+			String nameStr = address[1];
+			String portStr = address[2];
 
 			String[] hostArray = hostStr.split("\\s*\\.\\s*");
 			for (int i = 0; hostArray.length == 4 && i < hostArray.length; i++) {
@@ -58,6 +61,8 @@ public class TransactionArchiveDeserializer extends
 					logger.debug(rex.getMessage(), rex);
 				}
 			}
+
+			nameByteArray = StringUtils.isBlank(nameStr) ? new byte[0] : nameStr.getBytes();
 
 			try {
 				short port = (short) (Integer.valueOf(portStr) - 32768);
@@ -90,7 +95,7 @@ public class TransactionArchiveDeserializer extends
 			}
 		}
 
-		int length = 6 + 4 + 2 + varByteArray.length + 2;
+		int length = 6 + 4 + 1 + nameByteArray.length + 2 + varByteArray.length + 2;
 		byte[][] nativeByteArray = new byte[nativeArchiveNumber][];
 		for (int i = 0; i < nativeArchiveNumber; i++) {
 			CompensableArchive compensableArchive = nativeArchiveList.get(i);
@@ -133,6 +138,11 @@ public class TransactionArchiveDeserializer extends
 
 		System.arraycopy(hostByteArray, 0, byteArray, position, 4);
 		position = position + 4;
+
+		byteArray[position++] = (byte) (nameByteArray.length - 128);
+		System.arraycopy(nameByteArray, 0, byteArray, position, nameByteArray.length);
+		position = position + nameByteArray.length;
+
 		System.arraycopy(portByteArray, 0, byteArray, position, 2);
 		position = position + 2;
 
@@ -192,8 +202,14 @@ public class TransactionArchiveDeserializer extends
 			}
 		}
 		String host = ber.toString();
+
+		int sizeOfName = 128 + buffer.get();
+		byte[] nameByteArray = new byte[sizeOfName];
+		buffer.get(nameByteArray);
+		String name = new String(nameByteArray);
+
 		int port = 32768 + buffer.getShort();
-		archive.setPropagatedBy(String.format("%s:%s", host, port));
+		archive.setPropagatedBy(String.format("%s:%s:%s", host, name, port));
 
 		short sizeOfVar = buffer.getShort();
 		if (sizeOfVar > 0) {

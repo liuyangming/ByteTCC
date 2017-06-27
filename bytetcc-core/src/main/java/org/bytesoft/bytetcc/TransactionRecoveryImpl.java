@@ -27,6 +27,8 @@ import javax.transaction.xa.Xid;
 import org.apache.commons.lang3.StringUtils;
 import org.bytesoft.bytejta.supports.jdbc.RecoveredResource;
 import org.bytesoft.bytejta.supports.resource.LocalXAResourceDescriptor;
+import org.bytesoft.bytejta.supports.resource.RemoteResourceDescriptor;
+import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
 import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.common.utils.CommonUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;
@@ -147,6 +149,12 @@ public class TransactionRecoveryImpl
 			String identifier = descriptor.getIdentifier();
 
 			transaction.getParticipantArchiveList().add(participantArchive);
+			if (RemoteResourceDescriptor.class.isInstance(descriptor)) {
+				RemoteResourceDescriptor resourceDescriptor = (RemoteResourceDescriptor) descriptor;
+				RemoteCoordinator remoteCoordinator = resourceDescriptor.getDelegate();
+				String application = remoteCoordinator.getApplication();
+				transaction.getApplicationArchiveMap().put(application, participantArchive);
+			} // end-if (RemoteResourceDescriptor.class.isInstance(descriptor))
 			transaction.getParticipantArchiveMap().put(identifier, participantArchive);
 		}
 
