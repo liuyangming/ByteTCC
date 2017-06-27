@@ -170,7 +170,7 @@ public class CompensableMethodInterceptor
 			registry.register(invocation);
 			return mi.proceed();
 		} finally {
-			registry.unegister();
+			registry.unRegister();
 
 			if (desociateRequired) {
 				transactionManager.desociateThread();

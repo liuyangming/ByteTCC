@@ -46,7 +46,7 @@ public final class CompensableInvocationRegistry {
 		return stack.peek();
 	}
 
-	public CompensableInvocation unegister() {
+	public CompensableInvocation unRegister() {
 		Thread current = Thread.currentThread();
 		Stack<CompensableInvocation> stack = this.invocationMap.get(current);
 		if (stack == null || stack.isEmpty()) {
