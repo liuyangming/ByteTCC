@@ -6,7 +6,7 @@ ByteTCC是一个基于TCC（Try/Confirm/Cancel）机制的分布式事务管理�
 <dependency>
 	<groupId>org.bytesoft</groupId>
 	<artifactId>bytetcc-supports</artifactId>
-	<version>0.3.5</version>
+	<version>0.3.6</version>
 </dependency>
 ```
 #### 1.2. 编写业务服务
