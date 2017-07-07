@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.transaction.HeuristicMixedException;
 import javax.transaction.HeuristicRollbackException;
@@ -69,7 +70,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 	private final Map<String, XAResourceArchive> resourceMap = new HashMap<String, XAResourceArchive>();
 	private final List<XAResourceArchive> resourceList = new ArrayList<XAResourceArchive>();
 	private final Map<String, XAResourceArchive> applicationMap = new HashMap<String, XAResourceArchive>();
-	private Transaction transaction;
+	private final Map<Thread, Transaction> transactionMap = new ConcurrentHashMap<Thread, Transaction>(4);
 	private CompensableBeanFactory beanFactory;
 
 	private int transactionVote;
@@ -391,18 +392,21 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 	}
 
 	private void markCurrentBranchTransactionRollbackIfNecessary() {
-		Transaction branch = this.transaction;
+		List<Transaction> transactions = new ArrayList<Transaction>(this.transactionMap.values());
 		boolean recoveried = this.transactionContext.isRecoveried();
-		if (recoveried == false && branch != null) /* used by participant only. */ {
-			try {
-				branch.setRollbackOnly();
-			} catch (IllegalStateException ex) {
-				logger.info("The local transaction is not active.", ex); // tx in try-phase has been completed already.
-			} catch (SystemException ex) {
-				logger.warn("The local transaction is not active.", ex); // should never happen
-			} catch (RuntimeException ex) {
-				logger.warn("The local transaction is not active.", ex); // should never happen
-			}
+		if (recoveried == false && transactions.isEmpty() == false) /* used by participant only. */ {
+			for (int i = 0; i < transactions.size(); i++) {
+				Transaction branch = transactions.get(i);
+				try {
+					branch.setRollbackOnly();
+				} catch (IllegalStateException ex) {
+					logger.info("The local transaction is not active.", ex); // tx in try-phase has been completed already.
+				} catch (SystemException ex) {
+					logger.warn("The local transaction is not active.", ex); // should never happen
+				} catch (RuntimeException ex) {
+					logger.warn("The local transaction is not active.", ex); // should never happen
+				}
+			} // end-for (int i = 0; i < transactions.size(); i++)
 		}
 	}
 
@@ -708,7 +712,8 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 	}
 
 	public void resume() throws SystemException {
-		org.bytesoft.transaction.TransactionContext transactionContext = this.transaction.getTransactionContext();
+		Transaction transaction = this.transactionMap.get(Thread.currentThread());
+		org.bytesoft.transaction.TransactionContext transactionContext = transaction.getTransactionContext();
 		TransactionXid xid = transactionContext.getXid();
 		List<CompensableArchive> compensableList = this.archiveMap.remove(xid);
 
@@ -717,7 +722,8 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 	}
 
 	public void suspend() throws SystemException {
-		org.bytesoft.transaction.TransactionContext transactionContext = this.transaction.getTransactionContext();
+		Transaction transaction = this.transactionMap.get(Thread.currentThread());
+		org.bytesoft.transaction.TransactionContext transactionContext = transaction.getTransactionContext();
 		TransactionXid xid = transactionContext.getXid();
 
 		List<CompensableArchive> compensableList = new ArrayList<CompensableArchive>();
@@ -1050,9 +1056,11 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 	}
 
 	public XAResourceDescriptor getResourceDescriptor(String identifier) {
+		Transaction transaction = this.transactionMap.get(Thread.currentThread());
+
 		XAResourceDescriptor descriptor = null;
-		if (this.transaction != null) {
-			descriptor = this.transaction.getResourceDescriptor(identifier);
+		if (transaction != null) {
+			descriptor = transaction.getResourceDescriptor(identifier);
 		}
 
 		if (descriptor == null) {
@@ -1161,11 +1169,15 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 	}
 
 	public Object getTransactionalExtra() {
-		return transaction;
+		return this.transactionMap.get(Thread.currentThread());
 	}
 
 	public void setTransactionalExtra(Object transactionalExtra) {
-		this.transaction = (Transaction) transactionalExtra;
+		if (transactionalExtra == null) {
+			this.transactionMap.remove(Thread.currentThread());
+		} else {
+			this.transactionMap.put(Thread.currentThread(), (Transaction) transactionalExtra);
+		}
 	}
 
 	public Transaction getTransaction() {
