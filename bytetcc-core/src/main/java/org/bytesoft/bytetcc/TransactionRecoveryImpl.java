@@ -100,7 +100,7 @@ public class TransactionRecoveryImpl implements TransactionRecovery, Transaction
 					Transaction tx = recovered.get(transactionXid);
 					if (tx != null) {
 						tx.setTransactionalExtra(transaction);
-						transaction.setTransactionalExtra(tx);
+						transaction.setTransactionalExtra(tx); // TODO different thread
 					}
 				} else {
 					recoverStatusIfNecessary(transaction);
