@@ -106,7 +106,7 @@ public class TransactionRecoveryImpl
 					Transaction tx = recovered.get(transactionXid);
 					if (tx != null) {
 						tx.setTransactionalExtra(transaction);
-						transaction.setTransactionalExtra(tx);
+						transaction.setTransactionalExtra(tx); // TODO different thread
 					}
 				} else {
 					recoverStatusIfNecessary(transaction);
