@@ -194,6 +194,23 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 		}
 	}
 
+	public void forgetQuietly(Xid xid) {
+		try {
+			this.forget(xid);
+		} catch (XAException ex) {
+			switch (ex.errorCode) {
+			case XAException.XAER_NOTA:
+				break;
+			default:
+				logger.error("{}| Error occurred while forgeting remote coordinator.",
+						ByteUtils.byteArrayToString(xid.getGlobalTransactionId()), ex);
+			}
+		} catch (RuntimeException ex) {
+			logger.error("{}| Error occurred while forgeting remote coordinator.",
+					ByteUtils.byteArrayToString(xid.getGlobalTransactionId()), ex);
+		}
+	}
+
 	public int getTransactionTimeout() throws XAException {
 		return 0;
 	}

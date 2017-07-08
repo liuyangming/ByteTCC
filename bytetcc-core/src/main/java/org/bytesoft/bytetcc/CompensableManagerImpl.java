@@ -280,17 +280,17 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 		} catch (XAException xae) {
 			switch (xae.errorCode) {
 			case XAException.XA_HEURCOM:
-				this.forgetQuietly(transactionCoordinator, transactionXid);
+				transactionCoordinator.forgetQuietly(transactionXid);
 				break;
 			case XAException.XA_HEURRB:
-				this.forgetQuietly(transactionCoordinator, transactionXid);
+				transactionCoordinator.forgetQuietly(transactionXid);
 				throw new HeuristicRollbackException();
 			case XAException.XA_HEURMIX:
-				this.forgetQuietly(transactionCoordinator, transactionXid);
+				transactionCoordinator.forgetQuietly(transactionXid);
 				throw new HeuristicMixedException();
 			case XAException.XAER_RMERR:
 			default:
-				this.forgetQuietly(transactionCoordinator, transactionXid); // TODO
+				transactionCoordinator.forgetQuietly(transactionXid); // TODO
 				throw new SystemException();
 			}
 		}
@@ -315,7 +315,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 			transactionCoordinator.rollback(transactionXid);
 			throw new HeuristicRollbackException();
 		} catch (XAException xae) {
-			this.forgetQuietly(transactionCoordinator, transactionXid);
+			transactionCoordinator.forgetQuietly(transactionXid);
 			throw new SystemException();
 		}
 	}
@@ -371,7 +371,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 			transactionCoordinator.end(transactionContext, XAResource.TMSUCCESS);
 			transactionCoordinator.rollback(transactionXid);
 		} catch (XAException xae) {
-			this.forgetQuietly(transactionCoordinator, transactionXid);
+			transactionCoordinator.forgetQuietly(transactionXid);
 			throw new SystemException();
 		} finally {
 			compensable.setTransactionalExtra(null);
@@ -495,13 +495,13 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 		} catch (XAException xaex) {
 			switch (xaex.errorCode) {
 			case XAException.XA_HEURCOM:
-				this.forgetQuietly(transactionCoordinator, transactionXid);
+				transactionCoordinator.forgetQuietly(transactionXid);
 				break;
 			case XAException.XA_HEURRB:
-				this.forgetQuietly(transactionCoordinator, transactionXid);
+				transactionCoordinator.forgetQuietly(transactionXid);
 				throw new HeuristicRollbackException();
 			default:
-				this.forgetQuietly(transactionCoordinator, transactionXid); // TODO
+				transactionCoordinator.forgetQuietly(transactionXid); // TODO
 				throw new SystemException();
 			}
 		}
@@ -524,7 +524,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 			transactionCoordinator.rollback(transactionXid);
 			throw new HeuristicRollbackException();
 		} catch (XAException xaex) {
-			this.forgetQuietly(transactionCoordinator, transactionXid);
+			transactionCoordinator.forgetQuietly(transactionXid);
 			throw new SystemException();
 		}
 	}
@@ -579,7 +579,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 			transactionCoordinator.end(transactionContext, XAResource.TMSUCCESS);
 			transactionCoordinator.rollback(transactionXid);
 		} catch (XAException ex) {
-			this.forgetQuietly(transactionCoordinator, transactionXid);
+			transactionCoordinator.forgetQuietly(transactionXid);
 			logger.error("Error occurred while rolling back transaction in try phase!", ex);
 		} finally {
 			compensable.setTransactionalExtra(null);
@@ -596,23 +596,6 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 			}
 		}
 
-	}
-
-	private void forgetQuietly(RemoteCoordinator transactionCoordinator, TransactionXid xid) {
-		try {
-			transactionCoordinator.forget(xid);
-		} catch (XAException ex) {
-			switch (ex.errorCode) {
-			case XAException.XAER_NOTA:
-				break;
-			default:
-				logger.error("Error occurred while forgetting transaction: {}",
-						ByteUtils.byteArrayToInt(xid.getGlobalTransactionId()), ex);
-			}
-		} catch (RuntimeException ex) {
-			logger.error("Error occurred while forgetting transaction: {}",
-					ByteUtils.byteArrayToInt(xid.getGlobalTransactionId()), ex);
-		}
 	}
 
 	public void setRollbackOnly() throws IllegalStateException, SystemException {

@@ -110,6 +110,18 @@ public class TransactionCoordinator implements RemoteCoordinator, CompensableBea
 		}
 	}
 
+	public void forgetQuietly(Xid xid) {
+		RemoteCoordinator compensableCoordinator = this.beanFactory.getCompensableCoordinator();
+		RemoteCoordinator transactionCoordinator = this.beanFactory.getTransactionCoordinator();
+
+		int formatId = xid.getFormatId();
+		if (XidFactory.JTA_FORMAT_ID == formatId) {
+			transactionCoordinator.forgetQuietly(xid);
+		} else if (XidFactory.TCC_FORMAT_ID == formatId) {
+			compensableCoordinator.forgetQuietly(xid);
+		}
+	}
+
 	public String getApplication() {
 		throw new IllegalStateException();
 	}
