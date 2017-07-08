@@ -261,22 +261,26 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 
 		Transaction transaction = compensable.getTransaction();
 		org.bytesoft.transaction.TransactionContext transactionContext = transaction.getTransactionContext();
-		TransactionXid xid = transactionContext.getXid();
 		RemoteCoordinator transactionCoordinator = this.beanFactory.getTransactionCoordinator();
 
+		TransactionXid transactionXid = transactionContext.getXid();
 		try {
 			transactionCoordinator.end(transactionContext, XAResource.TMSUCCESS);
-			transactionCoordinator.commit(xid, true);
+			transactionCoordinator.commit(transactionXid, true);
 		} catch (XAException xae) {
 			switch (xae.errorCode) {
 			case XAException.XA_HEURCOM:
+				this.forgetQuietly(transactionCoordinator, transactionXid);
 				break;
 			case XAException.XA_HEURRB:
+				this.forgetQuietly(transactionCoordinator, transactionXid);
 				throw new HeuristicRollbackException();
 			case XAException.XA_HEURMIX:
+				this.forgetQuietly(transactionCoordinator, transactionXid);
 				throw new HeuristicMixedException();
 			case XAException.XAER_RMERR:
 			default:
+				this.forgetQuietly(transactionCoordinator, transactionXid);
 				throw new SystemException();
 			}
 		}
@@ -287,9 +291,9 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 
 		Transaction transaction = compensable.getTransaction();
 		org.bytesoft.transaction.TransactionContext transactionContext = transaction.getTransactionContext();
-		TransactionXid xid = transactionContext.getXid();
 		RemoteCoordinator transactionCoordinator = this.beanFactory.getTransactionCoordinator();
 
+		TransactionXid transactionXid = transactionContext.getXid();
 		try {
 			transactionCoordinator.end(transactionContext, XAResource.TMSUCCESS);
 
@@ -297,9 +301,10 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 			logger.error("[{}] jta-transaction in try-phase cannot be xa transaction.",
 					ByteUtils.byteArrayToString(compensableContext.getXid().getGlobalTransactionId()));
 
-			transactionCoordinator.rollback(xid);
+			transactionCoordinator.rollback(transactionXid);
 			throw new HeuristicRollbackException();
 		} catch (XAException xae) {
+			this.forgetQuietly(transactionCoordinator, transactionXid);
 			throw new SystemException();
 		}
 	}
@@ -348,12 +353,14 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 
 		Transaction transaction = compensable.getTransaction();
 		org.bytesoft.transaction.TransactionContext transactionContext = transaction.getTransactionContext();
-		TransactionXid xid = transactionContext.getXid();
 		RemoteCoordinator transactionCoordinator = this.beanFactory.getTransactionCoordinator();
+
+		TransactionXid transactionXid = transactionContext.getXid();
 		try {
 			transactionCoordinator.end(transactionContext, XAResource.TMSUCCESS);
-			transactionCoordinator.rollback(xid);
+			transactionCoordinator.rollback(transactionXid);
 		} catch (XAException xae) {
+			this.forgetQuietly(transactionCoordinator, transactionXid);
 			throw new SystemException();
 		} finally {
 			compensable.setTransactionalExtra(null);
@@ -467,10 +474,13 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 		} catch (XAException xaex) {
 			switch (xaex.errorCode) {
 			case XAException.XA_HEURCOM:
+				this.forgetQuietly(transactionCoordinator, transactionXid);
 				break;
 			case XAException.XA_HEURRB:
+				this.forgetQuietly(transactionCoordinator, transactionXid);
 				throw new HeuristicRollbackException();
 			default:
+				this.forgetQuietly(transactionCoordinator, transactionXid); // TODO
 				throw new SystemException();
 			}
 		}
@@ -493,6 +503,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 			transactionCoordinator.rollback(transactionXid);
 			throw new HeuristicRollbackException();
 		} catch (XAException xaex) {
+			this.forgetQuietly(transactionCoordinator, transactionXid);
 			throw new SystemException();
 		}
 	}
@@ -531,11 +542,12 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 		org.bytesoft.compensable.TransactionContext compensableContext = compensable.getTransactionContext();
 		org.bytesoft.transaction.TransactionContext transactionContext = transaction.getTransactionContext();
 
+		TransactionXid transactionXid = transactionContext.getXid();
 		try {
-			TransactionXid transactionXid = transactionContext.getXid();
 			transactionCoordinator.end(transactionContext, XAResource.TMSUCCESS);
 			transactionCoordinator.rollback(transactionXid);
 		} catch (XAException ex) {
+			this.forgetQuietly(transactionCoordinator, transactionXid);
 			logger.error("Error occurred while rolling back transaction in try phase!", ex);
 		} finally {
 			compensable.setTransactionalExtra(null);
@@ -555,6 +567,23 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 			}
 		}
 
+	}
+
+	private void forgetQuietly(RemoteCoordinator transactionCoordinator, TransactionXid xid) {
+		try {
+			transactionCoordinator.forget(xid);
+		} catch (XAException ex) {
+			switch (ex.errorCode) {
+			case XAException.XAER_NOTA:
+				break;
+			default:
+				logger.error("Error occurred while forgetting transaction: {}",
+						ByteUtils.byteArrayToInt(xid.getGlobalTransactionId()), ex);
+			}
+		} catch (RuntimeException ex) {
+			logger.error("Error occurred while forgetting transaction: {}",
+					ByteUtils.byteArrayToInt(xid.getGlobalTransactionId()), ex);
+		}
 	}
 
 	public void setRollbackOnly() throws IllegalStateException, SystemException {
