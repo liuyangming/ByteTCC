@@ -6,7 +6,7 @@
 <dependency>
 	<groupId>org.bytesoft</groupId>
 	<artifactId>bytetcc-supports-dubbo</artifactId>
-	<version>0.4.0-beta</version>
+	<version>0.4.0-beta2</version>
 </dependency>
 ```
 #### 1.2. 编写业务服务

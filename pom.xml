@@ -111,44 +111,44 @@
 			<dependency>
 				<groupId>org.bytesoft</groupId>
 				<artifactId>bytejta-core</artifactId>
-				<version>0.4.0-alpha3</version>
+				<version>0.4.0-alpha4</version>
 			</dependency>
 			<dependency>
 				<groupId>org.bytesoft</groupId>
 				<artifactId>bytejta-supports</artifactId>
-				<version>0.4.0-alpha3</version>
+				<version>0.4.0-alpha4</version>
 			</dependency>
 			<dependency>
 				<groupId>org.bytesoft</groupId>
 				<artifactId>bytejta-supports-dubbo</artifactId>
-				<version>0.4.0-alpha3</version>
+				<version>0.4.0-alpha4</version>
 			</dependency>
 
 			<!-- bytetcc -->
 			<dependency>
 				<groupId>org.bytesoft</groupId>
 				<artifactId>bytetcc-common</artifactId>
-				<version>0.4.0-beta</version>
+				<version>0.4.0-beta2</version>
 			</dependency>
 			<dependency>
 				<groupId>org.bytesoft</groupId>
 				<artifactId>bytetcc-core</artifactId>
-				<version>0.4.0-beta</version>
+				<version>0.4.0-beta2</version>
 			</dependency>
 			<dependency>
 				<groupId>org.bytesoft</groupId>
 				<artifactId>bytetcc-supports</artifactId>
-				<version>0.4.0-beta</version>
+				<version>0.4.0-beta2</version>
 			</dependency>
 			<dependency>
 				<groupId>org.bytesoft</groupId>
 				<artifactId>bytetcc-supports-dubbo</artifactId>
-				<version>0.4.0-beta</version>
+				<version>0.4.0-beta2</version>
 			</dependency>
 			<dependency>
 				<groupId>org.bytesoft</groupId>
 				<artifactId>bytetcc-supports-springcloud</artifactId>
-				<version>0.4.0-beta</version>
+				<version>0.4.0-beta2</version>
 			</dependency>
 
 			<!-- logger -->
