@@ -16,6 +16,7 @@
 package org.bytesoft.bytetcc.supports.rpc;
 
 import javax.transaction.RollbackException;
+import javax.transaction.Status;
 import javax.transaction.SystemException;
 import javax.transaction.xa.XAException;
 import javax.transaction.xa.XAResource;
@@ -56,6 +57,11 @@ public class CompensableInterceptorImpl implements TransactionInterceptor, Compe
 		TransactionXid globalXid = xidFactory.createGlobalXid(currentXid.getGlobalTransactionId());
 		transactionContext.setXid(globalXid);
 		request.setTransactionContext(transactionContext);
+
+		if (transaction.getTransactionStatus() == Status.STATUS_MARKED_ROLLBACK) {
+			throw new IllegalStateException(
+					"Transaction has been marked as rollback only, can not propagate its context to remote branch.");
+		} // end-if (transaction.getTransactionStatus() == Status.STATUS_MARKED_ROLLBACK)
 
 		try {
 			RemoteCoordinator resource = request.getTargetTransactionCoordinator();
