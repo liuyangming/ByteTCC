@@ -235,7 +235,7 @@ public class SampleCompensableLogger extends VirtualLoggingSystemImpl
 
 	public File getDefaultDirectory() {
 		String address = StringUtils.trimToEmpty(this.endpoint);
-		File directory = new File(String.format("bytetcc/%s", address.replaceAll("[^a-zA-Z0-9]", "_")));
+		File directory = new File(String.format("bytetcc/%s", address.replaceAll("[^a-zA-Z_0-9]", "_")));
 		if (directory.exists() == false) {
 			try {
 				directory.mkdirs();
