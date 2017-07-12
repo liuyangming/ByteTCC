@@ -246,6 +246,14 @@ public class SampleCompensableLogger extends VirtualLoggingSystemImpl
 		return directory;
 	}
 
+	public int getMajorVersion() {
+		return 0;
+	}
+
+	public int getMinorVersion() {
+		return 2;
+	}
+
 	public String getLoggingFilePrefix() {
 		return "bytetcc-";
 	}
