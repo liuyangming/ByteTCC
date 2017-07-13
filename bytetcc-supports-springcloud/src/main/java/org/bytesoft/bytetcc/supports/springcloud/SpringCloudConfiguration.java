@@ -19,6 +19,7 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -43,6 +44,7 @@ import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.boot.autoconfigure.web.HttpMessageConverters;
+import org.springframework.cloud.netflix.feign.AnnotatedParameterProcessor;
 import org.springframework.cloud.netflix.feign.support.ResponseEntityDecoder;
 import org.springframework.cloud.netflix.feign.support.SpringDecoder;
 import org.springframework.cloud.netflix.feign.support.SpringMvcContract;
@@ -106,8 +108,8 @@ public class SpringCloudConfiguration extends WebMvcConfigurerAdapter
 
 	@org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean(feign.Contract.class)
 	@org.springframework.context.annotation.Bean
-	public feign.Contract feignContract() {
-		return new SpringMvcContract();
+	public feign.Contract feignContract(@Autowired(required = false) List<AnnotatedParameterProcessor> processors) {
+		return processors == null || processors.isEmpty() ? new SpringMvcContract() : new SpringMvcContract(processors);
 	}
 
 	@org.springframework.context.annotation.Primary
