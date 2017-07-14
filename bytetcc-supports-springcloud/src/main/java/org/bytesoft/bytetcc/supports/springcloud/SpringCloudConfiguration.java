@@ -17,10 +17,8 @@ package org.bytesoft.bytetcc.supports.springcloud;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -46,7 +44,6 @@ import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.boot.autoconfigure.web.HttpMessageConverters;
-import org.springframework.cloud.netflix.feign.AnnotatedParameterProcessor;
 import org.springframework.cloud.netflix.feign.support.ResponseEntityDecoder;
 import org.springframework.cloud.netflix.feign.support.SpringDecoder;
 import org.springframework.cloud.netflix.feign.support.SpringMvcContract;
@@ -76,8 +73,8 @@ public class SpringCloudConfiguration extends WebMvcConfigurerAdapter
 	static final String CONSTANT_EXCLUSIONS = "org.bytesoft.bytetcc.feign.exclusions";
 	static final String FEIGN_FACTORY_CLASS = "org.springframework.cloud.netflix.feign.FeignClientFactoryBean";
 
-	@Autowired(required = false)
-	private List<AnnotatedParameterProcessor> parameterProcessors = new ArrayList<AnnotatedParameterProcessor>();
+	// @Autowired(required = false)
+	// private List<AnnotatedParameterProcessor> parameterProcessors = new ArrayList<AnnotatedParameterProcessor>();
 	@Autowired
 	private ObjectFactory<HttpMessageConverters> messageConverters;
 
@@ -121,39 +118,21 @@ public class SpringCloudConfiguration extends WebMvcConfigurerAdapter
 		return interceptor;
 	}
 
-	// @org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean(feign.Contract.class)
-	// @org.springframework.context.annotation.Bean
-	// public feign.Contract feignContract() {
-	// return new SpringMvcContract();
-	// }
-
 	@org.springframework.context.annotation.Primary
 	@org.springframework.context.annotation.Bean
-	public feign.Contract compensableFeignContract() /* @Autowired feign.Contract contract */ {
+	public feign.Contract compensableFeignContract() {
 		return new CompensableFeignContract();
 	}
 
-	// @org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean(feign.codec.Decoder.class)
-	// @org.springframework.context.annotation.Bean
-	// public feign.codec.Decoder feignDecoder(@Autowired ObjectFactory<HttpMessageConverters> messageConverters) {
-	// return new ResponseEntityDecoder(new SpringDecoder(messageConverters));
-	// }
-
 	@org.springframework.context.annotation.Primary
 	@org.springframework.context.annotation.Bean
-	public feign.codec.Decoder compensableFeignDecoder() /* @Autowired feign.codec.Decoder decoder */ {
+	public feign.codec.Decoder compensableFeignDecoder() {
 		return new CompensableFeignDecoder();
 	}
 
-	// @org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean(feign.codec.ErrorDecoder.class)
-	// @org.springframework.context.annotation.Bean
-	// public feign.codec.ErrorDecoder errorDecoder() {
-	// return new ErrorDecoder.Default();
-	// }
-
 	@org.springframework.context.annotation.Primary
 	@org.springframework.context.annotation.Bean
-	public feign.codec.ErrorDecoder compensableErrorDecoder() /* @Autowired feign.codec.ErrorDecoder decoder */ {
+	public feign.codec.ErrorDecoder compensableErrorDecoder() {
 		return new CompensableFeignErrorDecoder();
 	}
 
@@ -304,7 +283,7 @@ public class SpringCloudConfiguration extends WebMvcConfigurerAdapter
 			}
 		} else if (CompensableFeignContract.class.isInstance(bean)) {
 			if (this.delegateFeignContract == null) {
-				this.feignContract.setDelegate(new SpringMvcContract(this.parameterProcessors));
+				this.feignContract.setDelegate(new SpringMvcContract());
 			} else {
 				this.feignContract.setDelegate(this.delegateFeignContract);
 			}
