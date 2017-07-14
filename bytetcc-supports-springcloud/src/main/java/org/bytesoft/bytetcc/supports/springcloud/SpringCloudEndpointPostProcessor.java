@@ -67,8 +67,9 @@ public class SpringCloudEndpointPostProcessor
 		}
 
 		String host = CommonUtils.getInetAddress();
+		String name = this.environment.getProperty("spring.application.name");
 		String port = this.environment.getProperty("server.port");
-		String identifier = String.format("%s:%s", host, port);
+		String identifier = String.format("%s:%s:%s", host, name, port);
 
 		for (int i = 0; i < beanDefList.size(); i++) {
 			BeanDefinition beanDef = beanDefList.get(i);

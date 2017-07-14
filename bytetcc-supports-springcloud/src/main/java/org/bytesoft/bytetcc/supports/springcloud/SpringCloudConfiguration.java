@@ -19,7 +19,6 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -35,16 +34,16 @@ import org.bytesoft.bytetcc.supports.springcloud.web.CompensableHandlerIntercept
 import org.bytesoft.bytetcc.supports.springcloud.web.CompensableRequestInterceptor;
 import org.bytesoft.compensable.aware.CompensableEndpointAware;
 import org.springframework.beans.BeansException;
+import org.springframework.beans.FatalBeanException;
 import org.springframework.beans.MutablePropertyValues;
 import org.springframework.beans.PropertyValue;
 import org.springframework.beans.factory.ObjectFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
+import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.boot.autoconfigure.web.HttpMessageConverters;
-import org.springframework.cloud.netflix.feign.AnnotatedParameterProcessor;
 import org.springframework.cloud.netflix.feign.support.ResponseEntityDecoder;
 import org.springframework.cloud.netflix.feign.support.SpringDecoder;
 import org.springframework.cloud.netflix.feign.support.SpringMvcContract;
@@ -52,7 +51,6 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.EnvironmentAware;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.DependsOn;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.core.env.Environment;
 import org.springframework.http.client.ClientHttpRequestFactory;
@@ -69,15 +67,26 @@ import feign.codec.ErrorDecoder;
 @PropertySource(value = "bytetcc:loadbalancer.config", factory = CompensablePropertySourceFactory.class)
 @Configuration
 public class SpringCloudConfiguration extends WebMvcConfigurerAdapter
-		implements BeanFactoryPostProcessor, CompensableEndpointAware, EnvironmentAware, ApplicationContextAware {
+		implements BeanFactoryPostProcessor, CompensableEndpointAware, EnvironmentAware, ApplicationContextAware,
+		BeanPostProcessor /* , ApplicationListener<ApplicationReadyEvent> */ {
 	static final String CONSTANT_INCLUSIONS = "org.bytesoft.bytetcc.feign.inclusions";
 	static final String CONSTANT_EXCLUSIONS = "org.bytesoft.bytetcc.feign.exclusions";
 	static final String FEIGN_FACTORY_CLASS = "org.springframework.cloud.netflix.feign.FeignClientFactoryBean";
 
+	@Autowired
+	private ObjectFactory<HttpMessageConverters> messageConverters;
 	private ApplicationContext applicationContext;
 	private String identifier;
 	private Environment environment;
 	private transient final Set<String> transientClientSet = new HashSet<String>();
+
+	private transient CompensableFeignContract feignContract;
+	private transient CompensableFeignDecoder feignDecoder;
+	private transient CompensableFeignErrorDecoder errorDecoder;
+
+	private transient feign.codec.Decoder delegateFeignDecoder;
+	private transient feign.Contract delegateFeignContract;
+	private transient feign.codec.ErrorDecoder delegateErrorDecoder;
 
 	@org.springframework.context.annotation.Primary
 	@org.springframework.context.annotation.Bean
@@ -106,47 +115,46 @@ public class SpringCloudConfiguration extends WebMvcConfigurerAdapter
 		return interceptor;
 	}
 
-	@org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean(feign.Contract.class)
-	@org.springframework.context.annotation.Bean
-	public feign.Contract feignContract(@Autowired(required = false) List<AnnotatedParameterProcessor> processors) {
-		return processors == null || processors.isEmpty() ? new SpringMvcContract() : new SpringMvcContract(processors);
-	}
+	// @org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean(feign.Contract.class)
+	// @org.springframework.context.annotation.Bean
+	// public feign.Contract feignContract() {
+	// return new SpringMvcContract();
+	// }
 
 	@org.springframework.context.annotation.Primary
 	@org.springframework.context.annotation.Bean
-	public feign.Contract compensableFeignContract(@Autowired feign.Contract contract) {
-		return new CompensableFeignContract(contract);
+	public feign.Contract compensableFeignContract() /* @Autowired feign.Contract contract */ {
+		return new CompensableFeignContract();
 	}
 
-	@org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean(feign.codec.Decoder.class)
-	@org.springframework.context.annotation.Bean
-	public feign.codec.Decoder feignDecoder(@Autowired ObjectFactory<HttpMessageConverters> messageConverters) {
-		return new ResponseEntityDecoder(new SpringDecoder(messageConverters));
-	}
-
-	@org.springframework.context.annotation.Primary
-	@org.springframework.context.annotation.Bean
-	public feign.codec.Decoder compensableFeignDecoder(@Autowired feign.codec.Decoder decoder) {
-		return new CompensableFeignDecoder(decoder);
-	}
-
-	@org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean(feign.codec.ErrorDecoder.class)
-	@org.springframework.context.annotation.Bean
-	public feign.codec.ErrorDecoder errorDecoder() {
-		return new ErrorDecoder.Default();
-	}
+	// @org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean(feign.codec.Decoder.class)
+	// @org.springframework.context.annotation.Bean
+	// public feign.codec.Decoder feignDecoder(@Autowired ObjectFactory<HttpMessageConverters> messageConverters) {
+	// return new ResponseEntityDecoder(new SpringDecoder(messageConverters));
+	// }
 
 	@org.springframework.context.annotation.Primary
 	@org.springframework.context.annotation.Bean
-	public feign.codec.ErrorDecoder compensableErrorDecoder(@Autowired feign.codec.ErrorDecoder decoder) {
-		return new CompensableFeignErrorDecoder(decoder);
+	public feign.codec.Decoder compensableFeignDecoder() /* @Autowired feign.codec.Decoder decoder */ {
+		return new CompensableFeignDecoder();
+	}
+
+	// @org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean(feign.codec.ErrorDecoder.class)
+	// @org.springframework.context.annotation.Bean
+	// public feign.codec.ErrorDecoder errorDecoder() {
+	// return new ErrorDecoder.Default();
+	// }
+
+	@org.springframework.context.annotation.Primary
+	@org.springframework.context.annotation.Bean
+	public feign.codec.ErrorDecoder compensableErrorDecoder() /* @Autowired feign.codec.ErrorDecoder decoder */ {
+		return new CompensableFeignErrorDecoder();
 	}
 
 	@org.springframework.context.annotation.Bean
 	public CompensableHandlerInterceptor compensableHandlerInterceptor() {
 		CompensableHandlerInterceptor interceptor = new CompensableHandlerInterceptor();
 		interceptor.setEndpoint(this.identifier);
-		// interceptor.setApplicationContext(this.applicationContext);
 		return interceptor;
 	}
 
@@ -167,15 +175,11 @@ public class SpringCloudConfiguration extends WebMvcConfigurerAdapter
 	public RestTemplate transactionTemplate(@Autowired ClientHttpRequestFactory requestFactory) {
 		RestTemplate restTemplate = new RestTemplate();
 		restTemplate.setRequestFactory(requestFactory);
-		return restTemplate;
-	}
 
-	@DependsOn("compensableRestTemplate")
-	@org.springframework.context.annotation.Bean
-	public SpringCloudBeanRegistry beanRegistry(@Qualifier("compensableRestTemplate") @Autowired RestTemplate restTemplate) {
 		SpringCloudBeanRegistry registry = SpringCloudBeanRegistry.getInstance();
 		registry.setRestTemplate(restTemplate);
-		return registry;
+
+		return restTemplate;
 	}
 
 	@org.springframework.context.annotation.Primary
@@ -257,6 +261,58 @@ public class SpringCloudConfiguration extends WebMvcConfigurerAdapter
 		}
 
 	}
+
+	public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
+		if (CompensableFeignDecoder.class.isInstance(bean)) {
+			this.feignDecoder = (CompensableFeignDecoder) bean;
+		} else if (feign.codec.Decoder.class.isInstance(bean)) {
+			if (this.delegateFeignDecoder != null) {
+				throw new FatalBeanException("There are more than one feign.codec.Decoder exists!");
+			} // end-if (this.delegateFeignDecoder != null)
+			this.delegateFeignDecoder = (feign.codec.Decoder) bean;
+		} else if (CompensableFeignContract.class.isInstance(bean)) {
+			this.feignContract = (CompensableFeignContract) bean;
+		} else if (feign.Contract.class.isInstance(bean)) {
+			if (this.delegateFeignContract != null) {
+				throw new FatalBeanException("There are more than one feign.Contract exists!");
+			} // end-if (this.delegateFeignContract != null)
+			this.delegateFeignContract = (feign.Contract) bean;
+		} else if (CompensableFeignErrorDecoder.class.isInstance(bean)) {
+			this.errorDecoder = (CompensableFeignErrorDecoder) bean;
+		} else if (feign.codec.ErrorDecoder.class.isInstance(bean)) {
+			if (this.delegateErrorDecoder != null) {
+				throw new FatalBeanException("There are more than one feign.codec.ErrorDecoder exists!");
+			} // end-if (this.delegateErrorDecoder != null)
+			this.delegateErrorDecoder = (feign.codec.ErrorDecoder) bean;
+		}
+
+		return bean;
+	}
+
+	public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
+		if (CompensableFeignDecoder.class.isInstance(bean)) {
+			if (this.delegateFeignDecoder == null) {
+				this.feignDecoder.setDelegate(new ResponseEntityDecoder(new SpringDecoder(this.messageConverters)));
+			} else {
+				this.feignDecoder.setDelegate(this.delegateFeignDecoder);
+			}
+		} else if (CompensableFeignContract.class.isInstance(bean)) {
+			if (this.delegateFeignContract == null) {
+				this.feignContract.setDelegate(new SpringMvcContract());
+			} else {
+				this.feignContract.setDelegate(this.delegateFeignContract);
+			}
+		} else if (CompensableFeignErrorDecoder.class.isInstance(bean)) {
+			if (this.delegateErrorDecoder == null) {
+				this.errorDecoder.setDelegate(new ErrorDecoder.Default());
+			} else {
+				this.errorDecoder.setDelegate(this.delegateErrorDecoder);
+			}
+		}
+		return bean;
+	}
+
+	// public void onApplicationEvent(ApplicationReadyEvent event) {}
 
 	public void setEndpoint(String identifier) {
 		this.identifier = identifier;
