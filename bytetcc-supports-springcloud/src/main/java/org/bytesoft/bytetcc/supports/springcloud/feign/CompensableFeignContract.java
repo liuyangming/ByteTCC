@@ -15,12 +15,19 @@
  */
 package org.bytesoft.bytetcc.supports.springcloud.feign;
 
+import java.util.ArrayList;
 import java.util.List;
+
+import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.InitializingBean;
+import org.springframework.cloud.netflix.feign.support.SpringMvcContract;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
 
 import feign.MethodMetadata;
 
-public class CompensableFeignContract implements feign.Contract {
-
+public class CompensableFeignContract implements feign.Contract, InitializingBean, ApplicationContextAware {
+	private ApplicationContext applicationContext;
 	private feign.Contract delegate;
 
 	public CompensableFeignContract() {
@@ -30,15 +37,38 @@ public class CompensableFeignContract implements feign.Contract {
 		this.delegate = contract;
 	}
 
+	public void afterPropertiesSet() throws Exception {
+		feign.Contract feignContract = null;
+
+		String[] beanNameArray = this.applicationContext.getBeanNamesForType(feign.Contract.class);
+		for (int i = 0; beanNameArray != null && i < beanNameArray.length; i++) {
+			String beanName = beanNameArray[i];
+			Object beanInst = this.applicationContext.getBean(beanName);
+			if (CompensableFeignContract.class.isInstance(beanInst)) {
+				continue;
+			} else if (feignContract != null) {
+				throw new RuntimeException("There are more than one feign.Contract exists!");
+			} else {
+				feignContract = (feign.Contract) beanInst;
+			}
+		}
+
+		if (feignContract == null) {
+			feignContract = new SpringMvcContract();
+		} // end-if (feignContract == null)
+
+		this.delegate = feignContract;
+	}
+
 	public List<MethodMetadata> parseAndValidatateMetadata(Class<?> targetType) {
 		List<MethodMetadata> metas = this.delegate.parseAndValidatateMetadata(targetType);
-		for (int i = 0; i < metas.size(); i++) {
+		for (int i = 0; metas != null && i < metas.size(); i++) {
 			MethodMetadata meta = metas.get(i);
 			if (meta.returnType() == void.class) {
 				meta.returnType(Void.class);
 			}
 		}
-		return metas;
+		return metas == null ? new ArrayList<MethodMetadata>() : metas;
 	}
 
 	public feign.Contract getDelegate() {
@@ -47,6 +77,10 @@ public class CompensableFeignContract implements feign.Contract {
 
 	public void setDelegate(feign.Contract delegate) {
 		this.delegate = delegate;
+	}
+
+	public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+		this.applicationContext = applicationContext;
 	}
 
 }
