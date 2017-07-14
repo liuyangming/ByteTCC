@@ -93,12 +93,12 @@ public class CompensableRequestInterceptor
 				for (int i = 0; servers != null && i < servers.size(); i++) {
 					Server server = servers.get(i);
 					MetaInfo metaInfo = server.getMetaInfo();
-					String instanceId = metaInfo.getInstanceId();
+					// String instanceId = metaInfo.getInstanceId();
 
-					// String appName = metaInfo.getAppName();
-					// if (StringUtils.equalsIgnoreCase(serviceId, appName) == false) {
-					// continue;
-					// } // end-if (StringUtils.equalsIgnoreCase(serviceId, appName) == false)
+					String host = server.getHost();
+					String appName = metaInfo.getAppName();
+					int port = server.getPort();
+					String instanceId = String.format("%s:%s:%s", host, appName, port);
 
 					if (participants.containsKey(instanceId)) {
 						List<Server> serverList = new ArrayList<Server>();
@@ -126,7 +126,13 @@ public class CompensableRequestInterceptor
 				} else {
 					try {
 						MetaInfo metaInfo = server.getMetaInfo();
-						String instanceId = metaInfo.getInstanceId();
+
+						String host = server.getHost();
+						String appName = metaInfo.getAppName();
+						int port = server.getPort();
+						String instanceId = String.format("%s:%s:%s", host, appName, port);
+						// String instanceId = metaInfo.getInstanceId();
+
 						invokeBeforeSendRequest(httpRequest, instanceId);
 					} catch (IOException ex) {
 						throw new RuntimeException(ex);

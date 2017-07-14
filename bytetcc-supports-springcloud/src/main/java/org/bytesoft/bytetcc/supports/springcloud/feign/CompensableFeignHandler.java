@@ -81,12 +81,12 @@ public class CompensableFeignHandler implements InvocationHandler {
 					for (int i = 0; servers != null && i < servers.size(); i++) {
 						Server server = servers.get(i);
 						MetaInfo metaInfo = server.getMetaInfo();
-						String instanceId = metaInfo.getInstanceId();
+						// String instanceId = metaInfo.getInstanceId();
 
-						// String appName = metaInfo.getAppName();
-						// if (StringUtils.equalsIgnoreCase(serviceId, appName) == false) {
-						// continue;
-						// } // end-if (StringUtils.equalsIgnoreCase(serviceId, appName) == false)
+						String host = server.getHost();
+						String appName = metaInfo.getAppName();
+						int port = server.getPort();
+						String instanceId = String.format("%s:%s:%s", host, appName, port);
 
 						if (participants.containsKey(instanceId)) {
 							List<Server> serverList = new ArrayList<Server>();
@@ -119,8 +119,14 @@ public class CompensableFeignHandler implements InvocationHandler {
 					request.setTransactionContext(transactionContext);
 
 					MetaInfo metaInfo = server.getMetaInfo();
-					String identifier = metaInfo.getInstanceId();
-					RemoteCoordinator coordinator = beanRegistry.getConsumeCoordinator(identifier);
+
+					String host = server.getHost();
+					String appName = metaInfo.getAppName();
+					int port = server.getPort();
+					String instanceId = String.format("%s:%s:%s", host, appName, port);
+					// String instanceId = metaInfo.getInstanceId();
+
+					RemoteCoordinator coordinator = beanRegistry.getConsumeCoordinator(instanceId);
 					request.setTargetTransactionCoordinator(coordinator);
 
 					transactionInterceptor.beforeSendRequest(request);
