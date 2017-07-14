@@ -17,8 +17,10 @@ package org.bytesoft.bytetcc.supports.springcloud;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -44,6 +46,7 @@ import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.boot.autoconfigure.web.HttpMessageConverters;
+import org.springframework.cloud.netflix.feign.AnnotatedParameterProcessor;
 import org.springframework.cloud.netflix.feign.support.ResponseEntityDecoder;
 import org.springframework.cloud.netflix.feign.support.SpringDecoder;
 import org.springframework.cloud.netflix.feign.support.SpringMvcContract;
@@ -73,8 +76,11 @@ public class SpringCloudConfiguration extends WebMvcConfigurerAdapter
 	static final String CONSTANT_EXCLUSIONS = "org.bytesoft.bytetcc.feign.exclusions";
 	static final String FEIGN_FACTORY_CLASS = "org.springframework.cloud.netflix.feign.FeignClientFactoryBean";
 
+	@Autowired(required = false)
+	private List<AnnotatedParameterProcessor> parameterProcessors = new ArrayList<AnnotatedParameterProcessor>();
 	@Autowired
 	private ObjectFactory<HttpMessageConverters> messageConverters;
+
 	private ApplicationContext applicationContext;
 	private String identifier;
 	private Environment environment;
@@ -298,7 +304,7 @@ public class SpringCloudConfiguration extends WebMvcConfigurerAdapter
 			}
 		} else if (CompensableFeignContract.class.isInstance(bean)) {
 			if (this.delegateFeignContract == null) {
-				this.feignContract.setDelegate(new SpringMvcContract());
+				this.feignContract.setDelegate(new SpringMvcContract(this.parameterProcessors));
 			} else {
 				this.feignContract.setDelegate(this.delegateFeignContract);
 			}
