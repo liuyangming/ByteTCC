@@ -58,15 +58,21 @@ public class CompensableAnnotationValidator implements BeanFactoryPostProcessor 
 				continue;
 			}
 
+			Compensable compensable = null;
 			try {
-				Compensable compensable = clazz.getAnnotation(Compensable.class);
-				if (compensable == null) {
-					otherServiceMap.put(beanName, clazz);
-					continue;
-				} else {
-					compensables.put(beanName, compensable);
-				}
+				compensable = clazz.getAnnotation(Compensable.class);
+			} catch (RuntimeException rex) {
+				logger.warn("Error occurred while getting @Compensable annotation, class= {}!", clazz, rex);
+			}
 
+			if (compensable == null) {
+				otherServiceMap.put(beanName, clazz);
+				continue;
+			} else {
+				compensables.put(beanName, compensable);
+			}
+
+			try {
 				Class<?> interfaceClass = compensable.interfaceClass();
 				if (interfaceClass.isInterface() == false) {
 					throw new IllegalStateException("Compensable's interfaceClass must be a interface.");
@@ -84,6 +90,8 @@ public class CompensableAnnotationValidator implements BeanFactoryPostProcessor 
 			} catch (NoSuchMethodException ex) {
 				throw new FatalBeanException(ex.getMessage(), ex);
 			} catch (SecurityException ex) {
+				throw new FatalBeanException(ex.getMessage(), ex);
+			} catch (RuntimeException ex) {
 				throw new FatalBeanException(ex.getMessage(), ex);
 			}
 		}

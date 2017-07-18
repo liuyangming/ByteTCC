@@ -38,6 +38,12 @@ public class CompensableFeignContract implements feign.Contract, InitializingBea
 	}
 
 	public void afterPropertiesSet() throws Exception {
+		if (this.delegate == null) {
+			this.invokeAfterPropertiesSet();
+		} // end-if (this.delegate == null)
+	}
+
+	public void invokeAfterPropertiesSet() throws Exception {
 		feign.Contract feignContract = null;
 
 		String[] beanNameArray = this.applicationContext.getBeanNamesForType(feign.Contract.class);

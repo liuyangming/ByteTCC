@@ -54,6 +54,12 @@ public class CompensableFeignErrorDecoder implements feign.codec.ErrorDecoder, I
 	}
 
 	public void afterPropertiesSet() throws Exception {
+		if (this.delegate == null) {
+			this.invokeAfterPropertiesSet();
+		} // end-if (this.delegate == null)
+	}
+
+	public void invokeAfterPropertiesSet() throws Exception {
 		feign.codec.ErrorDecoder errorDecoder = null;
 
 		String[] beanNameArray = this.applicationContext.getBeanNamesForType(feign.codec.ErrorDecoder.class);
