@@ -123,22 +123,26 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 		}
 		TransactionRepository compensableRepository = this.beanFactory.getCompensableRepository();
 		XidFactory xidFactory = this.beanFactory.getCompensableXidFactory();
-		TransactionXid globalXid = xidFactory.createGlobalXid(xid.getGlobalTransactionId());
-		CompensableTransaction transaction = (CompensableTransaction) compensableRepository.getTransaction(globalXid);
-		if (transaction == null) {
-			throw new XAException(XAException.XAER_NOTA);
-		}
 
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 		TransactionLock compensableLock = this.beanFactory.getCompensableLock();
 
+		TransactionXid globalXid = xidFactory.createGlobalXid(xid.getGlobalTransactionId());
+		CompensableTransaction transaction = null;
+
 		boolean success = false;
 		try {
-			compensableManager.associateThread(transaction);
 			boolean locked = compensableLock.lockTransaction(globalXid, this.endpoint);
 			if (locked == false) {
 				throw new XAException(XAException.XAER_RMERR);
 			}
+
+			transaction = (CompensableTransaction) compensableRepository.getTransaction(globalXid);
+			if (transaction == null) {
+				throw new XAException(XAException.XAER_NOTA);
+			}
+
+			compensableManager.associateThread(transaction);
 
 			transaction.participantCommit(onePhase);
 			success = true;
@@ -247,21 +251,26 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 		}
 		TransactionRepository compensableRepository = this.beanFactory.getCompensableRepository();
 		XidFactory xidFactory = this.beanFactory.getCompensableXidFactory();
-		TransactionXid globalXid = xidFactory.createGlobalXid(xid.getGlobalTransactionId());
-		CompensableTransaction transaction = (CompensableTransaction) compensableRepository.getTransaction(globalXid);
-		if (transaction == null) {
-			throw new XAException(XAException.XAER_NOTA);
-		}
 
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 		TransactionLock compensableLock = this.beanFactory.getCompensableLock();
+
+		TransactionXid globalXid = xidFactory.createGlobalXid(xid.getGlobalTransactionId());
+		CompensableTransaction transaction = null;
+
 		boolean success = false;
 		try {
-			compensableManager.associateThread(transaction);
 			boolean locked = compensableLock.lockTransaction(globalXid, this.endpoint);
 			if (locked == false) {
 				throw new XAException(XAException.XAER_RMERR);
 			}
+
+			transaction = (CompensableTransaction) compensableRepository.getTransaction(globalXid);
+			if (transaction == null) {
+				throw new XAException(XAException.XAER_NOTA);
+			}
+
+			compensableManager.associateThread(transaction);
 
 			transaction.participantRollback();
 			success = true;
