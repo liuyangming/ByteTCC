@@ -107,7 +107,7 @@ public class CompensableServiceFilter implements Filter {
 		if (transaction == null) {
 			InvocationResult wrapped = new InvocationResult();
 			wrapped.setError(new XAException(XAException.XAER_NOTA));
-			wrapped.setVariable(CompensableCoordinator.class.getName(), compensableCoordinator.getIdentifier());
+			wrapped.setVariable(RemoteCoordinator.class.getName(), compensableCoordinator.getIdentifier());
 
 			result.setException(null);
 			result.setValue(wrapped);
@@ -115,7 +115,7 @@ public class CompensableServiceFilter implements Filter {
 			TransactionContext transactionContext = transaction.getTransactionContext();
 			String propagatedBy = String.valueOf(transactionContext.getPropagatedBy());
 
-			String remoteAddr = invocation.getAttachment(CompensableCoordinator.class.getName());
+			String remoteAddr = invocation.getAttachment(RemoteCoordinator.class.getName());
 
 			if (StringUtils.equals(propagatedBy, remoteAddr)) {
 				return this.wrapResultForProvider(invoker, invocation, false);
@@ -123,7 +123,7 @@ public class CompensableServiceFilter implements Filter {
 
 			InvocationResult wrapped = new InvocationResult();
 			wrapped.setError(new XAException(XAException.XAER_PROTO));
-			wrapped.setVariable(CompensableCoordinator.class.getName(), compensableCoordinator.getIdentifier());
+			wrapped.setVariable(RemoteCoordinator.class.getName(), compensableCoordinator.getIdentifier());
 
 			result.setException(null);
 			result.setValue(wrapped);
@@ -246,7 +246,7 @@ public class CompensableServiceFilter implements Filter {
 		InvocationResult wrapped = new InvocationResult();
 		wrapped.setError(throwable);
 		if (attachRequired) {
-			wrapped.setVariable(CompensableCoordinator.class.getName(), compensableCoordinator.getIdentifier());
+			wrapped.setVariable(RemoteCoordinator.class.getName(), compensableCoordinator.getIdentifier());
 		}
 
 		result.setException(null);
@@ -263,7 +263,7 @@ public class CompensableServiceFilter implements Filter {
 
 		RemotingException rpcError = null;
 		String transactionContextContent = invocation.getAttachment(TransactionContext.class.getName());
-		String propagatedBy = invocation.getAttachment(CompensableCoordinator.class.getName());
+		String propagatedBy = invocation.getAttachment(RemoteCoordinator.class.getName());
 		if (StringUtils.isNotBlank(transactionContextContent)) {
 			byte[] requestByteArray = ByteUtils.stringToByteArray(transactionContextContent);
 			ByteArrayInputStream bais = new ByteArrayInputStream(requestByteArray);
@@ -326,7 +326,7 @@ public class CompensableServiceFilter implements Filter {
 		RemoteCoordinator compensableCoordinator = beanFactory.getCompensableCoordinator();
 
 		Map<String, String> attachments = invocation.getAttachments();
-		attachments.put(CompensableCoordinator.class.getName(), compensableCoordinator.getIdentifier());
+		attachments.put(RemoteCoordinator.class.getName(), compensableCoordinator.getIdentifier());
 		RpcResult result = (RpcResult) invoker.invoke(invocation);
 		Object value = result.getValue();
 		if (InvocationResult.class.isInstance(value)) {
@@ -463,7 +463,7 @@ public class CompensableServiceFilter implements Filter {
 			String transactionContextContent = ByteUtils.byteArrayToString(baos.toByteArray());
 			Map<String, String> attachments = invocation.getAttachments();
 			attachments.put(TransactionContext.class.getName(), transactionContextContent);
-			attachments.put(CompensableCoordinator.class.getName(), compensableCoordinator.getIdentifier());
+			attachments.put(RemoteCoordinator.class.getName(), compensableCoordinator.getIdentifier());
 		}
 	}
 
