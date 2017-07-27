@@ -123,7 +123,7 @@ public class TransactionCoordinator implements RemoteCoordinator, CompensableBea
 	}
 
 	public String getApplication() {
-		throw new IllegalStateException();
+		return this.beanFactory.getCompensableCoordinator().getApplication();
 	}
 
 	public String getIdentifier() {

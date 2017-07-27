@@ -373,12 +373,12 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 		return this.endpoint;
 	}
 
-	public void setBeanFactory(CompensableBeanFactory tbf) {
-		this.beanFactory = tbf;
+	public String getApplication() {
+		return this.endpoint;
 	}
 
-	public String getApplication() {
-		throw new IllegalStateException();
+	public void setBeanFactory(CompensableBeanFactory tbf) {
+		this.beanFactory = tbf;
 	}
 
 }

@@ -83,20 +83,17 @@ public final class CompensableLoadBalance implements LoadBalance {
 		InvocationContext invocationContext = registry.getInvocationContext();
 
 		String serverHost = invocationContext.getServerHost();
-		String serviceKey = invocationContext.getServiceKey();
 		int serverPort = invocationContext.getServerPort();
 		for (int i = 0; invokers != null && i < invokers.size(); i++) {
 			Invoker<T> invoker = invokers.get(i);
 			URL targetUrl = invoker.getUrl();
 			String targetAddr = targetUrl.getIp();
-			String targetName = targetUrl.getParameter("application");
 			int targetPort = targetUrl.getPort();
-			if (StringUtils.equals(targetAddr, serverHost) //
-					&& StringUtils.equalsIgnoreCase(serviceKey, targetName) && targetPort == serverPort) {
+			if (StringUtils.equals(targetAddr, serverHost) && targetPort == serverPort) {
 				return invoker;
 			}
 		}
 
-		throw new RpcException(String.format("Invoker(%s:%s:%s) is not found!", serverHost, serviceKey, serverPort));
+		throw new RpcException(String.format("Invoker(%s:%s) is not found!", serverHost, serverPort));
 	}
 }
