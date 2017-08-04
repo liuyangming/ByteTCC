@@ -129,9 +129,9 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 
 		CompensableTransaction transaction = null;
 		boolean success = false;
+		boolean locked = false;
 		try {
-			boolean locked = compensableLock.lockTransaction(globalXid, this.endpoint);
-			if (locked == false) {
+			if ((locked = compensableLock.lockTransaction(globalXid, this.endpoint)) == false) {
 				throw new XAException(XAException.XAER_RMERR);
 			}
 
@@ -150,7 +150,9 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 		} catch (RuntimeException rex) {
 			throw new XAException(XAException.XAER_RMERR); // should never happen
 		} finally {
-			compensableLock.unlockTransaction(globalXid, this.endpoint);
+			if (locked) {
+				compensableLock.unlockTransaction(globalXid, this.endpoint);
+			} // end-if (locked)
 			if (success) {
 				transaction.forgetQuietly(); // forget transaction
 			} // end-if (success)
@@ -283,9 +285,9 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 
 		CompensableTransaction transaction = null;
 		boolean success = false;
+		boolean locked = false;
 		try {
-			boolean locked = compensableLock.lockTransaction(globalXid, this.endpoint);
-			if (locked == false) {
+			if ((locked = compensableLock.lockTransaction(globalXid, this.endpoint)) == false) {
 				throw new XAException(XAException.XAER_RMERR);
 			}
 
@@ -294,7 +296,9 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 		} catch (RuntimeException ex) {
 			throw new XAException(XAException.XAER_RMERR); // should never happen
 		} finally {
-			compensableLock.unlockTransaction(globalXid, this.endpoint);
+			if (locked) {
+				compensableLock.unlockTransaction(globalXid, this.endpoint);
+			} // end-if (locked)
 			if (success) {
 				transaction.forgetQuietly(); // forget transaction
 			} // end-if (success)

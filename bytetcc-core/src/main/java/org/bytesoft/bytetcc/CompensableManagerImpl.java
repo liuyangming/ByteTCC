@@ -168,6 +168,24 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 		}
 	}
 
+	protected void invokeRollbackInBegin(TransactionContext transactionContext) throws NotSupportedException, SystemException {
+		RemoteCoordinator transactionCoordinator = this.beanFactory.getTransactionCoordinator();
+
+		CompensableTransaction compensable = this.getCompensableTransactionQuietly();
+		TransactionContext compensableContext = compensable.getTransactionContext();
+
+		TransactionXid compensableXid = compensableContext.getXid();
+		TransactionXid transactionXid = transactionContext.getXid();
+		try {
+			transactionCoordinator.end(transactionContext, XAResource.TMFAIL);
+			transactionCoordinator.rollback(transactionXid);
+		} catch (XAException tex) {
+			logger.info("[{}] begin-transaction: error occurred while starting jta-transaction: {}",
+					ByteUtils.byteArrayToString(compensableXid.getGlobalTransactionId()),
+					ByteUtils.byteArrayToString(transactionXid.getGlobalTransactionId()));
+		}
+	}
+
 	public void compensableBegin() throws NotSupportedException, SystemException {
 		if (this.getCompensableTransactionQuietly() != null) {
 			throw new NotSupportedException();
@@ -194,11 +212,11 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 
 		this.associateThread(compensable);
 
+		TransactionContext transactionContext = new TransactionContext();
+		transactionContext.setXid(transactionXid);
+
 		boolean failure = true;
 		try {
-			TransactionContext transactionContext = new TransactionContext();
-			transactionContext.setXid(transactionXid);
-
 			this.invokeBegin(transactionContext, true);
 			failure = false;
 		} finally {
@@ -212,7 +230,12 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 		compensableLogger.createTransaction(compensable.getTransactionArchive());
 		boolean locked = compensableLock.lockTransaction(compensableXid, this.endpoint);
 		if (locked == false) {
-			compensableRepository.putErrorTransaction(compensableXid, compensable);
+			this.invokeRollbackInBegin(transactionContext);
+
+			compensableLogger.deleteTransaction(compensable.getTransactionArchive());
+			this.desociateThread();
+			compensableRepository.removeTransaction(compensableXid);
+
 			throw new SystemException(); // should never happen
 		}
 

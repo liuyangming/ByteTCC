@@ -338,6 +338,7 @@ public class TransactionRecoveryImpl
 		TransactionXid xid = transactionContext.getXid();
 
 		boolean forgetRequired = false;
+		boolean locked = false;
 		try {
 			compensableManager.associateThread(transaction);
 
@@ -347,8 +348,7 @@ public class TransactionRecoveryImpl
 			case Status.STATUS_PREPARING:
 			case Status.STATUS_UNKNOWN: /* TODO */ {
 				if (transactionContext.isPropagated() == false) {
-					boolean locked = compensableLock.lockTransaction(xid, this.endpoint);
-					if (locked == false) {
+					if ((locked = compensableLock.lockTransaction(xid, this.endpoint)) == false) {
 						throw new SystemException();
 					}
 
@@ -358,8 +358,7 @@ public class TransactionRecoveryImpl
 				break;
 			}
 			case Status.STATUS_ROLLING_BACK: {
-				boolean locked = compensableLock.lockTransaction(xid, this.endpoint);
-				if (locked == false) {
+				if ((locked = compensableLock.lockTransaction(xid, this.endpoint)) == false) {
 					throw new SystemException();
 				}
 
@@ -369,8 +368,7 @@ public class TransactionRecoveryImpl
 			}
 			case Status.STATUS_PREPARED:
 			case Status.STATUS_COMMITTING: {
-				boolean locked = compensableLock.lockTransaction(xid, this.endpoint);
-				if (locked == false) {
+				if ((locked = compensableLock.lockTransaction(xid, this.endpoint)) == false) {
 					throw new SystemException();
 				}
 
@@ -386,7 +384,9 @@ public class TransactionRecoveryImpl
 			}
 		} finally {
 			compensableManager.desociateThread();
-			compensableLock.unlockTransaction(xid, this.endpoint);
+			if (locked) {
+				compensableLock.unlockTransaction(xid, this.endpoint);
+			} // end-if (locked)
 			if (forgetRequired) {
 				transaction.forgetQuietly(); // forget transaction
 			} // end-if (forgetRequired)

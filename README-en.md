@@ -7,6 +7,15 @@
 ## 1. Quick Start
 
 #### 1.1 Add maven depenency
+###### 1.1.1. Spring Cloud
+```xml
+<dependency>
+	<groupId>org.bytesoft</groupId>
+	<artifactId>bytetcc-supports-springcloud</artifactId>
+	<version>0.4.0-beta3</version>
+</dependency>
+```
+###### 1.1.2. dubbo
 ```xml
 <dependency>
 	<groupId>org.bytesoft</groupId>

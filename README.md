@@ -2,6 +2,15 @@
 
 ## 一、快速入门
 #### 1.1. 加入maven依赖
+###### 1.1.1. 使用Spring Cloud
+```xml
+<dependency>
+	<groupId>org.bytesoft</groupId>
+	<artifactId>bytetcc-supports-springcloud</artifactId>
+	<version>0.4.0-beta3</version>
+</dependency>
+```
+###### 1.1.2. 使用dubbo
 ```xml
 <dependency>
 	<groupId>org.bytesoft</groupId>
@@ -9,6 +18,7 @@
 	<version>0.4.0-beta3</version>
 </dependency>
 ```
+
 #### 1.2. 编写业务服务
 ```java
 @Service("accountService")
