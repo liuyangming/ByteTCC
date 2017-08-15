@@ -114,6 +114,6 @@ If you have any questions or comements regarding this project, please feel free 
 
 1. send mail to _[bytefox@126.com](bytefox@126.com)_
 ~OR~
-2. add Tecent QQ group 537445956
+2. add Tecent QQ group 537445956/606453172
 
 We will review all the suggestions and implement good ones in future release.
