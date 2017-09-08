@@ -86,18 +86,22 @@ public class AccountServiceCancel implements IAccountService {
 * 6、支持spring cloud；
 
 ## 四、历史版本
-#### 4.1. v0.3.x
+#### 4.1. v0.4.x
+* 地址：https://github.com/liuyangming/ByteTCC/tree/0.4.x
+* 文档：https://github.com/liuyangming/ByteTCC/wiki
+
+#### 4.2. v0.3.x
 * 地址：https://github.com/liuyangming/ByteTCC/tree/0.3.x
 * 文档：https://github.com/liuyangming/ByteTCC/wiki
 
-#### 4.2. v0.2.0-alpha
+#### 4.3. v0.2.0-alpha
 * 地址：http://code.taobao.org/p/openjtcc
 * 文档：http://code.taobao.org/p/openjtcc/wiki/index/
 
-#### 4.3. v0.1.2
+#### 4.4. v0.1.2
 * 地址：http://code.google.com/p/bytetcc
 
-#### 4.4. v0.1
+#### 4.5. v0.1
 * 地址：http://pan.baidu.com/s/1hq3ffxU
 
 ## 五、建议及改进

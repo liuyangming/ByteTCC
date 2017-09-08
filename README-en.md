@@ -85,7 +85,6 @@ public class AccountServiceCancel implements IAccountService {
 * [Sample](https://github.com/liuyangming/ByteTCC-sample)
 
 
-
 ## 3. Features
 * 1. support declarative transaction management
 * 2. support normal transaction, TCC transaction, compensating service transaction
@@ -97,6 +96,14 @@ public class AccountServiceCancel implements IAccountService {
 
 ## 4. History
 
+#### v0.4.x
+* Link：[https://github.com/liuyangming/ByteTCC/tree/0.4.x](https://github.com/liuyangming/ByteTCC/tree/0.4.x)
+* Doc：[https://github.com/liuyangming/ByteTCC/wiki](https://github.com/liuyangming/ByteTCC/wiki)
+
+#### v0.3.x
+* Link：[https://github.com/liuyangming/ByteTCC/tree/0.3.x](https://github.com/liuyangming/ByteTCC/tree/0.3.x)
+* Doc：[https://github.com/liuyangming/ByteTCC/wiki](https://github.com/liuyangming/ByteTCC/wiki)
+
 #### v0.2.0-alpha
 * Link：[http://code.taobao.org/p/openjtcc](http://code.taobao.org/p/openjtcc)
 * Doc：[http://code.taobao.org/p/openjtcc/wiki/index/](http://code.taobao.org/p/openjtcc/wiki/index/) 
@@ -105,8 +112,7 @@ public class AccountServiceCancel implements IAccountService {
 * Link：[http://code.google.com/p/bytetcc](http://code.google.com/p/bytetcc)
 
 #### v0.1
-* Link：[http://pan.baidu.com/s/1hq3ffxU
-](http://pan.baidu.com/s/1hq3ffxU)
+* Link：[http://pan.baidu.com/s/1hq3ffxU](http://pan.baidu.com/s/1hq3ffxU)
 
 
 ## 5. Contact Me
