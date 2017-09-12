@@ -52,8 +52,8 @@ public class ServiceConfigValidator implements DubboConfigValidator {
 			throw new FatalBeanException(
 					String.format("The value of attr 'filter'(beanId= %s) should be 'compensable'.", this.beanName));
 		} else if (group == null || group.getValue() == null //
-				|| ("org.bytesoft.bytetcc".equals(group.getValue())
-						|| String.valueOf(group.getValue()).startsWith("org.bytesoft.bytetcc-")) == false) {
+				|| ("org-bytesoft-bytetcc".equals(group.getValue())
+						|| String.valueOf(group.getValue()).startsWith("org-bytesoft-bytetcc-")) == false) {
 			throw new FatalBeanException(String.format(
 					"The value of attr 'group'(beanId= %s) should be 'org.bytesoft.bytetcc' or starts with 'org.bytesoft.bytetcc-'.",
 					this.beanName));

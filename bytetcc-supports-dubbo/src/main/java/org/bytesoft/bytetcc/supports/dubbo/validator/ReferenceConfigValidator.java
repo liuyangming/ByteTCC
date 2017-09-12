@@ -42,10 +42,10 @@ public class ReferenceConfigValidator implements DubboConfigValidator {
 		PropertyValue filter = mpv.getPropertyValue("filter");
 
 		if (group == null || group.getValue() == null //
-				|| ("org.bytesoft.bytetcc".equals(group.getValue())
-						|| String.valueOf(group.getValue()).startsWith("org.bytesoft.bytetcc-")) == false) {
+				|| ("org-bytesoft-bytetcc".equals(group.getValue())
+						|| String.valueOf(group.getValue()).startsWith("org-bytesoft-bytetcc-")) == false) {
 			throw new FatalBeanException(String.format(
-					"The value of attr 'group'(beanId= %s) should be 'org.bytesoft.bytetcc' or starts with 'org.bytesoft.bytetcc-'.",
+					"The value of attr 'group'(beanId= %s) should be 'org-bytesoft-bytetcc' or starts with 'org-bytesoft-bytetcc-'.",
 					this.beanName));
 		} else if (retries == null || retries.getValue() == null || "0".equals(retries.getValue()) == false) {
 			throw new FatalBeanException(

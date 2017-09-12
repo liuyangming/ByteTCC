@@ -108,8 +108,8 @@ public class DubboConfigPostProcessor implements BeanFactoryPostProcessor {
 				}
 
 				if (group == null || group.getValue() == null //
-						|| ("org.bytesoft.bytetcc".equals(group.getValue())
-								|| String.valueOf(group.getValue()).startsWith("org.bytesoft.bytetcc-")) == false) {
+						|| ("org-bytesoft-bytetcc".equals(group.getValue())
+								|| String.valueOf(group.getValue()).startsWith("org-bytesoft-bytetcc-")) == false) {
 					continue;
 				}
 
@@ -118,8 +118,8 @@ public class DubboConfigPostProcessor implements BeanFactoryPostProcessor {
 				MutablePropertyValues mpv = beanDef.getPropertyValues();
 				PropertyValue group = mpv.getPropertyValue("group");
 				if (group == null || group.getValue() == null //
-						|| ("org.bytesoft.bytetcc".equals(group.getValue())
-								|| String.valueOf(group.getValue()).startsWith("org.bytesoft.bytetcc-")) == false) {
+						|| ("org-bytesoft-bytetcc".equals(group.getValue())
+								|| String.valueOf(group.getValue()).startsWith("org-bytesoft-bytetcc-")) == false) {
 					continue;
 				}
 
