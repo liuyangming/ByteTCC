@@ -85,24 +85,31 @@ public class AccountServiceCancel implements IAccountService {
 * 5、支持dubbo服务框架；
 * 6、支持spring cloud；
 
-## 四、历史版本
-#### 4.1. v0.4.x
+## 四、服务质量
+#### 4.1. 故障恢复
+* **任意时刻**因**任意故障**（包括但不限于：业务系统/RDBS服务器宕机；网络故障；断电等）造成的事务中断，ByteTCC均有相应机制予以恢复，保证全局事务的最终一致性。
+
+#### 4.2. 幂等性
+* ByteTCC**在框架层面提供对Confirm/Cancel业务逻辑的幂等性保障**，业务系统仅需关注自身业务本身，无需为幂等性问题而烦恼。
+
+## 五、历史版本
+#### 5.1. v0.4.x
 * 地址：https://github.com/liuyangming/ByteTCC/tree/0.4.x
 * 文档：https://github.com/liuyangming/ByteTCC/wiki
 
-#### 4.2. v0.3.x
+#### 5.2. v0.3.x
 * 地址：https://github.com/liuyangming/ByteTCC/tree/0.3.x
 * 文档：https://github.com/liuyangming/ByteTCC/wiki
 
-#### 4.3. v0.2.0-alpha
+#### 5.3. v0.2.0-alpha
 * 地址：http://code.taobao.org/p/openjtcc
 * 文档：http://code.taobao.org/p/openjtcc/wiki/index/
 
-#### 4.4. v0.1.2
+#### 5.4. v0.1.2
 * 地址：http://code.google.com/p/bytetcc
 
-#### 4.5. v0.1
+#### 5.5. v0.1
 * 地址：http://pan.baidu.com/s/1hq3ffxU
 
-## 五、建议及改进
+## 六、建议及改进
 若您有任何建议，可以通过1）加入qq群537445956/606453172向群主提出，或2）发送邮件至bytefox@126.com向我反馈。本人承诺，任何建议都将会被认真考虑，优秀的建议将会被采用，但不保证一定会在当前版本中实现。
