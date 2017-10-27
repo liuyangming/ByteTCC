@@ -22,6 +22,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import javax.transaction.HeuristicMixedException;
 import javax.transaction.HeuristicRollbackException;
 import javax.transaction.RollbackException;
+import javax.transaction.Status;
 import javax.transaction.SystemException;
 import javax.transaction.xa.XAException;
 import javax.transaction.xa.XAResource;
@@ -77,12 +78,18 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 
 			compensableLogger.createTransaction(((CompensableTransactionImpl) transaction).getTransactionArchive());
 			logger.info("{}| compensable transaction begin!", ByteUtils.byteArrayToString(globalXid.getGlobalTransactionId()));
+		} else if (transaction.getTransactionStatus() != Status.STATUS_ACTIVE) {
+			throw new XAException(XAException.XAER_PROTO);
 		}
 
 		boolean locked = compensableLock.lockTransaction(globalXid, this.endpoint);
 		if (locked == false) {
 			throw new XAException(XAException.XAER_PROTO);
-		}
+		} // end-if (locked == false)
+
+		if (((CompensableTransactionImpl) transaction).lock(true) == false) {
+			throw new XAException(XAException.XAER_PROTO);
+		} // end-if (available == false)
 
 		compensableManager.associateThread(transaction);
 
@@ -97,8 +104,12 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 		if (transaction == null) {
 			throw new XAException(XAException.XAER_PROTO);
 		}
+		// else if (transaction.getTransactionStatus() != Status.STATUS_ACTIVE)
+		// { throw new XAException(XAException.XAER_PROTO); }
 
 		compensableManager.desociateThread();
+
+		((CompensableTransactionImpl) transaction).release();
 
 		compensableLock.unlockTransaction(transactionContext.getXid(), this.endpoint);
 
@@ -133,7 +144,7 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 		try {
 			if ((locked = compensableLock.lockTransaction(globalXid, this.endpoint)) == false) {
 				throw new XAException(XAException.XAER_RMERR);
-			}
+			} // end-if ((locked = compensableLock.lockTransaction(globalXid, this.endpoint)) == false)
 
 			transaction = this.invokeCommit(globalXid, onePhase);
 
@@ -172,6 +183,7 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 		}
 
 		try {
+			((CompensableTransactionImpl) transaction).lock(false);
 			compensableManager.associateThread(transaction);
 
 			transaction.participantCommit(onePhase);
@@ -199,6 +211,7 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 			throw new XAException(XAException.XAER_RMERR);
 		} finally {
 			compensableManager.desociateThread();
+			((CompensableTransactionImpl) transaction).release();
 		}
 
 		return transaction;
@@ -319,6 +332,7 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 		}
 
 		try {
+			// ((CompensableTransactionImpl) transaction).lock(false); // markCurrentBranchTransactionRollbackIfNecessary
 			compensableManager.associateThread(transaction);
 
 			transaction.participantRollback();
@@ -334,6 +348,7 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 			throw new XAException(XAException.XAER_RMERR);
 		} finally {
 			compensableManager.desociateThread();
+			// ((CompensableTransactionImpl) transaction).release(); // markCurrentBranchTransactionRollbackIfNecessary
 		}
 
 		return transaction;

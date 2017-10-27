@@ -22,6 +22,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import javax.transaction.HeuristicMixedException;
 import javax.transaction.HeuristicRollbackException;
@@ -87,6 +89,9 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 	private boolean participantStickyRequired;
 
 	private Map<String, Serializable> variables = new HashMap<String, Serializable>();
+
+	private Thread currentThread;
+	private final Lock lock = new ReentrantLock();
 
 	public CompensableTransactionImpl(TransactionContext txContext) {
 		this.transactionContext = txContext;
@@ -1074,6 +1079,30 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 	public XAResourceDescriptor getRemoteCoordinator(String application) {
 		XAResourceArchive archive = this.applicationMap.get(application);
 		return archive == null ? null : archive.getDescriptor();
+	}
+
+	public boolean lock(boolean tryFlag) {
+		if (tryFlag) {
+			boolean locked = this.lock.tryLock();
+			if (locked) {
+				this.currentThread = Thread.currentThread();
+			} // end-if (locked)
+			return locked;
+		} else {
+			this.lock.lock();
+			this.currentThread = Thread.currentThread();
+			return true;
+		}
+	}
+
+	public void release() {
+		Thread current = Thread.currentThread();
+		if (current == this.currentThread) {
+			this.currentThread = null;
+			this.lock.unlock();
+		} else {
+			logger.warn("Illegal thread: expect= {}, actual= {}.", this.currentThread, current);
+		}
 	}
 
 	public CompensableArchive getCompensableArchive() {
