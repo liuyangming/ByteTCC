@@ -91,7 +91,7 @@ public class CleanupFile implements CompensableEndpointAware, CompensableBeanFac
 			try {
 				created = resource.createNewFile();
 			} catch (IOException ex) {
-				throw new RuntimeException(ex.getMessage());
+				throw new RuntimeException(String.format("Error occurred while creating file: %s.", resource));
 			}
 
 			if (created == false) {
@@ -102,28 +102,28 @@ public class CleanupFile implements CompensableEndpointAware, CompensableBeanFac
 		try {
 			this.raf = new RandomAccessFile(resource, "rw");
 		} catch (FileNotFoundException ex) {
-			throw new RuntimeException(ex.getMessage());
+			throw new RuntimeException(String.format("File not found: %s.", resource), ex);
 		}
 
 		if (created) {
 			try {
 				this.raf.setLength(CONSTANTS_START_INDEX);
 			} catch (IOException ex) {
-				throw new RuntimeException(ex.getMessage());
+				throw new RuntimeException(ex);
 			}
 		}
 
 		try {
 			this.sizeOfRaf = (int) this.raf.length();
 		} catch (IOException ex) {
-			throw new RuntimeException(ex.getMessage());
+			throw new RuntimeException(ex);
 		}
 
 		this.channel = raf.getChannel();
 		try {
 			this.header = this.channel.map(MapMode.READ_WRITE, 0, CONSTANTS_START_INDEX);
 		} catch (IOException ex) {
-			throw new RuntimeException(ex.getMessage());
+			throw new RuntimeException(ex);
 		}
 
 		this.checkIdentifier();
@@ -377,7 +377,7 @@ public class CleanupFile implements CompensableEndpointAware, CompensableBeanFac
 			this.channel.write(buffer);
 			buffer.rewind();
 		} catch (Exception ex) {
-			throw new IllegalStateException(ex.getMessage());
+			throw new IllegalStateException(ex);
 		}
 
 		byte recordFlag = buffer.get();
@@ -420,7 +420,7 @@ public class CleanupFile implements CompensableEndpointAware, CompensableBeanFac
 			this.channel.write(buffer);
 			buffer.rewind();
 		} catch (Exception ex) {
-			throw new IllegalStateException(ex.getMessage());
+			throw new IllegalStateException(ex);
 		}
 
 		byte recordFlag = buffer.get();
@@ -528,7 +528,7 @@ public class CleanupFile implements CompensableEndpointAware, CompensableBeanFac
 				this.raf.setLength(this.sizeOfRaf - decremental);
 				this.sizeOfRaf = this.sizeOfRaf - decremental;
 			} catch (IOException ex) {
-				throw new IllegalStateException(ex.getMessage());
+				throw new IllegalStateException(ex);
 			}
 		}
 	}
@@ -540,7 +540,7 @@ public class CleanupFile implements CompensableEndpointAware, CompensableBeanFac
 				this.raf.setLength(this.sizeOfRaf + incremental);
 				this.sizeOfRaf = this.sizeOfRaf + incremental;
 			} catch (IOException ex) {
-				throw new IllegalStateException(ex.getMessage());
+				throw new IllegalStateException(ex);
 			}
 		}
 	}
@@ -558,7 +558,7 @@ public class CleanupFile implements CompensableEndpointAware, CompensableBeanFac
 			buffer.flip();
 			this.channel.write(buffer);
 		} catch (Exception ex) {
-			throw new IllegalStateException(ex.getMessage());
+			throw new IllegalStateException(ex);
 		}
 
 		this.unRegisterRecord(record); // unRegister record
@@ -574,7 +574,7 @@ public class CleanupFile implements CompensableEndpointAware, CompensableBeanFac
 			try {
 				closeable.close();
 			} catch (IOException ex) {
-				logger.debug(ex.getMessage());
+				logger.debug(ex.getMessage(), ex);
 			}
 		}
 	}

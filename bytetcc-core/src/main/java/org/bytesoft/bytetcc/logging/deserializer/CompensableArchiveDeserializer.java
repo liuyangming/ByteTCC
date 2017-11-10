@@ -46,9 +46,9 @@ public class CompensableArchiveDeserializer implements ArchiveDeserializer, Comp
 			byteArray = CommonUtils.serializeObject(compensable);
 		} catch (Exception ex) {
 			if (compensable == null) {
-				logger.error("Error occurred while serializing compensable: {}", compensable);
+				logger.error("Error occurred while serializing compensable: {}", compensable, ex);
 			} else {
-				logger.error("Error occurred while serializing args: {}", compensable.getArgs());
+				logger.error("Error occurred while serializing args: {}", compensable.getArgs(), ex);
 			}
 		}
 
@@ -192,7 +192,7 @@ public class CompensableArchiveDeserializer implements ArchiveDeserializer, Comp
 		try {
 			compensable = (CompensableInvocation) CommonUtils.deserializeObject(byteArray);
 		} catch (Exception ex) {
-			logger.error("Error occurred while deserializing object: {}", byteArray);
+			logger.error("Error occurred while deserializing object: {}", byteArray, ex);
 		}
 
 		XidFactory xidFactory = this.beanFactory.getTransactionXidFactory();

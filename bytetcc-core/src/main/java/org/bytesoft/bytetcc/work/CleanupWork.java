@@ -240,6 +240,8 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableEndpo
 		try {
 			resource.forget(xidArray);
 		} catch (XAException xaex) {
+			logger.error("Error occurred while forgetting resource: {}.", resourceId, xaex);
+
 			switch (xaex.errorCode) {
 			case XAException.XAER_NOTA:
 				break;

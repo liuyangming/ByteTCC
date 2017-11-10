@@ -130,7 +130,7 @@ public class XAResourceDeserializerImpl implements XAResourceDeserializer, Appli
 
 				return descriptor;
 			} catch (Exception ex) {
-				logger.warn(ex.getMessage());
+				logger.warn("Error occurred while deserializing resource({}).", identifier, ex);
 
 				XAResource xares = xaConnection.getXAResource();
 
@@ -159,7 +159,7 @@ public class XAResourceDeserializerImpl implements XAResourceDeserializer, Appli
 
 				return descriptor;
 			} catch (Exception ex) {
-				logger.warn(ex.getMessage());
+				logger.warn("Error occurred while deserializing resource({}).", identifier, ex);
 
 				XAResource xares = xaSession.getXAResource();
 
@@ -187,7 +187,7 @@ public class XAResourceDeserializerImpl implements XAResourceDeserializer, Appli
 
 				return descriptor;
 			} catch (Exception ex) {
-				logger.warn(ex.getMessage());
+				logger.warn("Error occurred while deserializing resource({}).", identifier, ex);
 
 				XAResource xares = managedConnection.getXAResource();
 

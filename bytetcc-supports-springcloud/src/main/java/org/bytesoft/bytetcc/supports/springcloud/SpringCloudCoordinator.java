@@ -103,7 +103,9 @@ public class SpringCloudCoordinator implements InvocationHandler {
 
 			return response.getBody();
 		} catch (HttpClientErrorException ex) {
-			throw new XAException(XAException.XAER_RMFAIL);
+			XAException xaEx = new XAException(XAException.XAER_RMFAIL);
+			xaEx.initCause(ex);
+			throw xaEx;
 		} catch (HttpServerErrorException ex) {
 			// int statusCode = ex.getRawStatusCode();
 			HttpHeaders headers = ex.getResponseHeaders();
@@ -119,12 +121,18 @@ public class SpringCloudCoordinator implements InvocationHandler {
 			}
 
 			if (failure != null && errorCode != null) {
-				throw new XAException(errorCode);
+				XAException xaEx = new XAException(errorCode);
+				xaEx.initCause(ex);
+				throw xaEx;
 			} else {
-				throw new XAException(XAException.XAER_RMERR);
+				XAException xaEx = new XAException(XAException.XAER_RMERR);
+				xaEx.initCause(ex);
+				throw xaEx;
 			}
 		} catch (Exception ex) {
-			throw new XAException(XAException.XAER_RMERR);
+			XAException xaEx = new XAException(XAException.XAER_RMERR);
+			xaEx.initCause(ex);
+			throw xaEx;
 		}
 
 	}
@@ -156,7 +164,9 @@ public class SpringCloudCoordinator implements InvocationHandler {
 
 			return response.getBody();
 		} catch (HttpClientErrorException ex) {
-			throw new XAException(XAException.XAER_RMFAIL);
+			XAException xaEx = new XAException(XAException.XAER_RMFAIL);
+			xaEx.initCause(ex);
+			throw xaEx;
 		} catch (HttpServerErrorException ex) {
 			// int statusCode = ex.getRawStatusCode();
 			HttpHeaders headers = ex.getResponseHeaders();
@@ -172,12 +182,18 @@ public class SpringCloudCoordinator implements InvocationHandler {
 			}
 
 			if (failure != null && errorCode != null) {
-				throw new XAException(errorCode);
+				XAException xaEx = new XAException(errorCode);
+				xaEx.initCause(ex);
+				throw xaEx;
 			} else {
-				throw new XAException(XAException.XAER_RMERR);
+				XAException xaEx = new XAException(XAException.XAER_RMERR);
+				xaEx.initCause(ex);
+				throw xaEx;
 			}
 		} catch (Exception ex) {
-			throw new XAException(XAException.XAER_RMERR);
+			XAException xaEx = new XAException(XAException.XAER_RMERR);
+			xaEx.initCause(ex);
+			throw xaEx;
 		}
 
 	}
