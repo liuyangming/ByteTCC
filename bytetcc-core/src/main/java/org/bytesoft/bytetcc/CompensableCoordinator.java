@@ -151,7 +151,7 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 			success = true;
 		} catch (XAException xaex) {
 			logger.error("Error occurred while committing transaction: {}." //
-					, ByteUtils.byteArrayToString(xid.getGlobalTransactionId()), ex);
+					, ByteUtils.byteArrayToString(xid.getGlobalTransactionId()), xaex);
 
 			switch (xaex.errorCode) {
 			case XAException.XA_HEURRB:
@@ -246,7 +246,7 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 			throw new XAException(XAException.XAER_RMERR);
 		} catch (RuntimeException rex) {
 			logger.error("Error occurred while forgetting transaction: {}." //
-					, ByteUtils.byteArrayToString(xid.getGlobalTransactionId()), ex);
+					, ByteUtils.byteArrayToString(xid.getGlobalTransactionId()), rex);
 
 			throw new XAException(XAException.XAER_RMERR);
 		}
