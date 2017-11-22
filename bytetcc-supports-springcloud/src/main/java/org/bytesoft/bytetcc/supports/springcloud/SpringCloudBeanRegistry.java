@@ -25,15 +25,18 @@ import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.EnvironmentAware;
+import org.springframework.core.env.Environment;
 import org.springframework.web.client.RestTemplate;
 
-public final class SpringCloudBeanRegistry implements CompensableBeanFactoryAware {
+public final class SpringCloudBeanRegistry implements CompensableBeanFactoryAware, EnvironmentAware {
 	static final Logger logger = LoggerFactory.getLogger(SpringCloudBeanRegistry.class);
 	private static final SpringCloudBeanRegistry instance = new SpringCloudBeanRegistry();
 
 	private CompensableBeanFactory beanFactory;
 	private RestTemplate restTemplate;
 	private ThreadLocal<CompensableLoadBalancerInterceptor> interceptors = new ThreadLocal<CompensableLoadBalancerInterceptor>();
+	private Environment environment;
 
 	private SpringCloudBeanRegistry() {
 		if (instance != null) {
@@ -58,6 +61,7 @@ public final class SpringCloudBeanRegistry implements CompensableBeanFactoryAwar
 
 		SpringCloudCoordinator handler = new SpringCloudCoordinator();
 		handler.setIdentifier(identifier);
+		handler.setEnvironment(this.environment);
 
 		coordinator = (RemoteCoordinator) Proxy.newProxyInstance(SpringCloudCoordinator.class.getClassLoader(),
 				new Class[] { RemoteCoordinator.class }, handler);
@@ -92,6 +96,14 @@ public final class SpringCloudBeanRegistry implements CompensableBeanFactoryAwar
 
 	public CompensableBeanFactory getBeanFactory() {
 		return beanFactory;
+	}
+
+	public Environment getEnvironment() {
+		return environment;
+	}
+
+	public void setEnvironment(Environment environment) {
+		this.environment = environment;
 	}
 
 }
