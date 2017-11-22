@@ -44,12 +44,15 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
+import org.springframework.context.EnvironmentAware;
+import org.springframework.core.env.Environment;
 
-public class XAResourceDeserializerImpl implements XAResourceDeserializer, ApplicationContextAware {
+public class XAResourceDeserializerImpl implements XAResourceDeserializer, ApplicationContextAware, EnvironmentAware {
 	static final Logger logger = LoggerFactory.getLogger(XAResourceDeserializerImpl.class);
 	static Pattern pattern = Pattern.compile("^[^:]+\\s*:\\s*[^:]+\\s*:\\s*\\d+$");
 
 	private ApplicationContext applicationContext;
+	private Environment environment;
 
 	private Map<String, XAResourceDescriptor> cachedResourceMap = new ConcurrentHashMap<String, XAResourceDescriptor>();
 
@@ -76,6 +79,7 @@ public class XAResourceDeserializerImpl implements XAResourceDeserializer, Appli
 			if (coordinator == null) {
 				SpringCloudCoordinator springCloudCoordinator = new SpringCloudCoordinator();
 				springCloudCoordinator.setIdentifier(identifier);
+				springCloudCoordinator.setEnvironment(this.environment);
 
 				coordinator = (RemoteCoordinator) Proxy.newProxyInstance(SpringCloudCoordinator.class.getClassLoader(),
 						new Class[] { RemoteCoordinator.class }, springCloudCoordinator);
@@ -234,6 +238,10 @@ public class XAResourceDeserializerImpl implements XAResourceDeserializer, Appli
 				logger.debug(ex.getMessage());
 			}
 		}
+	}
+
+	public void setEnvironment(Environment environment) {
+		this.environment = environment;
 	}
 
 	public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {

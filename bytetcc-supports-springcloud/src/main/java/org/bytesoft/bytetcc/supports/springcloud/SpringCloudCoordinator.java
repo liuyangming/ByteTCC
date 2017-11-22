@@ -30,6 +30,7 @@ import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.common.utils.CommonUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.env.Environment;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.HttpClientErrorException;
@@ -38,8 +39,10 @@ import org.springframework.web.client.RestTemplate;
 
 public class SpringCloudCoordinator implements InvocationHandler {
 	static final Logger logger = LoggerFactory.getLogger(SpringCloudCoordinator.class);
+	static final String CONSTANT_CONTENT_PATH = "org.bytesoft.bytetcc.contextpath";
 
 	private String identifier;
+	private Environment environment;
 
 	public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
 		Class<?> clazz = method.getDeclaringClass();
@@ -88,10 +91,21 @@ public class SpringCloudCoordinator implements InvocationHandler {
 			int firstIndex = this.identifier.indexOf(":");
 			int lastIndex = this.identifier.lastIndexOf(":");
 			String prefix = firstIndex <= 0 ? null : this.identifier.substring(0, firstIndex);
+			String servId = firstIndex <= 0 || lastIndex <= 0 || firstIndex >= lastIndex //
+					? null : this.identifier.substring(firstIndex + 1, lastIndex);
 			String suffix = lastIndex <= 0 ? null : this.identifier.substring(lastIndex + 1);
+
+			String contextPathKey = String.format("%s.%s", CONSTANT_CONTENT_PATH, servId);
+			String contextPath = StringUtils.isBlank(servId) //
+					? null : StringUtils.trimToEmpty(this.environment.getProperty(contextPathKey));
 
 			ber.append("http://");
 			ber.append(prefix == null || suffix == null ? null : prefix + ":" + suffix);
+
+			if (StringUtils.isNotBlank(contextPath) || StringUtils.equals(contextPath, "/")) {
+				ber.append(contextPath.startsWith("/") ? "" : "/").append(contextPath);
+			} // end-if (StringUtils.isNotBlank(contextPath) || StringUtils.equals(contextPath, "/"))
+
 			ber.append("/org/bytesoft/bytetcc/");
 			ber.append(method.getName());
 			for (int i = 0; i < args.length; i++) {
@@ -149,10 +163,21 @@ public class SpringCloudCoordinator implements InvocationHandler {
 			int firstIndex = this.identifier.indexOf(":");
 			int lastIndex = this.identifier.lastIndexOf(":");
 			String prefix = firstIndex <= 0 ? null : this.identifier.substring(0, firstIndex);
+			String servId = firstIndex <= 0 || lastIndex <= 0 || firstIndex >= lastIndex //
+					? null : this.identifier.substring(firstIndex + 1, lastIndex);
 			String suffix = lastIndex <= 0 ? null : this.identifier.substring(lastIndex + 1);
+
+			String contextPathKey = String.format("%s.%s", CONSTANT_CONTENT_PATH, servId);
+			String contextPath = StringUtils.isBlank(servId) //
+					? null : StringUtils.trimToEmpty(this.environment.getProperty(contextPathKey));
 
 			ber.append("http://");
 			ber.append(prefix == null || suffix == null ? null : prefix + ":" + suffix);
+
+			if (StringUtils.isNotBlank(contextPath) || StringUtils.equals(contextPath, "/")) {
+				ber.append(contextPath.startsWith("/") ? "" : "/").append(contextPath);
+			} // end-if (StringUtils.isNotBlank(contextPath) || StringUtils.equals(contextPath, "/"))
+
 			ber.append("/org/bytesoft/bytetcc/");
 			ber.append(method.getName());
 			for (int i = 0; i < args.length; i++) {
@@ -219,6 +244,14 @@ public class SpringCloudCoordinator implements InvocationHandler {
 
 	public void setIdentifier(String identifier) {
 		this.identifier = identifier;
+	}
+
+	public Environment getEnvironment() {
+		return environment;
+	}
+
+	public void setEnvironment(Environment environment) {
+		this.environment = environment;
 	}
 
 }
