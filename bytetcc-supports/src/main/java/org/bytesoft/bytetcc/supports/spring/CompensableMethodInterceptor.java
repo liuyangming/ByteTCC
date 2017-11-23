@@ -100,6 +100,9 @@ public class CompensableMethodInterceptor
 
 	public Object execute(String identifier, MethodInvocation mi) throws Throwable {
 		Transactional transactional = mi.getMethod().getAnnotation(Transactional.class);
+		if (transactional == null) {
+			transactional = mi.getMethod().getDeclaringClass().getAnnotation(Transactional.class);
+		}
 
 		CompensableInvocationRegistry registry = CompensableInvocationRegistry.getInstance();
 		Compensable annotation = mi.getMethod().getDeclaringClass().getAnnotation(Compensable.class);
