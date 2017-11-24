@@ -16,7 +16,6 @@
 package org.bytesoft.bytetcc.supports.springcloud.web;
 
 import java.io.IOException;
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -57,6 +56,7 @@ public class CompensableRequestInterceptor
 
 	static final String HEADER_TRANCACTION_KEY = "org.bytesoft.bytetcc.transaction";
 	static final String HEADER_PROPAGATION_KEY = "org.bytesoft.bytetcc.propagation";
+	static final String PREFIX_TRANSACTION_KEY = "/org/bytesoft/bytetcc";
 
 	private String identifier;
 	private ApplicationContext applicationContext;
@@ -71,10 +71,11 @@ public class CompensableRequestInterceptor
 		CompensableTransactionImpl compensable = //
 				(CompensableTransactionImpl) compensableManager.getCompensableTransactionQuietly();
 
-		URI uri = httpRequest.getURI();
-
-		String path = uri.getPath();
-		if (path.startsWith("/org/bytesoft/bytetcc")) {
+		String path = httpRequest.getURI().getPath();
+		int position = path.startsWith("/") ? path.indexOf("/", 1) : -1;
+		String pathWithoutContextPath = position > 0 ? path.substring(position) : null;
+		if (StringUtils.startsWith(path, PREFIX_TRANSACTION_KEY) //
+				|| StringUtils.startsWith(pathWithoutContextPath, PREFIX_TRANSACTION_KEY)) {
 			return execution.execute(httpRequest, body);
 		} else if (compensable == null) {
 			return execution.execute(httpRequest, body);
