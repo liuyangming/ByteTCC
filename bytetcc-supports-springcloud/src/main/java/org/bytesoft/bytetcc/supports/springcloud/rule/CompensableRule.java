@@ -13,16 +13,22 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this distribution; if not, see <http://www.gnu.org/licenses/>.
  */
-package org.bytesoft.bytetcc.supports.springcloud.loadbalancer;
+package org.bytesoft.bytetcc.supports.springcloud.rule;
 
 import java.util.List;
 
+import com.netflix.client.IClientConfigAware;
+import com.netflix.loadbalancer.ILoadBalancer;
 import com.netflix.loadbalancer.Server;
 
-public interface CompensableLoadBalancerInterceptor {
+public interface CompensableRule extends IClientConfigAware {
 
-	public List<Server> beforeCompletion(List<Server> servers);
+	public Server chooseServer(Object key, List<Server> serverList);
 
-	public void afterCompletion(Server server);
+	public Server chooseServer(Object key);
+
+	public ILoadBalancer getLoadBalancer();
+
+	public void setLoadBalancer(ILoadBalancer loadBalancer);
 
 }
