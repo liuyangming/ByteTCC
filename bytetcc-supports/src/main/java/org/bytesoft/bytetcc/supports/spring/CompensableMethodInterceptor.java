@@ -157,6 +157,10 @@ public class CompensableMethodInterceptor
 				desociateRequired = true;
 			}
 
+			if (transaction != null && compensable == null) {
+				logger.warn("Compensable-service {} is participanting in a non-TCC transaction!", mi.getMethod());
+			}
+
 			if (transactional != null && compensable != null && transaction != null) {
 				Propagation propagation = transactional == null ? null : transactional.propagation();
 				if (propagation == null) {
