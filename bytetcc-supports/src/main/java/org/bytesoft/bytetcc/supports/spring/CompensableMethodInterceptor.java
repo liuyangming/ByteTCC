@@ -100,6 +100,9 @@ public class CompensableMethodInterceptor
 
 	public Object execute(String identifier, MethodInvocation mi) throws Throwable {
 		Transactional transactional = mi.getMethod().getAnnotation(Transactional.class);
+		if (transactional == null) {
+			transactional = mi.getMethod().getDeclaringClass().getAnnotation(Transactional.class);
+		}
 
 		CompensableInvocationRegistry registry = CompensableInvocationRegistry.getInstance();
 		Compensable annotation = mi.getMethod().getDeclaringClass().getAnnotation(Compensable.class);
@@ -152,6 +155,10 @@ public class CompensableMethodInterceptor
 				transaction = existingTxn;
 				transactionManager.associateThread(existingTxn);
 				desociateRequired = true;
+			}
+
+			if (transaction != null && compensable == null) {
+				logger.warn("Compensable-service {} is participanting in a non-TCC transaction!", mi.getMethod());
 			}
 
 			if (transactional != null && compensable != null && transaction != null) {

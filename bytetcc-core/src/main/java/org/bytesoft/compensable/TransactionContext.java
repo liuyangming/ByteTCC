@@ -15,13 +15,19 @@
  */
 package org.bytesoft.compensable;
 
-public class TransactionContext extends org.bytesoft.transaction.TransactionContext {
+import org.bytesoft.bytejta.supports.jdbc.LocalXACompatible;
+
+public class TransactionContext extends org.bytesoft.transaction.TransactionContext implements LocalXACompatible {
 	private static final long serialVersionUID = 1L;
 
 	private transient boolean compensating;
 	private transient int propagationLevel;
 
 	private boolean compensable;
+
+	public boolean compatibleLoggingLRO() {
+		return true;
+	}
 
 	public TransactionContext clone() {
 		TransactionContext that = new TransactionContext();
