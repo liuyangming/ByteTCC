@@ -35,6 +35,7 @@ public class CompensableArchiveDeserializer implements ArchiveDeserializer, Comp
 	static final Logger logger = LoggerFactory.getLogger(CompensableArchiveDeserializer.class);
 	static final int LENGTH_OF_XID = XidFactory.GLOBAL_TRANSACTION_LENGTH + XidFactory.BRANCH_QUALIFIER_LENGTH;
 
+	@javax.inject.Inject
 	private CompensableBeanFactory beanFactory;
 
 	public byte[] serialize(TransactionXid xid, Object obj) {

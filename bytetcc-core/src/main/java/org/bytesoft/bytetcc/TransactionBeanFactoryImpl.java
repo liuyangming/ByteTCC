@@ -51,6 +51,7 @@ public final class TransactionBeanFactoryImpl implements CompensableBeanFactory 
 	private XAResourceDeserializer resourceDeserializer;
 	private LocalResourceCleaner localResourceCleaner;
 	private CompensableContext compensableContext;
+	@javax.inject.Inject
 	private CompensableSynchronization compensableSynchronization;
 	private TransactionLock compensableLock;
 

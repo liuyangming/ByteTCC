@@ -19,8 +19,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.bytesoft.common.utils.CommonUtils;
-import org.bytesoft.compensable.CompensableBeanFactory;
-import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 import org.bytesoft.compensable.aware.CompensableEndpointAware;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,11 +30,9 @@ import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.context.EnvironmentAware;
 import org.springframework.core.env.Environment;
 
-public class SpringCloudEndpointPostProcessor
-		implements BeanFactoryPostProcessor, CompensableBeanFactoryAware, EnvironmentAware {
+public class SpringCloudEndpointPostProcessor implements BeanFactoryPostProcessor, EnvironmentAware {
 	static final Logger logger = LoggerFactory.getLogger(SpringCloudEndpointPostProcessor.class);
 
-	private CompensableBeanFactory beanFactory;
 	private Environment environment;
 
 	public void setEnvironment(Environment environment) {
@@ -77,14 +73,6 @@ public class SpringCloudEndpointPostProcessor
 			mpv.addPropertyValue(CompensableEndpointAware.ENDPOINT_FIELD_NAME, identifier);
 		}
 
-	}
-
-	public CompensableBeanFactory getBeanFactory() {
-		return beanFactory;
-	}
-
-	public void setBeanFactory(CompensableBeanFactory beanFactory) {
-		this.beanFactory = beanFactory;
 	}
 
 }

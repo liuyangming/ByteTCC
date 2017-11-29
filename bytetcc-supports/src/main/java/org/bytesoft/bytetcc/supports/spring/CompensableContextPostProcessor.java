@@ -19,36 +19,19 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.bytesoft.bytetcc.supports.spring.aware.CompensableContextAware;
-import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableContext;
-import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.FatalBeanException;
 import org.springframework.beans.MutablePropertyValues;
 import org.springframework.beans.factory.config.BeanDefinition;
-import org.springframework.beans.factory.config.BeanPostProcessor;
+import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.config.RuntimeBeanReference;
 
-public class CompensableContextPostProcessor implements BeanPostProcessor, CompensableBeanFactoryAware {
-	static final Logger logger = LoggerFactory.getLogger(CompensableBeanFactoryPostProcessor.class);
-
-	private CompensableBeanFactory beanFactory;
-
-	public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
-		if (CompensableContextAware.class.isInstance(bean)) {
-			CompensableContextAware aware = (CompensableContextAware) bean;
-			CompensableContext compensableContext = this.beanFactory.getCompensableContext();
-			aware.setCompensableContext(compensableContext);
-		}
-		return bean;
-	}
-
-	public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
-		return bean;
-	}
+public class CompensableContextPostProcessor implements BeanFactoryPostProcessor {
+	static final Logger logger = LoggerFactory.getLogger(CompensableContextPostProcessor.class);
 
 	public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
 		ClassLoader cl = Thread.currentThread().getContextClassLoader();
@@ -90,14 +73,6 @@ public class CompensableContextPostProcessor implements BeanPostProcessor, Compe
 			mpv.addPropertyValue(CompensableContextAware.COMPENSABLE_CONTEXT_FIELD_NAME, beanRef);
 		}
 
-	}
-
-	public CompensableBeanFactory getBeanFactory() {
-		return beanFactory;
-	}
-
-	public void setBeanFactory(CompensableBeanFactory beanFactory) {
-		this.beanFactory = beanFactory;
 	}
 
 }

@@ -34,8 +34,9 @@ import org.bytesoft.transaction.xa.XidFactory;
 
 public class XAResourceArchiveDeserializer implements ArchiveDeserializer, CompensableBeanFactoryAware {
 
-	private CompensableBeanFactory beanFactory;
 	private XAResourceDeserializer deserializer;
+	@javax.inject.Inject
+	private CompensableBeanFactory beanFactory;
 
 	public byte[] serialize(TransactionXid xid, Object obj) {
 		XAResourceArchive archive = (XAResourceArchive) obj;

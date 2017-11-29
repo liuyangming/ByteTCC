@@ -59,6 +59,7 @@ public class TransactionRecoveryImpl
 		implements TransactionRecovery, TransactionRecoveryListener, CompensableBeanFactoryAware, CompensableEndpointAware {
 	static final Logger logger = LoggerFactory.getLogger(TransactionRecoveryImpl.class);
 
+	@javax.inject.Inject
 	private CompensableBeanFactory beanFactory;
 	private String endpoint;
 

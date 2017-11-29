@@ -30,6 +30,7 @@ public final class CompensableBeanRegistry implements CompensableBeanFactoryAwar
 	static final Logger logger = LoggerFactory.getLogger(CompensableBeanRegistry.class);
 	private static final CompensableBeanRegistry instance = new CompensableBeanRegistry();
 
+	@javax.inject.Inject
 	private CompensableBeanFactory beanFactory;
 	private RemoteCoordinator consumeCoordinator;
 

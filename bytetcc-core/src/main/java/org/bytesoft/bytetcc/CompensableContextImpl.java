@@ -24,6 +24,7 @@ import org.bytesoft.compensable.CompensableTransaction;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 
 public class CompensableContextImpl implements CompensableContext, CompensableBeanFactoryAware {
+	@javax.inject.Inject
 	private CompensableBeanFactory beanFactory;
 
 	public boolean isCurrentCompensableServiceTried() throws IllegalStateException {

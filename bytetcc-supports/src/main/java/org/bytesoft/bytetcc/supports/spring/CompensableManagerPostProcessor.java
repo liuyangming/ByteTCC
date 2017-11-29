@@ -33,6 +33,7 @@ import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.config.RuntimeBeanReference;
 import org.springframework.transaction.jta.JtaTransactionManager;
 
+@Deprecated
 public class CompensableManagerPostProcessor implements BeanFactoryPostProcessor, BeanPostProcessor {
 	static final Logger logger = LoggerFactory.getLogger(CompensableManagerPostProcessor.class);
 

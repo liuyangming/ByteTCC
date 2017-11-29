@@ -54,6 +54,7 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableEndpo
 	static final int CONSTANTS_RECORD_SIZE = CONSTANTS_RES_ID_MAX_SIZE + XidFactory.GLOBAL_TRANSACTION_LENGTH
 			+ XidFactory.BRANCH_QUALIFIER_LENGTH;
 
+	@javax.inject.Inject
 	private CompensableBeanFactory beanFactory;
 	private final Lock lock = new ReentrantLock();
 

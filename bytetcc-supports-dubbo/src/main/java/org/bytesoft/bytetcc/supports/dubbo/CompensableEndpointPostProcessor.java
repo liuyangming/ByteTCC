@@ -19,8 +19,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.bytesoft.common.utils.CommonUtils;
-import org.bytesoft.compensable.CompensableBeanFactory;
-import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 import org.bytesoft.compensable.aware.CompensableEndpointAware;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,10 +33,8 @@ import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import com.alibaba.dubbo.config.ApplicationConfig;
 import com.alibaba.dubbo.config.ProtocolConfig;
 
-public class CompensableEndpointPostProcessor implements BeanFactoryPostProcessor, CompensableBeanFactoryAware {
+public class CompensableEndpointPostProcessor implements BeanFactoryPostProcessor {
 	static final Logger logger = LoggerFactory.getLogger(CompensableEndpointPostProcessor.class);
-
-	private CompensableBeanFactory beanFactory;
 
 	public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
 		ClassLoader cl = Thread.currentThread().getContextClassLoader();
@@ -108,30 +104,6 @@ public class CompensableEndpointPostProcessor implements BeanFactoryPostProcesso
 			mpv.addPropertyValue(CompensableEndpointAware.ENDPOINT_FIELD_NAME, identifier);
 		}
 
-	}
-
-	// public void initializeCoordinator(ConfigurableListableBeanFactory beanFactory, BeanDefinition protocolDef,
-	// String compensableBeanId) throws BeansException {
-	// MutablePropertyValues mpv = protocolDef.getPropertyValues();
-	// PropertyValue pv = mpv.getPropertyValue("port");
-	// if (pv == null || pv.getValue() == null) {
-	// throw new FatalBeanException("Attribute 'port' of <dubbo:protocol ... /> is null.");
-	// }
-	//
-	// String host = CommonUtils.getInetAddress();
-	// String port = String.valueOf(pv.getValue());
-	// String identifier = String.format("%s:%s", host, port);
-	//
-	// BeanDefinition beanDef = beanFactory.getBeanDefinition(compensableBeanId);
-	// beanDef.getPropertyValues().addPropertyValue("identifier", identifier);
-	// }
-
-	public CompensableBeanFactory getBeanFactory() {
-		return beanFactory;
-	}
-
-	public void setBeanFactory(CompensableBeanFactory beanFactory) {
-		this.beanFactory = beanFactory;
 	}
 
 }

@@ -33,6 +33,7 @@ public class CompensableWork implements Work, CompensableBeanFactoryAware {
 
 	private boolean initialized = false;
 
+	@javax.inject.Inject
 	private CompensableBeanFactory beanFactory;
 
 	private void initializeIfNecessary() {
