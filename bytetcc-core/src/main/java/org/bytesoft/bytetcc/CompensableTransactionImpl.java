@@ -159,7 +159,8 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 			logger.info("{}| confirm native branchs failed!",
 					ByteUtils.byteArrayToString(this.transactionContext.getXid().getGlobalTransactionId()), ex);
 		} catch (RuntimeException ex) {
-			systemEx = new SystemException(ex.getMessage());
+			systemEx = new SystemException();
+			systemEx.initCause(ex);
 
 			logger.info("{}| confirm native branchs failed!",
 					ByteUtils.byteArrayToString(this.transactionContext.getXid().getGlobalTransactionId()), ex);
@@ -205,19 +206,27 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 		} catch (SecurityException ex) {
 			logger.error("{}| confirm native/remote branchs failed!",
 					ByteUtils.byteArrayToString(this.transactionContext.getXid().getGlobalTransactionId()), ex);
-			throw new SystemException(ex.getMessage());
+			SystemException sysEx = new SystemException();
+			sysEx.initCause(ex);
+			throw sysEx;
 		} catch (RollbackException ex) {
 			logger.error("{}| confirm native/remote branchs failed!",
 					ByteUtils.byteArrayToString(this.transactionContext.getXid().getGlobalTransactionId()), ex);
-			throw new SystemException(ex.getMessage());
+			SystemException sysEx = new SystemException();
+			sysEx.initCause(ex);
+			throw sysEx;
 		} catch (HeuristicMixedException ex) {
 			logger.error("{}| confirm native/remote branchs failed!",
 					ByteUtils.byteArrayToString(this.transactionContext.getXid().getGlobalTransactionId()), ex);
-			throw new SystemException(ex.getMessage());
+			SystemException sysEx = new SystemException();
+			sysEx.initCause(ex);
+			throw sysEx;
 		} catch (HeuristicRollbackException ex) {
 			logger.error("{}| confirm native/remote branchs failed!",
 					ByteUtils.byteArrayToString(this.transactionContext.getXid().getGlobalTransactionId()), ex);
-			throw new SystemException(ex.getMessage());
+			SystemException sysEx = new SystemException();
+			sysEx.initCause(ex);
+			throw sysEx;
 		}
 
 	}
@@ -315,6 +324,11 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 					current.setCommitted(true);
 					current.setRolledback(true);
 					current.setCompleted(true);
+
+					logger.error("{}| error occurred while confirming remote branch: {}, transaction has been completed!",
+							ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()),
+							current.getDescriptor().getIdentifier(), ex);
+
 					break;
 				case XAException.XA_HEURRB:
 					rolledbackExists = true;
@@ -329,14 +343,14 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 					current.setHeuristic(true);
 					logger.warn("{}| error occurred while confirming remote branch: {}, transaction is not exists!",
 							ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()),
-							current.getDescriptor().getIdentifier());
+							current.getDescriptor().getIdentifier(), ex);
 					break;
 				case XAException.XAER_RMFAIL:
 					unFinishExists = true;
 
 					logger.warn("{}| error occurred while confirming remote branch: {}, transaction is not exists!",
 							ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()),
-							current.getDescriptor().getIdentifier());
+							current.getDescriptor().getIdentifier(), ex);
 					break;
 				case XAException.XAER_NOTA:
 					committedExists = true; // TODO 1) tried & committed; 2) have not tried
@@ -350,7 +364,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 
 					logger.warn("{}| error occurred while confirming remote branch: {}, transaction is not exists!",
 							ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()),
-							current.getDescriptor().getIdentifier());
+							current.getDescriptor().getIdentifier(), ex);
 					break;
 				case XAException.XA_RBCOMMFAIL:
 				case XAException.XA_RBDEADLOCK:
@@ -365,13 +379,17 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 
 					current.setRolledback(true);
 					current.setCompleted(true);
+
+					logger.error("{}| error occurred while confirming remote branch: {}, transaction has been rolled back!",
+							ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()),
+							current.getDescriptor().getIdentifier(), ex);
 				}
 
 			} catch (RuntimeException rex) {
 				errorExists = true;
 				logger.warn("{}| error occurred while confirming remote branch: {}, transaction is not exists!",
 						ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()),
-						current.getDescriptor().getIdentifier());
+						current.getDescriptor().getIdentifier(), rex);
 			} finally {
 				if (current.isCompleted()) {
 					transactionLogger.updateCoordinator(current);
@@ -459,7 +477,8 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 			logger.info("{}| cancel native branchs failed!",
 					ByteUtils.byteArrayToString(this.transactionContext.getXid().getGlobalTransactionId()), ex);
 		} catch (RuntimeException ex) {
-			systemEx = new SystemException(ex.getMessage());
+			systemEx = new SystemException();
+			systemEx.initCause(ex);
 
 			logger.info("{}| cancel native branchs failed!",
 					ByteUtils.byteArrayToString(this.transactionContext.getXid().getGlobalTransactionId()), ex);
@@ -474,7 +493,9 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 		} catch (RuntimeException ex) {
 			logger.info("{}| cancel remote branchs failed!",
 					ByteUtils.byteArrayToString(this.transactionContext.getXid().getGlobalTransactionId()), ex);
-			throw new SystemException(ex.getMessage());
+			SystemException sysEx = new SystemException();
+			sysEx.initCause(ex);
+			throw sysEx;
 		}
 
 		if (systemEx != null) {
@@ -921,10 +942,10 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 								ByteUtils.byteArrayToString(current.getIdentifier().getGlobalTransactionId()), xaex);
 						break;
 					default:
-						logger.error("Illegal state, the status of the current branch transaction is unknown!");
+						logger.error("Illegal state, the status of the current branch transaction is unknown!", xaex);
 					}
 				} catch (RuntimeException rex) {
-					logger.error("Illegal resources, the status of the current branch transaction is unknown!");
+					logger.error("Illegal resources, the status of the current branch transaction is unknown!", rex);
 				}
 			} catch (RuntimeException rex) {
 				errorExists = true;

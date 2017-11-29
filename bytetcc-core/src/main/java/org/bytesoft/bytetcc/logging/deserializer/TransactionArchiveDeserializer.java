@@ -58,7 +58,7 @@ public class TransactionArchiveDeserializer extends org.bytesoft.bytejta.logging
 					int value = Integer.valueOf(hostArray[i]);
 					hostByteArray[i] = (byte) (value - 128);
 				} catch (RuntimeException rex) {
-					logger.debug(rex.getMessage(), rex);
+					logger.warn(rex.getMessage(), rex);
 				}
 			}
 
@@ -69,7 +69,7 @@ public class TransactionArchiveDeserializer extends org.bytesoft.bytejta.logging
 				byte[] byteArray = ByteUtils.shortToByteArray(port);
 				System.arraycopy(byteArray, 0, portByteArray, 0, 2);
 			} catch (RuntimeException rex) {
-				logger.debug(rex.getMessage(), rex);
+				logger.warn(rex.getMessage(), rex);
 			}
 		}
 
@@ -90,7 +90,7 @@ public class TransactionArchiveDeserializer extends org.bytesoft.bytejta.logging
 				System.arraycopy(sizeByteArray, 0, varByteArray, 0, sizeByteArray.length);
 				System.arraycopy(textByteArray, 0, varByteArray, sizeByteArray.length, textByteArray.length);
 			} catch (Exception ex) {
-				logger.error("Error occurred while serializing variable: {}", archive.getVariables());
+				logger.error("Error occurred while serializing variable: {}", archive.getVariables(), ex);
 				varByteArray = ByteUtils.shortToByteArray((short) 0);
 			}
 		}
@@ -221,7 +221,7 @@ public class TransactionArchiveDeserializer extends org.bytesoft.bytejta.logging
 				variables = (Map<String, Serializable>) CommonUtils.deserializeObject(varByteArray);
 			} catch (Exception ex) {
 				variables = new HashMap<String, Serializable>();
-				logger.error("Error occurred while deserializing object: {}", varByteArray);
+				logger.error("Error occurred while deserializing object: {}", varByteArray, ex);
 			}
 
 			archive.setVariables(variables);

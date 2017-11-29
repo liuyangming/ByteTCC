@@ -151,6 +151,9 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 
 			success = true;
 		} catch (XAException xaex) {
+			logger.error("Error occurred while committing transaction: {}." //
+					, ByteUtils.byteArrayToString(xid.getGlobalTransactionId()), xaex);
+
 			switch (xaex.errorCode) {
 			case XAException.XA_HEURRB:
 			case XAException.XA_HEURMIX:
@@ -160,6 +163,9 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 			}
 			throw xaex; // throw XAException
 		} catch (RuntimeException rex) {
+			logger.error("Error occurred while committing transaction: {}." //
+					, ByteUtils.byteArrayToString(xid.getGlobalTransactionId()), rex);
+
 			throw new XAException(XAException.XAER_RMERR); // should never happen
 		} finally {
 			if (locked) {
@@ -235,8 +241,14 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 		try {
 			transaction.forget();
 		} catch (SystemException ex) {
+			logger.error("Error occurred while forgetting transaction: {}." //
+					, ByteUtils.byteArrayToString(xid.getGlobalTransactionId()), ex);
+
 			throw new XAException(XAException.XAER_RMERR);
 		} catch (RuntimeException rex) {
+			logger.error("Error occurred while forgetting transaction: {}." //
+					, ByteUtils.byteArrayToString(xid.getGlobalTransactionId()), rex);
+
 			throw new XAException(XAException.XAER_RMERR);
 		}
 	}
@@ -308,6 +320,9 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 			transaction = this.invokeRollback(globalXid);
 			success = true;
 		} catch (RuntimeException ex) {
+			logger.error("Error occurred while rolling back transaction: {}." //
+					, ByteUtils.byteArrayToString(xid.getGlobalTransactionId()), ex);
+
 			throw new XAException(XAException.XAER_RMERR); // should never happen
 		} finally {
 			if (locked) {

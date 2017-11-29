@@ -159,7 +159,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 		} catch (XAException tex) {
 			logger.info("[{}] begin-transaction: error occurred while starting jta-transaction: {}",
 					ByteUtils.byteArrayToString(compensableXid.getGlobalTransactionId()),
-					ByteUtils.byteArrayToString(transactionXid.getGlobalTransactionId()));
+					ByteUtils.byteArrayToString(transactionXid.getGlobalTransactionId()), tex);
 			try {
 				transactionCoordinator.end(transactionContext, XAResource.TMFAIL);
 				throw new SystemException("Error occurred while beginning a compensable-transaction!");
@@ -183,7 +183,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 		} catch (XAException tex) {
 			logger.info("[{}] begin-transaction: error occurred while starting jta-transaction: {}",
 					ByteUtils.byteArrayToString(compensableXid.getGlobalTransactionId()),
-					ByteUtils.byteArrayToString(transactionXid.getGlobalTransactionId()));
+					ByteUtils.byteArrayToString(transactionXid.getGlobalTransactionId()), tex);
 		}
 	}
 
@@ -301,21 +301,27 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 		try {
 			transactionCoordinator.end(transactionContext, XAResource.TMSUCCESS);
 			transactionCoordinator.commit(transactionXid, true);
-		} catch (XAException xae) {
-			switch (xae.errorCode) {
+		} catch (XAException xaEx) {
+			switch (xaEx.errorCode) {
 			case XAException.XA_HEURCOM:
 				transactionCoordinator.forgetQuietly(transactionXid);
 				break;
 			case XAException.XA_HEURRB:
 				transactionCoordinator.forgetQuietly(transactionXid);
-				throw new HeuristicRollbackException();
+				HeuristicRollbackException hrex = new HeuristicRollbackException();
+				hrex.initCause(xaEx);
+				throw hrex;
 			case XAException.XA_HEURMIX:
 				transactionCoordinator.forgetQuietly(transactionXid);
-				throw new HeuristicMixedException();
+				HeuristicMixedException hmex = new HeuristicMixedException();
+				hmex.initCause(xaEx);
+				throw hmex;
 			case XAException.XAER_RMERR:
 			default:
 				transactionCoordinator.forgetQuietly(transactionXid); // TODO
-				throw new SystemException();
+				SystemException sysEx = new SystemException();
+				sysEx.initCause(xaEx);
+				throw sysEx;
 			}
 		}
 
@@ -338,9 +344,11 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 
 			transactionCoordinator.rollback(transactionXid);
 			throw new HeuristicRollbackException();
-		} catch (XAException xae) {
+		} catch (XAException xaEx) {
 			transactionCoordinator.forgetQuietly(transactionXid);
-			throw new SystemException();
+			SystemException sysEx = new SystemException();
+			sysEx.initCause(xaEx);
+			throw sysEx;
 		}
 	}
 
@@ -394,9 +402,11 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 		try {
 			transactionCoordinator.end(transactionContext, XAResource.TMSUCCESS);
 			transactionCoordinator.rollback(transactionXid);
-		} catch (XAException xae) {
+		} catch (XAException xaEx) {
 			transactionCoordinator.forgetQuietly(transactionXid);
-			throw new SystemException();
+			SystemException sysEx = new SystemException();
+			sysEx.initCause(xaEx);
+			throw sysEx;
 		} finally {
 			compensable.setTransactionalExtra(null);
 		}
@@ -465,17 +475,20 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 
 		boolean isLocalTransaction = transaction.isLocalTransaction();
 		try {
-			if (isLocalTransaction) /* jta-transaction in try-phase cannot be xa transaction. */ {
+			if (isLocalTransaction) /* transaction in try-phase cannot be xa transaction. */ {
 				this.invokeCompensableCommitIfLocalTransaction(compensable);
 				commitExists = true;
 			} else {
 				this.invokeCompensableCommitIfNotLocalTransaction(compensable);
 			}
 		} catch (HeuristicRollbackException ex) {
+			logger.info("Transaction in try-phase has already been rolled back heuristically.", ex);
 			rollbackExists = true;
 		} catch (SystemException ex) {
+			logger.info("Error occurred while committing transaction in try-phase.", ex);
 			errorExists = true;
 		} catch (RuntimeException ex) {
+			logger.info("Error occurred while committing transaction in try-phase.", ex);
 			errorExists = true;
 		} finally {
 			compensable.setTransactionalExtra(null);
@@ -523,10 +536,14 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 				break;
 			case XAException.XA_HEURRB:
 				transactionCoordinator.forgetQuietly(transactionXid);
-				throw new HeuristicRollbackException();
+				HeuristicRollbackException hrex = new HeuristicRollbackException();
+				hrex.initCause(xaex);
+				throw hrex;
 			default:
 				transactionCoordinator.forgetQuietly(transactionXid); // TODO
-				throw new SystemException();
+				SystemException sysEx = new SystemException();
+				sysEx.initCause(xaex);
+				throw sysEx;
 			}
 		}
 	}
@@ -549,7 +566,9 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 			throw new HeuristicRollbackException();
 		} catch (XAException xaex) {
 			transactionCoordinator.forgetQuietly(transactionXid);
-			throw new SystemException();
+			SystemException sysEx = new SystemException();
+			sysEx.initCause(xaex);
+			throw sysEx;
 		}
 	}
 
