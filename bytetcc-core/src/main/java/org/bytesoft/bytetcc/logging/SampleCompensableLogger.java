@@ -47,6 +47,7 @@ public class SampleCompensableLogger extends VirtualLoggingSystemImpl
 		implements CompensableLogger, LoggingFlushable, CompensableBeanFactoryAware, CompensableEndpointAware {
 	static final Logger logger = LoggerFactory.getLogger(SampleCompensableLogger.class);
 
+	@javax.inject.Inject
 	private CompensableBeanFactory beanFactory;
 	private String endpoint;
 

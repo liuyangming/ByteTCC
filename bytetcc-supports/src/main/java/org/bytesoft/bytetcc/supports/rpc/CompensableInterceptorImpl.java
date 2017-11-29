@@ -41,6 +41,7 @@ import org.slf4j.LoggerFactory;
 public class CompensableInterceptorImpl implements TransactionInterceptor, CompensableBeanFactoryAware {
 	static final Logger logger = LoggerFactory.getLogger(CompensableInterceptorImpl.class);
 
+	@javax.inject.Inject
 	private CompensableBeanFactory beanFactory;
 
 	public void beforeSendRequest(TransactionRequest request) throws IllegalStateException {

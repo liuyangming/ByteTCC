@@ -33,6 +33,7 @@ public final class SpringCloudBeanRegistry implements CompensableBeanFactoryAwar
 	static final Logger logger = LoggerFactory.getLogger(SpringCloudBeanRegistry.class);
 	private static final SpringCloudBeanRegistry instance = new SpringCloudBeanRegistry();
 
+	@javax.inject.Inject
 	private CompensableBeanFactory beanFactory;
 	private RestTemplate restTemplate;
 	private ThreadLocal<CompensableLoadBalancerInterceptor> interceptors = new ThreadLocal<CompensableLoadBalancerInterceptor>();

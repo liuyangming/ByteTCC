@@ -232,6 +232,16 @@
 				<artifactId>netty-transport-native-epoll</artifactId>
 				<version>4.1.9.Final</version>
 			</dependency>
+			<dependency>
+				<groupId>javax.inject</groupId>
+				<artifactId>javax.inject</artifactId>
+				<version>1</version>
+			</dependency>
+			<dependency>
+				<groupId>javax.annotation</groupId>
+				<artifactId>javax.annotation-api</artifactId>
+				<version>1.2</version>
+			</dependency>
 		</dependencies>
 	</dependencyManagement>
 

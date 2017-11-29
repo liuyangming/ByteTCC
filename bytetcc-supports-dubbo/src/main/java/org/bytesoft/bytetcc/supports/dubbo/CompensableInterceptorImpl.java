@@ -26,6 +26,7 @@ import org.bytesoft.transaction.supports.rpc.TransactionResponse;
 
 public class CompensableInterceptorImpl implements TransactionInterceptor, CompensableBeanFactoryAware {
 
+	@javax.inject.Inject
 	private CompensableBeanFactory beanFactory;
 
 	// private TransactionInterceptor transactionInterceptor;

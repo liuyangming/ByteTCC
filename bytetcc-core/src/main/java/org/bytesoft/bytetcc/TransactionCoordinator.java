@@ -28,6 +28,7 @@ import org.bytesoft.transaction.xa.XidFactory;
 
 public class TransactionCoordinator implements RemoteCoordinator, CompensableBeanFactoryAware {
 
+	@javax.inject.Inject
 	private CompensableBeanFactory beanFactory;
 
 	public int prepare(Xid xid) throws XAException {

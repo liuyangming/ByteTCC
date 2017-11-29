@@ -26,7 +26,6 @@ import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 import org.bytesoft.transaction.xa.XidFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -35,9 +34,9 @@ import org.springframework.web.bind.annotation.ResponseBody;
 
 @Controller
 public class CompensableCoordinatorController extends PropertyEditorSupport implements CompensableBeanFactoryAware {
-	@Autowired
+	@javax.inject.Inject
 	private CompensableCoordinator compensableCoordinator;
-	@Autowired
+	@javax.inject.Inject
 	private CompensableBeanFactory beanFactory;
 
 	@RequestMapping(value = "/org/bytesoft/bytetcc/prepare/{xid}", method = RequestMethod.POST)

@@ -47,8 +47,10 @@ public class UserCompensableImpl implements UserCompensable, Referenceable, Seri
 	private static final long serialVersionUID = 1L;
 	static final Logger logger = LoggerFactory.getLogger(UserCompensableImpl.class);
 
-	private CompensableBeanFactory beanFactory;
+	@javax.annotation.Resource
 	private TransactionManager transactionManager;
+	@javax.inject.Inject
+	private CompensableBeanFactory beanFactory;
 
 	public TransactionXid compensableBegin() throws NotSupportedException, SystemException {
 		RemoteCoordinator compensableCoordinator = this.beanFactory.getCompensableCoordinator();
@@ -181,33 +183,31 @@ public class UserCompensableImpl implements UserCompensable, Referenceable, Seri
 		} catch (XAException xaex) {
 			switch (xaex.errorCode) {
 			case XAException.XAER_NOTA:
-				throw new IllegalStateException();
+				IllegalStateException stateEx = new IllegalStateException();
+				stateEx.initCause(xaex);
+				throw stateEx;
 			case XAException.XA_HEURRB:
-				throw new HeuristicRollbackException();
+				HeuristicRollbackException hrex = new HeuristicRollbackException();
+				hrex.initCause(xaex);
+				throw hrex;
 			case XAException.XA_HEURMIX:
-				throw new HeuristicMixedException();
+				HeuristicMixedException hmex = new HeuristicMixedException();
+				hmex.initCause(xaex);
+				throw hmex;
 			case XAException.XAER_INVAL:
-				throw new IllegalStateException();
+				IllegalStateException error = new IllegalStateException();
+				error.initCause(xaex);
+				throw error;
 			case XAException.XAER_RMERR:
 			case XAException.XAER_RMFAIL:
 			default:
-				throw new SystemException();
+				SystemException systemEx = new SystemException();
+				systemEx.initCause(xaex);
+				throw systemEx;
 			}
 		} finally {
 			if (success) {
-				try {
-					compensableCoordinator.forget(compensableContext.getXid());
-				} catch (XAException ex) {
-					switch (ex.errorCode) {
-					case XAException.XAER_INVAL:
-						throw new IllegalStateException();
-					case XAException.XAER_NOTA:
-						throw new IllegalStateException();
-					case XAException.XAER_RMERR:
-					default:
-						throw new SystemException();
-					}
-				}
+				compensableCoordinator.forgetQuietly(compensableContext.getXid());
 			} // end-if (success)
 		}
 	}
@@ -265,29 +265,23 @@ public class UserCompensableImpl implements UserCompensable, Referenceable, Seri
 		} catch (XAException xaex) {
 			switch (xaex.errorCode) {
 			case XAException.XAER_NOTA:
-				throw new IllegalStateException();
+				IllegalStateException stateEx = new IllegalStateException();
+				stateEx.initCause(xaex);
+				throw stateEx;
 			case XAException.XAER_INVAL:
-				throw new IllegalStateException();
+				IllegalStateException error = new IllegalStateException();
+				error.initCause(xaex);
+				throw error;
 			case XAException.XAER_RMERR:
 			case XAException.XAER_RMFAIL:
 			default:
-				throw new SystemException();
+				SystemException systemEx = new SystemException();
+				systemEx.initCause(xaex);
+				throw systemEx;
 			}
 		} finally {
 			if (success) {
-				try {
-					compensableCoordinator.forget(compensableContext.getXid());
-				} catch (XAException ex) {
-					switch (ex.errorCode) {
-					case XAException.XAER_INVAL:
-						throw new IllegalStateException();
-					case XAException.XAER_NOTA:
-						throw new IllegalStateException();
-					case XAException.XAER_RMERR:
-					default:
-						throw new SystemException();
-					}
-				}
+				compensableCoordinator.forgetQuietly(compensableContext.getXid());
 			} // end-if (success)
 		}
 	}

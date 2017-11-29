@@ -21,7 +21,10 @@
 		<aop:advisor advice-ref="compensableMethodInterceptor" pointcut-ref="compensableMethodPointcut" />
 	</aop:config>
 
-	<tx:annotation-driven transaction-manager="transactionManager" />
-	<bean id="transactionManager" class="org.springframework.transaction.jta.JtaTransactionManager" />
+	<bean id="jtaTransactionManager" class="org.springframework.transaction.jta.JtaTransactionManager">
+		<property name="userTransaction" ref="bytetccUserTransaction" />
+		<property name="transactionManager" ref="transactionManager" />
+	</bean>
+	<tx:annotation-driven transaction-manager="jtaTransactionManager" />
 
 </beans>

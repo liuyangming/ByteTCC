@@ -46,6 +46,7 @@ public class CompensableMethodInterceptor
 		implements MethodInterceptor, CompensableSynchronization, ApplicationContextAware, CompensableBeanFactoryAware {
 	static final Logger logger = LoggerFactory.getLogger(CompensableMethodInterceptor.class);
 
+	@javax.inject.Inject
 	private CompensableBeanFactory beanFactory;
 	private ApplicationContext applicationContext;
 
