@@ -341,14 +341,14 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 					unFinishExists = true;
 
 					current.setHeuristic(true);
-					logger.warn("{}| error occurred while confirming remote branch: {}, transaction is not exists!",
+					logger.warn("{}| error occurred while confirming remote branch: {}, transaction may has been completd!",
 							ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()),
 							current.getDescriptor().getIdentifier(), ex);
 					break;
 				case XAException.XAER_RMFAIL:
 					unFinishExists = true;
 
-					logger.warn("{}| error occurred while confirming remote branch: {}, transaction is not exists!",
+					logger.warn("{}| error occurred while confirming remote branch: {}, the remote branch is unreachable!",
 							ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()),
 							current.getDescriptor().getIdentifier(), ex);
 					break;
@@ -362,7 +362,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 				case XAException.XAER_PROTO:
 					errorExists = true;
 
-					logger.warn("{}| error occurred while confirming remote branch: {}, transaction is not exists!",
+					logger.warn("{}| error occurred while confirming remote branch: {}!",
 							ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()),
 							current.getDescriptor().getIdentifier(), ex);
 					break;
@@ -387,7 +387,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 
 			} catch (RuntimeException rex) {
 				errorExists = true;
-				logger.warn("{}| error occurred while confirming remote branch: {}, transaction is not exists!",
+				logger.warn("{}| error occurred while confirming remote branch: {}!",
 						ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()),
 						current.getDescriptor().getIdentifier(), rex);
 			} finally {
@@ -633,7 +633,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 					break;
 				case XAException.XAER_RMFAIL:
 					unFinishExists = true;
-					logger.error("{}| error occurred while cancelling remote branch: {}",
+					logger.error("{}| error occurred while cancelling remote branch: {}, the remote branch is unreachable!",
 							ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()), current, xaex);
 					break;
 				case XAException.XAER_NOTA:
