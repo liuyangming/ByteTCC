@@ -92,6 +92,11 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 			throw new XAException(XAException.XAER_PROTO);
 		} // end-if (available == false)
 
+		org.bytesoft.compensable.TransactionContext compensableContext //
+				= (org.bytesoft.compensable.TransactionContext) transaction.getTransactionContext();
+		int propagationLevel = compensableContext.getPropagationLevel();
+		compensableContext.setPropagationLevel(propagationLevel + 1);
+
 		compensableManager.associateThread(transaction);
 
 		return transaction;
@@ -111,6 +116,11 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 		compensableManager.desociateThread();
 
 		((CompensableTransactionImpl) transaction).release();
+
+		org.bytesoft.compensable.TransactionContext compensableContext //
+				= (org.bytesoft.compensable.TransactionContext) transaction.getTransactionContext();
+		int propagationLevel = compensableContext.getPropagationLevel();
+		compensableContext.setPropagationLevel(propagationLevel - 1);
 
 		compensableLock.unlockTransaction(transactionContext.getXid(), this.endpoint);
 

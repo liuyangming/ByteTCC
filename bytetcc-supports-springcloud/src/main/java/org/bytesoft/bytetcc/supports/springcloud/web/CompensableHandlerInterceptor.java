@@ -80,6 +80,8 @@ public class CompensableHandlerInterceptor implements HandlerInterceptor, Compen
 		TransactionContext transactionContext = null;
 		if (byteArray != null && byteArray.length > 0) {
 			transactionContext = (TransactionContext) CommonUtils.deserializeObject(byteArray);
+			transactionContext.setPropagated(true);
+			transactionContext.setPropagatedBy(propagationText);
 		}
 
 		TransactionRequestImpl req = new TransactionRequestImpl();

@@ -41,6 +41,7 @@ import org.bytesoft.bytejta.supports.resource.RemoteResourceDescriptor;
 import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
 import org.bytesoft.bytetcc.supports.resource.LocalResourceCleaner;
 import org.bytesoft.common.utils.ByteUtils;
+import org.bytesoft.common.utils.CommonUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableInvocation;
 import org.bytesoft.compensable.CompensableTransaction;
@@ -685,6 +686,17 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 		RemoteResourceDescriptor descriptor = (RemoteResourceDescriptor) xaRes;
 		String identifier = descriptor.getIdentifier();
 
+		RemoteCoordinator transactionCoordinator = this.beanFactory.getCompensableCoordinator();
+		String self = transactionCoordinator.getIdentifier();
+		String parent = String.valueOf(this.transactionContext.getPropagatedBy());
+		boolean resourceValid = StringUtils.equalsIgnoreCase(identifier, self) == false
+				&& CommonUtils.instanceEquals(parent, identifier) == false;
+
+		if (resourceValid == false) {
+			logger.warn("Endpoint {} can not be its own remote branch!", identifier);
+			return true;
+		} // end-if (resourceValid == false)
+
 		XAResourceArchive resourceArchive = this.resourceMap.get(identifier);
 		if (resourceArchive == null) {
 			XidFactory xidFactory = this.beanFactory.getCompensableXidFactory();
@@ -716,6 +728,15 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 			RemoteCoordinator resource = descriptor.getDelegate();
 
 			String identifier = descriptor.getIdentifier();
+
+			RemoteCoordinator transactionCoordinator = this.beanFactory.getCompensableCoordinator();
+			String self = transactionCoordinator.getIdentifier();
+			String parent = String.valueOf(this.transactionContext.getPropagatedBy());
+
+			if (StringUtils.equalsIgnoreCase(identifier, self) || CommonUtils.instanceEquals(parent, identifier)) {
+				return true;
+			}
+
 			XAResourceArchive archive = this.resourceMap.remove(identifier);
 			if (flag == XAResource.TMFAIL) {
 
