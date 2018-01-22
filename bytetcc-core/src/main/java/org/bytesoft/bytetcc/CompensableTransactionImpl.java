@@ -737,8 +737,10 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 				return true;
 			}
 
-			XAResourceArchive archive = this.resourceMap.remove(identifier);
+			XAResourceArchive archive = this.resourceMap.get(identifier);
 			if (flag == XAResource.TMFAIL) {
+
+				this.resourceMap.remove(identifier);
 
 				if (archive != null) {
 					this.resourceList.remove(archive);
