@@ -70,7 +70,7 @@ public class XAResourceDeserializerImpl implements XAResourceDeserializer, Appli
 			Matcher matcher = pattern.matcher(identifier);
 			if (matcher.find()) {
 				RemoteCoordinatorRegistry registry = RemoteCoordinatorRegistry.getInstance();
-				RemoteCoordinator coordinator = registry.getTransactionManagerStub(identifier);
+				RemoteCoordinator coordinator = registry.getRemoteCoordinator(identifier);
 				if (coordinator == null) {
 					String[] array = identifier.split("\\:");
 					InvocationContext invocationContext = new InvocationContext();
@@ -87,12 +87,12 @@ public class XAResourceDeserializerImpl implements XAResourceDeserializer, Appli
 
 					coordinator = (RemoteCoordinator) Proxy.newProxyInstance(DubboRemoteCoordinator.class.getClassLoader(),
 							new Class[] { RemoteCoordinator.class }, dubboCoordinator);
-					registry.putTransactionManagerStub(identifier, coordinator);
+					registry.putRemoteCoordinator(identifier, coordinator);
 				}
 
 				RemoteResourceDescriptor descriptor = new RemoteResourceDescriptor();
 				descriptor.setIdentifier(identifier);
-				descriptor.setDelegate(registry.getTransactionManagerStub(identifier));
+				descriptor.setDelegate(registry.getRemoteCoordinator(identifier));
 
 				return descriptor;
 			} else {

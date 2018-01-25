@@ -55,7 +55,7 @@ public final class SpringCloudBeanRegistry implements CompensableBeanFactoryAwar
 			return null;
 		}
 
-		RemoteCoordinator coordinator = registry.getTransactionManagerStub(identifier);
+		RemoteCoordinator coordinator = registry.getRemoteCoordinator(identifier);
 		if (coordinator != null) {
 			return coordinator;
 		}
@@ -66,7 +66,7 @@ public final class SpringCloudBeanRegistry implements CompensableBeanFactoryAwar
 
 		coordinator = (RemoteCoordinator) Proxy.newProxyInstance(SpringCloudCoordinator.class.getClassLoader(),
 				new Class[] { RemoteCoordinator.class }, handler);
-		registry.putTransactionManagerStub(identifier, coordinator);
+		registry.putRemoteCoordinator(identifier, coordinator);
 
 		return coordinator;
 	}
