@@ -75,7 +75,7 @@ public class XAResourceDeserializerImpl implements XAResourceDeserializer, Appli
 			}
 
 			RemoteCoordinatorRegistry registry = RemoteCoordinatorRegistry.getInstance();
-			RemoteCoordinator coordinator = registry.getTransactionManagerStub(identifier);
+			RemoteCoordinator coordinator = registry.getRemoteCoordinator(identifier);
 			if (coordinator == null) {
 				SpringCloudCoordinator springCloudCoordinator = new SpringCloudCoordinator();
 				springCloudCoordinator.setIdentifier(identifier);
@@ -83,12 +83,12 @@ public class XAResourceDeserializerImpl implements XAResourceDeserializer, Appli
 
 				coordinator = (RemoteCoordinator) Proxy.newProxyInstance(SpringCloudCoordinator.class.getClassLoader(),
 						new Class[] { RemoteCoordinator.class }, springCloudCoordinator);
-				registry.putTransactionManagerStub(identifier, coordinator);
+				registry.putRemoteCoordinator(identifier, coordinator);
 			}
 
 			RemoteResourceDescriptor descriptor = new RemoteResourceDescriptor();
 			descriptor.setIdentifier(identifier);
-			descriptor.setDelegate(registry.getTransactionManagerStub(identifier));
+			descriptor.setDelegate(registry.getRemoteCoordinator(identifier));
 
 			return descriptor;
 		} catch (Exception ex) {

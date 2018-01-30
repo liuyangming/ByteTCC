@@ -61,7 +61,9 @@ public class SpringCloudCoordinator implements InvocationHandler {
 				throw new XAException(XAException.XAER_RMFAIL);
 			}
 		} else if (XAResource.class.equals(clazz)) {
-			if ("prepare".equals(methodName)) {
+			if ("start".equals(methodName)) {
+				return null; // return immediately
+			} else if ("prepare".equals(methodName)) {
 				return this.invokePostCoordinator(proxy, method, args);
 			} else if ("commit".equals(methodName)) {
 				return this.invokePostCoordinator(proxy, method, args);

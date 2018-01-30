@@ -30,6 +30,7 @@ import org.bytesoft.bytetcc.supports.springcloud.feign.CompensableFeignDecoder;
 import org.bytesoft.bytetcc.supports.springcloud.feign.CompensableFeignErrorDecoder;
 import org.bytesoft.bytetcc.supports.springcloud.feign.CompensableFeignHandler;
 import org.bytesoft.bytetcc.supports.springcloud.feign.CompensableFeignInterceptor;
+import org.bytesoft.bytetcc.supports.springcloud.hystrix.CompensableHystrixBeanPostProcessor;
 import org.bytesoft.bytetcc.supports.springcloud.property.CompensablePropertySourceFactory;
 import org.bytesoft.bytetcc.supports.springcloud.web.CompensableHandlerInterceptor;
 import org.bytesoft.bytetcc.supports.springcloud.web.CompensableRequestInterceptor;
@@ -44,6 +45,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.web.HttpMessageConverters;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
@@ -55,11 +58,6 @@ import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter;
-
-import feign.Feign;
-import feign.Feign.Builder;
-import feign.InvocationHandlerFactory;
-import feign.Target;
 
 @PropertySource(value = "bytetcc:loadbalancer.config", factory = CompensablePropertySourceFactory.class)
 @Configuration
@@ -83,22 +81,24 @@ public class SpringCloudConfiguration extends WebMvcConfigurerAdapter implements
 
 	@org.springframework.context.annotation.Primary
 	@org.springframework.context.annotation.Bean
-	public InvocationHandlerFactory compensableInvocationHandlerFactory() {
-		return new InvocationHandlerFactory() {
+	@ConditionalOnProperty(name = "feign.hystrix.enabled", havingValue = "false", matchIfMissing = true)
+	public feign.Feign.Builder compensableFeignBuilder() {
+		return feign.Feign.builder().invocationHandlerFactory(new feign.InvocationHandlerFactory() {
 			@SuppressWarnings("rawtypes")
-			public InvocationHandler create(Target target, Map<Method, MethodHandler> dispatch) {
+			public InvocationHandler create(feign.Target target, Map<Method, MethodHandler> dispatch) {
 				CompensableFeignHandler handler = new CompensableFeignHandler();
 				handler.setTarget(target);
 				handler.setHandlers(dispatch);
 				return handler;
 			}
-		};
+		});
 	}
 
-	@org.springframework.context.annotation.Primary
 	@org.springframework.context.annotation.Bean
-	public Builder compensableFeignBuilder(@Autowired InvocationHandlerFactory invocationHandlerFactory) {
-		return Feign.builder().invocationHandlerFactory(invocationHandlerFactory);
+	@ConditionalOnProperty(name = "feign.hystrix.enabled")
+	@ConditionalOnClass(feign.hystrix.HystrixFeign.class)
+	public CompensableHystrixBeanPostProcessor hystrixPostProcessor() {
+		return new CompensableHystrixBeanPostProcessor();
 	}
 
 	@org.springframework.context.annotation.Bean

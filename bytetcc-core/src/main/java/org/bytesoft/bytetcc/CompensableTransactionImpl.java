@@ -683,7 +683,19 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 		if (RemoteResourceDescriptor.class.isInstance(xaRes) == false) {
 			throw new SystemException("Invalid resource!");
 		}
+
 		RemoteResourceDescriptor descriptor = (RemoteResourceDescriptor) xaRes;
+
+		XidFactory xidFactory = this.beanFactory.getCompensableXidFactory();
+		TransactionXid globalXid = this.transactionContext.getXid();
+		TransactionXid branchXid = xidFactory.createBranchXid(globalXid);
+
+		try {
+			descriptor.start(branchXid, XAResource.TMNOFLAGS);
+		} catch (XAException ex) {
+			throw new RollbackException(); // should never happen
+		}
+
 		String identifier = descriptor.getIdentifier();
 
 		RemoteCoordinator transactionCoordinator = this.beanFactory.getCompensableCoordinator();
@@ -694,14 +706,11 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 
 		if (resourceValid == false) {
 			logger.warn("Endpoint {} can not be its own remote branch!", identifier);
-			return true;
+			return false;
 		} // end-if (resourceValid == false)
 
 		XAResourceArchive resourceArchive = this.resourceMap.get(identifier);
 		if (resourceArchive == null) {
-			XidFactory xidFactory = this.beanFactory.getCompensableXidFactory();
-			TransactionXid globalXid = this.transactionContext.getXid();
-			TransactionXid branchXid = xidFactory.createBranchXid(globalXid);
 			resourceArchive = new XAResourceArchive();
 			resourceArchive.setXid(branchXid);
 			resourceArchive.setDescriptor(descriptor);
