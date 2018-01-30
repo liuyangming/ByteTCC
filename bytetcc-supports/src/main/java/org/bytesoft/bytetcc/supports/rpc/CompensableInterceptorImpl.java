@@ -136,18 +136,22 @@ public class CompensableInterceptorImpl implements TransactionInterceptor, Compe
 		boolean participantEnlistFlag = ((TransactionResponseImpl) response).isParticipantEnlistFlag();
 		boolean participantDelistFlag = ((TransactionResponseImpl) response).isParticipantDelistFlag();
 
+		RemoteCoordinator resource = response.getSourceTransactionCoordinator();
+
 		if (transaction == null || remoteTransactionContext == null) {
 			return;
 		} else if (participantEnlistFlag == false) {
 			return;
+		} else if (resource == null) {
+			logger.error("CompensableInterceptorImpl.afterReceiveResponse(TransactionRequest): remote coordinator is null.");
+			throw new IllegalStateException("remote coordinator is null.");
 		}
 
 		try {
-			RemoteCoordinator resource = response.getSourceTransactionCoordinator();
 
 			RemoteResourceDescriptor descriptor = new RemoteResourceDescriptor();
 			descriptor.setDelegate(resource);
-			descriptor.setIdentifier(resource.getIdentifier());
+			// descriptor.setIdentifier(resource.getIdentifier());
 
 			transaction.delistResource(descriptor, participantDelistFlag ? XAResource.TMFAIL : XAResource.TMSUCCESS);
 		} catch (IllegalStateException ex) {

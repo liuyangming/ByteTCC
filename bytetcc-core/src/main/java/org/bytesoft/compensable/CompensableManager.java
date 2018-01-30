@@ -25,6 +25,8 @@ import org.bytesoft.transaction.TransactionManager;
 
 public interface CompensableManager extends TransactionManager {
 
+	public CompensableTransaction getCompensableTransaction(Thread thread);
+
 	public CompensableTransaction getCompensableTransactionQuietly();
 
 	public void compensableBegin() throws NotSupportedException, SystemException;

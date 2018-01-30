@@ -246,6 +246,20 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 		(isCompensableTransaction ? compensableManager : transactionManager).setTransactionTimeout(seconds);
 	}
 
+	public Transaction getTransaction(Thread thread) {
+		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
+		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
+		Transaction transaction = transactionManager.getTransaction(thread);
+		Transaction compensable = compensableManager.getTransaction(thread);
+		if (transaction != null) {
+			return transaction;
+		} else if (compensable != null) {
+			return ((CompensableTransaction) compensable).getTransaction();
+		} else {
+			return null;
+		}
+	}
+
 	public Transaction getTransaction() throws SystemException {
 		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();

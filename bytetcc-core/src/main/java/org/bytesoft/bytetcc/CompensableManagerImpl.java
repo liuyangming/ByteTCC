@@ -69,6 +69,11 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 		return transaction == null ? Status.STATUS_NO_TRANSACTION : transaction.getStatus();
 	}
 
+	public Transaction getTransaction(Thread thread) {
+		CompensableTransaction transaction = this.getCompensableTransaction(thread);
+		return transaction == null ? null : transaction.getTransaction();
+	}
+
 	public Transaction getTransactionQuietly() {
 		CompensableTransaction transaction = this.getCompensableTransactionQuietly();
 		return transaction == null ? null : transaction.getTransaction();
@@ -81,6 +86,10 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 
 	public CompensableTransaction getCompensableTransactionQuietly() {
 		return (CompensableTransaction) this.compensableMap.get(Thread.currentThread());
+	}
+
+	public CompensableTransaction getCompensableTransaction(Thread thread) {
+		return (CompensableTransaction) this.compensableMap.get(thread);
 	}
 
 	public void resume(javax.transaction.Transaction tobj)

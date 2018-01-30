@@ -92,7 +92,30 @@ public class UserCompensableImpl implements UserCompensable, Referenceable, Seri
 		this.transactionManager.commit();
 	}
 
-	public void compensableRecoveryBegin(Xid xid) throws NotSupportedException, SystemException {
+	public void compensableRecoverySuspend() throws NotSupportedException, SystemException {
+		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
+		CompensableTransaction compensable = compensableManager.getCompensableTransactionQuietly();
+		if (compensable == null) {
+			throw new IllegalStateException();
+		}
+
+		TransactionContext transactionContext = compensable.getTransactionContext();
+		if (transactionContext.isCoordinator() == false) {
+			throw new IllegalStateException();
+		}
+
+		RemoteCoordinator compensableCoordinator = this.beanFactory.getCompensableCoordinator();
+
+		TransactionContext compensableContext = compensable.getTransactionContext();
+		try {
+			compensableCoordinator.end(compensableContext, XAResource.TMSUCCESS);
+		} catch (XAException ex) {
+			logger.error("Error occurred while suspending an compensable transaction!", ex);
+			throw new SystemException(ex.getMessage());
+		}
+	}
+
+	public void compensableRecoveryResume(Xid xid) throws NotSupportedException, SystemException {
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 		TransactionRepository transactionRepository = this.beanFactory.getCompensableRepository();
 		RemoteCoordinator compensableCoordinator = this.beanFactory.getCompensableCoordinator();
@@ -121,7 +144,7 @@ public class UserCompensableImpl implements UserCompensable, Referenceable, Seri
 			try {
 				compensableCoordinator.start(transactionContext, XAResource.TMNOFLAGS);
 			} catch (XAException ex) {
-				logger.error("Error occurred while beginning an compensable transaction!", ex);
+				logger.error("Error occurred while resuming an compensable transaction!", ex);
 				throw new SystemException(ex.getMessage());
 			}
 		} else if (compensable == null) {
