@@ -611,6 +611,9 @@ public class CompensableServiceFilter implements Filter {
 		TransactionInterceptor transactionInterceptor = beanFactory.getTransactionInterceptor();
 		RemoteCoordinator compensableCoordinator = beanFactory.getCompensableCoordinator();
 
+		Map<String, String> attachments = invocation.getAttachments();
+		attachments.put(RemoteCoordinator.class.getName(), compensableCoordinator.getIdentifier());
+
 		transactionInterceptor.beforeSendRequest(request);
 		if (request.getTransactionContext() != null) {
 			ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -621,10 +624,9 @@ public class CompensableServiceFilter implements Filter {
 				logger.error("Error occurred in remote call!", ex);
 				throw new RemotingException(ex.getMessage());
 			}
+
 			String transactionContextContent = ByteUtils.byteArrayToString(baos.toByteArray());
-			Map<String, String> attachments = invocation.getAttachments();
 			attachments.put(TransactionContext.class.getName(), transactionContextContent);
-			attachments.put(RemoteCoordinator.class.getName(), compensableCoordinator.getIdentifier());
 		}
 	}
 
