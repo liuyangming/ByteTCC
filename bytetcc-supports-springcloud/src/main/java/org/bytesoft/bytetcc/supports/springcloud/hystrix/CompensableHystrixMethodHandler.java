@@ -57,9 +57,10 @@ public class CompensableHystrixMethodHandler implements MethodHandler {
 		CompensableManager compensableManager = beanFactory.getCompensableManager();
 		final TransactionInterceptor transactionInterceptor = beanFactory.getTransactionInterceptor();
 
-		Thread thread = (Thread) argv[0];
-		Method method = (Method) argv[1];
-		Object[] args = (Object[]) argv[2];
+		CompensableHystrixInvocation invocation = (CompensableHystrixInvocation) argv[0];
+		Thread thread = invocation.getThread(); // (Thread) argv[0];
+		Method method = invocation.getMethod(); // (Method) argv[1];
+		Object[] args = invocation.getArgs(); // (Object[]) argv[2];
 
 		CompensableTransactionImpl compensable = //
 				(CompensableTransactionImpl) compensableManager.getCompensableTransaction(thread);

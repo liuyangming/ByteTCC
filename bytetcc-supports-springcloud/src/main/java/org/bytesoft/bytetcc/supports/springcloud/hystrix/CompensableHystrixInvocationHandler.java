@@ -1,5 +1,5 @@
 /**
- * Copyright 2014-2017 yangming.liu<bytefox@126.com>.
+ * Copyright 2014-2018 yangming.liu<bytefox@126.com>.
  *
  * This copyrighted material is made available to anyone wishing to use, modify,
  * copy, or redistribute it subject to the terms and conditions of the GNU
@@ -15,10 +15,8 @@
  */
 package org.bytesoft.bytetcc.supports.springcloud.hystrix;
 
-import java.lang.reflect.Method;
-
 public interface CompensableHystrixInvocationHandler {
 
-	public Object invoke(Thread current, Method method, Object[] values);
+	public Object invoke(CompensableHystrixInvocation invocation);
 
 }
