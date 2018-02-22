@@ -26,7 +26,10 @@
 		<property name="compensableInterceptor" ref="bytetccCompensableInterceptor" />
 	</bean>
 
-	<bean id="bytetccResourceDeserializer" class="org.bytesoft.bytetcc.supports.dubbo.serialize.XAResourceDeserializerImpl" />
+	<bean id="commonResourceDeserializer" class="org.bytesoft.bytejta.supports.resource.serialize.XAResourceDeserializerImpl" />
+	<bean id="bytetccResourceDeserializer" class="org.bytesoft.bytetcc.supports.dubbo.serialize.XAResourceDeserializerImpl">
+		<property name="resourceDeserializer" ref="commonResourceDeserializer" />
+	</bean>
 
 	<bean id="bytetccTransactionArchiveDeserializer" class="org.bytesoft.bytetcc.logging.deserializer.TransactionArchiveDeserializer">
 		<property name="resourceArchiveDeserializer" ref="bytetccXAResourceArchiveDeserializer" />
