@@ -16,19 +16,11 @@
 
 	<import resource="classpath:bytetcc-supports-task.xml" />
 
-	<bean class="org.bytesoft.bytetcc.supports.springcloud.SpringCloudEndpointPostProcessor" />
-	<bean class="org.bytesoft.bytetcc.supports.springcloud.SpringCloudBeanRegistry" factory-method="getInstance" />
+	<!-- <bean class="org.bytesoft.bytetcc.supports.dubbo.CompensableEndpointPostProcessor" /> -->
+	<!-- <bean class="org.bytesoft.bytetcc.supports.dubbo.DubboConfigPostProcessor" /> -->
+	<!-- <bean class="org.bytesoft.bytetcc.supports.dubbo.CompensableConfigPostProcessor" /> -->
 
-	<bean class="org.bytesoft.bytetcc.supports.springcloud.controller.CompensableCoordinatorController" />
-
-	<bean id="bytetccTransactionInterceptor" class="org.bytesoft.bytetcc.supports.springcloud.CompensableInterceptorImpl">
-		<property name="compensableInterceptor" ref="bytetccCompensableInterceptor" />
-	</bean>
-
-	<bean id="commonResourceDeserializer" class="org.bytesoft.bytejta.supports.resource.serialize.XAResourceDeserializerImpl" />
-	<bean id="bytetccResourceDeserializer" class="org.bytesoft.bytetcc.supports.springcloud.serialize.XAResourceDeserializerImpl">
-		<property name="resourceDeserializer" ref="commonResourceDeserializer" />
-	</bean>
+	<bean id="bytetccResourceDeserializer" class="org.bytesoft.bytejta.supports.resource.serialize.XAResourceDeserializerImpl" />
 
 	<bean id="bytetccTransactionArchiveDeserializer" class="org.bytesoft.bytetcc.logging.deserializer.TransactionArchiveDeserializer">
 		<property name="resourceArchiveDeserializer" ref="bytetccXAResourceArchiveDeserializer" />
@@ -76,5 +68,19 @@
 		<property name="compensableContext" ref="bytetccCompensableContext" />
 		<property name="compensableLock" ref="bytejtaTransactionLock" />
 	</bean>
+
+	<import resource="classpath:bytetcc-disable-tx-advice.xml" />
+
+	<bean id="compensableMethodInterceptor" class="org.bytesoft.bytetcc.supports.spring.CompensableMethodInterceptor" />
+	<aop:config proxy-target-class="true">
+		<aop:pointcut id="compensableMethodPointcut" expression="@within(org.bytesoft.compensable.Compensable)" />
+		<aop:advisor advice-ref="compensableMethodInterceptor" pointcut-ref="compensableMethodPointcut" />
+	</aop:config>
+
+	<bean id="jtaTransactionManager" class="org.springframework.transaction.jta.JtaTransactionManager">
+		<property name="userTransaction" ref="bytetccUserTransaction" />
+		<property name="transactionManager" ref="transactionManager" />
+	</bean>
+	<tx:annotation-driven transaction-manager="jtaTransactionManager" />
 
 </beans>
