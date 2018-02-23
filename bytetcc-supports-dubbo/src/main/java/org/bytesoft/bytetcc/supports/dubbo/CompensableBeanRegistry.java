@@ -15,11 +15,7 @@
  */
 package org.bytesoft.bytetcc.supports.dubbo;
 
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
-
+import org.bytesoft.bytejta.supports.dubbo.TransactionBeanRegistry;
 import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
@@ -32,10 +28,6 @@ public final class CompensableBeanRegistry implements CompensableBeanFactoryAwar
 
 	@javax.inject.Inject
 	private CompensableBeanFactory beanFactory;
-	private RemoteCoordinator consumeCoordinator;
-
-	private Lock lock = new ReentrantLock();
-	private Condition condition = this.lock.newCondition();
 
 	private CompensableBeanRegistry() {
 		if (instance != null) {
@@ -48,44 +40,13 @@ public final class CompensableBeanRegistry implements CompensableBeanFactoryAwar
 	}
 
 	public RemoteCoordinator getConsumeCoordinator() {
-		if (this.consumeCoordinator != null) {
-			return this.consumeCoordinator;
-		} else {
-			return this.doGetConsumeCoordinator();
-		}
-	}
-
-	private RemoteCoordinator doGetConsumeCoordinator() {
-		try {
-			this.lock.lock();
-			while (this.consumeCoordinator == null) {
-				try {
-					this.condition.await(1, TimeUnit.SECONDS);
-				} catch (InterruptedException ex) {
-					logger.debug(ex.getMessage());
-				}
-			}
-
-			// ConsumeCoordinator is injected by the CompensableConfigPostProcessor, which has a slight delay.
-			return consumeCoordinator;
-		} finally {
-			this.lock.unlock();
-		}
+		TransactionBeanRegistry transactionBeanRegistry = TransactionBeanRegistry.getInstance();
+		return transactionBeanRegistry.getConsumeCoordinator();
 	}
 
 	public void setConsumeCoordinator(RemoteCoordinator consumeCoordinator) {
-		try {
-			this.lock.lock();
-			if (this.consumeCoordinator == null) {
-				this.consumeCoordinator = consumeCoordinator;
-				this.condition.signalAll();
-			} else {
-				throw new IllegalStateException(
-						"Field 'consumeCoordinator' has already been set, please check your app whether it imports ByteTCC repeatedly!");
-			}
-		} finally {
-			this.lock.unlock();
-		}
+		TransactionBeanRegistry transactionBeanRegistry = TransactionBeanRegistry.getInstance();
+		transactionBeanRegistry.setConsumeCoordinator(consumeCoordinator);
 	}
 
 	public void setBeanFactory(CompensableBeanFactory tbf) {
