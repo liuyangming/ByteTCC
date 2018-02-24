@@ -60,7 +60,6 @@
 		<property name="transactionCoordinator" ref="bytejtaTransactionCoordinator" />
 		<property name="compensableCoordinator" ref="bytetccCompensableCoordinator" />
 		<property name="containerContext" ref="springContainerContext" />
-		<property name="transactionInterceptor" ref="bytetccTransactionInterceptor" />
 		<property name="compensableLogger" ref="bytetccCompensableLogger" />
 		<property name="archiveDeserializer" ref="bytetccArchiveDeserializer" />
 		<property name="resourceDeserializer" ref="bytetccResourceDeserializer" />
