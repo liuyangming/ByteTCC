@@ -15,20 +15,17 @@
  */
 package org.bytesoft.bytetcc.supports.springcloud.config;
 
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Method;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
 import org.bytesoft.bytetcc.supports.springcloud.SpringCloudBeanRegistry;
 import org.bytesoft.bytetcc.supports.springcloud.feign.CompensableClientRegistry;
+import org.bytesoft.bytetcc.supports.springcloud.feign.CompensableFeignBeanPostProcessor;
 import org.bytesoft.bytetcc.supports.springcloud.feign.CompensableFeignContract;
 import org.bytesoft.bytetcc.supports.springcloud.feign.CompensableFeignDecoder;
 import org.bytesoft.bytetcc.supports.springcloud.feign.CompensableFeignErrorDecoder;
-import org.bytesoft.bytetcc.supports.springcloud.feign.CompensableFeignHandler;
 import org.bytesoft.bytetcc.supports.springcloud.feign.CompensableFeignInterceptor;
 import org.bytesoft.bytetcc.supports.springcloud.hystrix.CompensableHystrixBeanPostProcessor;
 import org.bytesoft.bytetcc.supports.springcloud.property.CompensablePropertySourceFactory;
@@ -79,19 +76,10 @@ public class SpringCloudConfiguration extends WebMvcConfigurerAdapter implements
 		this.identifier = String.format("%s:%s:%s", host, name, port);
 	}
 
-	@org.springframework.context.annotation.Primary
 	@org.springframework.context.annotation.Bean
 	@ConditionalOnProperty(name = "feign.hystrix.enabled", havingValue = "false", matchIfMissing = true)
-	public feign.Feign.Builder compensableFeignBuilder() {
-		return feign.Feign.builder().invocationHandlerFactory(new feign.InvocationHandlerFactory() {
-			@SuppressWarnings("rawtypes")
-			public InvocationHandler create(feign.Target target, Map<Method, MethodHandler> dispatch) {
-				CompensableFeignHandler handler = new CompensableFeignHandler();
-				handler.setTarget(target);
-				handler.setHandlers(dispatch);
-				return handler;
-			}
-		});
+	public CompensableFeignBeanPostProcessor feignPostProcessor() {
+		return new CompensableFeignBeanPostProcessor();
 	}
 
 	@org.springframework.context.annotation.Bean
