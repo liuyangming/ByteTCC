@@ -21,11 +21,14 @@ import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.EnvironmentAware;
+import org.springframework.core.env.Environment;
 
-public final class CompensableBeanRegistry implements CompensableBeanFactoryAware {
+public final class CompensableBeanRegistry implements CompensableBeanFactoryAware, EnvironmentAware {
 	static final Logger logger = LoggerFactory.getLogger(CompensableBeanRegistry.class);
 	private static final CompensableBeanRegistry instance = new CompensableBeanRegistry();
 
+	private Environment environment;
 	@javax.inject.Inject
 	private CompensableBeanFactory beanFactory;
 
@@ -47,6 +50,14 @@ public final class CompensableBeanRegistry implements CompensableBeanFactoryAwar
 	public void setConsumeCoordinator(RemoteCoordinator consumeCoordinator) {
 		TransactionBeanRegistry transactionBeanRegistry = TransactionBeanRegistry.getInstance();
 		transactionBeanRegistry.setConsumeCoordinator(consumeCoordinator);
+	}
+
+	public Environment getEnvironment() {
+		return environment;
+	}
+
+	public void setEnvironment(Environment environment) {
+		this.environment = environment;
 	}
 
 	public void setBeanFactory(CompensableBeanFactory tbf) {
