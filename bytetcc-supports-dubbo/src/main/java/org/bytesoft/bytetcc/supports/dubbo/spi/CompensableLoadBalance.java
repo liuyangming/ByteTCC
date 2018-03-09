@@ -16,26 +16,45 @@
 package org.bytesoft.bytetcc.supports.dubbo.spi;
 
 import java.util.List;
-import java.util.Random;
 
 import org.apache.commons.lang3.StringUtils;
 import org.bytesoft.bytejta.supports.dubbo.InvocationContext;
 import org.bytesoft.bytejta.supports.dubbo.InvocationContextRegistry;
 import org.bytesoft.bytetcc.CompensableTransactionImpl;
 import org.bytesoft.bytetcc.supports.dubbo.CompensableBeanRegistry;
+import org.bytesoft.bytetcc.supports.dubbo.ext.ILoadBalancer;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableManager;
 import org.bytesoft.transaction.archive.XAResourceArchive;
 import org.bytesoft.transaction.supports.resource.XAResourceDescriptor;
+import org.springframework.core.env.Environment;
 
 import com.alibaba.dubbo.common.URL;
+import com.alibaba.dubbo.common.extension.ExtensionLoader;
 import com.alibaba.dubbo.rpc.Invocation;
 import com.alibaba.dubbo.rpc.Invoker;
 import com.alibaba.dubbo.rpc.RpcException;
 import com.alibaba.dubbo.rpc.cluster.LoadBalance;
 
 public final class CompensableLoadBalance implements LoadBalance {
-	static final Random random = new Random();
+	static final String CONSTANT_LOADBALANCE_KEY = "org.bytesoft.bytetcc.loadbalance";
+
+	private ILoadBalancer loadBalancer;
+
+	private void fireInitializeIfNecessary() {
+		if (this.loadBalancer == null) {
+			this.initializeIfNecessary();
+		}
+	}
+
+	private synchronized void initializeIfNecessary() {
+		if (this.loadBalancer == null) {
+			Environment environment = CompensableBeanRegistry.getInstance().getEnvironment();
+			String loadBalanceKey = environment.getProperty(CONSTANT_LOADBALANCE_KEY, "default");
+			ExtensionLoader<ILoadBalancer> extensionLoader = ExtensionLoader.getExtensionLoader(ILoadBalancer.class);
+			this.loadBalancer = extensionLoader.getExtension(loadBalanceKey);
+		}
+	}
 
 	public <T> Invoker<T> select(List<Invoker<T>> invokers, URL url, Invocation invocation) throws RpcException {
 		InvocationContextRegistry registry = InvocationContextRegistry.getInstance();
@@ -79,7 +98,14 @@ public final class CompensableLoadBalance implements LoadBalance {
 			}
 		}
 
-		return invokers.get(random.nextInt(invokers.size()));
+		this.fireInitializeIfNecessary();
+
+		if (this.loadBalancer == null) {
+			throw new RpcException("No org.bytesoft.bytetcc.supports.dubbo.ext.ILoadBalancer is found!");
+		} else {
+			return this.loadBalancer.select(invokers, url, invocation);
+		}
+
 	}
 
 	public <T> Invoker<T> selectInvokerForTCC(List<Invoker<T>> invokers, URL url, Invocation invocation) throws RpcException {

@@ -42,10 +42,10 @@ public class ReferenceConfigValidator implements DubboConfigValidator {
 		PropertyValue filter = mpv.getPropertyValue("filter");
 
 		if (group == null || group.getValue() == null //
-				|| ("org-bytesoft-bytetcc".equals(group.getValue())
-						|| String.valueOf(group.getValue()).startsWith("org-bytesoft-bytetcc-")) == false) {
+				|| ("org.bytesoft.bytetcc".equals(group.getValue())
+						|| String.valueOf(group.getValue()).startsWith("org.bytesoft.bytetcc-")) == false) {
 			throw new FatalBeanException(String.format(
-					"The value of attr 'group'(beanId= %s) should be 'org-bytesoft-bytetcc' or starts with 'org-bytesoft-bytetcc-'.",
+					"The value of attr 'group'(beanId= %s) should be 'org.bytesoft.bytetcc' or starts with 'org.bytesoft.bytetcc-'.",
 					this.beanName));
 		} else if (retries == null || retries.getValue() == null || "0".equals(retries.getValue()) == false) {
 			throw new FatalBeanException(
@@ -57,9 +57,22 @@ public class ReferenceConfigValidator implements DubboConfigValidator {
 		} else if (cluster == null || cluster.getValue() == null || "failfast".equals(cluster.getValue()) == false) {
 			throw new FatalBeanException(
 					String.format("The value of attribute 'cluster' (beanId= %s) must be 'failfast'.", this.beanName));
-		} else if (filter == null || filter.getValue() == null || "compensable".equals(filter.getValue()) == false) {
-			throw new FatalBeanException(
-					String.format("The value of attr 'filter'(beanId= %s) should be 'compensable'.", this.beanName));
+		} else if (filter == null || filter.getValue() == null || String.class.isInstance(filter.getValue()) == false) {
+			throw new FatalBeanException(String.format(
+					"The value of attr 'filter'(beanId= %s) must be java.lang.String and cannot be null.", this.beanName));
+		} else {
+			String filterValue = String.valueOf(filter.getValue());
+			String[] filterArray = filterValue.split("\\s*,\\s*");
+			int filters = 0;
+			for (int i = 0; i < filterArray.length; i++) {
+				String element = filterArray[i];
+				filters = "compensable".equals(element) ? filters + 1 : filters;
+			}
+
+			if (filters != 1) {
+				throw new FatalBeanException(
+						String.format("The value of attr 'filter'(beanId= %s) should contains 'compensable'.", this.beanName));
+			}
 		}
 
 		PropertyValue pv = mpv.getPropertyValue("interface");
