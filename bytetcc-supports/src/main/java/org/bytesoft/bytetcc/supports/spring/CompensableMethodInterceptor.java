@@ -164,9 +164,9 @@ public class CompensableMethodInterceptor
 
 			if (transactional != null && compensable != null && transaction != null) {
 				Propagation propagation = transactional == null ? null : transactional.propagation();
-				if (propagation == null) {
+				if (Propagation.REQUIRED.equals(propagation)) {
 					compensable.registerCompensable(invocation);
-				} else if (Propagation.REQUIRED.equals(propagation)) {
+				} else if (Propagation.REQUIRES_NEW.equals(propagation)) {
 					compensable.registerCompensable(invocation);
 				} else if (Propagation.MANDATORY.equals(propagation)) {
 					compensable.registerCompensable(invocation);
