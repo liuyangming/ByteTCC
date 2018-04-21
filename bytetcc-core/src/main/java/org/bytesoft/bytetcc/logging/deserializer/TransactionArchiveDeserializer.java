@@ -167,7 +167,7 @@ public class TransactionArchiveDeserializer extends org.bytesoft.bytejta.logging
 		return byteArray;
 	}
 
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({ "unchecked", "deprecation" })
 	public Object deserialize(TransactionXid xid, byte[] array) {
 
 		ByteBuffer buffer = ByteBuffer.wrap(array);

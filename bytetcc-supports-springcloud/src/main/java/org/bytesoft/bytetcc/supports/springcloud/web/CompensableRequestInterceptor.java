@@ -216,6 +216,7 @@ public class CompensableRequestInterceptor
 		transactionInterceptor.beforeSendRequest(request);
 	}
 
+	@SuppressWarnings("deprecation")
 	private void invokeAfterRecvResponse(ClientHttpResponse httpResponse, boolean serverFlag) throws IOException {
 		SpringCloudBeanRegistry beanRegistry = SpringCloudBeanRegistry.getInstance();
 		CompensableBeanFactory beanFactory = beanRegistry.getBeanFactory();

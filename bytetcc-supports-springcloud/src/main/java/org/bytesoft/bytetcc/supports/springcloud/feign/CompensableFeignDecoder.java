@@ -90,6 +90,7 @@ public class CompensableFeignDecoder implements feign.codec.Decoder, Initializin
 		this.delegate = feignDecoder;
 	}
 
+	@SuppressWarnings("deprecation")
 	public Object decode(Response resp, Type type) throws IOException, DecodeException, FeignException {
 		Request request = resp.request();
 

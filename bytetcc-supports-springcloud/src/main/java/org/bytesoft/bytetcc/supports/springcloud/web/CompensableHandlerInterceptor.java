@@ -47,6 +47,7 @@ public class CompensableHandlerInterceptor implements HandlerInterceptor, Compen
 	private String identifier;
 	private ApplicationContext applicationContext;
 
+	@SuppressWarnings("deprecation")
 	public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
 		HandlerMethod hm = (HandlerMethod) handler;
 		Class<?> clazz = hm.getBeanType();
@@ -90,6 +91,13 @@ public class CompensableHandlerInterceptor implements HandlerInterceptor, Compen
 
 		transactionInterceptor.afterReceiveRequest(req);
 
+		CompensableManager compensableManager = beanFactory.getCompensableManager();
+		CompensableTransaction compensable = compensableManager.getCompensableTransactionQuietly();
+		byte[] responseByteArray = CommonUtils.serializeObject(compensable.getTransactionContext());
+		String compensableStr = ByteUtils.byteArrayToString(responseByteArray);
+		response.setHeader(HEADER_TRANCACTION_KEY, compensableStr);
+		response.setHeader(HEADER_PROPAGATION_KEY, this.identifier);
+
 		return true;
 	}
 
@@ -125,10 +133,10 @@ public class CompensableHandlerInterceptor implements HandlerInterceptor, Compen
 		CompensableTransaction compensable = compensableManager.getCompensableTransactionQuietly();
 		TransactionContext transactionContext = compensable.getTransactionContext();
 
-		byte[] byteArray = CommonUtils.serializeObject(transactionContext);
-		String compensableStr = ByteUtils.byteArrayToString(byteArray);
-		response.addHeader(HEADER_TRANCACTION_KEY, compensableStr);
-		response.addHeader(HEADER_PROPAGATION_KEY, this.identifier);
+		// byte[] byteArray = CommonUtils.serializeObject(transactionContext);
+		// String compensableStr = ByteUtils.byteArrayToString(byteArray);
+		// response.setHeader(HEADER_TRANCACTION_KEY, compensableStr);
+		// response.setHeader(HEADER_PROPAGATION_KEY, this.identifier);
 
 		TransactionResponseImpl resp = new TransactionResponseImpl();
 		resp.setTransactionContext(transactionContext);

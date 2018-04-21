@@ -136,6 +136,7 @@ public class CompensableArchiveDeserializer implements ArchiveDeserializer, Comp
 		return resultArray;
 	}
 
+	@SuppressWarnings("deprecation")
 	public Object deserialize(TransactionXid xid, byte[] array) {
 		byte[] globalByteArray = new byte[XidFactory.GLOBAL_TRANSACTION_LENGTH];
 		byte[] branchByteArray = new byte[XidFactory.BRANCH_QUALIFIER_LENGTH];

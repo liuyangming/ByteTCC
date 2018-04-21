@@ -82,6 +82,7 @@ public class CompensableFeignErrorDecoder implements feign.codec.ErrorDecoder, I
 		this.delegate = errorDecoder;
 	}
 
+	@SuppressWarnings("deprecation")
 	public Exception decode(String methodKey, Response resp) {
 		Request request = resp.request();
 
