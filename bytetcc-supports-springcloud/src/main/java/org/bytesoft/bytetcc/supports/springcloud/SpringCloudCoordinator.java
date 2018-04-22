@@ -225,6 +225,7 @@ public class SpringCloudCoordinator implements InvocationHandler {
 
 	}
 
+	@SuppressWarnings("deprecation")
 	private String serialize(Serializable arg) throws IOException {
 		if (Xid.class.isInstance(arg)) {
 			Xid xid = (Xid) arg;

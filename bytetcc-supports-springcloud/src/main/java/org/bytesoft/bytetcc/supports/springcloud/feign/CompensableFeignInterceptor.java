@@ -39,6 +39,7 @@ public class CompensableFeignInterceptor
 	private String identifier;
 	private ApplicationContext applicationContext;
 
+	@SuppressWarnings("deprecation")
 	public void apply(feign.RequestTemplate template) {
 		final SpringCloudBeanRegistry beanRegistry = SpringCloudBeanRegistry.getInstance();
 		CompensableBeanFactory beanFactory = beanRegistry.getBeanFactory();

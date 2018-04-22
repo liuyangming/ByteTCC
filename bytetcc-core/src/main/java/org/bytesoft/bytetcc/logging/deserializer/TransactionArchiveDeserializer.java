@@ -39,6 +39,7 @@ public class TransactionArchiveDeserializer extends org.bytesoft.bytejta.logging
 	private ArchiveDeserializer resourceArchiveDeserializer;
 	private ArchiveDeserializer compensableArchiveDeserializer;
 
+	@SuppressWarnings("deprecation")
 	public byte[] serialize(TransactionXid xid, Object obj) {
 		TransactionArchive archive = (TransactionArchive) obj;
 

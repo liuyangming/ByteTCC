@@ -38,6 +38,7 @@ public class CompensableArchiveDeserializer implements ArchiveDeserializer, Comp
 	@javax.inject.Inject
 	private CompensableBeanFactory beanFactory;
 
+	@SuppressWarnings("deprecation")
 	public byte[] serialize(TransactionXid xid, Object obj) {
 		CompensableArchive archive = (CompensableArchive) obj;
 
