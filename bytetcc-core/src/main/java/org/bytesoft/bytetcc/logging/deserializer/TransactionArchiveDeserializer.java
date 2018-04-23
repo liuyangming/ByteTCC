@@ -23,7 +23,7 @@ import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
 import org.bytesoft.common.utils.ByteUtils;
-import org.bytesoft.common.utils.CommonUtils;
+import org.bytesoft.common.utils.SerializeUtils;
 import org.bytesoft.compensable.archive.CompensableArchive;
 import org.bytesoft.compensable.archive.TransactionArchive;
 import org.bytesoft.transaction.archive.XAResourceArchive;
@@ -84,7 +84,7 @@ public class TransactionArchiveDeserializer extends org.bytesoft.bytejta.logging
 			varByteArray = ByteUtils.shortToByteArray((short) 0);
 		} else {
 			try {
-				byte[] textByteArray = CommonUtils.serializeObject((Serializable) archive.getVariables());
+				byte[] textByteArray = SerializeUtils.serializeObject((Serializable) archive.getVariables());
 				byte[] sizeByteArray = ByteUtils.shortToByteArray((short) textByteArray.length);
 				varByteArray = new byte[sizeByteArray.length + textByteArray.length];
 				System.arraycopy(sizeByteArray, 0, varByteArray, 0, sizeByteArray.length);
@@ -218,7 +218,7 @@ public class TransactionArchiveDeserializer extends org.bytesoft.bytejta.logging
 
 			Map<String, Serializable> variables = null;
 			try {
-				variables = (Map<String, Serializable>) CommonUtils.deserializeObject(varByteArray);
+				variables = (Map<String, Serializable>) SerializeUtils.deserializeObject(varByteArray);
 			} catch (Exception ex) {
 				variables = new HashMap<String, Serializable>();
 				logger.error("Error occurred while deserializing object: {}", varByteArray, ex);

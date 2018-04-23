@@ -29,6 +29,7 @@ import org.bytesoft.bytetcc.supports.springcloud.SpringCloudBeanRegistry;
 import org.bytesoft.bytetcc.supports.springcloud.loadbalancer.CompensableLoadBalancerInterceptor;
 import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.common.utils.CommonUtils;
+import org.bytesoft.common.utils.SerializeUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableManager;
 import org.bytesoft.compensable.TransactionContext;
@@ -56,8 +57,8 @@ public class CompensableRequestInterceptor
 		implements ClientHttpRequestInterceptor, CompensableEndpointAware, ApplicationContextAware {
 	static final Logger logger = LoggerFactory.getLogger(CompensableRequestInterceptor.class);
 
-	static final String HEADER_TRANCACTION_KEY = "org.bytesoft.bytetcc.transaction";
-	static final String HEADER_PROPAGATION_KEY = "org.bytesoft.bytetcc.propagation";
+	static final String HEADER_TRANCACTION_KEY = "X-BYTETCC-TRANSACTION"; // org.bytesoft.bytetcc.transaction
+	static final String HEADER_PROPAGATION_KEY = "X-BYTETCC-PROPAGATION"; // org.bytesoft.bytetcc.propagation
 	static final String PREFIX_TRANSACTION_KEY = "/org/bytesoft/bytetcc";
 
 	private String identifier;
@@ -201,7 +202,7 @@ public class CompensableRequestInterceptor
 
 		TransactionContext transactionContext = compensable.getTransactionContext();
 
-		byte[] reqByteArray = CommonUtils.serializeObject(transactionContext);
+		byte[] reqByteArray = SerializeUtils.serializeObject(transactionContext);
 		String reqTransactionStr = ByteUtils.byteArrayToString(reqByteArray);
 
 		HttpHeaders reqHeaders = httpRequest.getHeaders();
@@ -226,7 +227,7 @@ public class CompensableRequestInterceptor
 		String respPropagationStr = respHeaders.getFirst(HEADER_PROPAGATION_KEY);
 
 		byte[] byteArray = ByteUtils.stringToByteArray(StringUtils.trimToNull(respTransactionStr));
-		TransactionContext serverContext = (TransactionContext) CommonUtils.deserializeObject(byteArray);
+		TransactionContext serverContext = (TransactionContext) SerializeUtils.deserializeObject(byteArray);
 
 		TransactionResponseImpl txResp = new TransactionResponseImpl();
 		txResp.setTransactionContext(serverContext);

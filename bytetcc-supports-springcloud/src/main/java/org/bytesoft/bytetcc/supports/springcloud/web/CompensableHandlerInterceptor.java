@@ -24,7 +24,7 @@ import org.bytesoft.bytejta.supports.rpc.TransactionResponseImpl;
 import org.bytesoft.bytetcc.supports.springcloud.SpringCloudBeanRegistry;
 import org.bytesoft.bytetcc.supports.springcloud.controller.CompensableCoordinatorController;
 import org.bytesoft.common.utils.ByteUtils;
-import org.bytesoft.common.utils.CommonUtils;
+import org.bytesoft.common.utils.SerializeUtils;
 import org.bytesoft.compensable.Compensable;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableManager;
@@ -33,7 +33,7 @@ import org.bytesoft.compensable.TransactionContext;
 import org.bytesoft.compensable.aware.CompensableEndpointAware;
 import org.bytesoft.transaction.supports.rpc.TransactionInterceptor;
 import org.springframework.beans.BeansException;
-import org.springframework.boot.autoconfigure.web.ErrorController;
+import org.springframework.boot.autoconfigure.web.servlet.error.ErrorController;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.web.method.HandlerMethod;
@@ -41,8 +41,8 @@ import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.ModelAndView;
 
 public class CompensableHandlerInterceptor implements HandlerInterceptor, CompensableEndpointAware, ApplicationContextAware {
-	static final String HEADER_TRANCACTION_KEY = "org.bytesoft.bytetcc.transaction";
-	static final String HEADER_PROPAGATION_KEY = "org.bytesoft.bytetcc.propagation";
+	static final String HEADER_TRANCACTION_KEY = "X-BYTETCC-TRANSACTION"; // org.bytesoft.bytetcc.transaction
+	static final String HEADER_PROPAGATION_KEY = "X-BYTETCC-PROPAGATION"; // org.bytesoft.bytetcc.propagation
 
 	private String identifier;
 	private ApplicationContext applicationContext;
@@ -79,7 +79,7 @@ public class CompensableHandlerInterceptor implements HandlerInterceptor, Compen
 
 		TransactionContext transactionContext = null;
 		if (byteArray != null && byteArray.length > 0) {
-			transactionContext = (TransactionContext) CommonUtils.deserializeObject(byteArray);
+			transactionContext = (TransactionContext) SerializeUtils.deserializeObject(byteArray);
 			transactionContext.setPropagated(true);
 			transactionContext.setPropagatedBy(propagationText);
 		}
@@ -92,7 +92,7 @@ public class CompensableHandlerInterceptor implements HandlerInterceptor, Compen
 
 		CompensableManager compensableManager = beanFactory.getCompensableManager();
 		CompensableTransaction compensable = compensableManager.getCompensableTransactionQuietly();
-		byte[] responseByteArray = CommonUtils.serializeObject(compensable.getTransactionContext());
+		byte[] responseByteArray = SerializeUtils.serializeObject(compensable.getTransactionContext());
 		String compensableStr = ByteUtils.byteArrayToString(responseByteArray);
 		response.setHeader(HEADER_TRANCACTION_KEY, compensableStr);
 		response.setHeader(HEADER_PROPAGATION_KEY, this.identifier);
@@ -132,7 +132,7 @@ public class CompensableHandlerInterceptor implements HandlerInterceptor, Compen
 		CompensableTransaction compensable = compensableManager.getCompensableTransactionQuietly();
 		TransactionContext transactionContext = compensable.getTransactionContext();
 
-		// byte[] byteArray = CommonUtils.serializeObject(transactionContext);
+		// byte[] byteArray = SerializeUtils.serializeObject(transactionContext);
 		// String compensableStr = ByteUtils.byteArrayToString(byteArray);
 		// response.setHeader(HEADER_TRANCACTION_KEY, compensableStr);
 		// response.setHeader(HEADER_PROPAGATION_KEY, this.identifier);

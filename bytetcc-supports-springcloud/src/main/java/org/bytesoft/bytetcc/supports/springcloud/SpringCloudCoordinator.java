@@ -27,7 +27,7 @@ import javax.transaction.xa.Xid;
 import org.apache.commons.lang3.StringUtils;
 import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
 import org.bytesoft.common.utils.ByteUtils;
-import org.bytesoft.common.utils.CommonUtils;
+import org.bytesoft.common.utils.SerializeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.env.Environment;
@@ -235,7 +235,7 @@ public class SpringCloudCoordinator implements InvocationHandler {
 		} else if (Boolean.class.isInstance(arg) || Boolean.TYPE.isInstance(arg)) {
 			return String.valueOf(arg);
 		} else {
-			byte[] byteArray = CommonUtils.serializeObject(arg);
+			byte[] byteArray = SerializeUtils.serializeObject(arg);
 			return ByteUtils.byteArrayToString(byteArray);
 		}
 	}

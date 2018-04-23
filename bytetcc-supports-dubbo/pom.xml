@@ -87,7 +87,6 @@
 		<dependency>
 			<groupId>com.alibaba</groupId>
 			<artifactId>dubbo</artifactId>
-			<version>2.5.7</version>
 			<exclusions>
 				<exclusion>
 					<groupId>org.springframework</groupId>
@@ -96,4 +95,5 @@
 			</exclusions>
 		</dependency>
 	</dependencies>
+
 </project>

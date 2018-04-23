@@ -21,7 +21,7 @@ import java.util.Map;
 
 import org.bytesoft.bytetcc.supports.springcloud.SpringCloudBeanRegistry;
 import org.bytesoft.common.utils.ByteUtils;
-import org.bytesoft.common.utils.CommonUtils;
+import org.bytesoft.common.utils.SerializeUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableManager;
 import org.bytesoft.compensable.CompensableTransaction;
@@ -33,8 +33,8 @@ import org.springframework.context.ApplicationContextAware;
 
 public class CompensableFeignInterceptor
 		implements feign.RequestInterceptor, CompensableEndpointAware, ApplicationContextAware {
-	static final String HEADER_TRANCACTION_KEY = "org.bytesoft.bytetcc.transaction";
-	static final String HEADER_PROPAGATION_KEY = "org.bytesoft.bytetcc.propagation";
+	static final String HEADER_TRANCACTION_KEY = "X-BYTETCC-TRANSACTION"; // org.bytesoft.bytetcc.transaction
+	static final String HEADER_PROPAGATION_KEY = "X-BYTETCC-PROPAGATION"; // org.bytesoft.bytetcc.propagation
 
 	private String identifier;
 	private ApplicationContext applicationContext;
@@ -50,7 +50,7 @@ public class CompensableFeignInterceptor
 
 		try {
 			TransactionContext transactionContext = compensable.getTransactionContext();
-			byte[] byteArray = CommonUtils.serializeObject(transactionContext);
+			byte[] byteArray = SerializeUtils.serializeObject(transactionContext);
 
 			String transactionText = ByteUtils.byteArrayToString(byteArray);
 

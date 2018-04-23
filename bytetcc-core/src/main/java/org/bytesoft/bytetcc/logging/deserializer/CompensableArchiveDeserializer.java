@@ -20,7 +20,7 @@ import java.util.Arrays;
 import javax.transaction.xa.Xid;
 
 import org.bytesoft.common.utils.ByteUtils;
-import org.bytesoft.common.utils.CommonUtils;
+import org.bytesoft.common.utils.SerializeUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableInvocation;
 import org.bytesoft.compensable.archive.CompensableArchive;
@@ -44,7 +44,7 @@ public class CompensableArchiveDeserializer implements ArchiveDeserializer, Comp
 		CompensableInvocation compensable = archive.getCompensable();
 		byte[] byteArray = new byte[0];
 		try {
-			byteArray = CommonUtils.serializeObject(compensable);
+			byteArray = SerializeUtils.serializeObject(compensable);
 		} catch (Exception ex) {
 			if (compensable == null) {
 				logger.error("Error occurred while serializing compensable: {}", compensable, ex);
@@ -191,7 +191,7 @@ public class CompensableArchiveDeserializer implements ArchiveDeserializer, Comp
 
 		CompensableInvocation compensable = null;
 		try {
-			compensable = (CompensableInvocation) CommonUtils.deserializeObject(byteArray);
+			compensable = (CompensableInvocation) SerializeUtils.deserializeObject(byteArray);
 		} catch (Exception ex) {
 			logger.error("Error occurred while deserializing object: {}", byteArray, ex);
 		}
