@@ -15,6 +15,8 @@
  */
 package org.bytesoft.bytetcc.supports.springcloud.web;
 
+import java.util.Base64;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
@@ -23,7 +25,6 @@ import org.bytesoft.bytejta.supports.rpc.TransactionRequestImpl;
 import org.bytesoft.bytejta.supports.rpc.TransactionResponseImpl;
 import org.bytesoft.bytetcc.supports.springcloud.SpringCloudBeanRegistry;
 import org.bytesoft.bytetcc.supports.springcloud.controller.CompensableCoordinatorController;
-import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.common.utils.SerializeUtils;
 import org.bytesoft.compensable.Compensable;
 import org.bytesoft.compensable.CompensableBeanFactory;
@@ -75,7 +76,7 @@ public class CompensableHandlerInterceptor implements HandlerInterceptor, Compen
 		CompensableBeanFactory beanFactory = beanRegistry.getBeanFactory();
 		TransactionInterceptor transactionInterceptor = beanFactory.getTransactionInterceptor();
 
-		byte[] byteArray = transactionText == null ? new byte[0] : ByteUtils.stringToByteArray(transactionText);
+		byte[] byteArray = transactionText == null ? new byte[0] : Base64.getDecoder().decode(transactionText);
 
 		TransactionContext transactionContext = null;
 		if (byteArray != null && byteArray.length > 0) {
@@ -93,7 +94,7 @@ public class CompensableHandlerInterceptor implements HandlerInterceptor, Compen
 		CompensableManager compensableManager = beanFactory.getCompensableManager();
 		CompensableTransaction compensable = compensableManager.getCompensableTransactionQuietly();
 		byte[] responseByteArray = SerializeUtils.serializeObject(compensable.getTransactionContext());
-		String compensableStr = ByteUtils.byteArrayToString(responseByteArray);
+		String compensableStr = Base64.getEncoder().encodeToString(responseByteArray);
 		response.setHeader(HEADER_TRANCACTION_KEY, compensableStr);
 		response.setHeader(HEADER_PROPAGATION_KEY, this.identifier);
 

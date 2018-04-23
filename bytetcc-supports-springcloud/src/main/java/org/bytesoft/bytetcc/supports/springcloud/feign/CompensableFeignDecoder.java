@@ -17,6 +17,7 @@ package org.bytesoft.bytetcc.supports.springcloud.feign;
 
 import java.io.IOException;
 import java.lang.reflect.Type;
+import java.util.Base64;
 import java.util.Collection;
 import java.util.Map;
 
@@ -24,7 +25,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.bytesoft.bytejta.supports.rpc.TransactionResponseImpl;
 import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
 import org.bytesoft.bytetcc.supports.springcloud.SpringCloudBeanRegistry;
-import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.common.utils.SerializeUtils;
 import org.bytesoft.compensable.TransactionContext;
 import org.slf4j.Logger;
@@ -109,7 +109,7 @@ public class CompensableFeignDecoder implements feign.codec.Decoder, Initializin
 			String transactionStr = StringUtils.isBlank(respTransactionStr) ? reqTransactionStr : respTransactionStr;
 			String propagationStr = StringUtils.isBlank(respPropagationStr) ? reqPropagationStr : respPropagationStr;
 
-			byte[] byteArray = ByteUtils.stringToByteArray(transactionStr);
+			byte[] byteArray = Base64.getDecoder().decode(transactionStr); // ByteUtils.stringToByteArray(transactionStr);
 			TransactionContext transactionContext = (TransactionContext) SerializeUtils.deserializeObject(byteArray);
 
 			SpringCloudBeanRegistry beanRegistry = SpringCloudBeanRegistry.getInstance();
