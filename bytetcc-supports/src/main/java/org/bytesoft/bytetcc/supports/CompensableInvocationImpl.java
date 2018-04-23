@@ -29,6 +29,7 @@ public class CompensableInvocationImpl implements CompensableInvocation {
 	private Object identifier;
 
 	private boolean simplified;
+	private boolean enlisted;
 
 	protected Object writeReplace() throws ObjectStreamException {
 		CompensableInvocationInfo that = new CompensableInvocationInfo();
@@ -92,6 +93,14 @@ public class CompensableInvocationImpl implements CompensableInvocation {
 
 	public void setIdentifier(Object identifier) {
 		this.identifier = identifier;
+	}
+
+	public boolean isEnlisted() {
+		return enlisted;
+	}
+
+	public void setEnlisted(boolean enlisted) {
+		this.enlisted = enlisted;
 	}
 
 	public boolean isSimplified() {

@@ -60,6 +60,8 @@ public class CompensableMethodInterceptor
 		TransactionContext transactionContext = compensable.getTransactionContext();
 		if (invocation == null) /* non-Compensable operation in CompensableService */ {
 			return;
+		} else if (invocation.isEnlisted()) {
+			return;
 		} else if (transactionContext.isCompensating()) {
 			return;
 		}

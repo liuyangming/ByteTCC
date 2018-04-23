@@ -794,6 +794,8 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 	public void registerCompensable(CompensableInvocation invocation) {
 		XidFactory xidFactory = this.beanFactory.getTransactionXidFactory();
 
+		invocation.setEnlisted(true);
+
 		CompensableArchive archive = new CompensableArchive();
 		TransactionXid globalXid = xidFactory.createGlobalXid(this.transactionContext.getXid().getGlobalTransactionId());
 		TransactionXid branchXid = xidFactory.createBranchXid(globalXid);
