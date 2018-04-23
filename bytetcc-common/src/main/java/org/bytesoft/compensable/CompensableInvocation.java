@@ -34,4 +34,8 @@ public interface CompensableInvocation extends Serializable {
 
 	public void setIdentifier(Object identifier);
 
+	public boolean isEnlisted();
+
+	public void setEnlisted(boolean enlisted);
+
 }

@@ -58,7 +58,11 @@ public class CompensableMethodInterceptor
 		CompensableTransaction compensable = compensableManager.getCompensableTransactionQuietly();
 
 		TransactionContext transactionContext = compensable.getTransactionContext();
-		if (transactionContext.isCompensating()) {
+		if (invocation == null) /* non-Compensable operation in CompensableService */ {
+			return;
+		} else if (invocation.isEnlisted()) {
+			return;
+		} else if (transactionContext.isCompensating()) {
 			return;
 		}
 
@@ -123,6 +127,14 @@ public class CompensableMethodInterceptor
 			Class<?> interfaceClass = annotation.interfaceClass();
 			String methodName = method.getName();
 			Class<?>[] parameterTypes = method.getParameterTypes();
+
+			Method invokeMethod = null;
+			try {
+				invokeMethod = interfaceClass.getMethod(methodName, parameterTypes);
+			} catch (NoSuchMethodException ex) {
+				logger.warn("Current compensable-service {} is invoking a non-TCC operation!", mi.getMethod());
+			}
+
 			if (annotation.simplified()) {
 				invocation.setMethod(method); // class-method
 
@@ -142,8 +154,10 @@ public class CompensableMethodInterceptor
 						invocation.setCancellableKey(identifier);
 					}
 				}
+			} else if (invokeMethod == null) {
+				return mi.proceed();
 			} else {
-				invocation.setMethod(interfaceClass.getMethod(methodName, parameterTypes));
+				invocation.setMethod(invokeMethod);
 				invocation.setConfirmableKey(annotation.confirmableKey());
 				invocation.setCancellableKey(annotation.cancellableKey());
 			}
