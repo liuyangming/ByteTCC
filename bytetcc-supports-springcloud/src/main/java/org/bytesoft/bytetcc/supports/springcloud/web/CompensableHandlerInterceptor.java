@@ -32,6 +32,8 @@ import org.bytesoft.compensable.CompensableTransaction;
 import org.bytesoft.compensable.TransactionContext;
 import org.bytesoft.compensable.aware.CompensableEndpointAware;
 import org.bytesoft.transaction.supports.rpc.TransactionInterceptor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.boot.autoconfigure.web.ErrorController;
 import org.springframework.context.ApplicationContext;
@@ -41,6 +43,8 @@ import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.ModelAndView;
 
 public class CompensableHandlerInterceptor implements HandlerInterceptor, CompensableEndpointAware, ApplicationContextAware {
+	private static final Logger logger = LoggerFactory.getLogger(CompensableHandlerInterceptor.class);
+
 	static final String HEADER_TRANCACTION_KEY = "org.bytesoft.bytetcc.transaction";
 	static final String HEADER_PROPAGATION_KEY = "org.bytesoft.bytetcc.propagation";
 
@@ -49,6 +53,12 @@ public class CompensableHandlerInterceptor implements HandlerInterceptor, Compen
 
 	@SuppressWarnings("deprecation")
 	public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+		if (HandlerMethod.class.isInstance(handler) == false) {
+			logger.warn("CompensableHandlerInterceptor cannot handle current request(uri= {}, handler= {}) correctly.",
+					request.getRequestURI(), handler);
+			return true;
+		}
+
 		HandlerMethod hm = (HandlerMethod) handler;
 		Class<?> clazz = hm.getBeanType();
 		if (CompensableCoordinatorController.class.equals(clazz)) {
@@ -107,6 +117,10 @@ public class CompensableHandlerInterceptor implements HandlerInterceptor, Compen
 
 	public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex)
 			throws Exception {
+		if (HandlerMethod.class.isInstance(handler) == false) {
+			return;
+		}
+
 		HandlerMethod hm = (HandlerMethod) handler;
 		Class<?> clazz = hm.getBeanType();
 		if (CompensableCoordinatorController.class.equals(clazz)) {
