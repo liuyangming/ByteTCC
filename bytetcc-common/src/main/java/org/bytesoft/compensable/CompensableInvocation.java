@@ -20,6 +20,14 @@ import java.lang.reflect.Method;
 
 public interface CompensableInvocation extends Serializable {
 
+	public String getDeclaringClass();
+
+	public String getMethodName();
+
+	public String[] getParameterTypeArray();
+
+	public void setMethod(Method method);
+
 	public Method getMethod();
 
 	public Object[] getArgs();

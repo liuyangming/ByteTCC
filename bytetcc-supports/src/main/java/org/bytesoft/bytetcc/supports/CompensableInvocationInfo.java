@@ -17,7 +17,6 @@ package org.bytesoft.bytetcc.supports;
 
 import java.io.ObjectStreamException;
 import java.io.Serializable;
-import java.util.Arrays;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,53 +44,9 @@ public class CompensableInvocationInfo implements Serializable {
 		that.setIdentifier(this.identifier);
 		that.setSimplified(this.simplified);
 
-		Class<?> clazz = null;
-		ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
-		try {
-			clazz = classLoader.loadClass(this.declaringClass);
-		} catch (ClassNotFoundException ex) {
-			logger.error("Error occurred while loading class: {}", this.declaringClass, ex);
-			return that;
-		}
-
-		Class<?>[] parameterTypes = new Class<?>[this.parameterTypeArray == null ? 0 : this.parameterTypeArray.length];
-		for (int i = 0; this.parameterTypeArray != null && i < this.parameterTypeArray.length; i++) {
-			String className = this.parameterTypeArray[i];
-			if (Double.TYPE.getName().equals(className)) {
-				parameterTypes[i] = Double.TYPE;
-			} else if (Long.TYPE.getName().equals(className)) {
-				parameterTypes[i] = Long.TYPE;
-			} else if (Integer.TYPE.getName().equals(className)) {
-				parameterTypes[i] = Integer.TYPE;
-			} else if (Float.TYPE.getName().equals(className)) {
-				parameterTypes[i] = Float.TYPE;
-			} else if (Short.TYPE.getName().equals(className)) {
-				parameterTypes[i] = Short.TYPE;
-			} else if (Character.TYPE.getName().equals(className)) {
-				parameterTypes[i] = Character.TYPE;
-			} else if (Boolean.TYPE.getName().equals(className)) {
-				parameterTypes[i] = Boolean.TYPE;
-			} else if (Byte.TYPE.getName().equals(className)) {
-				parameterTypes[i] = Byte.TYPE;
-			} else {
-				try {
-					parameterTypes[i] = Class.forName(className, false, classLoader); // classLoader.loadClass(className);
-				} catch (ClassNotFoundException ex) {
-					logger.error("Error occurred while loading class: {}", className, ex);
-					return that;
-				}
-			}
-		}
-
-		try {
-			that.setMethod(clazz.getDeclaredMethod(this.methodName, parameterTypes));
-		} catch (NoSuchMethodException ex) {
-			logger.error("Error occurred: class= {}, method= {}, parameters= {}" //
-					, this.declaringClass, this.methodName, Arrays.toString(this.parameterTypeArray), ex);
-		} catch (SecurityException ex) {
-			logger.error("Error occurred: class= {}, method= {}, parameters= {}" //
-					, this.declaringClass, this.methodName, Arrays.toString(this.parameterTypeArray), ex);
-		}
+		that.setDeclaringClass(this.declaringClass);
+		that.setMethodName(this.methodName);
+		that.setParameterTypeArray(this.parameterTypeArray);
 
 		return that;
 	}
