@@ -17,6 +17,7 @@ package org.bytesoft.bytetcc.supports.spring;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.Arrays;
 
 import org.bytesoft.compensable.CompensableCancel;
 import org.bytesoft.compensable.CompensableConfirm;
@@ -35,7 +36,7 @@ public class SpringContainerContextImpl implements ContainerContext, Application
 	public void confirm(CompensableInvocation invocation) throws RuntimeException {
 		String identifier = (String) invocation.getIdentifier();
 		String confirmableKey = invocation.getConfirmableKey();
-		Method method = invocation.getMethod();
+		Method method = this.getCompensableMethod(invocation); // invocation.getMethod();
 		Object[] args = invocation.getArgs();
 
 		if (invocation.isSimplified()) {
@@ -100,7 +101,7 @@ public class SpringContainerContextImpl implements ContainerContext, Application
 		String identifier = (String) invocation.getIdentifier();
 		String cancellableKey = invocation.getCancellableKey();
 
-		Method method = invocation.getMethod();
+		Method method = this.getCompensableMethod(invocation); // invocation.getMethod();
 		Object[] args = invocation.getArgs();
 
 		if (invocation.isSimplified()) {
@@ -160,6 +161,70 @@ public class SpringContainerContextImpl implements ContainerContext, Application
 		} catch (Throwable throwable) {
 			throw new RuntimeException(throwable);
 		}
+	}
+
+	private Method getCompensableMethod(CompensableInvocation invocation) {
+		if (invocation.getMethod() == null) {
+			this.initCompensableMethod(invocation);
+		} // end-if (invocation.getMethod() == null)
+
+		return invocation.getMethod();
+	}
+
+	private void initCompensableMethod(CompensableInvocation invocation) {
+		String declaringClass = invocation.getDeclaringClass();
+		String methodName = invocation.getMethodName();
+		String[] parameterTypeArray = invocation.getParameterTypeArray();
+
+		ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+
+		Class<?> clazz = null;
+		try {
+			clazz = classLoader.loadClass(declaringClass);
+		} catch (ClassNotFoundException ex) {
+			throw new RuntimeException(String.format("Error occurred while loading class: %s", declaringClass), ex);
+		}
+
+		Method targetMethod = null;
+		Class<?>[] parameterTypes = new Class<?>[parameterTypeArray == null ? 0 : parameterTypeArray.length];
+		for (int i = 0; parameterTypeArray != null && i < parameterTypeArray.length; i++) {
+			String className = parameterTypeArray[i];
+			if (Double.TYPE.getName().equals(className)) {
+				parameterTypes[i] = Double.TYPE;
+			} else if (Long.TYPE.getName().equals(className)) {
+				parameterTypes[i] = Long.TYPE;
+			} else if (Integer.TYPE.getName().equals(className)) {
+				parameterTypes[i] = Integer.TYPE;
+			} else if (Float.TYPE.getName().equals(className)) {
+				parameterTypes[i] = Float.TYPE;
+			} else if (Short.TYPE.getName().equals(className)) {
+				parameterTypes[i] = Short.TYPE;
+			} else if (Character.TYPE.getName().equals(className)) {
+				parameterTypes[i] = Character.TYPE;
+			} else if (Boolean.TYPE.getName().equals(className)) {
+				parameterTypes[i] = Boolean.TYPE;
+			} else if (Byte.TYPE.getName().equals(className)) {
+				parameterTypes[i] = Byte.TYPE;
+			} else {
+				try {
+					parameterTypes[i] = Class.forName(className, false, classLoader); // classLoader.loadClass(className);
+				} catch (ClassNotFoundException ex) {
+					throw new RuntimeException(String.format("Error occurred while loading class: %s", declaringClass), ex);
+				}
+			}
+		}
+
+		try {
+			targetMethod = clazz.getDeclaredMethod(methodName, parameterTypes);
+		} catch (NoSuchMethodException ex) {
+			throw new RuntimeException(String.format("Error occurred: class= %s, method= %s, parameters= %s" //
+					, declaringClass, methodName, Arrays.toString(parameterTypeArray)), ex);
+		} catch (SecurityException ex) {
+			throw new RuntimeException(String.format("Error occurred: class= %s, method= %s, parameters= %s" //
+					, declaringClass, methodName, Arrays.toString(parameterTypeArray)), ex);
+		}
+
+		invocation.setMethod(targetMethod);
 	}
 
 	public ApplicationContext getApplicationContext() {

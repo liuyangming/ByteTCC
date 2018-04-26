@@ -22,7 +22,10 @@ import org.bytesoft.compensable.CompensableInvocation;
 
 public class CompensableInvocationImpl implements CompensableInvocation {
 
-	private Method method;
+	private String declaringClass;
+	private String methodName;
+	private String[] parameterTypeArray;
+	private transient Method method;
 	private Object[] args;
 	private String confirmableKey;
 	private String cancellableKey;
@@ -40,19 +43,48 @@ public class CompensableInvocationImpl implements CompensableInvocation {
 		that.setIdentifier(this.identifier);
 		that.setSimplified(this.simplified);
 
-		that.setDeclaringClass(this.method.getDeclaringClass().getName());
-		that.setMethodName(this.method.getName());
+		that.setDeclaringClass(this.getDeclaringClass());
+		that.setMethodName(this.getMethodName());
 
-		Class<?>[] parameterTypes = this.method.getParameterTypes();
+		that.setParameterTypeArray(this.getParameterTypeArray());
+
+		return that;
+	}
+
+	private void initMethod(Method method) {
+		this.declaringClass = method.getDeclaringClass().getName();
+		this.methodName = method.getName();
+		Class<?>[] parameterTypes = method.getParameterTypes();
 		String[] parameterTypeArray = new String[parameterTypes.length];
 		for (int i = 0; i < parameterTypes.length; i++) {
 			Class<?> parameterType = parameterTypes[i];
 			parameterTypeArray[i] = parameterType.getName();
 		}
+		this.parameterTypeArray = parameterTypeArray;
+	}
 
-		that.setParameterTypeArray(parameterTypeArray);
+	public String getDeclaringClass() {
+		return this.declaringClass;
+	}
 
-		return that;
+	public void setDeclaringClass(String declaringClass) {
+		this.declaringClass = declaringClass;
+	}
+
+	public String getMethodName() {
+		return this.methodName;
+	}
+
+	public void setMethodName(String methodName) {
+		this.methodName = methodName;
+	}
+
+	public String[] getParameterTypeArray() {
+		return parameterTypeArray;
+	}
+
+	public void setParameterTypeArray(String[] parameterTypeArray) {
+		this.parameterTypeArray = parameterTypeArray;
 	}
 
 	public Method getMethod() {
@@ -60,6 +92,7 @@ public class CompensableInvocationImpl implements CompensableInvocation {
 	}
 
 	public void setMethod(Method method) {
+		this.initMethod(method);
 		this.method = method;
 	}
 
