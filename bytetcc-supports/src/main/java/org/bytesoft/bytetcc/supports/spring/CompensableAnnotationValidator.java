@@ -247,7 +247,8 @@ public class CompensableAnnotationValidator implements BeanFactoryPostProcessor 
 		Propagation propagation = transactional.propagation();
 		if (Propagation.REQUIRED.equals(propagation) == false //
 				&& Propagation.MANDATORY.equals(propagation) == false //
-				&& Propagation.REQUIRES_NEW.equals(propagation) == false) {
+				&& Propagation.SUPPORTS.equals(propagation) == false //
+		                && Propagation.REQUIRES_NEW.equals(propagation) == false) {
 			throw new IllegalStateException(
 					String.format("Method(%s) not support propagation level: %s!", method, propagation.name()));
 		}
