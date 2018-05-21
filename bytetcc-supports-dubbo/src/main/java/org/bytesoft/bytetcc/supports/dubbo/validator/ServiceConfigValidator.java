@@ -15,6 +15,7 @@
  */
 package org.bytesoft.bytetcc.supports.dubbo.validator;
 
+import org.apache.commons.lang3.StringUtils;
 import org.bytesoft.bytetcc.supports.dubbo.DubboConfigValidator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,7 +39,13 @@ public class ServiceConfigValidator implements DubboConfigValidator {
 		PropertyValue filter = mpv.getPropertyValue("filter");
 		PropertyValue group = mpv.getPropertyValue("group");
 
-		if (retries == null || retries.getValue() == null || "0".equals(retries.getValue()) == false) {
+		if (group == null || group.getValue() == null //
+				|| ("org.bytesoft.bytetcc".equals(group.getValue())
+						|| String.valueOf(group.getValue()).startsWith("org.bytesoft.bytetcc-")) == false) {
+			throw new FatalBeanException(String.format(
+					"The value of attr 'group'(beanId= %s) should be 'org.bytesoft.bytetcc' or starts with 'org.bytesoft.bytetcc-'.",
+					this.beanName));
+		} else if (retries == null || retries.getValue() == null || "0".equals(retries.getValue()) == false) {
 			throw new FatalBeanException(
 					String.format("The value of attr 'retries'(beanId= %s) should be '0'.", this.beanName));
 		} else if (loadbalance == null || loadbalance.getValue() == null
@@ -48,16 +55,29 @@ public class ServiceConfigValidator implements DubboConfigValidator {
 		} else if (cluster == null || cluster.getValue() == null || "failfast".equals(cluster.getValue()) == false) {
 			throw new FatalBeanException(
 					String.format("The value of attribute 'cluster' (beanId= %s) must be 'failfast'.", this.beanName));
-		} else if (filter == null || filter.getValue() == null || "compensable".equals(filter.getValue()) == false) {
-			throw new FatalBeanException(
-					String.format("The value of attr 'filter'(beanId= %s) should be 'compensable'.", this.beanName));
-		} else if (group == null || group.getValue() == null //
-				|| ("org-bytesoft-bytetcc".equals(group.getValue())
-						|| String.valueOf(group.getValue()).startsWith("org-bytesoft-bytetcc-")) == false) {
+		} else if (filter == null || filter.getValue() == null || String.class.isInstance(filter.getValue()) == false) {
 			throw new FatalBeanException(String.format(
-					"The value of attr 'group'(beanId= %s) should be 'org.bytesoft.bytetcc' or starts with 'org.bytesoft.bytetcc-'.",
-					this.beanName));
+					"The value of attr 'filter'(beanId= %s) must be java.lang.String and cannot be null.", this.beanName));
+		} else {
+			String filterValue = String.valueOf(filter.getValue());
+			String[] filterArray = filterValue.split("\\s*,\\s*");
+			int filters = 0, index = -1;
+			for (int i = 0; i < filterArray.length; i++) {
+				String element = filterArray[i];
+				boolean filterEquals = StringUtils.equalsIgnoreCase("compensable", element);
+				index = filterEquals ? i : index;
+				filters = filterEquals ? filters + 1 : filters;
+			}
+
+			if (filters != 1) {
+				throw new FatalBeanException(
+						String.format("The value of attr 'filter'(beanId= %s) should contains 'compensable'.", this.beanName));
+			} else if (index != 0) {
+				throw new FatalBeanException(
+						String.format("The first filter of bean(beanId= %s) should be 'compensable'.", this.beanName));
+			}
 		}
+
 	}
 
 	public String getBeanName() {

@@ -17,6 +17,7 @@ package org.bytesoft.bytetcc.supports.dubbo.validator;
 
 import java.lang.reflect.Method;
 
+import org.apache.commons.lang3.StringUtils;
 import org.bytesoft.bytetcc.supports.dubbo.DubboConfigValidator;
 import org.bytesoft.compensable.RemotingException;
 import org.slf4j.Logger;
@@ -63,15 +64,21 @@ public class ReferenceConfigValidator implements DubboConfigValidator {
 		} else {
 			String filterValue = String.valueOf(filter.getValue());
 			String[] filterArray = filterValue.split("\\s*,\\s*");
-			int filters = 0;
+
+			int filters = 0, index = -1;
 			for (int i = 0; i < filterArray.length; i++) {
 				String element = filterArray[i];
-				filters = "compensable".equals(element) ? filters + 1 : filters;
+				boolean filterEquals = StringUtils.equalsIgnoreCase("compensable", element);
+				index = filterEquals ? i : index;
+				filters = filterEquals ? filters + 1 : filters;
 			}
 
 			if (filters != 1) {
 				throw new FatalBeanException(
 						String.format("The value of attr 'filter'(beanId= %s) should contains 'compensable'.", this.beanName));
+			} else if (index != (filterArray.length - 1)) {
+				throw new FatalBeanException(
+						String.format("The last filter of bean(beanId= %s) should be 'compensable'.", this.beanName));
 			}
 		}
 
