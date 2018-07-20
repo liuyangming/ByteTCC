@@ -175,22 +175,22 @@
 			<dependency>
 				<groupId>org.bytesoft</groupId>
 				<artifactId>bytejta-core</artifactId>
-				<version>0.4.6</version>
+				<version>0.4.7</version>
 			</dependency>
 			<dependency>
 				<groupId>org.bytesoft</groupId>
 				<artifactId>bytejta-supports</artifactId>
-				<version>0.4.6</version>
+				<version>0.4.7</version>
 			</dependency>
 			<dependency>
 				<groupId>org.bytesoft</groupId>
 				<artifactId>bytejta-supports-springcloud</artifactId>
-				<version>0.4.6</version>
+				<version>0.4.7</version>
 			</dependency>
 			<dependency>
 				<groupId>org.bytesoft</groupId>
 				<artifactId>bytejta-supports-dubbo</artifactId>
-				<version>0.4.6</version>
+				<version>0.4.7</version>
 			</dependency>
 
 			<!-- bytetcc -->
@@ -244,6 +244,12 @@
 				<groupId>cglib</groupId>
 				<artifactId>cglib</artifactId>
 				<version>2.2.2</version>
+				<exclusions>
+					<exclusion>
+    					<groupId>asm</groupId>
+    					<artifactId>asm</artifactId>
+					</exclusion>
+				</exclusions>
 			</dependency>
 			<dependency>
 				<groupId>org.aspectj</groupId>
