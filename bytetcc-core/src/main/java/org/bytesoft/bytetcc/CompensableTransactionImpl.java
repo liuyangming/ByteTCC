@@ -94,6 +94,8 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 	private Thread currentThread;
 	private final Lock lock = new ReentrantLock();
 
+	private transient Exception createdAt;
+
 	public CompensableTransactionImpl(TransactionContext txContext) {
 		this.transactionContext = txContext;
 	}
@@ -1266,6 +1268,14 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 
 	public Transaction getTransaction() {
 		return (Transaction) this.getTransactionalExtra();
+	}
+
+	public Exception getCreatedAt() {
+		return createdAt;
+	}
+
+	public void setCreatedAt(Exception createdAt) {
+		this.createdAt = createdAt;
 	}
 
 	public int getTransactionVote() {

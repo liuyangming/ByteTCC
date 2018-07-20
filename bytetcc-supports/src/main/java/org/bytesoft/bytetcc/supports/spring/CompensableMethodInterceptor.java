@@ -173,7 +173,8 @@ public class CompensableMethodInterceptor
 			}
 
 			if (transaction != null && compensable == null) {
-				logger.warn("Compensable-service {} is participanting in a non-TCC transaction!", mi.getMethod());
+				logger.warn("Compensable-service {} is participanting in a non-TCC transaction which was created at:",
+						mi.getMethod(), transaction.getCreatedAt());
 			}
 
 			if (transactional != null && compensable != null && transaction != null) {
