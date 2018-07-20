@@ -43,7 +43,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class CleanupWork implements Work, LocalResourceCleaner, CompensableEndpointAware, CompensableBeanFactoryAware {
-	static final Logger logger = LoggerFactory.getLogger(CompensableWork.class);
+	static final Logger logger = LoggerFactory.getLogger(CleanupWork.class);
 	static final byte[] IDENTIFIER = "org.bytesoft.bytetcc.resource.cleanup".getBytes();
 
 	static final long SECOND_MILLIS = 1000L;
