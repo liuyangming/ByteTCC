@@ -79,7 +79,7 @@ public class AccountServiceCancel implements IAccountService {
 
 ## 三、ByteTCC特性
 * 1、支持Spring容器的声明式事务管理；
-* 2、支持普通事务、TCC事务、业务补偿型事务等事务机制；
+* 2、支持普通事务、TCC事务、saga事务等事务机制；
 * 3、支持多数据源、跨应用、跨服务器等分布式事务场景；
 * 4、支持长事务；
 * 5、支持dubbo服务框架；
