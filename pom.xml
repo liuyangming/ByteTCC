@@ -4,7 +4,7 @@
 
 	<groupId>org.bytesoft</groupId>
 	<artifactId>bytetcc-parent</artifactId>
-	<version>0.4.15</version>
+	<version>0.4.16</version>
 	<packaging>pom</packaging>
 	<name>bytetcc-parent</name>
 	<description>ByteTCC is a transaction manager based on the TCC(Try/Confirm/Cancel) mechanism.</description>
@@ -175,49 +175,49 @@
 			<dependency>
 				<groupId>org.bytesoft</groupId>
 				<artifactId>bytejta-core</artifactId>
-				<version>0.4.7</version>
+				<version>0.4.8</version>
 			</dependency>
 			<dependency>
 				<groupId>org.bytesoft</groupId>
 				<artifactId>bytejta-supports</artifactId>
-				<version>0.4.7</version>
+				<version>0.4.8</version>
 			</dependency>
 			<dependency>
 				<groupId>org.bytesoft</groupId>
 				<artifactId>bytejta-supports-springcloud</artifactId>
-				<version>0.4.7</version>
+				<version>0.4.8</version>
 			</dependency>
 			<dependency>
 				<groupId>org.bytesoft</groupId>
 				<artifactId>bytejta-supports-dubbo</artifactId>
-				<version>0.4.7</version>
+				<version>0.4.8</version>
 			</dependency>
 
 			<!-- bytetcc -->
 			<dependency>
 				<groupId>org.bytesoft</groupId>
 				<artifactId>bytetcc-common</artifactId>
-				<version>0.4.15</version>
+				<version>0.4.16</version>
 			</dependency>
 			<dependency>
 				<groupId>org.bytesoft</groupId>
 				<artifactId>bytetcc-core</artifactId>
-				<version>0.4.15</version>
+				<version>0.4.16</version>
 			</dependency>
 			<dependency>
 				<groupId>org.bytesoft</groupId>
 				<artifactId>bytetcc-supports</artifactId>
-				<version>0.4.15</version>
+				<version>0.4.16</version>
 			</dependency>
 			<dependency>
 				<groupId>org.bytesoft</groupId>
 				<artifactId>bytetcc-supports-dubbo</artifactId>
-				<version>0.4.15</version>
+				<version>0.4.16</version>
 			</dependency>
 			<dependency>
 				<groupId>org.bytesoft</groupId>
 				<artifactId>bytetcc-supports-springcloud</artifactId>
-				<version>0.4.15</version>
+				<version>0.4.16</version>
 			</dependency>
 
 			<!-- logger -->
