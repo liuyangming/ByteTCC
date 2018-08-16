@@ -18,7 +18,7 @@ package org.bytesoft.bytetcc.supports.dubbo.spi;
 import java.util.List;
 import java.util.Random;
 
-import org.bytesoft.bytejta.supports.dubbo.ext.ILoadBalancer;
+import org.bytesoft.bytetcc.supports.dubbo.ext.ILoadBalancer;
 
 import com.alibaba.dubbo.common.URL;
 import com.alibaba.dubbo.rpc.Invocation;
