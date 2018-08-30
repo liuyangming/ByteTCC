@@ -78,16 +78,14 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 
 	private int transactionVote;
 	private int transactionStatus = Status.STATUS_ACTIVE;
-	/* current comensable-decision in confirm/cancel phase. */
+	/* current compensable-decision in confirm/cancel phase. */
 	private transient Boolean positive;
-	/* current compense-archive in confirm/cancel phase. */
+	/* current compensable-archive in confirm/cancel phase. */
 	private transient CompensableArchive archive;
 
 	/* current compensable-archive list in try phase. */
 	private transient final List<CompensableArchive> currentArchiveList = new ArrayList<CompensableArchive>();
 	private transient final Map<Xid, List<CompensableArchive>> archiveMap = new HashMap<Xid, List<CompensableArchive>>();
-
-	private boolean participantStickyRequired;
 
 	private Map<String, Serializable> variables = new HashMap<String, Serializable>();
 
@@ -704,7 +702,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 		String self = transactionCoordinator.getIdentifier();
 		String parent = String.valueOf(this.transactionContext.getPropagatedBy());
 		boolean resourceValid = StringUtils.equalsIgnoreCase(identifier, self) == false
-				&& CommonUtils.instanceEquals(parent, identifier) == false;
+				&& CommonUtils.instanceKeyEquals(parent, identifier) == false;
 
 		if (resourceValid == false) {
 			logger.warn("Endpoint {} can not be its own remote branch!", identifier);
@@ -744,7 +742,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 			String self = transactionCoordinator.getIdentifier();
 			String parent = String.valueOf(this.transactionContext.getPropagatedBy());
 
-			if (StringUtils.equalsIgnoreCase(identifier, self) || CommonUtils.instanceEquals(parent, identifier)) {
+			if (StringUtils.equalsIgnoreCase(identifier, self) || CommonUtils.instanceKeyEquals(parent, identifier)) {
 				return true;
 			}
 
@@ -1194,12 +1192,30 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 		return this.applicationMap;
 	}
 
-	public void setRollbackOnly() throws IllegalStateException, SystemException {
-		throw new IllegalStateException();
+	public boolean isMarkedRollbackOnly() {
+		return this.transactionContext.isRollbackOnly();
 	}
 
-	public void setRollbackOnlyQuietly() {
-		throw new IllegalStateException();
+	public synchronized void setRollbackOnly() throws IllegalStateException, SystemException {
+		if (this.transactionStatus == Status.STATUS_ACTIVE || this.transactionStatus == Status.STATUS_MARKED_ROLLBACK) {
+			this.transactionStatus = Status.STATUS_MARKED_ROLLBACK;
+			this.transactionContext.setRollbackOnly(true);
+
+			Transaction transactionalExtra = this.getTransaction();
+			if (transactionalExtra != null) {
+				transactionalExtra.setRollbackOnlyQuietly();
+			}
+		} else {
+			throw new IllegalStateException();
+		}
+	}
+
+	public synchronized void setRollbackOnlyQuietly() {
+		try {
+			this.setRollbackOnly();
+		} catch (Exception ex) {
+			logger.debug(ex.getMessage(), ex);
+		}
 	}
 
 	public boolean isLocalTransaction() {
@@ -1244,14 +1260,6 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 
 	public void setVariable(String key, Serializable variable) {
 		this.variables.put(key, variable);
-	}
-
-	public boolean isParticipantStickyRequired() {
-		return participantStickyRequired;
-	}
-
-	public void setParticipantStickyRequired(boolean participantStickyRequired) {
-		this.participantStickyRequired = participantStickyRequired;
 	}
 
 	public Object getTransactionalExtra() {

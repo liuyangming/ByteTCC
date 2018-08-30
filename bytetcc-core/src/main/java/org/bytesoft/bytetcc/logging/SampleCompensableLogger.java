@@ -356,7 +356,7 @@ public class SampleCompensableLogger extends VirtualLoggingSystemImpl
 	}
 
 	public int getMinorVersion() {
-		return 2;
+		return 3;
 	}
 
 	public String getLoggingFilePrefix() {

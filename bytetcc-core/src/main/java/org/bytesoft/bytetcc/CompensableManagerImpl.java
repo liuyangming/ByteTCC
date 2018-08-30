@@ -650,7 +650,19 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 
 	}
 
+	public void setRollbackOnlyQuietly() {
+		CompensableTransaction transaction = this.getCompensableTransactionQuietly();
+		if (transaction != null) {
+			transaction.setRollbackOnlyQuietly();
+		}
+	}
+
 	public void setRollbackOnly() throws IllegalStateException, SystemException {
+		CompensableTransaction transaction = this.getCompensableTransactionQuietly();
+		if (transaction == null) {
+			throw new IllegalStateException();
+		}
+		transaction.setRollbackOnlyQuietly();
 	}
 
 	public void setTransactionTimeout(int seconds) throws SystemException {

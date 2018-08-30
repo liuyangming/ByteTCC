@@ -46,6 +46,11 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 
 		CompensableTransaction transaction = compensableManager.getCompensableTransactionQuietly();
+		boolean markedRollbackOnly = transaction == null ? false : transaction.isMarkedRollbackOnly();
+
+		if (markedRollbackOnly) {
+			throw new SystemException("Current global transaction has already been marked rollback only!");
+		}
 
 		CompensableInvocationRegistry registry = CompensableInvocationRegistry.getInstance();
 		CompensableInvocation invocation = registry.getCurrent();
@@ -57,7 +62,6 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 		} else {
 			transactionManager.begin();
 		}
-
 	}
 
 	public void commit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException, SecurityException,
@@ -198,6 +202,14 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 		}
 	}
 
+	public void setRollbackOnlyQuietly() {
+		try {
+			this.setRollbackOnly();
+		} catch (Exception error) {
+			logger.debug(error.getMessage());
+		}
+	}
+
 	public void setRollbackOnly() throws IllegalStateException, SystemException {
 		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
@@ -306,4 +318,5 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 	public void setTimeoutSeconds(int timeoutSeconds) {
 		throw new IllegalStateException();
 	}
+
 }
