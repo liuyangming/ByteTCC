@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.transaction.xa.Xid;
 
@@ -47,26 +48,114 @@ import org.bytesoft.transaction.xa.TransactionXid;
 import org.bytesoft.transaction.xa.XidFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.InitializingBean;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.FindIterable;
+import com.mongodb.client.ListIndexesIterable;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
+import com.mongodb.client.model.IndexOptions;
 import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
 
-public class MongoCompensableLogger implements CompensableLogger, CompensableEndpointAware, CompensableBeanFactoryAware {
+public class MongoCompensableLogger
+		implements CompensableLogger, CompensableEndpointAware, CompensableBeanFactoryAware, InitializingBean {
 	static Logger logger = LoggerFactory.getLogger(MongoCompensableLogger.class);
 	static final String CONSTANTS_DB_NAME = "bytetcc";
+	static final String CONSTANTS_TB_TRANSACTIONS = "transactions";
+	static final String CONSTANTS_TB_PARTICIPANTS = "participants";
+	static final String CONSTANTS_TB_COMPENSABLES = "compensables";
+	static final String CONSTANTS_FD_GLOBAL = "gxid";
+	static final String CONSTANTS_FD_BRANCH = "bxid";
 
 	@javax.annotation.Resource(name = "compensableMongoClient")
 	private MongoClient mongoClient;
 	private String endpoint;
 	private CompensableBeanFactory beanFactory;
+	private boolean initializeEnabled = true;
+
+	public void afterPropertiesSet() throws Exception {
+		if (this.initializeEnabled) {
+			this.initializeIndexIfNecessary();
+		}
+	}
+
+	public void initializeIndexIfNecessary() {
+		this.createTransactionsIndexIfNecessary();
+		this.createParticipantsIndexIfNecessary();
+		this.createCompensablesIndexIfNecessary();
+	}
+
+	private void createTransactionsIndexIfNecessary() {
+		MongoDatabase database = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
+		MongoCollection<Document> transactions = database.getCollection(CONSTANTS_TB_TRANSACTIONS);
+		ListIndexesIterable<Document> transactionIndexList = transactions.listIndexes();
+		MongoCursor<Document> transactionCursor = transactionIndexList.iterator();
+		boolean transactionIndexExists = false;
+		while (transactionIndexExists == false && transactionCursor.hasNext()) {
+			Document document = transactionCursor.next();
+			Document key = (Document) document.get("key");
+			Set<String> keySet = key.keySet();
+			if (keySet.size() != 1) {
+				continue;
+			}
+			Iterator<String> itr = keySet.iterator();
+			transactionIndexExists = itr.hasNext() ? StringUtils.equals(CONSTANTS_FD_GLOBAL, itr.next()) : transactionIndexExists;
+		}
+
+		if (transactionIndexExists == false) {
+			transactions.createIndex(new Document(CONSTANTS_FD_GLOBAL, 1), new IndexOptions().unique(false));
+		}
+	}
+
+	private void createParticipantsIndexIfNecessary() {
+		MongoDatabase database = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
+		MongoCollection<Document> participants = database.getCollection(CONSTANTS_TB_PARTICIPANTS);
+		ListIndexesIterable<Document> participantIndexList = participants.listIndexes();
+		MongoCursor<Document> participantCursor = participantIndexList.iterator();
+		boolean participantIndexExists = false;
+		while (participantIndexExists == false && participantCursor.hasNext()) {
+			Document document = participantCursor.next();
+			Document key = (Document) document.get("key");
+			Set<String> keySet = key.keySet();
+			if (keySet.size() != 1) {
+				continue;
+			}
+			Iterator<String> itr = keySet.iterator();
+			participantIndexExists = itr.hasNext() ? StringUtils.equals(CONSTANTS_FD_GLOBAL, itr.next()) : participantIndexExists;
+		}
+
+		if (participantIndexExists == false) {
+			participants.createIndex(new Document(CONSTANTS_FD_GLOBAL, 1), new IndexOptions().unique(false));
+		}
+	}
+
+	private void createCompensablesIndexIfNecessary() {
+		MongoDatabase database = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
+		MongoCollection<Document> compensables = database.getCollection(CONSTANTS_TB_COMPENSABLES);
+		ListIndexesIterable<Document> compensableIndexList = compensables.listIndexes();
+		MongoCursor<Document> compensableCursor = compensableIndexList.iterator();
+		boolean compensableIndexExists = false;
+		while (compensableIndexExists == false && compensableCursor.hasNext()) {
+			Document document = compensableCursor.next();
+			Document key = (Document) document.get("key");
+			Set<String> keySet = key.keySet();
+			if (keySet.size() != 1) {
+				continue;
+			}
+			Iterator<String> itr = keySet.iterator();
+			compensableIndexExists = itr.hasNext() ? StringUtils.equals(CONSTANTS_FD_GLOBAL, itr.next()) : compensableIndexExists;
+		}
+
+		if (compensableIndexExists == false) {
+			compensables.createIndex(new Document(CONSTANTS_FD_GLOBAL, 1), new IndexOptions().unique(false));
+		}
+	}
 
 	public void createTransaction(TransactionArchive archive) {
 		try {
@@ -83,8 +172,8 @@ public class MongoCompensableLogger implements CompensableLogger, CompensableEnd
 			byte[] variablesByteArray = SerializeUtils.serializeObject((Serializable) variables);
 			String textVariables = ByteUtils.byteArrayToString(variablesByteArray);
 
-			MongoDatabase mdb = mongoClient.getDatabase(CONSTANTS_DB_NAME);
-			MongoCollection<Document> collection = mdb.getCollection("transaction");
+			MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
+			MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_TRANSACTIONS);
 
 			String[] values = this.endpoint.split("\\s*:\\s*");
 			String application = values[1];
@@ -97,17 +186,17 @@ public class MongoCompensableLogger implements CompensableLogger, CompensableEnd
 
 			Document document = new Document();
 			document.append("_id", ByteUtils.byteArrayToString(byteArray));
-			document.append("gxid", ByteUtils.byteArrayToString(global));
+			document.append(CONSTANTS_FD_GLOBAL, ByteUtils.byteArrayToString(global));
 			document.append("application", application);
 			document.append("created", this.endpoint);
 			document.append("modified", this.endpoint);
 			document.append("propagated", propagated);
-			document.append("propagatedBy", propagatedBy);
+			document.append("propagated_by", propagatedBy);
 			document.append("compensable", compensable);
 			document.append("coordinator", coordinator);
 			document.append("status", status);
 			document.append("lock", 0);
-			document.append("lockedBy", this.endpoint);
+			document.append("locked_by", this.endpoint);
 			document.append("vars", jsonVariables);
 			document.append("variables", textVariables);
 			document.append("version", 0L);
@@ -134,8 +223,8 @@ public class MongoCompensableLogger implements CompensableLogger, CompensableEnd
 
 			int status = archive.getCompensableStatus();
 
-			MongoDatabase mdb = mongoClient.getDatabase(CONSTANTS_DB_NAME);
-			MongoCollection<Document> collection = mdb.getCollection("transaction");
+			MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
+			MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_TRANSACTIONS);
 
 			Map<String, Serializable> variables = archive.getVariables();
 			ObjectMapper mapper = new ObjectMapper();
@@ -178,15 +267,15 @@ public class MongoCompensableLogger implements CompensableLogger, CompensableEnd
 			System.arraycopy(branch, 0, byteArray, global.length, branch.length);
 			String identifier = ByteUtils.byteArrayToString(byteArray);
 
-			MongoDatabase mdb = mongoClient.getDatabase(CONSTANTS_DB_NAME);
-			MongoCollection<Document> transactions = mdb.getCollection("transaction");
-			MongoCollection<Document> participants = mdb.getCollection("participant");
-			MongoCollection<Document> compensables = mdb.getCollection("compensable");
+			MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
+			MongoCollection<Document> transactions = mdb.getCollection(CONSTANTS_TB_TRANSACTIONS);
+			MongoCollection<Document> participants = mdb.getCollection(CONSTANTS_TB_PARTICIPANTS);
+			MongoCollection<Document> compensables = mdb.getCollection(CONSTANTS_TB_COMPENSABLES);
 
 			String[] values = this.endpoint.split("\\s*:\\s*");
 			String application = values[1];
 
-			Bson xidBson = Filters.eq("gxid", ByteUtils.byteArrayToString(global));
+			Bson xidBson = Filters.eq(CONSTANTS_FD_GLOBAL, ByteUtils.byteArrayToString(global));
 			Bson created = Filters.eq("application", application);
 
 			compensables.deleteMany(Filters.and(xidBson, created));
@@ -212,8 +301,8 @@ public class MongoCompensableLogger implements CompensableLogger, CompensableEnd
 			System.arraycopy(global, 0, byteArray, 0, global.length);
 			System.arraycopy(branch, 0, byteArray, global.length, branch.length);
 
-			MongoDatabase mdb = mongoClient.getDatabase(CONSTANTS_DB_NAME);
-			MongoCollection<Document> collection = mdb.getCollection("participant");
+			MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
+			MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_PARTICIPANTS);
 
 			Document document = new Document();
 
@@ -232,8 +321,8 @@ public class MongoCompensableLogger implements CompensableLogger, CompensableEnd
 			String application = values[1];
 
 			document.append("_id", ByteUtils.byteArrayToString(byteArray));
-			document.append("gxid", ByteUtils.byteArrayToString(global));
-			document.append("bxid", ByteUtils.byteArrayToString(branch));
+			document.append(CONSTANTS_FD_GLOBAL, ByteUtils.byteArrayToString(global));
+			document.append(CONSTANTS_FD_BRANCH, ByteUtils.byteArrayToString(branch));
 			document.append("application", application);
 			document.append("created", this.endpoint);
 
@@ -266,8 +355,8 @@ public class MongoCompensableLogger implements CompensableLogger, CompensableEnd
 			System.arraycopy(global, 0, byteArray, 0, global.length);
 			System.arraycopy(branch, 0, byteArray, global.length, branch.length);
 
-			MongoDatabase mdb = mongoClient.getDatabase(CONSTANTS_DB_NAME);
-			MongoCollection<Document> collection = mdb.getCollection("participant");
+			MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
+			MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_PARTICIPANTS);
 
 			int branchVote = archive.getVote();
 			boolean readonly = archive.isReadonly();
@@ -308,8 +397,8 @@ public class MongoCompensableLogger implements CompensableLogger, CompensableEnd
 			System.arraycopy(global, 0, byteArray, 0, global.length);
 			System.arraycopy(branch, 0, byteArray, global.length, branch.length);
 
-			MongoDatabase mdb = mongoClient.getDatabase(CONSTANTS_DB_NAME);
-			MongoCollection<Document> collection = mdb.getCollection("compensable");
+			MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
+			MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_COMPENSABLES);
 
 			CompensableInvocation invocation = archive.getCompensable();
 			String beanId = (String) invocation.getIdentifier();
@@ -326,19 +415,19 @@ public class MongoCompensableLogger implements CompensableLogger, CompensableEnd
 
 			Document document = new Document();
 			document.append("_id", ByteUtils.byteArrayToString(byteArray));
-			document.append("gxid", ByteUtils.byteArrayToString(global));
-			document.append("bxid", ByteUtils.byteArrayToString(branch));
+			document.append(CONSTANTS_FD_GLOBAL, ByteUtils.byteArrayToString(global));
+			document.append(CONSTANTS_FD_BRANCH, ByteUtils.byteArrayToString(branch));
 			document.append("application", application);
 			document.append("created", this.endpoint);
 
-			document.append("transactionKey", archive.getTransactionResourceKey());
-			document.append("compensableKey", archive.getCompensableResourceKey());
+			document.append("transaction_key", archive.getTransactionResourceKey());
+			document.append("compensable_key", archive.getCompensableResourceKey());
 
 			Xid transactionXid = archive.getTransactionXid();
 			Xid compensableXid = archive.getCompensableXid();
 
-			document.append("transactionXid", String.valueOf(transactionXid));
-			document.append("compensableXid", String.valueOf(compensableXid));
+			document.append("transaction_xid", String.valueOf(transactionXid));
+			document.append("compensable_xid", String.valueOf(compensableXid));
 
 			document.append("coordinator", archive.isCoordinator());
 			document.append("tried", archive.isTried());
@@ -348,8 +437,8 @@ public class MongoCompensableLogger implements CompensableLogger, CompensableEnd
 
 			document.append("serviceId", beanId);
 			document.append("simplified", invocation.isSimplified());
-			document.append("confirmableKey", invocation.getConfirmableKey());
-			document.append("cancellableKey", invocation.getCancellableKey());
+			document.append("confirmable_key", invocation.getConfirmableKey());
+			document.append("cancellable_key", invocation.getCancellableKey());
 			document.append("args", argsValue);
 			document.append("interface", method.getDeclaringClass().getName());
 			document.append("method", methodDesc);
@@ -373,8 +462,8 @@ public class MongoCompensableLogger implements CompensableLogger, CompensableEnd
 			System.arraycopy(global, 0, byteArray, 0, global.length);
 			System.arraycopy(branch, 0, byteArray, global.length, branch.length);
 
-			MongoDatabase mdb = mongoClient.getDatabase(CONSTANTS_DB_NAME);
-			MongoCollection<Document> collection = mdb.getCollection("compensable");
+			MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
+			MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_COMPENSABLES);
 
 			Xid transactionXid = archive.getTransactionXid();
 			Xid compensableXid = archive.getCompensableXid();
@@ -384,10 +473,10 @@ public class MongoCompensableLogger implements CompensableLogger, CompensableEnd
 			variables.append("confirmed", archive.isConfirmed());
 			variables.append("cancelled", archive.isCancelled());
 			variables.append("modified", this.endpoint);
-			variables.append("transactionKey", archive.getTransactionResourceKey());
-			variables.append("compensableKey", archive.getCompensableResourceKey());
-			variables.append("transactionXid", String.valueOf(transactionXid));
-			variables.append("compensableXid", String.valueOf(compensableXid));
+			variables.append("transaction_key", archive.getTransactionResourceKey());
+			variables.append("compensable_key", archive.getCompensableResourceKey());
+			variables.append("transaction_xid", String.valueOf(transactionXid));
+			variables.append("compensable_xid", String.valueOf(compensableXid));
 
 			UpdateResult result = collection.updateOne(Filters.eq("_id", ByteUtils.byteArrayToString(byteArray)),
 					new Document("$set", variables));
@@ -410,10 +499,10 @@ public class MongoCompensableLogger implements CompensableLogger, CompensableEnd
 
 		Map<Xid, TransactionArchive> archiveMap = new HashMap<Xid, TransactionArchive>();
 		try {
-			MongoDatabase mdb = mongoClient.getDatabase(CONSTANTS_DB_NAME);
-			MongoCollection<Document> transactions = mdb.getCollection("transaction");
-			MongoCollection<Document> participants = mdb.getCollection("participant");
-			MongoCollection<Document> compensables = mdb.getCollection("compensable");
+			MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
+			MongoCollection<Document> transactions = mdb.getCollection(CONSTANTS_TB_TRANSACTIONS);
+			MongoCollection<Document> participants = mdb.getCollection(CONSTANTS_TB_PARTICIPANTS);
+			MongoCollection<Document> compensables = mdb.getCollection(CONSTANTS_TB_COMPENSABLES);
 
 			String[] values = this.endpoint.split("\\s*:\\s*");
 			String application = values[1];
@@ -425,13 +514,13 @@ public class MongoCompensableLogger implements CompensableLogger, CompensableEnd
 				Document document = transactionCursor.next();
 				TransactionArchive archive = new TransactionArchive();
 
-				String gxid = document.getString("gxid");
+				String gxid = document.getString(CONSTANTS_FD_GLOBAL);
 				byte[] globalTransactionId = ByteUtils.stringToByteArray(gxid);
 				TransactionXid globalXid = compensableXidFactory.createGlobalXid(globalTransactionId);
 				archive.setXid(globalXid);
 
 				boolean propagated = document.getBoolean("propagated");
-				String propagatedBy = document.getString("propagatedBy");
+				String propagatedBy = document.getString("propagated_by");
 				boolean compensable = document.getBoolean("compensable");
 				boolean coordinator = document.getBoolean("coordinator");
 				int compensableStatus = document.getInteger("status");
@@ -458,8 +547,8 @@ public class MongoCompensableLogger implements CompensableLogger, CompensableEnd
 				Document document = participantCursor.next();
 				XAResourceArchive participant = new XAResourceArchive();
 
-				String gxid = document.getString("gxid");
-				String bxid = document.getString("bxid");
+				String gxid = document.getString(CONSTANTS_FD_GLOBAL);
+				String bxid = document.getString(CONSTANTS_FD_BRANCH);
 
 				String descriptorType = document.getString("type");
 				String identifier = document.getString("resource");
@@ -507,8 +596,8 @@ public class MongoCompensableLogger implements CompensableLogger, CompensableEnd
 				Document document = compensableCursor.next();
 				CompensableArchive compensable = new CompensableArchive();
 
-				String gxid = document.getString("gxid");
-				String bxid = document.getString("bxid");
+				String gxid = document.getString(CONSTANTS_FD_GLOBAL);
+				String bxid = document.getString(CONSTANTS_FD_BRANCH);
 
 				boolean coordinator = document.getBoolean("coordinator");
 				boolean tried = document.getBoolean("tried");
@@ -516,17 +605,17 @@ public class MongoCompensableLogger implements CompensableLogger, CompensableEnd
 				boolean cancelled = document.getBoolean("cancelled");
 				String serviceId = document.getString("serviceId");
 				boolean simplified = document.getBoolean("simplified");
-				String confirmableKey = document.getString("confirmableKey");
-				String cancellableKey = document.getString("cancellableKey");
+				String confirmableKey = document.getString("confirmable_key");
+				String cancellableKey = document.getString("cancellable_key");
 				String argsValue = document.getString("args");
 				String clazzName = document.getString("interface");
 				String methodDesc = document.getString("method");
 
-				String transactionKey = document.getString("transactionKey");
-				String compensableKey = document.getString("compensableKey");
+				String transactionKey = document.getString("transaction_key");
+				String compensableKey = document.getString("compensable_key");
 
-				String transactionXid = document.getString("transactionXid");
-				String compensableXid = document.getString("compensableXid");
+				String transactionXid = document.getString("transaction_xid");
+				String compensableXid = document.getString("compensable_xid");
 
 				CompensableInvocationImpl invocation = new CompensableInvocationImpl();
 				invocation.setIdentifier(serviceId);
@@ -733,6 +822,14 @@ public class MongoCompensableLogger implements CompensableLogger, CompensableEnd
 		paramTypeList.toArray(parameterTypes);
 
 		return interfaceClass.getDeclaredMethod(methodName, parameterTypes);
+	}
+
+	public boolean isInitializeEnabled() {
+		return initializeEnabled;
+	}
+
+	public void setInitializeEnabled(boolean initializeEnabled) {
+		this.initializeEnabled = initializeEnabled;
 	}
 
 	public void setBeanFactory(CompensableBeanFactory tbf) {

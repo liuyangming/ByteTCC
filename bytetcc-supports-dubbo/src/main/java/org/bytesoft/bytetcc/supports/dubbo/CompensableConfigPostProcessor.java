@@ -16,7 +16,7 @@
 package org.bytesoft.bytetcc.supports.dubbo;
 
 import org.apache.commons.lang3.StringUtils;
-import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
+import org.bytesoft.transaction.remote.RemoteCoordinator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;

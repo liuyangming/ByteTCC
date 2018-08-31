@@ -21,7 +21,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.bytesoft.bytejta.supports.rpc.TransactionRequestImpl;
-import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
 import org.bytesoft.bytetcc.CompensableTransactionImpl;
 import org.bytesoft.bytetcc.supports.springcloud.SpringCloudBeanRegistry;
 import org.bytesoft.bytetcc.supports.springcloud.loadbalancer.CompensableLoadBalancerInterceptor;
@@ -31,6 +30,8 @@ import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableManager;
 import org.bytesoft.compensable.TransactionContext;
 import org.bytesoft.transaction.archive.XAResourceArchive;
+import org.bytesoft.transaction.remote.RemoteCoordinator;
+import org.bytesoft.transaction.remote.RemoteSvc;
 import org.bytesoft.transaction.supports.rpc.TransactionInterceptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -76,7 +77,7 @@ public class CompensableHystrixMethodHandler implements MethodHandler {
 		final TransactionRequestImpl request = new TransactionRequestImpl();
 		final TransactionResponseImpl response = new TransactionResponseImpl();
 
-		final Map<String, XAResourceArchive> participants = compensable.getParticipantArchiveMap();
+		final Map<RemoteSvc, XAResourceArchive> participants = compensable.getParticipantArchiveMap();
 		beanRegistry.setLoadBalancerInterceptor(new CompensableLoadBalancerInterceptor() {
 			public List<Server> beforeCompletion(List<Server> servers) {
 				final List<Server> readyServerList = new ArrayList<Server>();

@@ -19,11 +19,13 @@ import javax.transaction.xa.XAException;
 import javax.transaction.xa.XAResource;
 import javax.transaction.xa.Xid;
 
-import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 import org.bytesoft.transaction.Transaction;
 import org.bytesoft.transaction.TransactionContext;
+import org.bytesoft.transaction.remote.RemoteAddr;
+import org.bytesoft.transaction.remote.RemoteCoordinator;
+import org.bytesoft.transaction.remote.RemoteNode;
 import org.bytesoft.transaction.xa.XidFactory;
 
 public class TransactionCoordinator implements RemoteCoordinator, CompensableBeanFactoryAware {
@@ -123,12 +125,20 @@ public class TransactionCoordinator implements RemoteCoordinator, CompensableBea
 		}
 	}
 
+	public RemoteAddr getRemoteAddr() {
+		return this.beanFactory.getCompensableCoordinator().getRemoteAddr();
+	}
+
+	public RemoteNode getRemoteNode() {
+		return this.beanFactory.getCompensableCoordinator().getRemoteNode();
+	}
+
 	public String getApplication() {
 		return this.beanFactory.getCompensableCoordinator().getApplication();
 	}
 
 	public String getIdentifier() {
-		throw new IllegalStateException();
+		return this.beanFactory.getCompensableCoordinator().getIdentifier();
 	}
 
 	public void start(Xid xid, int flags) throws XAException {

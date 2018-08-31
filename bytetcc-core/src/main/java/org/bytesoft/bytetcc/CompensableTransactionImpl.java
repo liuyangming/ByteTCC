@@ -38,7 +38,6 @@ import javax.transaction.xa.Xid;
 import org.apache.commons.lang3.StringUtils;
 import org.bytesoft.bytejta.supports.jdbc.RecoveredResource;
 import org.bytesoft.bytejta.supports.resource.RemoteResourceDescriptor;
-import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
 import org.bytesoft.bytetcc.supports.resource.LocalResourceCleaner;
 import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.common.utils.CommonUtils;
@@ -55,6 +54,8 @@ import org.bytesoft.transaction.RollbackRequiredException;
 import org.bytesoft.transaction.Transaction;
 import org.bytesoft.transaction.TransactionRepository;
 import org.bytesoft.transaction.archive.XAResourceArchive;
+import org.bytesoft.transaction.remote.RemoteCoordinator;
+import org.bytesoft.transaction.remote.RemoteSvc;
 import org.bytesoft.transaction.supports.TransactionListener;
 import org.bytesoft.transaction.supports.TransactionListenerAdapter;
 import org.bytesoft.transaction.supports.TransactionResourceListener;
@@ -70,10 +71,9 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 
 	private final TransactionContext transactionContext;
 	private final List<CompensableArchive> archiveList = new ArrayList<CompensableArchive>();
-	private final Map<String, XAResourceArchive> resourceMap = new HashMap<String, XAResourceArchive>();
+	private final Map<RemoteSvc, XAResourceArchive> resourceMap = new HashMap<RemoteSvc, XAResourceArchive>();
 	private final List<XAResourceArchive> resourceList = new ArrayList<XAResourceArchive>();
-	private final Map<String, XAResourceArchive> applicationMap = new HashMap<String, XAResourceArchive>();
-	private final Map<Thread, Transaction> transactionMap = new ConcurrentHashMap<Thread, Transaction>(4);
+	private final Map<Thread, Transaction> transactionMap = new ConcurrentHashMap<Thread, Transaction>();
 	private CompensableBeanFactory beanFactory;
 
 	private int transactionVote;
@@ -696,31 +696,31 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 			throw new RollbackException(); // should never happen
 		}
 
-		String identifier = descriptor.getIdentifier();
-
 		RemoteCoordinator transactionCoordinator = this.beanFactory.getCompensableCoordinator();
-		String self = transactionCoordinator.getIdentifier();
-		String parent = String.valueOf(this.transactionContext.getPropagatedBy());
-		boolean resourceValid = StringUtils.equalsIgnoreCase(identifier, self) == false
-				&& CommonUtils.instanceKeyEquals(parent, identifier) == false;
 
-		if (resourceValid == false) {
-			logger.warn("Endpoint {} can not be its own remote branch!", identifier);
+		RemoteSvc nativeSvc = CommonUtils.getRemoteSvc(transactionCoordinator.getRemoteNode());
+		RemoteSvc parentSvc = CommonUtils.getRemoteSvc(String.valueOf(this.transactionContext.getPropagatedBy()));
+		RemoteSvc remoteSvc = descriptor.getRemoteSvc();
+
+		boolean nativeFlag = StringUtils.equalsIgnoreCase(remoteSvc.getServiceKey(), nativeSvc.getServiceKey());
+		boolean parentFlag = StringUtils.equalsIgnoreCase(remoteSvc.getServiceKey(), parentSvc.getServiceKey());
+		if (nativeFlag || parentFlag) {
+			logger.warn("Endpoint {} can not be its own remote branch!", descriptor.getIdentifier());
 			return false;
 		} // end-if (resourceValid == false)
 
-		XAResourceArchive resourceArchive = this.resourceMap.get(identifier);
+		XAResourceArchive resourceArchive = this.resourceMap.get(remoteSvc);
 		if (resourceArchive == null) {
 			resourceArchive = new XAResourceArchive();
 			resourceArchive.setXid(branchXid);
 			resourceArchive.setDescriptor(descriptor);
 			this.resourceList.add(resourceArchive);
-			this.resourceMap.put(identifier, resourceArchive);
+			this.resourceMap.put(remoteSvc, resourceArchive);
 
 			compensableLogger.createCoordinator(resourceArchive);
 
-			logger.info("{}| enlist remote resource: {}.", ByteUtils.byteArrayToString(globalXid.getGlobalTransactionId()),
-					identifier);
+			logger.info("{}| enlist remote resource: {}." //
+					, ByteUtils.byteArrayToString(globalXid.getGlobalTransactionId()), descriptor.getIdentifier());
 
 			return true;
 		} else {
@@ -730,38 +730,31 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 	}
 
 	public boolean delistResource(XAResource xaRes, int flag) throws IllegalStateException, SystemException {
+		RemoteCoordinator transactionCoordinator = this.beanFactory.getCompensableCoordinator();
 		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
 
 		if (RemoteResourceDescriptor.class.isInstance(xaRes)) {
 			RemoteResourceDescriptor descriptor = (RemoteResourceDescriptor) xaRes;
-			RemoteCoordinator resource = descriptor.getDelegate();
 
-			String identifier = descriptor.getIdentifier();
+			RemoteSvc nativeSvc = CommonUtils.getRemoteSvc(transactionCoordinator.getIdentifier());
+			RemoteSvc parentSvc = CommonUtils.getRemoteSvc(String.valueOf(this.transactionContext.getPropagatedBy()));
+			RemoteSvc remoteSvc = descriptor.getRemoteSvc();
 
-			RemoteCoordinator transactionCoordinator = this.beanFactory.getCompensableCoordinator();
-			String self = transactionCoordinator.getIdentifier();
-			String parent = String.valueOf(this.transactionContext.getPropagatedBy());
-
-			if (StringUtils.equalsIgnoreCase(identifier, self) || CommonUtils.instanceKeyEquals(parent, identifier)) {
+			boolean nativeFlag = StringUtils.equalsIgnoreCase(remoteSvc.getServiceKey(), nativeSvc.getServiceKey());
+			boolean parentFlag = StringUtils.equalsIgnoreCase(remoteSvc.getServiceKey(), parentSvc.getServiceKey());
+			if (nativeFlag || parentFlag) {
 				return true;
 			}
 
-			XAResourceArchive archive = this.resourceMap.get(identifier);
 			if (flag == XAResource.TMFAIL) {
+				this.resourceMap.remove(remoteSvc);
 
-				this.resourceMap.remove(identifier);
-
+				XAResourceArchive archive = this.resourceMap.get(remoteSvc);
 				if (archive != null) {
 					this.resourceList.remove(archive);
 				} // end-if (archive != null)
 
 				compensableLogger.updateTransaction(this.getTransactionArchive());
-			} else {
-
-				if (archive != null) {
-					this.applicationMap.put(resource.getApplication(), archive);
-				} // end-if (archive != null)
-
 			}
 
 		} // end-if (RemoteResourceDescriptor.class.isInstance(xaRes))
@@ -1115,16 +1108,21 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 
 	}
 
-	public XAResourceDescriptor getResourceDescriptor(String identifier) {
-		Transaction transaction = this.transactionMap.get(Thread.currentThread());
+	public XAResourceDescriptor getResourceDescriptor(String beanId) {
+		Transaction transaction = this.getTransaction();
+		return transaction.getResourceDescriptor(beanId);
+	}
+
+	public XAResourceDescriptor getRemoteCoordinator(RemoteSvc remoteSvc) {
+		Transaction transaction = this.getTransaction();
 
 		XAResourceDescriptor descriptor = null;
 		if (transaction != null) {
-			descriptor = transaction.getResourceDescriptor(identifier);
+			descriptor = transaction.getRemoteCoordinator(remoteSvc);
 		}
 
 		if (descriptor == null) {
-			XAResourceArchive archive = this.resourceMap.get(identifier);
+			XAResourceArchive archive = this.resourceMap.get(remoteSvc);
 			descriptor = archive == null ? descriptor : archive.getDescriptor();
 		}
 
@@ -1132,7 +1130,9 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 	}
 
 	public XAResourceDescriptor getRemoteCoordinator(String application) {
-		XAResourceArchive archive = this.applicationMap.get(application);
+		RemoteSvc remoteSvc = new RemoteSvc();
+		remoteSvc.setServiceKey(application);
+		XAResourceArchive archive = this.resourceMap.get(remoteSvc);
 		return archive == null ? null : archive.getDescriptor();
 	}
 
@@ -1174,7 +1174,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 	/**
 	 * only for recovery.
 	 */
-	public Map<String, XAResourceArchive> getParticipantArchiveMap() {
+	public Map<RemoteSvc, XAResourceArchive> getParticipantArchiveMap() {
 		return this.resourceMap;
 	}
 
@@ -1183,13 +1183,6 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 	 */
 	public List<XAResourceArchive> getParticipantArchiveList() {
 		return this.resourceList;
-	}
-
-	/**
-	 * only for recovery.
-	 */
-	public Map<String, XAResourceArchive> getApplicationArchiveMap() {
-		return this.applicationMap;
 	}
 
 	public boolean isMarkedRollbackOnly() {

@@ -28,7 +28,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.bytesoft.bytejta.supports.jdbc.RecoveredResource;
 import org.bytesoft.bytejta.supports.resource.LocalXAResourceDescriptor;
 import org.bytesoft.bytejta.supports.resource.RemoteResourceDescriptor;
-import org.bytesoft.bytejta.supports.wire.RemoteCoordinator;
 import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.common.utils.CommonUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;
@@ -48,6 +47,8 @@ import org.bytesoft.transaction.archive.TransactionArchive;
 import org.bytesoft.transaction.archive.XAResourceArchive;
 import org.bytesoft.transaction.recovery.TransactionRecoveryCallback;
 import org.bytesoft.transaction.recovery.TransactionRecoveryListener;
+import org.bytesoft.transaction.remote.RemoteCoordinator;
+import org.bytesoft.transaction.remote.RemoteSvc;
 import org.bytesoft.transaction.supports.resource.XAResourceDescriptor;
 import org.bytesoft.transaction.supports.serialize.XAResourceDeserializer;
 import org.bytesoft.transaction.xa.TransactionXid;
@@ -147,16 +148,14 @@ public class TransactionRecoveryImpl
 		for (int i = 0; i < participantList.size(); i++) {
 			XAResourceArchive participantArchive = participantList.get(i);
 			XAResourceDescriptor descriptor = participantArchive.getDescriptor();
-			String identifier = descriptor.getIdentifier();
 
 			transaction.getParticipantArchiveList().add(participantArchive);
 			if (RemoteResourceDescriptor.class.isInstance(descriptor)) {
 				RemoteResourceDescriptor resourceDescriptor = (RemoteResourceDescriptor) descriptor;
 				RemoteCoordinator remoteCoordinator = resourceDescriptor.getDelegate();
-				String application = remoteCoordinator.getApplication();
-				transaction.getApplicationArchiveMap().put(application, participantArchive);
+				RemoteSvc remoteSvc = CommonUtils.getRemoteSvc(remoteCoordinator.getRemoteNode());
+				transaction.getParticipantArchiveMap().put(remoteSvc, participantArchive);
 			} // end-if (RemoteResourceDescriptor.class.isInstance(descriptor))
-			transaction.getParticipantArchiveMap().put(identifier, participantArchive);
 		}
 
 		List<CompensableArchive> compensableList = archive.getCompensableResourceList();
