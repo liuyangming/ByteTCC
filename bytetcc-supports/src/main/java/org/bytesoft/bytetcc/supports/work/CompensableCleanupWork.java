@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
 
 import javax.resource.spi.work.Work;
 import javax.transaction.xa.XAException;
@@ -17,6 +18,7 @@ import org.bytesoft.bytejta.supports.jdbc.RecoveredResource;
 import org.bytesoft.bytejta.supports.resource.LocalXAResourceDescriptor;
 import org.bytesoft.bytetcc.supports.logging.MongoCompensableLogger;
 import org.bytesoft.bytetcc.supports.resource.LocalResourceCleaner;
+import org.bytesoft.bytetcc.work.CommandManager;
 import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
@@ -46,6 +48,8 @@ public class CompensableCleanupWork
 
 	@javax.annotation.Resource(name = "compensableMongoClient")
 	private MongoClient mongoClient;
+	@javax.inject.Inject
+	private CommandManager commandManager;
 	private String endpoint;
 	private boolean released;
 	@javax.inject.Inject
@@ -87,9 +91,17 @@ public class CompensableCleanupWork
 			} else {
 				int number = 0;
 				try {
-					number = this.timingExecution(CONSTANTS_MAX_HANDLE_RECORDS);
-				} catch (RuntimeException rex) {
+					number = this.commandManager.execute(new Callable<Integer>() {
+						public Integer call() throws Exception {
+							return timingExecution(CONSTANTS_MAX_HANDLE_RECORDS);
+						}
+					});
+				} catch (SecurityException rex) {
+					logger.debug(rex.getMessage());
+				} catch (Exception rex) {
 					logger.error("Error occurred while cleaning up resources.", rex);
+					nextMillis = System.currentTimeMillis() + CONSTANTS_SECOND_MILLIS * 30;
+					continue;
 				}
 
 				if (number < CONSTANTS_MAX_HANDLE_RECORDS) {

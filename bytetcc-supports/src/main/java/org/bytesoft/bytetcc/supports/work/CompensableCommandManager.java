@@ -67,16 +67,17 @@ public class CompensableCommandManager
 		this.execute(new CallableImpl(runnable));
 	}
 
-	public Object execute(Callable<?> callable) throws Exception {
+	@SuppressWarnings("unchecked")
+	public <T> T execute(Callable<T> callable) throws Exception {
 		if (this.hasLeadership() == false) {
-			throw new IllegalStateException("Current node is not master!");
+			throw new SecurityException("Current node is not master!");
 		} else if (ConnectionState.CONNECTED.equals(this.state) == false) {
-			throw new IllegalStateException("State is not Connected!");
+			throw new SecurityException("State is not Connected!");
 		}
 
 		ExecutionWork work = new ExecutionWork();
 		this.registerTask(work);
-		return this.waitForResult(work);
+		return (T) this.waitForResult(work);
 	}
 
 	private void registerTask(ExecutionWork work) {
@@ -138,7 +139,7 @@ public class CompensableCommandManager
 		try {
 			work.lock.lock();
 			if (ConnectionState.CONNECTED.equals(this.state) == false) {
-				throw new IllegalStateException("Current node is no longer the master!");
+				throw new SecurityException("Current node is no longer the master!");
 			}
 			work.result = work.callable.call();
 			work.error = false;
