@@ -21,4 +21,6 @@ public interface CommandManager {
 
 	public Object execute(Callable<?> callable) throws Exception;
 
+	public void execute(Runnable runnable) throws Exception;
+
 }

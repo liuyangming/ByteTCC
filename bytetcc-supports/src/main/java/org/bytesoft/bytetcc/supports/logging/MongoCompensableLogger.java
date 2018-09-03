@@ -27,6 +27,7 @@ import java.util.Set;
 
 import javax.transaction.xa.Xid;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.bson.Document;
 import org.bson.conversions.Bson;
@@ -76,6 +77,7 @@ public class MongoCompensableLogger
 	@javax.annotation.Resource(name = "compensableMongoClient")
 	private MongoClient mongoClient;
 	private String endpoint;
+	@javax.inject.Inject
 	private CompensableBeanFactory beanFactory;
 	private boolean initializeEnabled = true;
 
@@ -95,17 +97,23 @@ public class MongoCompensableLogger
 		MongoDatabase database = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
 		MongoCollection<Document> transactions = database.getCollection(CONSTANTS_TB_TRANSACTIONS);
 		ListIndexesIterable<Document> transactionIndexList = transactions.listIndexes();
-		MongoCursor<Document> transactionCursor = transactionIndexList.iterator();
 		boolean transactionIndexExists = false;
-		while (transactionIndexExists == false && transactionCursor.hasNext()) {
-			Document document = transactionCursor.next();
-			Document key = (Document) document.get("key");
-			Set<String> keySet = key.keySet();
-			if (keySet.size() != 1) {
-				continue;
+		MongoCursor<Document> transactionCursor = null;
+		try {
+			transactionCursor = transactionIndexList.iterator();
+			while (transactionIndexExists == false && transactionCursor.hasNext()) {
+				Document document = transactionCursor.next();
+				Document key = (Document) document.get("key");
+				Set<String> keySet = key.keySet();
+				if (keySet.size() != 1) {
+					continue;
+				}
+				Iterator<String> itr = keySet.iterator();
+				transactionIndexExists = itr.hasNext() ? StringUtils.equals(CONSTANTS_FD_GLOBAL, itr.next())
+						: transactionIndexExists;
 			}
-			Iterator<String> itr = keySet.iterator();
-			transactionIndexExists = itr.hasNext() ? StringUtils.equals(CONSTANTS_FD_GLOBAL, itr.next()) : transactionIndexExists;
+		} finally {
+			IOUtils.closeQuietly(transactionCursor);
 		}
 
 		if (transactionIndexExists == false) {
@@ -117,17 +125,23 @@ public class MongoCompensableLogger
 		MongoDatabase database = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
 		MongoCollection<Document> participants = database.getCollection(CONSTANTS_TB_PARTICIPANTS);
 		ListIndexesIterable<Document> participantIndexList = participants.listIndexes();
-		MongoCursor<Document> participantCursor = participantIndexList.iterator();
 		boolean participantIndexExists = false;
-		while (participantIndexExists == false && participantCursor.hasNext()) {
-			Document document = participantCursor.next();
-			Document key = (Document) document.get("key");
-			Set<String> keySet = key.keySet();
-			if (keySet.size() != 1) {
-				continue;
+		MongoCursor<Document> participantCursor = null;
+		try {
+			participantCursor = participantIndexList.iterator();
+			while (participantIndexExists == false && participantCursor.hasNext()) {
+				Document document = participantCursor.next();
+				Document key = (Document) document.get("key");
+				Set<String> keySet = key.keySet();
+				if (keySet.size() != 1) {
+					continue;
+				}
+				Iterator<String> itr = keySet.iterator();
+				participantIndexExists = itr.hasNext() ? StringUtils.equals(CONSTANTS_FD_GLOBAL, itr.next())
+						: participantIndexExists;
 			}
-			Iterator<String> itr = keySet.iterator();
-			participantIndexExists = itr.hasNext() ? StringUtils.equals(CONSTANTS_FD_GLOBAL, itr.next()) : participantIndexExists;
+		} finally {
+			IOUtils.closeQuietly(participantCursor);
 		}
 
 		if (participantIndexExists == false) {
@@ -139,17 +153,23 @@ public class MongoCompensableLogger
 		MongoDatabase database = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
 		MongoCollection<Document> compensables = database.getCollection(CONSTANTS_TB_COMPENSABLES);
 		ListIndexesIterable<Document> compensableIndexList = compensables.listIndexes();
-		MongoCursor<Document> compensableCursor = compensableIndexList.iterator();
 		boolean compensableIndexExists = false;
-		while (compensableIndexExists == false && compensableCursor.hasNext()) {
-			Document document = compensableCursor.next();
-			Document key = (Document) document.get("key");
-			Set<String> keySet = key.keySet();
-			if (keySet.size() != 1) {
-				continue;
+		MongoCursor<Document> compensableCursor = null;
+		try {
+			compensableCursor = compensableIndexList.iterator();
+			while (compensableIndexExists == false && compensableCursor.hasNext()) {
+				Document document = compensableCursor.next();
+				Document key = (Document) document.get("key");
+				Set<String> keySet = key.keySet();
+				if (keySet.size() != 1) {
+					continue;
+				}
+				Iterator<String> itr = keySet.iterator();
+				compensableIndexExists = itr.hasNext() ? StringUtils.equals(CONSTANTS_FD_GLOBAL, itr.next())
+						: compensableIndexExists;
 			}
-			Iterator<String> itr = keySet.iterator();
-			compensableIndexExists = itr.hasNext() ? StringUtils.equals(CONSTANTS_FD_GLOBAL, itr.next()) : compensableIndexExists;
+		} finally {
+			IOUtils.closeQuietly(compensableCursor);
 		}
 
 		if (compensableIndexExists == false) {
@@ -509,182 +529,197 @@ public class MongoCompensableLogger
 			Bson filter = Filters.eq("application", application);
 
 			FindIterable<Document> transactionItr = transactions.find(filter);
-			MongoCursor<Document> transactionCursor = transactionItr.iterator();
-			for (; transactionCursor.hasNext();) {
-				Document document = transactionCursor.next();
-				TransactionArchive archive = new TransactionArchive();
+			MongoCursor<Document> transactionCursor = null;
+			try {
+				transactionCursor = transactionItr.iterator();
+				for (; transactionCursor.hasNext();) {
+					Document document = transactionCursor.next();
+					TransactionArchive archive = new TransactionArchive();
 
-				String gxid = document.getString(CONSTANTS_FD_GLOBAL);
-				byte[] globalTransactionId = ByteUtils.stringToByteArray(gxid);
-				TransactionXid globalXid = compensableXidFactory.createGlobalXid(globalTransactionId);
-				archive.setXid(globalXid);
+					String gxid = document.getString(CONSTANTS_FD_GLOBAL);
+					byte[] globalTransactionId = ByteUtils.stringToByteArray(gxid);
+					TransactionXid globalXid = compensableXidFactory.createGlobalXid(globalTransactionId);
+					archive.setXid(globalXid);
 
-				boolean propagated = document.getBoolean("propagated");
-				String propagatedBy = document.getString("propagated_by");
-				boolean compensable = document.getBoolean("compensable");
-				boolean coordinator = document.getBoolean("coordinator");
-				int compensableStatus = document.getInteger("status");
+					boolean propagated = document.getBoolean("propagated");
+					String propagatedBy = document.getString("propagated_by");
+					boolean compensable = document.getBoolean("compensable");
+					boolean coordinator = document.getBoolean("coordinator");
+					int compensableStatus = document.getInteger("status");
 
-				String textVariables = document.getString("variables");
-				byte[] variablesByteArray = ByteUtils.stringToByteArray(textVariables);
-				Map<String, Serializable> variables = //
-						(Map<String, Serializable>) SerializeUtils.deserializeObject(variablesByteArray);
+					String textVariables = document.getString("variables");
+					byte[] variablesByteArray = ByteUtils.stringToByteArray(textVariables);
+					Map<String, Serializable> variables = //
+							(Map<String, Serializable>) SerializeUtils.deserializeObject(variablesByteArray);
 
-				archive.setVariables(variables);
+					archive.setVariables(variables);
 
-				archive.setCompensable(compensable);
-				archive.setCoordinator(coordinator);
-				archive.setCompensableStatus(compensableStatus);
-				archive.setPropagated(propagated);
-				archive.setPropagatedBy(propagatedBy);
+					archive.setCompensable(compensable);
+					archive.setCoordinator(coordinator);
+					archive.setCompensableStatus(compensableStatus);
+					archive.setPropagated(propagated);
+					archive.setPropagatedBy(propagatedBy);
 
-				archiveMap.put(globalXid, archive);
+					archiveMap.put(globalXid, archive);
+				}
+			} finally {
+				IOUtils.closeQuietly(transactionCursor);
 			}
 
 			FindIterable<Document> participantItr = participants.find(filter);
-			MongoCursor<Document> participantCursor = participantItr.iterator();
-			for (; participantCursor.hasNext();) {
-				Document document = participantCursor.next();
-				XAResourceArchive participant = new XAResourceArchive();
+			MongoCursor<Document> participantCursor = null;
+			try {
+				participantCursor = participantItr.iterator();
+				for (; participantCursor.hasNext();) {
+					Document document = participantCursor.next();
+					XAResourceArchive participant = new XAResourceArchive();
 
-				String gxid = document.getString(CONSTANTS_FD_GLOBAL);
-				String bxid = document.getString(CONSTANTS_FD_BRANCH);
+					String gxid = document.getString(CONSTANTS_FD_GLOBAL);
+					String bxid = document.getString(CONSTANTS_FD_BRANCH);
 
-				String descriptorType = document.getString("type");
-				String identifier = document.getString("resource");
+					String descriptorType = document.getString("type");
+					String identifier = document.getString("resource");
 
-				int vote = document.getInteger("vote");
-				boolean committed = document.getBoolean("committed");
-				boolean rolledback = document.getBoolean("rolledback");
-				boolean readonly = document.getBoolean("readonly");
-				boolean completed = document.getBoolean("completed");
-				boolean heuristic = document.getBoolean("heuristic");
+					int vote = document.getInteger("vote");
+					boolean committed = document.getBoolean("committed");
+					boolean rolledback = document.getBoolean("rolledback");
+					boolean readonly = document.getBoolean("readonly");
+					boolean completed = document.getBoolean("completed");
+					boolean heuristic = document.getBoolean("heuristic");
 
-				byte[] globalTransactionId = ByteUtils.stringToByteArray(gxid);
-				byte[] branchQualifier = ByteUtils.stringToByteArray(bxid);
-				TransactionXid globalXid = transactionXidFactory.createGlobalXid(globalTransactionId);
-				TransactionXid branchXid = transactionXidFactory.createBranchXid(globalXid, branchQualifier);
-				participant.setXid(branchXid);
+					byte[] globalTransactionId = ByteUtils.stringToByteArray(gxid);
+					byte[] branchQualifier = ByteUtils.stringToByteArray(bxid);
+					TransactionXid globalXid = transactionXidFactory.createGlobalXid(globalTransactionId);
+					TransactionXid branchXid = transactionXidFactory.createBranchXid(globalXid, branchQualifier);
+					participant.setXid(branchXid);
 
-				XAResourceDeserializer resourceDeserializer = this.beanFactory.getResourceDeserializer();
-				XAResourceDescriptor descriptor = resourceDeserializer.deserialize(identifier);
-				if (descriptor != null //
-						&& descriptor.getClass().getName().equals(descriptorType) == false) {
-					throw new IllegalStateException();
+					XAResourceDeserializer resourceDeserializer = this.beanFactory.getResourceDeserializer();
+					XAResourceDescriptor descriptor = resourceDeserializer.deserialize(identifier);
+					if (descriptor != null //
+							&& descriptor.getClass().getName().equals(descriptorType) == false) {
+						throw new IllegalStateException();
+					}
+
+					participant.setVote(vote);
+					participant.setCommitted(committed);
+					participant.setRolledback(rolledback);
+					participant.setReadonly(readonly);
+					participant.setCompleted(completed);
+					participant.setHeuristic(heuristic);
+
+					participant.setDescriptor(descriptor);
+
+					TransactionArchive archive = archiveMap.get(globalXid);
+					if (archive == null) {
+						throw new IllegalStateException();
+					}
+
+					archive.getRemoteResources().add(participant);
 				}
-
-				participant.setVote(vote);
-				participant.setCommitted(committed);
-				participant.setRolledback(rolledback);
-				participant.setReadonly(readonly);
-				participant.setCompleted(completed);
-				participant.setHeuristic(heuristic);
-
-				participant.setDescriptor(descriptor);
-
-				TransactionArchive archive = archiveMap.get(globalXid);
-				if (archive == null) {
-					throw new IllegalStateException();
-				}
-
-				archive.getRemoteResources().add(participant);
+			} finally {
+				IOUtils.closeQuietly(participantCursor);
 			}
 
 			FindIterable<Document> compensableItr = compensables.find(filter);
-			MongoCursor<Document> compensableCursor = compensableItr.iterator();
-			for (; compensableCursor.hasNext();) {
-				Document document = compensableCursor.next();
-				CompensableArchive compensable = new CompensableArchive();
+			MongoCursor<Document> compensableCursor = null;
+			try {
+				compensableCursor = compensableItr.iterator();
+				for (; compensableCursor.hasNext();) {
+					Document document = compensableCursor.next();
+					CompensableArchive compensable = new CompensableArchive();
 
-				String gxid = document.getString(CONSTANTS_FD_GLOBAL);
-				String bxid = document.getString(CONSTANTS_FD_BRANCH);
+					String gxid = document.getString(CONSTANTS_FD_GLOBAL);
+					String bxid = document.getString(CONSTANTS_FD_BRANCH);
 
-				boolean coordinator = document.getBoolean("coordinator");
-				boolean tried = document.getBoolean("tried");
-				boolean confirmed = document.getBoolean("confirmed");
-				boolean cancelled = document.getBoolean("cancelled");
-				String serviceId = document.getString("serviceId");
-				boolean simplified = document.getBoolean("simplified");
-				String confirmableKey = document.getString("confirmable_key");
-				String cancellableKey = document.getString("cancellable_key");
-				String argsValue = document.getString("args");
-				String clazzName = document.getString("interface");
-				String methodDesc = document.getString("method");
+					boolean coordinator = document.getBoolean("coordinator");
+					boolean tried = document.getBoolean("tried");
+					boolean confirmed = document.getBoolean("confirmed");
+					boolean cancelled = document.getBoolean("cancelled");
+					String serviceId = document.getString("serviceId");
+					boolean simplified = document.getBoolean("simplified");
+					String confirmableKey = document.getString("confirmable_key");
+					String cancellableKey = document.getString("cancellable_key");
+					String argsValue = document.getString("args");
+					String clazzName = document.getString("interface");
+					String methodDesc = document.getString("method");
 
-				String transactionKey = document.getString("transaction_key");
-				String compensableKey = document.getString("compensable_key");
+					String transactionKey = document.getString("transaction_key");
+					String compensableKey = document.getString("compensable_key");
 
-				String transactionXid = document.getString("transaction_xid");
-				String compensableXid = document.getString("compensable_xid");
+					String transactionXid = document.getString("transaction_xid");
+					String compensableXid = document.getString("compensable_xid");
 
-				CompensableInvocationImpl invocation = new CompensableInvocationImpl();
-				invocation.setIdentifier(serviceId);
-				invocation.setSimplified(simplified);
+					CompensableInvocationImpl invocation = new CompensableInvocationImpl();
+					invocation.setIdentifier(serviceId);
+					invocation.setSimplified(simplified);
 
-				Class<?> clazz = cl.loadClass(clazzName);
-				Method method = this.deserializeMethod(clazz, methodDesc);
-				invocation.setMethod(method);
+					Class<?> clazz = cl.loadClass(clazzName);
+					Method method = this.deserializeMethod(clazz, methodDesc);
+					invocation.setMethod(method);
 
-				byte[] argsByteArray = ByteUtils.stringToByteArray(argsValue);
-				Object[] args = (Object[]) SerializeUtils.deserializeObject(argsByteArray);
-				invocation.setArgs(args);
+					byte[] argsByteArray = ByteUtils.stringToByteArray(argsValue);
+					Object[] args = (Object[]) SerializeUtils.deserializeObject(argsByteArray);
+					invocation.setArgs(args);
 
-				invocation.setConfirmableKey(confirmableKey);
-				invocation.setCancellableKey(cancellableKey);
+					invocation.setConfirmableKey(confirmableKey);
+					invocation.setCancellableKey(cancellableKey);
 
-				compensable.setCompensable(invocation);
+					compensable.setCompensable(invocation);
 
-				compensable.setConfirmed(confirmed);
-				compensable.setCancelled(cancelled);
-				compensable.setTried(tried);
-				compensable.setCoordinator(coordinator);
+					compensable.setConfirmed(confirmed);
+					compensable.setCancelled(cancelled);
+					compensable.setTried(tried);
+					compensable.setCoordinator(coordinator);
 
-				compensable.setTransactionResourceKey(transactionKey);
-				compensable.setCompensableResourceKey(compensableKey);
+					compensable.setTransactionResourceKey(transactionKey);
+					compensable.setCompensableResourceKey(compensableKey);
 
-				String[] transactionArray = transactionXid.split("\\s*\\-\\s*");
-				if (transactionArray.length == 3) {
-					String transactionGlobalId = transactionArray[1];
-					String transactionBranchId = transactionArray[2];
-					TransactionXid transactionGlobalXid = transactionXidFactory
-							.createGlobalXid(ByteUtils.stringToByteArray(transactionGlobalId));
-					if (StringUtils.isNotBlank(transactionBranchId)) {
-						TransactionXid transactionBranchXid = transactionXidFactory.createBranchXid(transactionGlobalXid,
-								ByteUtils.stringToByteArray(transactionBranchId));
-						compensable.setTransactionXid(transactionBranchXid);
-					} else {
-						compensable.setTransactionXid(transactionGlobalXid);
+					String[] transactionArray = transactionXid.split("\\s*\\-\\s*");
+					if (transactionArray.length == 3) {
+						String transactionGlobalId = transactionArray[1];
+						String transactionBranchId = transactionArray[2];
+						TransactionXid transactionGlobalXid = transactionXidFactory
+								.createGlobalXid(ByteUtils.stringToByteArray(transactionGlobalId));
+						if (StringUtils.isNotBlank(transactionBranchId)) {
+							TransactionXid transactionBranchXid = transactionXidFactory.createBranchXid(transactionGlobalXid,
+									ByteUtils.stringToByteArray(transactionBranchId));
+							compensable.setTransactionXid(transactionBranchXid);
+						} else {
+							compensable.setTransactionXid(transactionGlobalXid);
+						}
 					}
-				}
 
-				String[] compensableArray = compensableXid.split("\\s*\\-\\s*");
-				if (compensableArray.length == 3) {
-					String compensableGlobalId = compensableArray[1];
-					String compensableBranchId = compensableArray[2];
-					TransactionXid compensableGlobalXid = transactionXidFactory
-							.createGlobalXid(ByteUtils.stringToByteArray(compensableGlobalId));
-					if (StringUtils.isNotBlank(compensableBranchId)) {
-						TransactionXid compensableBranchXid = transactionXidFactory.createBranchXid(compensableGlobalXid,
-								ByteUtils.stringToByteArray(compensableBranchId));
-						compensable.setCompensableXid(compensableBranchXid);
-					} else {
-						compensable.setCompensableXid(compensableGlobalXid);
+					String[] compensableArray = compensableXid.split("\\s*\\-\\s*");
+					if (compensableArray.length == 3) {
+						String compensableGlobalId = compensableArray[1];
+						String compensableBranchId = compensableArray[2];
+						TransactionXid compensableGlobalXid = transactionXidFactory
+								.createGlobalXid(ByteUtils.stringToByteArray(compensableGlobalId));
+						if (StringUtils.isNotBlank(compensableBranchId)) {
+							TransactionXid compensableBranchXid = transactionXidFactory.createBranchXid(compensableGlobalXid,
+									ByteUtils.stringToByteArray(compensableBranchId));
+							compensable.setCompensableXid(compensableBranchXid);
+						} else {
+							compensable.setCompensableXid(compensableGlobalXid);
+						}
 					}
+
+					byte[] globalTransactionId = ByteUtils.stringToByteArray(gxid);
+					byte[] branchQualifier = ByteUtils.stringToByteArray(bxid);
+					TransactionXid globalXid = transactionXidFactory.createGlobalXid(globalTransactionId);
+					TransactionXid branchXid = transactionXidFactory.createBranchXid(globalXid, branchQualifier);
+
+					compensable.setIdentifier(branchXid);
+
+					TransactionArchive archive = archiveMap.get(globalXid);
+					if (archive == null) {
+						throw new IllegalStateException();
+					}
+
+					archive.getCompensableResourceList().add(compensable);
 				}
-
-				byte[] globalTransactionId = ByteUtils.stringToByteArray(gxid);
-				byte[] branchQualifier = ByteUtils.stringToByteArray(bxid);
-				TransactionXid globalXid = transactionXidFactory.createGlobalXid(globalTransactionId);
-				TransactionXid branchXid = transactionXidFactory.createBranchXid(globalXid, branchQualifier);
-
-				compensable.setIdentifier(branchXid);
-
-				TransactionArchive archive = archiveMap.get(globalXid);
-				if (archive == null) {
-					throw new IllegalStateException();
-				}
-
-				archive.getCompensableResourceList().add(compensable);
+			} finally {
+				IOUtils.closeQuietly(compensableCursor);
 			}
 		} catch (RuntimeException error) {
 			logger.error("Error occurred while recovering transaction.", error);

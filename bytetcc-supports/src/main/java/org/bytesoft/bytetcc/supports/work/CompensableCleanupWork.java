@@ -1,0 +1,210 @@
+package org.bytesoft.bytetcc.supports.work;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+
+import javax.resource.spi.work.Work;
+import javax.transaction.xa.XAException;
+import javax.transaction.xa.Xid;
+
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.bson.Document;
+import org.bytesoft.bytejta.supports.jdbc.RecoveredResource;
+import org.bytesoft.bytejta.supports.resource.LocalXAResourceDescriptor;
+import org.bytesoft.bytetcc.supports.logging.MongoCompensableLogger;
+import org.bytesoft.bytetcc.supports.resource.LocalResourceCleaner;
+import org.bytesoft.common.utils.ByteUtils;
+import org.bytesoft.compensable.CompensableBeanFactory;
+import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
+import org.bytesoft.compensable.aware.CompensableEndpointAware;
+import org.bytesoft.transaction.supports.serialize.XAResourceDeserializer;
+import org.bytesoft.transaction.xa.TransactionXid;
+import org.bytesoft.transaction.xa.XidFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoCursor;
+import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.Filters;
+
+public class CompensableCleanupWork
+		implements Work, LocalResourceCleaner, CompensableEndpointAware, CompensableBeanFactoryAware {
+	static Logger logger = LoggerFactory.getLogger(MongoCompensableLogger.class);
+	static final String CONSTANTS_DB_NAME = "bytetcc";
+	static final String CONSTANTS_TB_REMOVEDRESES = "removedreses";
+	static final String CONSTANTS_FD_GLOBAL = "gxid";
+	static final String CONSTANTS_FD_BRANCH = "bxid";
+
+	static final long CONSTANTS_SECOND_MILLIS = 1000L;
+	static final int CONSTANTS_MAX_HANDLE_RECORDS = 1000;
+
+	@javax.annotation.Resource(name = "compensableMongoClient")
+	private MongoClient mongoClient;
+	private String endpoint;
+	private boolean released;
+	@javax.inject.Inject
+	private CompensableBeanFactory beanFactory;
+
+	public void forget(Xid xid, String resourceId) throws RuntimeException {
+		try {
+			MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
+			MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_REMOVEDRESES);
+
+			String[] values = this.endpoint.split("\\s*:\\s*");
+			String application = values[1];
+
+			byte[] global = xid.getGlobalTransactionId();
+			byte[] branch = xid.getBranchQualifier();
+			byte[] byteArray = new byte[global.length + branch.length];
+			System.arraycopy(global, 0, byteArray, 0, global.length);
+			System.arraycopy(branch, 0, byteArray, global.length, branch.length);
+
+			Document document = new Document();
+			document.append("_id", ByteUtils.byteArrayToString(byteArray));
+			document.append(CONSTANTS_FD_GLOBAL, ByteUtils.byteArrayToString(global));
+			document.append(CONSTANTS_FD_BRANCH, ByteUtils.byteArrayToString(branch));
+			document.append("resource_id", resourceId);
+			document.append("application", application);
+			document.append("created", this.endpoint);
+
+			collection.insertOne(document);
+		} catch (RuntimeException error) {
+			logger.error("Error occurred while forgetting resource({}).", resourceId, error);
+		}
+	}
+
+	public void run() {
+		long nextMillis = System.currentTimeMillis() + CONSTANTS_SECOND_MILLIS * 30;
+		while (this.released == false) {
+			if (System.currentTimeMillis() < nextMillis) {
+				this.waitForMillis(100);
+			} else {
+				int number = 0;
+				try {
+					number = this.timingExecution(CONSTANTS_MAX_HANDLE_RECORDS);
+				} catch (RuntimeException rex) {
+					logger.error("Error occurred while cleaning up resources.", rex);
+				}
+
+				if (number < CONSTANTS_MAX_HANDLE_RECORDS) {
+					nextMillis = System.currentTimeMillis() + CONSTANTS_SECOND_MILLIS * 30;
+				} // end-if (number < CONSTANTS_MAX_HANDLE_RECORDS)
+			}
+		}
+	}
+
+	public int timingExecution(int batchSize) {
+		MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
+		MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_REMOVEDRESES);
+
+		int length = 0;
+
+		XidFactory xidFactory = this.beanFactory.getCompensableXidFactory();
+
+		Map<String, List<Xid>> resource2XidListMap = new HashMap<String, List<Xid>>();
+		MongoCursor<Document> cursor = null;
+		try {
+			cursor = collection.find().limit(batchSize).iterator();
+			for (; cursor.hasNext(); length++) {
+				Document document = cursor.next();
+				String globalValue = document.getString(CONSTANTS_FD_GLOBAL);
+				String branchValue = document.getString(CONSTANTS_FD_BRANCH);
+				byte[] global = ByteUtils.stringToByteArray(globalValue);
+				byte[] branch = ByteUtils.stringToByteArray(branchValue);
+
+				TransactionXid globalXid = xidFactory.createGlobalXid(global);
+				TransactionXid branchXid = xidFactory.createBranchXid(globalXid, branch);
+
+				String resourceId = document.getString("resource_id");
+
+				List<Xid> xidList = resource2XidListMap.get(resourceId);
+				if (xidList == null) {
+					xidList = new ArrayList<Xid>();
+					resource2XidListMap.put(resourceId, xidList);
+				}
+
+				xidList.add(branchXid);
+			}
+		} finally {
+			IOUtils.closeQuietly(cursor);
+		}
+
+		for (Iterator<Map.Entry<String, List<Xid>>> itr = resource2XidListMap.entrySet().iterator(); itr.hasNext();) {
+			Map.Entry<String, List<Xid>> entry = itr.next();
+			String resourceId = entry.getKey();
+			List<Xid> xidList = entry.getValue();
+			this.cleanupByResource(resourceId, xidList);
+		}
+
+		for (Iterator<Map.Entry<String, List<Xid>>> itr = resource2XidListMap.entrySet().iterator(); itr.hasNext();) {
+			Map.Entry<String, List<Xid>> entry = itr.next();
+			List<Xid> xidList = entry.getValue();
+			for (int i = 0; i < xidList.size(); i++) {
+				Xid transactionXid = xidList.get(i);
+				byte[] global = transactionXid.getGlobalTransactionId();
+				byte[] branch = transactionXid.getBranchQualifier();
+				byte[] byteArray = new byte[global.length + branch.length];
+				System.arraycopy(global, 0, byteArray, 0, global.length);
+				System.arraycopy(branch, 0, byteArray, global.length, branch.length);
+
+				collection.deleteOne(Filters.eq("_id", ByteUtils.byteArrayToString(byteArray)));
+			}
+		}
+
+		return length;
+	}
+
+	private void cleanupByResource(String resourceId, List<Xid> xidList) throws RuntimeException {
+		XAResourceDeserializer resourceDeserializer = this.beanFactory.getResourceDeserializer();
+		if (StringUtils.isBlank(resourceId)) {
+			throw new IllegalStateException();
+		}
+
+		Xid[] xidArray = new Xid[xidList.size()];
+		xidList.toArray(xidArray);
+		LocalXAResourceDescriptor descriptor = //
+				(LocalXAResourceDescriptor) resourceDeserializer.deserialize(resourceId);
+		RecoveredResource resource = (RecoveredResource) descriptor.getDelegate();
+		try {
+			resource.forget(xidArray);
+		} catch (XAException xaex) {
+			logger.error("Error occurred while forgetting resource: {}.", resourceId, xaex);
+
+			switch (xaex.errorCode) {
+			case XAException.XAER_NOTA:
+				break;
+			case XAException.XAER_RMERR:
+			case XAException.XAER_RMFAIL:
+				throw new IllegalStateException();
+			}
+		}
+
+	}
+
+	private void waitForMillis(long millis) {
+		try {
+			Thread.sleep(millis);
+		} catch (Exception ex) {
+			logger.debug(ex.getMessage());
+		}
+	}
+
+	public void setBeanFactory(CompensableBeanFactory tbf) {
+		this.beanFactory = tbf;
+	}
+
+	public void setEndpoint(String identifier) {
+		this.endpoint = identifier;
+	}
+
+	public void release() {
+		this.released = true;
+	}
+
+}

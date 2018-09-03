@@ -63,6 +63,10 @@ public class CompensableCommandManager
 
 	private final Queue<ExecutionWork> works = new LinkedList<ExecutionWork>();
 
+	public void execute(Runnable runnable) throws Exception {
+		this.execute(new CallableImpl(runnable));
+	}
+
 	public Object execute(Callable<?> callable) throws Exception {
 		if (this.hasLeadership() == false) {
 			throw new IllegalStateException("Current node is not master!");
@@ -78,7 +82,7 @@ public class CompensableCommandManager
 	private void registerTask(ExecutionWork work) {
 		try {
 			this.workLock.lock();
-			this.works.add(work);
+			this.works.offer(work);
 			this.workCondition.signalAll();
 		} finally {
 			this.workLock.unlock();
@@ -220,6 +224,19 @@ public class CompensableCommandManager
 		public boolean error;
 		public Object result;
 		public Callable<Object> callable;
+	}
+
+	static class CallableImpl implements Callable<Object> {
+		private Runnable runnable;
+
+		public CallableImpl(Runnable runnable) {
+			this.runnable = runnable;
+		}
+
+		public Object call() throws Exception {
+			this.runnable.run();
+			return null;
+		}
 	}
 
 	public CuratorFramework getCuratorFramework() {
