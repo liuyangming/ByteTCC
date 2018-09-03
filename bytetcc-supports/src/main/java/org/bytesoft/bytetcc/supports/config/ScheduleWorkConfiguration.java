@@ -32,7 +32,7 @@ public class ScheduleWorkConfiguration {
 	public org.bytesoft.transaction.adapter.ResourceAdapterImpl compensableResourceAdapter(
 			@org.springframework.beans.factory.annotation.Autowired org.bytesoft.bytetcc.work.CompensableWork compensableWork,
 			@org.springframework.beans.factory.annotation.Autowired org.bytesoft.bytetcc.logging.SampleCompensableLogger compensableLogger,
-			@org.springframework.beans.factory.annotation.Autowired org.bytesoft.bytetcc.work.CleanupWork cleanupWork) {
+			@org.springframework.beans.factory.annotation.Autowired org.bytesoft.bytetcc.work.vfs.CleanupWork cleanupWork) {
 		org.bytesoft.transaction.adapter.ResourceAdapterImpl resourceAdapter = new org.bytesoft.transaction.adapter.ResourceAdapterImpl();
 		resourceAdapter.getWorkList().add(compensableWork);
 		resourceAdapter.getWorkList().add(compensableLogger);

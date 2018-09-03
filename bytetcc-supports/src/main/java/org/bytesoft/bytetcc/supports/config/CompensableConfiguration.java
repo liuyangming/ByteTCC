@@ -99,8 +99,8 @@ public class CompensableConfiguration {
 	}
 
 	@org.springframework.context.annotation.Bean
-	public org.bytesoft.bytetcc.supports.callable.InvocationManager bytetccElectionManager() {
-		return new org.bytesoft.bytetcc.supports.callable.InvocationManager();
+	public org.bytesoft.bytetcc.work.CommandManager bytetccElectionManager() {
+		return new org.bytesoft.bytetcc.supports.work.CompensableCommandManager();
 	}
 
 }
