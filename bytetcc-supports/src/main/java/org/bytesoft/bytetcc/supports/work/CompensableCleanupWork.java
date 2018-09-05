@@ -14,6 +14,7 @@ import javax.transaction.xa.Xid;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.bson.Document;
+import org.bson.conversions.Bson;
 import org.bytesoft.bytejta.supports.jdbc.RecoveredResource;
 import org.bytesoft.bytejta.supports.resource.LocalXAResourceDescriptor;
 import org.bytesoft.bytetcc.supports.logging.MongoCompensableLogger;
@@ -42,6 +43,7 @@ public class CompensableCleanupWork
 	static final String CONSTANTS_TB_REMOVEDRESES = "removedreses";
 	static final String CONSTANTS_FD_GLOBAL = "gxid";
 	static final String CONSTANTS_FD_BRANCH = "bxid";
+	static final String CONSTANTS_FD_SYSTEM = "system";
 
 	static final long CONSTANTS_SECOND_MILLIS = 1000L;
 	static final int CONSTANTS_MAX_HANDLE_RECORDS = 1000;
@@ -65,16 +67,12 @@ public class CompensableCleanupWork
 
 			byte[] global = xid.getGlobalTransactionId();
 			byte[] branch = xid.getBranchQualifier();
-			byte[] byteArray = new byte[global.length + branch.length];
-			System.arraycopy(global, 0, byteArray, 0, global.length);
-			System.arraycopy(branch, 0, byteArray, global.length, branch.length);
 
 			Document document = new Document();
-			document.append("_id", ByteUtils.byteArrayToString(byteArray));
 			document.append(CONSTANTS_FD_GLOBAL, ByteUtils.byteArrayToString(global));
 			document.append(CONSTANTS_FD_BRANCH, ByteUtils.byteArrayToString(branch));
+			document.append(CONSTANTS_FD_SYSTEM, application);
 			document.append("resource_id", resourceId);
-			document.append("application", application);
 			document.append("created", this.endpoint);
 
 			collection.insertOne(document);
@@ -161,11 +159,11 @@ public class CompensableCleanupWork
 				Xid transactionXid = xidList.get(i);
 				byte[] global = transactionXid.getGlobalTransactionId();
 				byte[] branch = transactionXid.getBranchQualifier();
-				byte[] byteArray = new byte[global.length + branch.length];
-				System.arraycopy(global, 0, byteArray, 0, global.length);
-				System.arraycopy(branch, 0, byteArray, global.length, branch.length);
 
-				collection.deleteOne(Filters.eq("_id", ByteUtils.byteArrayToString(byteArray)));
+				Bson globalFilter = Filters.eq(CONSTANTS_FD_GLOBAL, ByteUtils.byteArrayToString(global));
+				Bson branchFilter = Filters.eq(CONSTANTS_FD_BRANCH, ByteUtils.byteArrayToString(branch));
+
+				collection.deleteOne(Filters.and(globalFilter, branchFilter));
 			}
 		}
 

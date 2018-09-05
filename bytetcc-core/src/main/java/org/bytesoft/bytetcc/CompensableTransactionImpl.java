@@ -393,7 +393,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 						current.getDescriptor().getIdentifier(), rex);
 			} finally {
 				if (current.isCompleted()) {
-					transactionLogger.updateCoordinator(current);
+					transactionLogger.updateParticipant(current);
 				}
 			}
 		}
@@ -654,7 +654,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 						ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()), current, rex);
 			} finally {
 				if (current.isCompleted()) {
-					transactionLogger.updateCoordinator(current);
+					transactionLogger.updateParticipant(current);
 				}
 			}
 		}
@@ -717,7 +717,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 			this.resourceList.add(resourceArchive);
 			this.resourceMap.put(remoteSvc, resourceArchive);
 
-			compensableLogger.createCoordinator(resourceArchive);
+			compensableLogger.createParticipant(resourceArchive);
 
 			logger.info("{}| enlist remote resource: {}." //
 					, ByteUtils.byteArrayToString(globalXid.getGlobalTransactionId()), descriptor.getIdentifier());

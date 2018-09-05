@@ -83,7 +83,7 @@ public class SampleCompensableLogger extends VirtualLoggingSystemImpl
 		}
 	}
 
-	public void createCoordinator(XAResourceArchive archive) {
+	public void createParticipant(XAResourceArchive archive) {
 		ArchiveDeserializer deserializer = this.beanFactory.getArchiveDeserializer();
 
 		try {
@@ -94,7 +94,7 @@ public class SampleCompensableLogger extends VirtualLoggingSystemImpl
 		}
 	}
 
-	public void updateCoordinator(XAResourceArchive archive) {
+	public void updateParticipant(XAResourceArchive archive) {
 		ArchiveDeserializer deserializer = this.beanFactory.getArchiveDeserializer();
 
 		try {
@@ -103,6 +103,9 @@ public class SampleCompensableLogger extends VirtualLoggingSystemImpl
 		} catch (RuntimeException rex) {
 			logger.error("Error occurred while modifying resource-archive.", rex);
 		}
+	}
+
+	public void deleteParticipant(XAResourceArchive archive) {
 	}
 
 	public void createCompensable(CompensableArchive archive) {

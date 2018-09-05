@@ -31,7 +31,22 @@ public class SampleTransactionLogger implements TransactionLogger {
 	public void deleteTransaction(TransactionArchive archive) {
 	}
 
+	public void createResource(XAResourceArchive archive) {
+	}
+
 	public void updateResource(XAResourceArchive archive) {
+	}
+
+	public void deleteResource(XAResourceArchive archive) {
+	}
+
+	public void createParticipant(XAResourceArchive archive) {
+	}
+
+	public void updateParticipant(XAResourceArchive archive) {
+	}
+
+	public void deleteParticipant(XAResourceArchive archive) {
 	}
 
 	public void recover(TransactionRecoveryCallback callback) {

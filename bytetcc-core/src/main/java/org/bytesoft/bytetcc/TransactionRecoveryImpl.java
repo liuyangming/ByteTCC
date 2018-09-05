@@ -98,7 +98,7 @@ public class TransactionRecoveryImpl
 			public void recover(org.bytesoft.compensable.archive.TransactionArchive archive) {
 				XidFactory transactionXidFactory = beanFactory.getTransactionXidFactory();
 
-				CompensableTransactionImpl transaction = reconstructTransaction(archive);
+				CompensableTransactionImpl transaction = reconstruct(archive);
 				TransactionContext transactionContext = transaction.getTransactionContext();
 
 				TransactionXid compensableXid = transactionContext.getXid();
@@ -124,7 +124,7 @@ public class TransactionRecoveryImpl
 		compensableCoordinator.markParticipantReady();
 	}
 
-	public CompensableTransactionImpl reconstructTransaction(TransactionArchive transactionArchive) {
+	public CompensableTransactionImpl reconstruct(TransactionArchive transactionArchive) {
 		XidFactory xidFactory = this.beanFactory.getCompensableXidFactory();
 
 		org.bytesoft.compensable.archive.TransactionArchive archive = (org.bytesoft.compensable.archive.TransactionArchive) transactionArchive;

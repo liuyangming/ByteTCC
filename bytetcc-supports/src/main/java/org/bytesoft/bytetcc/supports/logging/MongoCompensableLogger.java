@@ -18,12 +18,10 @@ package org.bytesoft.bytetcc.supports.logging;
 import java.io.IOException;
 import java.io.Serializable;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import javax.transaction.xa.Xid;
 
@@ -73,6 +71,9 @@ public class MongoCompensableLogger
 	static final String CONSTANTS_TB_COMPENSABLES = "compensables";
 	static final String CONSTANTS_FD_GLOBAL = "gxid";
 	static final String CONSTANTS_FD_BRANCH = "bxid";
+	static final String CONSTANTS_FD_SYSTEM = "system";
+
+	static final int MONGODB_ERROR_DUPLICATE_KEY = 11000;
 
 	@javax.annotation.Resource(name = "compensableMongoClient")
 	private MongoClient mongoClient;
@@ -88,12 +89,43 @@ public class MongoCompensableLogger
 	}
 
 	public void initializeIndexIfNecessary() {
-		this.createTransactionsIndexIfNecessary();
-		this.createParticipantsIndexIfNecessary();
-		this.createCompensablesIndexIfNecessary();
+		this.createTransactionsGlobalTxKeyIndexIfNecessary();
+		this.createTransactionsApplicationIndexIfNecessary();
+		this.createParticipantsGlobalTxKeyIndexIfNecessary();
+		this.createCompensablesGlobalTxKeyIndexIfNecessary();
 	}
 
-	private void createTransactionsIndexIfNecessary() {
+	private void createTransactionsApplicationIndexIfNecessary() {
+		MongoDatabase database = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
+		MongoCollection<Document> transactions = database.getCollection(CONSTANTS_TB_TRANSACTIONS);
+		ListIndexesIterable<Document> transactionIndexList = transactions.listIndexes();
+		boolean applicationIndexExists = false;
+		MongoCursor<Document> applicationCursor = null;
+		try {
+			applicationCursor = transactionIndexList.iterator();
+			while (applicationIndexExists == false && applicationCursor.hasNext()) {
+				Document document = applicationCursor.next();
+				Boolean unique = document.getBoolean("unique");
+				Document key = (Document) document.get("key");
+
+				boolean systemExists = key.containsKey(CONSTANTS_FD_SYSTEM);
+				boolean lengthEquals = key.size() == 1;
+				applicationIndexExists = lengthEquals && systemExists;
+
+				if (applicationIndexExists && unique) {
+					throw new IllegalStateException();
+				}
+			}
+		} finally {
+			IOUtils.closeQuietly(applicationCursor);
+		}
+
+		if (applicationIndexExists == false) {
+			transactions.createIndex(new Document(CONSTANTS_FD_SYSTEM, 1), new IndexOptions().unique(false));
+		}
+	}
+
+	private void createTransactionsGlobalTxKeyIndexIfNecessary() {
 		MongoDatabase database = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
 		MongoCollection<Document> transactions = database.getCollection(CONSTANTS_TB_TRANSACTIONS);
 		ListIndexesIterable<Document> transactionIndexList = transactions.listIndexes();
@@ -103,25 +135,29 @@ public class MongoCompensableLogger
 			transactionCursor = transactionIndexList.iterator();
 			while (transactionIndexExists == false && transactionCursor.hasNext()) {
 				Document document = transactionCursor.next();
+				Boolean unique = document.getBoolean("unique");
 				Document key = (Document) document.get("key");
-				Set<String> keySet = key.keySet();
-				if (keySet.size() != 1) {
-					continue;
+
+				boolean globalExists = key.containsKey(CONSTANTS_FD_GLOBAL);
+				boolean systemExists = key.containsKey(CONSTANTS_FD_SYSTEM);
+				boolean lengthEquals = key.size() == 2;
+				transactionIndexExists = lengthEquals && globalExists && systemExists;
+
+				if (transactionIndexExists && unique == false) {
+					throw new IllegalStateException();
 				}
-				Iterator<String> itr = keySet.iterator();
-				transactionIndexExists = itr.hasNext() ? StringUtils.equals(CONSTANTS_FD_GLOBAL, itr.next())
-						: transactionIndexExists;
 			}
 		} finally {
 			IOUtils.closeQuietly(transactionCursor);
 		}
 
 		if (transactionIndexExists == false) {
-			transactions.createIndex(new Document(CONSTANTS_FD_GLOBAL, 1), new IndexOptions().unique(false));
+			Document index = new Document(CONSTANTS_FD_GLOBAL, 1).append(CONSTANTS_FD_SYSTEM, 1);
+			transactions.createIndex(index, new IndexOptions().unique(true));
 		}
 	}
 
-	private void createParticipantsIndexIfNecessary() {
+	private void createParticipantsGlobalTxKeyIndexIfNecessary() {
 		MongoDatabase database = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
 		MongoCollection<Document> participants = database.getCollection(CONSTANTS_TB_PARTICIPANTS);
 		ListIndexesIterable<Document> participantIndexList = participants.listIndexes();
@@ -131,25 +167,29 @@ public class MongoCompensableLogger
 			participantCursor = participantIndexList.iterator();
 			while (participantIndexExists == false && participantCursor.hasNext()) {
 				Document document = participantCursor.next();
+				Boolean unique = document.getBoolean("unique");
 				Document key = (Document) document.get("key");
-				Set<String> keySet = key.keySet();
-				if (keySet.size() != 1) {
-					continue;
+
+				boolean globalExists = key.containsKey(CONSTANTS_FD_GLOBAL);
+				boolean branchExists = key.containsKey(CONSTANTS_FD_BRANCH);
+				boolean lengthEquals = key.size() == 2;
+				participantIndexExists = lengthEquals && globalExists && branchExists;
+
+				if (participantIndexExists && unique == false) {
+					throw new IllegalStateException();
 				}
-				Iterator<String> itr = keySet.iterator();
-				participantIndexExists = itr.hasNext() ? StringUtils.equals(CONSTANTS_FD_GLOBAL, itr.next())
-						: participantIndexExists;
 			}
 		} finally {
 			IOUtils.closeQuietly(participantCursor);
 		}
 
 		if (participantIndexExists == false) {
-			participants.createIndex(new Document(CONSTANTS_FD_GLOBAL, 1), new IndexOptions().unique(false));
+			Document index = new Document(CONSTANTS_FD_GLOBAL, 1).append(CONSTANTS_FD_BRANCH, 1);
+			participants.createIndex(index, new IndexOptions().unique(true));
 		}
 	}
 
-	private void createCompensablesIndexIfNecessary() {
+	private void createCompensablesGlobalTxKeyIndexIfNecessary() {
 		MongoDatabase database = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
 		MongoCollection<Document> compensables = database.getCollection(CONSTANTS_TB_COMPENSABLES);
 		ListIndexesIterable<Document> compensableIndexList = compensables.listIndexes();
@@ -159,21 +199,25 @@ public class MongoCompensableLogger
 			compensableCursor = compensableIndexList.iterator();
 			while (compensableIndexExists == false && compensableCursor.hasNext()) {
 				Document document = compensableCursor.next();
+				Boolean unique = document.getBoolean("unique");
 				Document key = (Document) document.get("key");
-				Set<String> keySet = key.keySet();
-				if (keySet.size() != 1) {
-					continue;
+
+				boolean globalExists = key.containsKey(CONSTANTS_FD_GLOBAL);
+				boolean branchExists = key.containsKey(CONSTANTS_FD_BRANCH);
+				boolean lengthEquals = key.size() == 2;
+				compensableIndexExists = lengthEquals && globalExists && branchExists;
+
+				if (compensableIndexExists && unique == false) {
+					throw new IllegalStateException();
 				}
-				Iterator<String> itr = keySet.iterator();
-				compensableIndexExists = itr.hasNext() ? StringUtils.equals(CONSTANTS_FD_GLOBAL, itr.next())
-						: compensableIndexExists;
 			}
 		} finally {
 			IOUtils.closeQuietly(compensableCursor);
 		}
 
 		if (compensableIndexExists == false) {
-			compensables.createIndex(new Document(CONSTANTS_FD_GLOBAL, 1), new IndexOptions().unique(false));
+			Document index = new Document(CONSTANTS_FD_GLOBAL, 1).append(CONSTANTS_FD_BRANCH, 1);
+			compensables.createIndex(index, new IndexOptions().unique(true));
 		}
 	}
 
@@ -199,15 +243,11 @@ public class MongoCompensableLogger
 			String application = values[1];
 
 			byte[] global = transactionXid.getGlobalTransactionId();
-			byte[] branch = transactionXid.getBranchQualifier();
-			byte[] byteArray = new byte[global.length + branch.length];
-			System.arraycopy(global, 0, byteArray, 0, global.length);
-			System.arraycopy(branch, 0, byteArray, global.length, branch.length);
+			String identifier = ByteUtils.byteArrayToString(global);
 
 			Document document = new Document();
-			document.append("_id", ByteUtils.byteArrayToString(byteArray));
-			document.append(CONSTANTS_FD_GLOBAL, ByteUtils.byteArrayToString(global));
-			document.append("application", application);
+			document.append(CONSTANTS_FD_GLOBAL, identifier);
+			document.append(CONSTANTS_FD_SYSTEM, application);
 			document.append("created", this.endpoint);
 			document.append("modified", this.endpoint);
 			document.append("propagated", propagated);
@@ -219,6 +259,7 @@ public class MongoCompensableLogger
 			document.append("locked_by", this.endpoint);
 			document.append("vars", jsonVariables);
 			document.append("variables", textVariables);
+			document.append("error", false);
 			document.append("version", 0L);
 
 			collection.insertOne(document);
@@ -229,17 +270,28 @@ public class MongoCompensableLogger
 			logger.error("Error occurred while creating transaction.", error);
 			this.beanFactory.getCompensableManager().setRollbackOnlyQuietly();
 		}
+
+		List<XAResourceArchive> participantList = archive.getRemoteResources();
+		for (int i = 0; participantList != null && i < participantList.size(); i++) {
+			XAResourceArchive resource = participantList.get(i);
+			this.createParticipant(resource);
+		}
+
+		List<CompensableArchive> compensableList = archive.getCompensableResourceList();
+		for (int i = 0; compensableList != null && i < compensableList.size(); i++) {
+			CompensableArchive resource = compensableList.get(i);
+			this.createCompensable(resource);
+		}
 	}
 
 	public void updateTransaction(TransactionArchive archive) {
 		try {
 			TransactionXid transactionXid = (TransactionXid) archive.getXid();
 			byte[] global = transactionXid.getGlobalTransactionId();
-			byte[] branch = transactionXid.getBranchQualifier();
-			byte[] byteArray = new byte[global.length + branch.length];
-			System.arraycopy(global, 0, byteArray, 0, global.length);
-			System.arraycopy(branch, 0, byteArray, global.length, branch.length);
-			String identifier = ByteUtils.byteArrayToString(byteArray);
+			String identifier = ByteUtils.byteArrayToString(global);
+
+			String[] values = this.endpoint.split("\\s*:\\s*");
+			String application = values[1];
 
 			int status = archive.getCompensableStatus();
 
@@ -262,7 +314,9 @@ public class MongoCompensableLogger
 			document.append("$set", target);
 			document.append("$inc", new BasicDBObject("version", 1));
 
-			UpdateResult result = collection.updateOne(Filters.eq("_id", identifier), document);
+			Bson globalFilter = Filters.eq(CONSTANTS_FD_GLOBAL, identifier);
+			Bson systemFilter = Filters.eq(CONSTANTS_FD_SYSTEM, application);
+			UpdateResult result = collection.updateOne(Filters.and(globalFilter, systemFilter), document);
 			if (result.getModifiedCount() != 1) {
 				throw new IllegalStateException(
 						String.format("Error occurred while updating transaction(matched= %s, modified= %s).",
@@ -281,28 +335,24 @@ public class MongoCompensableLogger
 		try {
 			TransactionXid transactionXid = (TransactionXid) archive.getXid();
 			byte[] global = transactionXid.getGlobalTransactionId();
-			byte[] branch = transactionXid.getBranchQualifier();
-			byte[] byteArray = new byte[global.length + branch.length];
-			System.arraycopy(global, 0, byteArray, 0, global.length);
-			System.arraycopy(branch, 0, byteArray, global.length, branch.length);
-			String identifier = ByteUtils.byteArrayToString(byteArray);
+			String identifier = ByteUtils.byteArrayToString(global);
+
+			String[] values = this.endpoint.split("\\s*:\\s*");
+			String application = values[1];
 
 			MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
 			MongoCollection<Document> transactions = mdb.getCollection(CONSTANTS_TB_TRANSACTIONS);
 			MongoCollection<Document> participants = mdb.getCollection(CONSTANTS_TB_PARTICIPANTS);
 			MongoCollection<Document> compensables = mdb.getCollection(CONSTANTS_TB_COMPENSABLES);
 
-			String[] values = this.endpoint.split("\\s*:\\s*");
-			String application = values[1];
+			Bson globalFilter = Filters.eq(CONSTANTS_FD_GLOBAL, identifier);
+			Bson systemFilter = Filters.eq(CONSTANTS_FD_SYSTEM, application);
 
-			Bson xidBson = Filters.eq(CONSTANTS_FD_GLOBAL, ByteUtils.byteArrayToString(global));
-			Bson created = Filters.eq("application", application);
+			compensables.deleteMany(Filters.and(globalFilter, systemFilter));
 
-			compensables.deleteMany(Filters.and(xidBson, created));
+			participants.deleteMany(Filters.and(globalFilter, systemFilter));
 
-			participants.deleteMany(Filters.and(xidBson, created));
-
-			DeleteResult result = transactions.deleteOne(Filters.eq("_id", identifier));
+			DeleteResult result = transactions.deleteOne(Filters.and(globalFilter, systemFilter));
 			if (result.getDeletedCount() != 1) {
 				throw new IllegalStateException(
 						String.format("Error occurred while deleting transaction(deleted= %s).", result.getDeletedCount()));
@@ -312,14 +362,15 @@ public class MongoCompensableLogger
 		}
 	}
 
-	public void createCoordinator(XAResourceArchive archive) {
+	public void createParticipant(XAResourceArchive archive) {
+		this.createParticipant(archive, true);
+	}
+
+	private void createParticipant(XAResourceArchive archive, boolean redirect) {
 		try {
 			TransactionXid transactionXid = (TransactionXid) archive.getXid();
 			byte[] global = transactionXid.getGlobalTransactionId();
 			byte[] branch = transactionXid.getBranchQualifier();
-			byte[] byteArray = new byte[global.length + branch.length];
-			System.arraycopy(global, 0, byteArray, 0, global.length);
-			System.arraycopy(branch, 0, byteArray, global.length, branch.length);
 
 			MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
 			MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_PARTICIPANTS);
@@ -340,10 +391,9 @@ public class MongoCompensableLogger
 			String[] values = this.endpoint.split("\\s*:\\s*");
 			String application = values[1];
 
-			document.append("_id", ByteUtils.byteArrayToString(byteArray));
 			document.append(CONSTANTS_FD_GLOBAL, ByteUtils.byteArrayToString(global));
 			document.append(CONSTANTS_FD_BRANCH, ByteUtils.byteArrayToString(branch));
-			document.append("application", application);
+			document.append(CONSTANTS_FD_SYSTEM, application);
 			document.append("created", this.endpoint);
 
 			document.append("type", descriptorType);
@@ -360,20 +410,29 @@ public class MongoCompensableLogger
 			document.append("modified", this.endpoint);
 
 			collection.insertOne(document);
+		} catch (com.mongodb.MongoWriteException error) {
+			com.mongodb.WriteError writeError = error.getError();
+			if (MONGODB_ERROR_DUPLICATE_KEY == writeError.getCode() && redirect) {
+				this.updateParticipant(archive, false);
+			} else {
+				logger.error("Error occurred while creating participant!", error);
+				this.beanFactory.getCompensableManager().setRollbackOnlyQuietly();
+			}
 		} catch (RuntimeException error) {
 			logger.error("Error occurred while creating participant!", error);
 			this.beanFactory.getCompensableManager().setRollbackOnlyQuietly();
 		}
 	}
 
-	public void updateCoordinator(XAResourceArchive archive) {
+	public void updateParticipant(XAResourceArchive archive) {
+		this.updateParticipant(archive, true);
+	}
+
+	private void updateParticipant(XAResourceArchive archive, boolean redirect) {
 		try {
 			TransactionXid transactionXid = (TransactionXid) archive.getXid();
 			byte[] global = transactionXid.getGlobalTransactionId();
 			byte[] branch = transactionXid.getBranchQualifier();
-			byte[] byteArray = new byte[global.length + branch.length];
-			System.arraycopy(global, 0, byteArray, 0, global.length);
-			System.arraycopy(branch, 0, byteArray, global.length, branch.length);
 
 			MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
 			MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_PARTICIPANTS);
@@ -395,9 +454,14 @@ public class MongoCompensableLogger
 
 			variables.append("modified", this.endpoint);
 
-			UpdateResult result = collection.updateOne(Filters.eq("_id", ByteUtils.byteArrayToString(byteArray)),
+			Bson globalFilter = Filters.eq(CONSTANTS_FD_GLOBAL, ByteUtils.byteArrayToString(global));
+			Bson branchFilter = Filters.eq(CONSTANTS_FD_BRANCH, ByteUtils.byteArrayToString(branch));
+
+			UpdateResult result = collection.updateOne(Filters.and(globalFilter, branchFilter),
 					new Document("$set", variables));
-			if (result.getModifiedCount() != 1) {
+			if (result.getModifiedCount() == 0 && redirect) {
+				this.createParticipant(archive, false);
+			} else if (result.getModifiedCount() != 1) {
 				throw new IllegalStateException(
 						String.format("Error occurred while updating participant(matched= %s, modified= %s).",
 								result.getMatchedCount(), result.getModifiedCount()));
@@ -408,14 +472,18 @@ public class MongoCompensableLogger
 		}
 	}
 
+	public void deleteParticipant(XAResourceArchive archive) {
+	}
+
 	public void createCompensable(CompensableArchive archive) {
+		this.createCompensable(archive, true);
+	}
+
+	private void createCompensable(CompensableArchive archive, boolean redirect) {
 		try {
 			TransactionXid xid = (TransactionXid) archive.getIdentifier();
 			byte[] global = xid.getGlobalTransactionId();
 			byte[] branch = xid.getBranchQualifier();
-			byte[] byteArray = new byte[global.length + branch.length];
-			System.arraycopy(global, 0, byteArray, 0, global.length);
-			System.arraycopy(branch, 0, byteArray, global.length, branch.length);
 
 			MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
 			MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_COMPENSABLES);
@@ -426,7 +494,7 @@ public class MongoCompensableLogger
 			Method method = invocation.getMethod();
 			Object[] args = invocation.getArgs();
 
-			String methodDesc = this.serializeMethod(invocation);
+			String methodDesc = SerializeUtils.serializeMethod(invocation.getMethod());
 			byte[] argsByteArray = SerializeUtils.serializeObject(args);
 			String argsValue = ByteUtils.byteArrayToString(argsByteArray);
 
@@ -434,10 +502,9 @@ public class MongoCompensableLogger
 			String application = values[1];
 
 			Document document = new Document();
-			document.append("_id", ByteUtils.byteArrayToString(byteArray));
 			document.append(CONSTANTS_FD_GLOBAL, ByteUtils.byteArrayToString(global));
 			document.append(CONSTANTS_FD_BRANCH, ByteUtils.byteArrayToString(branch));
-			document.append("application", application);
+			document.append(CONSTANTS_FD_SYSTEM, application);
 			document.append("created", this.endpoint);
 
 			document.append("transaction_key", archive.getTransactionResourceKey());
@@ -467,6 +534,14 @@ public class MongoCompensableLogger
 		} catch (IOException error) {
 			logger.error("Error occurred while creating compensable!", error);
 			this.beanFactory.getCompensableManager().setRollbackOnlyQuietly();
+		} catch (com.mongodb.MongoWriteException error) {
+			com.mongodb.WriteError writeError = error.getError();
+			if (MONGODB_ERROR_DUPLICATE_KEY == writeError.getCode() && redirect) {
+				this.updateCompensable(archive, false);
+			} else {
+				logger.error("Error occurred while creating compensable!", error);
+				this.beanFactory.getCompensableManager().setRollbackOnlyQuietly();
+			}
 		} catch (RuntimeException error) {
 			logger.error("Error occurred while creating compensable!", error);
 			this.beanFactory.getCompensableManager().setRollbackOnlyQuietly();
@@ -474,13 +549,14 @@ public class MongoCompensableLogger
 	}
 
 	public void updateCompensable(CompensableArchive archive) {
+		this.updateCompensable(archive, true);
+	}
+
+	private void updateCompensable(CompensableArchive archive, boolean redirect) {
 		try {
 			TransactionXid xid = (TransactionXid) archive.getIdentifier();
 			byte[] global = xid.getGlobalTransactionId();
 			byte[] branch = xid.getBranchQualifier();
-			byte[] byteArray = new byte[global.length + branch.length];
-			System.arraycopy(global, 0, byteArray, 0, global.length);
-			System.arraycopy(branch, 0, byteArray, global.length, branch.length);
 
 			MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
 			MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_COMPENSABLES);
@@ -498,9 +574,14 @@ public class MongoCompensableLogger
 			variables.append("transaction_xid", String.valueOf(transactionXid));
 			variables.append("compensable_xid", String.valueOf(compensableXid));
 
-			UpdateResult result = collection.updateOne(Filters.eq("_id", ByteUtils.byteArrayToString(byteArray)),
+			Bson globalFilter = Filters.eq(CONSTANTS_FD_GLOBAL, ByteUtils.byteArrayToString(global));
+			Bson branchFilter = Filters.eq(CONSTANTS_FD_BRANCH, ByteUtils.byteArrayToString(branch));
+			UpdateResult result = collection.updateOne(Filters.and(globalFilter, branchFilter),
 					new Document("$set", variables));
-			if (result.getModifiedCount() != 1) {
+
+			if (result.getModifiedCount() == 0 && redirect) {
+				this.createCompensable(archive, false);
+			} else if (result.getModifiedCount() != 1) {
 				throw new IllegalStateException(
 						String.format("Error occurred while updating compensable(matched= %s, modified= %s).",
 								result.getMatchedCount(), result.getModifiedCount()));
@@ -526,9 +607,10 @@ public class MongoCompensableLogger
 
 			String[] values = this.endpoint.split("\\s*:\\s*");
 			String application = values[1];
-			Bson filter = Filters.eq("application", application);
+			Bson systemFilter = Filters.eq(CONSTANTS_FD_SYSTEM, application);
+			Bson errorFilter = Filters.eq("error", true);
 
-			FindIterable<Document> transactionItr = transactions.find(filter);
+			FindIterable<Document> transactionItr = transactions.find(Filters.and(systemFilter, errorFilter));
 			MongoCursor<Document> transactionCursor = null;
 			try {
 				transactionCursor = transactionItr.iterator();
@@ -566,6 +648,7 @@ public class MongoCompensableLogger
 				IOUtils.closeQuietly(transactionCursor);
 			}
 
+			Bson filter = Filters.eq(CONSTANTS_FD_SYSTEM, application);
 			FindIterable<Document> participantItr = participants.find(filter);
 			MongoCursor<Document> participantCursor = null;
 			try {
@@ -610,11 +693,9 @@ public class MongoCompensableLogger
 					participant.setDescriptor(descriptor);
 
 					TransactionArchive archive = archiveMap.get(globalXid);
-					if (archive == null) {
-						throw new IllegalStateException();
-					}
-
-					archive.getRemoteResources().add(participant);
+					if (archive != null) {
+						archive.getRemoteResources().add(participant);
+					} // end-if (archive != null)
 				}
 			} finally {
 				IOUtils.closeQuietly(participantCursor);
@@ -654,7 +735,7 @@ public class MongoCompensableLogger
 					invocation.setSimplified(simplified);
 
 					Class<?> clazz = cl.loadClass(clazzName);
-					Method method = this.deserializeMethod(clazz, methodDesc);
+					Method method = SerializeUtils.deserializeMethod(clazz, methodDesc);
 					invocation.setMethod(method);
 
 					byte[] argsByteArray = ByteUtils.stringToByteArray(argsValue);
@@ -712,11 +793,9 @@ public class MongoCompensableLogger
 					compensable.setIdentifier(branchXid);
 
 					TransactionArchive archive = archiveMap.get(globalXid);
-					if (archive == null) {
-						throw new IllegalStateException();
-					}
-
-					archive.getCompensableResourceList().add(compensable);
+					if (archive != null) {
+						archive.getCompensableResourceList().add(compensable);
+					} // end-if (archive != null)
 				}
 			} finally {
 				IOUtils.closeQuietly(compensableCursor);
@@ -734,129 +813,6 @@ public class MongoCompensableLogger
 			callback.recover(archive);
 		}
 
-	}
-
-	private String serializeClass(Class<?> clazz) {
-		if (boolean.class.equals(clazz)) {
-			return "Z";
-		} else if (byte.class.equals(clazz)) {
-			return "B";
-		} else if (short.class.equals(clazz)) {
-			return "S";
-		} else if (char.class.equals(clazz)) {
-			return "C";
-		} else if (int.class.equals(clazz)) {
-			return "I";
-		} else if (float.class.equals(clazz)) {
-			return "F";
-		} else if (long.class.equals(clazz)) {
-			return "J";
-		} else if (double.class.equals(clazz)) {
-			return "D";
-		} else if (void.class.equals(clazz)) {
-			return "V";
-		} else if (clazz.isArray()) {
-			return clazz.getName();
-		} else {
-			return String.format("L%s;", clazz.getName().replaceAll("\\.", "/"));
-		}
-	}
-
-	private Class<?> deserializeClass(String clazzDesc) {
-		String clazz = StringUtils.trimToEmpty(clazzDesc);
-		if (StringUtils.isBlank(clazz)) {
-			throw new IllegalStateException();
-		}
-
-		if (clazz.length() > 1) {
-			String clazzName = clazz.replaceAll("\\/", ".");
-			ClassLoader cl = Thread.currentThread().getContextClassLoader();
-			try {
-				return cl.loadClass(clazzName);
-			} catch (ClassNotFoundException ex) {
-				throw new IllegalStateException(ex.getMessage());
-			}
-		}
-
-		final char character = clazz.charAt(0);
-		return this.deserializeClass(character);
-	}
-
-	private Class<?> deserializeClass(final char character) {
-		switch (character) {
-		case 'Z':
-			return boolean.class;
-		case 'B':
-			return byte.class;
-		case 'S':
-			return short.class;
-		case 'C':
-			return char.class;
-		case 'I':
-			return int.class;
-		case 'J':
-			return long.class;
-		case 'F':
-			return float.class;
-		case 'D':
-			return double.class;
-		default:
-			throw new IllegalStateException();
-		}
-	}
-
-	private String serializeMethod(CompensableInvocation invocation) {
-		Method method = invocation.getMethod();
-
-		StringBuilder ber = new StringBuilder();
-		ber.append(method.getName()).append("(");
-		Class<?>[] parameterTypes = method.getParameterTypes();
-		for (int i = 0; i < parameterTypes.length; i++) {
-			Class<?> parameterType = parameterTypes[i];
-			String clazzName = this.serializeClass(parameterType);
-			ber.append(clazzName);
-		}
-
-		ber.append(")").append(this.serializeClass(method.getReturnType()));
-
-		return ber.toString();
-	}
-
-	private Method deserializeMethod(Class<?> interfaceClass, String methodDesc) throws Exception {
-		int startIdx = methodDesc.indexOf("(");
-		String methodName = methodDesc.substring(0, startIdx);
-		int endIndex = methodDesc.indexOf(")");
-		String value = methodDesc.substring(startIdx + 1, endIndex);
-		char[] values = value.toCharArray();
-
-		List<Class<?>> paramTypeList = new ArrayList<Class<?>>();
-		boolean flags = false;
-		StringBuilder clazzDesc = new StringBuilder();
-		for (int i = 0; i < values.length; i++) {
-			char character = values[i];
-			if (character == ';') {
-				flags = false;
-				String paramTypeNameDesc = clazzDesc.toString();
-				clazzDesc.delete(0, clazzDesc.length());
-				Class<?> paramType = this.deserializeClass(paramTypeNameDesc);
-				paramTypeList.add(paramType);
-				continue;
-			} else if (flags) {
-				clazzDesc.append(character);
-				continue;
-			} else if (character == 'L') {
-				flags = true;
-				continue;
-			}
-
-			Class<?> paramType = this.deserializeClass(character);
-			paramTypeList.add(paramType);
-		}
-
-		Class<?>[] parameterTypes = new Class<?>[paramTypeList.size()];
-		paramTypeList.toArray(parameterTypes);
-
-		return interfaceClass.getDeclaredMethod(methodName, parameterTypes);
 	}
 
 	public boolean isInitializeEnabled() {
