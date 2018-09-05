@@ -88,7 +88,7 @@ public class MongoCompensableLogger
 		}
 	}
 
-	public void initializeIndexIfNecessary() {
+	private void initializeIndexIfNecessary() {
 		this.createTransactionsGlobalTxKeyIndexIfNecessary();
 		this.createTransactionsApplicationIndexIfNecessary();
 		this.createParticipantsGlobalTxKeyIndexIfNecessary();
@@ -263,6 +263,19 @@ public class MongoCompensableLogger
 			document.append("version", 0L);
 
 			collection.insertOne(document);
+
+			List<XAResourceArchive> participantList = archive.getRemoteResources();
+			for (int i = 0; participantList != null && i < participantList.size(); i++) {
+				XAResourceArchive resource = participantList.get(i);
+				this.createParticipant(resource, true);
+			}
+
+			List<CompensableArchive> compensableList = archive.getCompensableResourceList();
+			for (int i = 0; compensableList != null && i < compensableList.size(); i++) {
+				CompensableArchive resource = compensableList.get(i);
+				this.createCompensable(resource, true);
+			}
+
 		} catch (IOException error) {
 			logger.error("Error occurred while creating transaction.", error);
 			this.beanFactory.getCompensableManager().setRollbackOnlyQuietly();
@@ -271,17 +284,6 @@ public class MongoCompensableLogger
 			this.beanFactory.getCompensableManager().setRollbackOnlyQuietly();
 		}
 
-		List<XAResourceArchive> participantList = archive.getRemoteResources();
-		for (int i = 0; participantList != null && i < participantList.size(); i++) {
-			XAResourceArchive resource = participantList.get(i);
-			this.createParticipant(resource);
-		}
-
-		List<CompensableArchive> compensableList = archive.getCompensableResourceList();
-		for (int i = 0; compensableList != null && i < compensableList.size(); i++) {
-			CompensableArchive resource = compensableList.get(i);
-			this.createCompensable(resource);
-		}
 	}
 
 	public void updateTransaction(TransactionArchive archive) {
@@ -322,6 +324,19 @@ public class MongoCompensableLogger
 						String.format("Error occurred while updating transaction(matched= %s, modified= %s).",
 								result.getMatchedCount(), result.getModifiedCount()));
 			}
+
+			List<XAResourceArchive> participantList = archive.getRemoteResources();
+			for (int i = 0; participantList != null && i < participantList.size(); i++) {
+				XAResourceArchive resource = participantList.get(i);
+				this.updateParticipant(resource, true);
+			}
+
+			List<CompensableArchive> compensableList = archive.getCompensableResourceList();
+			for (int i = 0; compensableList != null && i < compensableList.size(); i++) {
+				CompensableArchive resource = compensableList.get(i);
+				this.updateCompensable(resource, true);
+			}
+
 		} catch (IOException error) {
 			logger.error("Error occurred while updating transaction.", error);
 			this.beanFactory.getCompensableManager().setRollbackOnlyQuietly();
@@ -363,7 +378,12 @@ public class MongoCompensableLogger
 	}
 
 	public void createParticipant(XAResourceArchive archive) {
-		this.createParticipant(archive, true);
+		try {
+			this.createParticipant(archive, true);
+		} catch (RuntimeException error) {
+			logger.error("Error occurred while creating participant!", error);
+			this.beanFactory.getCompensableManager().setRollbackOnlyQuietly();
+		}
 	}
 
 	private void createParticipant(XAResourceArchive archive, boolean redirect) {
@@ -415,60 +435,55 @@ public class MongoCompensableLogger
 			if (MONGODB_ERROR_DUPLICATE_KEY == writeError.getCode() && redirect) {
 				this.updateParticipant(archive, false);
 			} else {
-				logger.error("Error occurred while creating participant!", error);
-				this.beanFactory.getCompensableManager().setRollbackOnlyQuietly();
+				throw error;
 			}
-		} catch (RuntimeException error) {
-			logger.error("Error occurred while creating participant!", error);
-			this.beanFactory.getCompensableManager().setRollbackOnlyQuietly();
 		}
 	}
 
 	public void updateParticipant(XAResourceArchive archive) {
-		this.updateParticipant(archive, true);
-	}
-
-	private void updateParticipant(XAResourceArchive archive, boolean redirect) {
 		try {
-			TransactionXid transactionXid = (TransactionXid) archive.getXid();
-			byte[] global = transactionXid.getGlobalTransactionId();
-			byte[] branch = transactionXid.getBranchQualifier();
-
-			MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
-			MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_PARTICIPANTS);
-
-			int branchVote = archive.getVote();
-			boolean readonly = archive.isReadonly();
-			boolean committed = archive.isCommitted();
-			boolean rolledback = archive.isRolledback();
-			boolean completed = archive.isCompleted();
-			boolean heuristic = archive.isHeuristic();
-
-			Document variables = new Document();
-			variables.append("vote", branchVote);
-			variables.append("committed", committed);
-			variables.append("rolledback", rolledback);
-			variables.append("readonly", readonly);
-			variables.append("completed", completed);
-			variables.append("heuristic", heuristic);
-
-			variables.append("modified", this.endpoint);
-
-			Bson globalFilter = Filters.eq(CONSTANTS_FD_GLOBAL, ByteUtils.byteArrayToString(global));
-			Bson branchFilter = Filters.eq(CONSTANTS_FD_BRANCH, ByteUtils.byteArrayToString(branch));
-
-			UpdateResult result = collection.updateOne(Filters.and(globalFilter, branchFilter),
-					new Document("$set", variables));
-			if (result.getModifiedCount() == 0 && redirect) {
-				this.createParticipant(archive, false);
-			} else if (result.getModifiedCount() != 1) {
-				throw new IllegalStateException(
-						String.format("Error occurred while updating participant(matched= %s, modified= %s).",
-								result.getMatchedCount(), result.getModifiedCount()));
-			}
+			this.updateParticipant(archive, true);
 		} catch (RuntimeException error) {
 			logger.error("Error occurred while updating participant.", error);
 			this.beanFactory.getCompensableManager().setRollbackOnlyQuietly();
+		}
+	}
+
+	private void updateParticipant(XAResourceArchive archive, boolean redirect) {
+		TransactionXid transactionXid = (TransactionXid) archive.getXid();
+		byte[] global = transactionXid.getGlobalTransactionId();
+		byte[] branch = transactionXid.getBranchQualifier();
+
+		MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
+		MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_PARTICIPANTS);
+
+		int branchVote = archive.getVote();
+		boolean readonly = archive.isReadonly();
+		boolean committed = archive.isCommitted();
+		boolean rolledback = archive.isRolledback();
+		boolean completed = archive.isCompleted();
+		boolean heuristic = archive.isHeuristic();
+
+		Document variables = new Document();
+		variables.append("vote", branchVote);
+		variables.append("committed", committed);
+		variables.append("rolledback", rolledback);
+		variables.append("readonly", readonly);
+		variables.append("completed", completed);
+		variables.append("heuristic", heuristic);
+
+		variables.append("modified", this.endpoint);
+
+		Bson globalFilter = Filters.eq(CONSTANTS_FD_GLOBAL, ByteUtils.byteArrayToString(global));
+		Bson branchFilter = Filters.eq(CONSTANTS_FD_BRANCH, ByteUtils.byteArrayToString(branch));
+
+		UpdateResult result = collection.updateOne(Filters.and(globalFilter, branchFilter), new Document("$set", variables));
+		if (result.getModifiedCount() == 0 && redirect) {
+			this.createParticipant(archive, false);
+		} else if (result.getModifiedCount() != 1) {
+			throw new IllegalStateException(
+					String.format("Error occurred while updating participant(matched= %s, modified= %s).",
+							result.getMatchedCount(), result.getModifiedCount()));
 		}
 	}
 
@@ -476,10 +491,18 @@ public class MongoCompensableLogger
 	}
 
 	public void createCompensable(CompensableArchive archive) {
-		this.createCompensable(archive, true);
+		try {
+			this.createCompensable(archive, true);
+		} catch (IOException error) {
+			logger.error("Error occurred while creating compensable!", error);
+			this.beanFactory.getCompensableManager().setRollbackOnlyQuietly();
+		} catch (RuntimeException error) {
+			logger.error("Error occurred while creating compensable!", error);
+			this.beanFactory.getCompensableManager().setRollbackOnlyQuietly();
+		}
 	}
 
-	private void createCompensable(CompensableArchive archive, boolean redirect) {
+	private void createCompensable(CompensableArchive archive, boolean redirect) throws IOException {
 		try {
 			TransactionXid xid = (TransactionXid) archive.getIdentifier();
 			byte[] global = xid.getGlobalTransactionId();
@@ -531,64 +554,59 @@ public class MongoCompensableLogger
 			document.append("method", methodDesc);
 
 			collection.insertOne(document);
-		} catch (IOException error) {
-			logger.error("Error occurred while creating compensable!", error);
-			this.beanFactory.getCompensableManager().setRollbackOnlyQuietly();
 		} catch (com.mongodb.MongoWriteException error) {
 			com.mongodb.WriteError writeError = error.getError();
 			if (MONGODB_ERROR_DUPLICATE_KEY == writeError.getCode() && redirect) {
 				this.updateCompensable(archive, false);
 			} else {
-				logger.error("Error occurred while creating compensable!", error);
-				this.beanFactory.getCompensableManager().setRollbackOnlyQuietly();
+				throw error;
 			}
-		} catch (RuntimeException error) {
-			logger.error("Error occurred while creating compensable!", error);
-			this.beanFactory.getCompensableManager().setRollbackOnlyQuietly();
 		}
 	}
 
 	public void updateCompensable(CompensableArchive archive) {
-		this.updateCompensable(archive, true);
-	}
-
-	private void updateCompensable(CompensableArchive archive, boolean redirect) {
 		try {
-			TransactionXid xid = (TransactionXid) archive.getIdentifier();
-			byte[] global = xid.getGlobalTransactionId();
-			byte[] branch = xid.getBranchQualifier();
-
-			MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
-			MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_COMPENSABLES);
-
-			Xid transactionXid = archive.getTransactionXid();
-			Xid compensableXid = archive.getCompensableXid();
-
-			Document variables = new Document();
-			variables.append("tried", archive.isTried());
-			variables.append("confirmed", archive.isConfirmed());
-			variables.append("cancelled", archive.isCancelled());
-			variables.append("modified", this.endpoint);
-			variables.append("transaction_key", archive.getTransactionResourceKey());
-			variables.append("compensable_key", archive.getCompensableResourceKey());
-			variables.append("transaction_xid", String.valueOf(transactionXid));
-			variables.append("compensable_xid", String.valueOf(compensableXid));
-
-			Bson globalFilter = Filters.eq(CONSTANTS_FD_GLOBAL, ByteUtils.byteArrayToString(global));
-			Bson branchFilter = Filters.eq(CONSTANTS_FD_BRANCH, ByteUtils.byteArrayToString(branch));
-			UpdateResult result = collection.updateOne(Filters.and(globalFilter, branchFilter),
-					new Document("$set", variables));
-
-			if (result.getModifiedCount() == 0 && redirect) {
-				this.createCompensable(archive, false);
-			} else if (result.getModifiedCount() != 1) {
-				throw new IllegalStateException(
-						String.format("Error occurred while updating compensable(matched= %s, modified= %s).",
-								result.getMatchedCount(), result.getModifiedCount()));
-			}
+			this.updateCompensable(archive, true);
+		} catch (IOException error) {
+			logger.error("Error occurred while updating compensable.", error);
+			this.beanFactory.getCompensableManager().setRollbackOnlyQuietly();
 		} catch (RuntimeException error) {
 			logger.error("Error occurred while updating compensable.", error);
 			this.beanFactory.getCompensableManager().setRollbackOnlyQuietly();
+		}
+	}
+
+	private void updateCompensable(CompensableArchive archive, boolean redirect) throws IOException {
+		TransactionXid xid = (TransactionXid) archive.getIdentifier();
+		byte[] global = xid.getGlobalTransactionId();
+		byte[] branch = xid.getBranchQualifier();
+
+		MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
+		MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_COMPENSABLES);
+
+		Xid transactionXid = archive.getTransactionXid();
+		Xid compensableXid = archive.getCompensableXid();
+
+		Document variables = new Document();
+		variables.append("tried", archive.isTried());
+		variables.append("confirmed", archive.isConfirmed());
+		variables.append("cancelled", archive.isCancelled());
+		variables.append("modified", this.endpoint);
+		variables.append("transaction_key", archive.getTransactionResourceKey());
+		variables.append("compensable_key", archive.getCompensableResourceKey());
+		variables.append("transaction_xid", String.valueOf(transactionXid));
+		variables.append("compensable_xid", String.valueOf(compensableXid));
+
+		Bson globalFilter = Filters.eq(CONSTANTS_FD_GLOBAL, ByteUtils.byteArrayToString(global));
+		Bson branchFilter = Filters.eq(CONSTANTS_FD_BRANCH, ByteUtils.byteArrayToString(branch));
+		UpdateResult result = collection.updateOne(Filters.and(globalFilter, branchFilter), new Document("$set", variables));
+
+		if (result.getModifiedCount() == 0 && redirect) {
+			this.createCompensable(archive, false);
+		} else if (result.getModifiedCount() != 1) {
+			throw new IllegalStateException(
+					String.format("Error occurred while updating compensable(matched= %s, modified= %s).",
+							result.getMatchedCount(), result.getModifiedCount()));
 		}
 	}
 

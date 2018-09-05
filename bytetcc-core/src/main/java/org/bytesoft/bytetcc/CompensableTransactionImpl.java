@@ -826,7 +826,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 
 		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
 		if (this.transactionContext.isCompensating()) {
-			this.archive.setCompensableXid(xid);
+			// this.archive.setCompensableXid(xid); // preset the compensable-xid.
 			this.archive.setCompensableResourceKey(resourceKey);
 			compensableLogger.updateCompensable(this.archive);
 		} else {
@@ -834,6 +834,11 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 				CompensableArchive compensableArchive = this.currentArchiveList.get(i);
 				compensableArchive.setTransactionXid(xid);
 				compensableArchive.setTransactionResourceKey(resourceKey);
+
+				XidFactory transactionXidFactory = this.beanFactory.getTransactionXidFactory();
+				TransactionXid globalXid = transactionXidFactory.createGlobalXid(xid.getGlobalTransactionId());
+				TransactionXid branchXid = transactionXidFactory.createBranchXid(globalXid);
+				compensableArchive.setCompensableXid(branchXid); // preset the compensable-xid.
 
 				compensableLogger.createCompensable(compensableArchive);
 			}

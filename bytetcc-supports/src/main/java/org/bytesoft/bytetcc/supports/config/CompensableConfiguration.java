@@ -103,4 +103,9 @@ public class CompensableConfiguration {
 		return new org.bytesoft.bytetcc.supports.work.CompensableCommandManager();
 	}
 
+	@org.springframework.context.annotation.Bean
+	public org.bytesoft.bytetcc.supports.internal.MongoCompensableLock bytetccTransactionLock() {
+		return new org.bytesoft.bytetcc.supports.internal.MongoCompensableLock();
+	}
+
 }
