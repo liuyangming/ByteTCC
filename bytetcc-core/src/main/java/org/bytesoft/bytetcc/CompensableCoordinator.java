@@ -202,6 +202,12 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 			throw new XAException(XAException.XAER_NOTA);
 		}
 
+		TransactionContext transactionContext = transaction.getTransactionContext();
+		if (transactionContext.isRollbackOnly()) {
+			this.invokeRollback(globalXid);
+			throw new XAException(XAException.XA_HEURRB);
+		}
+
 		try {
 			((CompensableTransactionImpl) transaction).lock(false);
 			compensableManager.associateThread(transaction);

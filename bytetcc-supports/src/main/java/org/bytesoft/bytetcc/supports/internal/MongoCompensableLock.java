@@ -17,8 +17,14 @@ package org.bytesoft.bytetcc.supports.internal;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.api.BackgroundCallback;
+import org.apache.curator.framework.api.CuratorEvent;
+import org.apache.curator.framework.api.CuratorWatcher;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException.NodeExistsException;
+import org.apache.zookeeper.WatchedEvent;
+import org.apache.zookeeper.Watcher.Event.EventType;
+import org.apache.zookeeper.Watcher.Event.KeeperState;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.bytesoft.common.utils.ByteUtils;
@@ -41,8 +47,8 @@ import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.IndexOptions;
 import com.mongodb.client.result.DeleteResult;
 
-public class MongoCompensableLock
-		implements TransactionLock, CompensableEndpointAware, CompensableBeanFactoryAware, InitializingBean {
+public class MongoCompensableLock implements TransactionLock, CompensableEndpointAware, CompensableBeanFactoryAware,
+		CuratorWatcher, BackgroundCallback, InitializingBean {
 	static Logger logger = LoggerFactory.getLogger(MongoCompensableLock.class);
 	static final String CONSTANTS_ROOT_PATH = "/org/bytesoft/bytetcc";
 	static final String CONSTANTS_DB_NAME = "bytetcc";
@@ -79,7 +85,11 @@ public class MongoCompensableLock
 			logger.debug("Path exists(path= {})!", parent);
 		}
 
-		this.curatorFramework.create().withMode(CreateMode.EPHEMERAL).forPath(String.format("%s/%s", parent, this.endpoint));
+		// this.curatorFramework.checkExists().usingWatcher(this).forPath(parent);
+		this.curatorFramework.getChildren().usingWatcher(this).inBackground(this).forPath(parent);
+
+		String path = String.format("%s/%s", parent, this.endpoint);
+		this.curatorFramework.create().withMode(CreateMode.EPHEMERAL).forPath(path);
 	}
 
 	private void initializeIndexIfNecessary() {
@@ -169,6 +179,47 @@ public class MongoCompensableLock
 		} catch (RuntimeException rex) {
 			logger.error("Error occurred while unlocking transaction!", rex);
 		}
+	}
+
+	public void processResult(CuratorFramework client, CuratorEvent event) throws Exception {
+		WatchedEvent watchedEvent = event.getWatchedEvent();
+		EventType watchedEventType = watchedEvent == null ? null : watchedEvent.getType();
+		if (EventType.NodeChildrenChanged.equals(watchedEventType)) {
+			// List<String> children = event.getChildren();
+		}
+	}
+
+	public void stateChanged(KeeperState state) {
+	}
+
+	public void process(WatchedEvent event) throws Exception {
+		if (EventType.NodeCreated.equals(event.getType())) {
+			this.processNodeCreated(event);
+		} else if (EventType.NodeChildrenChanged.equals(event.getType())) {
+			this.processNodeChildrenChanged(event);
+		} else if (EventType.NodeDeleted.equals(event.getType())) {
+			this.processNodeDeleted(event);
+		} else if (EventType.NodeDataChanged.equals(event.getType())) {
+			this.processNodeDataChanged(event);
+		} else {
+			this.stateChanged(event.getState());
+		}
+	}
+
+	private void processNodeCreated(WatchedEvent event) throws Exception {
+		this.curatorFramework.getChildren().usingWatcher(this).inBackground(this).forPath(event.getPath());
+	}
+
+	private void processNodeChildrenChanged(WatchedEvent event) throws Exception {
+		this.curatorFramework.getChildren().usingWatcher(this).inBackground(this).forPath(event.getPath());
+	}
+
+	private void processNodeDeleted(WatchedEvent event) throws Exception {
+		this.curatorFramework.checkExists().usingWatcher(this).inBackground(this).forPath(event.getPath());
+	}
+
+	private void processNodeDataChanged(WatchedEvent event) throws Exception {
+		// should never happen
 	}
 
 	public void setEndpoint(String identifier) {

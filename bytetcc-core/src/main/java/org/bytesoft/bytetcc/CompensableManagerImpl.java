@@ -453,6 +453,9 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 			throw new IllegalStateException();
 		} else if (compensating) {
 			throw new IllegalStateException();
+		} else if (transactionContext.isRollbackOnly()) {
+			this.compensableRollback();
+			throw new HeuristicRollbackException();
 		}
 
 		TransactionLock compensableLock = this.beanFactory.getCompensableLock();

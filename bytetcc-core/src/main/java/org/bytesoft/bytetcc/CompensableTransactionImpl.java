@@ -1194,17 +1194,25 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 		return this.transactionContext.isRollbackOnly();
 	}
 
-	public synchronized void setRollbackOnly() throws IllegalStateException, SystemException {
-		if (this.transactionStatus == Status.STATUS_ACTIVE || this.transactionStatus == Status.STATUS_MARKED_ROLLBACK) {
-			this.transactionStatus = Status.STATUS_MARKED_ROLLBACK;
-			this.transactionContext.setRollbackOnly(true);
+	private synchronized void setTransactionRollbackOnlyQuietly() {
+		Transaction transactionalExtra = this.getTransaction();
+		if (transactionalExtra != null) {
+			transactionalExtra.setRollbackOnlyQuietly();
+		}
+	}
 
-			Transaction transactionalExtra = this.getTransaction();
-			if (transactionalExtra != null) {
-				transactionalExtra.setRollbackOnlyQuietly();
-			}
+	public synchronized void setRollbackOnly() throws IllegalStateException, SystemException {
+		if (this.transactionContext.isCompensating()) {
+			this.setTransactionRollbackOnlyQuietly();
+		} else if (this.transactionStatus == Status.STATUS_ACTIVE) {
+			this.transactionStatus = Status.STATUS_MARKED_ROLLBACK;
+			this.setTransactionRollbackOnlyQuietly();
+			this.transactionContext.setRollbackOnly(true);
+		} else if (this.transactionStatus == Status.STATUS_MARKED_ROLLBACK) {
+			this.setTransactionRollbackOnlyQuietly();
+			this.transactionContext.setRollbackOnly(true);
 		} else {
-			throw new IllegalStateException();
+			this.setTransactionRollbackOnlyQuietly();
 		}
 	}
 
