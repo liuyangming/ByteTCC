@@ -15,11 +15,19 @@
  */
 package org.bytesoft.bytetcc.supports.internal;
 
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.api.BackgroundCallback;
 import org.apache.curator.framework.api.CuratorEvent;
+import org.apache.curator.framework.api.CuratorEventType;
 import org.apache.curator.framework.api.CuratorWatcher;
+import org.apache.curator.framework.state.ConnectionState;
+import org.apache.curator.framework.state.ConnectionStateListener;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException.NodeExistsException;
 import org.apache.zookeeper.WatchedEvent;
@@ -38,6 +46,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.InitializingBean;
 
+import com.mongodb.client.FindIterable;
 import com.mongodb.client.ListIndexesIterable;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoCollection;
@@ -46,9 +55,10 @@ import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.IndexOptions;
 import com.mongodb.client.result.DeleteResult;
+import com.mongodb.client.result.UpdateResult;
 
 public class MongoCompensableLock implements TransactionLock, CompensableEndpointAware, CompensableBeanFactoryAware,
-		CuratorWatcher, BackgroundCallback, InitializingBean {
+		CuratorWatcher, ConnectionStateListener, BackgroundCallback, InitializingBean {
 	static Logger logger = LoggerFactory.getLogger(MongoCompensableLock.class);
 	static final String CONSTANTS_ROOT_PATH = "/org/bytesoft/bytetcc";
 	static final String CONSTANTS_DB_NAME = "bytetcc";
@@ -68,10 +78,15 @@ public class MongoCompensableLock implements TransactionLock, CompensableEndpoin
 	private CompensableBeanFactory beanFactory;
 	private boolean initializeEnabled = true;
 
+	private final Set<String> instances = new HashSet<String>();
+	private transient ConnectionState curatorState;
+
 	public void afterPropertiesSet() throws Exception {
 		if (this.initializeEnabled) {
 			this.initializeIndexIfNecessary();
 		}
+
+		this.curatorFramework.getConnectionStateListenable().addListener(this);
 
 		this.initializeClusterInstanceConfig();
 	}
@@ -85,11 +100,10 @@ public class MongoCompensableLock implements TransactionLock, CompensableEndpoin
 			logger.debug("Path exists(path= {})!", parent);
 		}
 
-		// this.curatorFramework.checkExists().usingWatcher(this).forPath(parent);
-		this.curatorFramework.getChildren().usingWatcher(this).inBackground(this).forPath(parent);
-
 		String path = String.format("%s/%s", parent, this.endpoint);
 		this.curatorFramework.create().withMode(CreateMode.EPHEMERAL).forPath(path);
+
+		this.getInstancesDirectorysChildrenAndRegisterWatcher();
 	}
 
 	private void initializeIndexIfNecessary() {
@@ -129,15 +143,37 @@ public class MongoCompensableLock implements TransactionLock, CompensableEndpoin
 	}
 
 	public boolean lockTransaction(TransactionXid transactionXid, String identifier) {
+		if (this.lockTransactionInMongoDB(transactionXid, identifier)) {
+			return true;
+		}
+
+		String instanceId = this.getTransactionOwnerInMongoDB(transactionXid);
+		if (StringUtils.isBlank(instanceId)) {
+			return false;
+		}
+
+		boolean instanceCrashed = false;
+		synchronized (this) {
+			instanceCrashed = this.instances.contains(instanceId) == false;
+		}
+
+		if (instanceCrashed) {
+			return this.takeOverTransactionInMongoDB(transactionXid, instanceId, identifier);
+		}
+
+		return false;
+	}
+
+	private boolean lockTransactionInMongoDB(TransactionXid transactionXid, String identifier) {
+		byte[] global = transactionXid.getGlobalTransactionId();
+		String instanceId = ByteUtils.byteArrayToString(global);
+
 		try {
 			MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
 			MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_LOCKS);
 
 			String[] values = this.endpoint.split("\\s*:\\s*");
 			String application = values[1];
-
-			byte[] global = transactionXid.getGlobalTransactionId();
-			String instanceId = ByteUtils.byteArrayToString(global);
 
 			Document document = new Document();
 			document.append(CONSTANTS_FD_GLOBAL, instanceId);
@@ -149,16 +185,76 @@ public class MongoCompensableLock implements TransactionLock, CompensableEndpoin
 		} catch (com.mongodb.MongoWriteException error) {
 			com.mongodb.WriteError writeError = error.getError();
 			if (MONGODB_ERROR_DUPLICATE_KEY != writeError.getCode()) {
-				logger.error("Error occurred while creating transaction-archive.", error);
+				logger.error("Error occurred while locking transaction(gxid= {}).", instanceId, error);
 			}
 			return false;
 		} catch (RuntimeException rex) {
-			logger.error("Error occurred while creating transaction-archive.", rex);
+			logger.error("Error occurred while locking transaction(gxid= {}).", instanceId, rex);
 			return false;
 		}
 	}
 
+	private boolean takeOverTransactionInMongoDB(TransactionXid transactionXid, String source, String target) {
+		byte[] global = transactionXid.getGlobalTransactionId();
+		String instanceId = ByteUtils.byteArrayToString(global);
+
+		try {
+			MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
+			MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_LOCKS);
+
+			String[] values = this.endpoint.split("\\s*:\\s*");
+			String application = values[1];
+
+			Bson globalFilter = Filters.eq(CONSTANTS_FD_GLOBAL, instanceId);
+			Bson systemFilter = Filters.eq(CONSTANTS_FD_SYSTEM, application);
+			Bson instIdFilter = Filters.eq("identifier", source);
+
+			Document document = new Document("$set", new Document("identifier", target));
+
+			UpdateResult result = collection.updateOne(Filters.and(globalFilter, systemFilter, instIdFilter), document);
+			return result.getModifiedCount() == 1;
+		} catch (RuntimeException rex) {
+			logger.error("Error occurred while locking transaction(gxid= {}).", instanceId, rex);
+			return false;
+		}
+	}
+
+	private String getTransactionOwnerInMongoDB(TransactionXid transactionXid) {
+		byte[] global = transactionXid.getGlobalTransactionId();
+		String instanceId = ByteUtils.byteArrayToString(global);
+
+		try {
+			MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
+			MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_LOCKS);
+
+			String[] values = this.endpoint.split("\\s*:\\s*");
+			String application = values[1];
+
+			Bson globalFilter = Filters.eq(CONSTANTS_FD_GLOBAL, instanceId);
+			Bson systemFilter = Filters.eq(CONSTANTS_FD_SYSTEM, application);
+
+			FindIterable<Document> findIterable = collection.find(Filters.and(globalFilter, systemFilter));
+			MongoCursor<Document> cursor = findIterable.iterator();
+			if (cursor.hasNext()) {
+				Document document = cursor.next();
+				return document.getString("identifier");
+			} else {
+				return null;
+			}
+		} catch (RuntimeException rex) {
+			logger.error("Error occurred while querying the lock-owner of transaction(gxid= {}).", instanceId, rex);
+			return null;
+		}
+	}
+
 	public void unlockTransaction(TransactionXid transactionXid, String identifier) {
+		this.unlockTransactionInMongoDB(transactionXid, identifier);
+	}
+
+	public void unlockTransactionInMongoDB(TransactionXid transactionXid, String identifier) {
+		byte[] global = transactionXid.getGlobalTransactionId();
+		String instanceId = ByteUtils.byteArrayToString(global);
+
 		try {
 			MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
 			MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_LOCKS);
@@ -166,60 +262,91 @@ public class MongoCompensableLock implements TransactionLock, CompensableEndpoin
 			String[] values = this.endpoint.split("\\s*:\\s*");
 			String system = values[1];
 
-			byte[] global = transactionXid.getGlobalTransactionId();
-			String instanceId = ByteUtils.byteArrayToString(global);
-
 			Bson globalFilter = Filters.eq(CONSTANTS_FD_GLOBAL, instanceId);
 			Bson systemFilter = Filters.eq(CONSTANTS_FD_SYSTEM, system);
+			Bson instIdFilter = Filters.eq("identifier", identifier);
 
-			DeleteResult result = collection.deleteOne(Filters.and(globalFilter, systemFilter));
+			DeleteResult result = collection.deleteOne(Filters.and(globalFilter, systemFilter, instIdFilter));
 			if (result.getDeletedCount() == 0) {
 				logger.warn("Error occurred while unlocking transaction(gxid= {}).", instanceId);
 			}
 		} catch (RuntimeException rex) {
-			logger.error("Error occurred while unlocking transaction!", rex);
+			logger.error("Error occurred while unlocking transaction(gxid= {})!", instanceId, rex);
 		}
 	}
 
-	public void processResult(CuratorFramework client, CuratorEvent event) throws Exception {
-		WatchedEvent watchedEvent = event.getWatchedEvent();
-		EventType watchedEventType = watchedEvent == null ? null : watchedEvent.getType();
-		if (EventType.NodeChildrenChanged.equals(watchedEventType)) {
-			// List<String> children = event.getChildren();
+	public synchronized void processResult(CuratorFramework client, CuratorEvent event) throws Exception {
+		if (CuratorEventType.CHILDREN.equals(event.getType())) {
+			return;
 		}
+
+		List<String> children = event.getChildren();
+		this.instances.clear();
+		if (children != null) {
+			this.instances.addAll(children);
+		} // end-if (children != null)
 	}
 
-	public void stateChanged(KeeperState state) {
+	public synchronized void stateChanged(CuratorFramework client, final ConnectionState target) {
+		ConnectionState source = this.curatorState;
+		this.curatorState = target;
+
+		if (target.equals(source)) {
+			return; // should never happen
+		}
+
+		switch (target) {
+		case CONNECTED:
+		case RECONNECTED:
+			try {
+				this.getInstancesDirectorysChildrenAndRegisterWatcher();
+			} catch (Exception ex) {
+				logger.error("Error occurred while registering curator watcher!", ex);
+			}
+			break;
+		default /* SUSPENDED, LOST, READ_ONLY */:
+			break;
+		}
 	}
 
 	public void process(WatchedEvent event) throws Exception {
-		if (EventType.NodeCreated.equals(event.getType())) {
-			this.processNodeCreated(event);
-		} else if (EventType.NodeChildrenChanged.equals(event.getType())) {
+		if (EventType.NodeChildrenChanged.equals(event.getType())) {
 			this.processNodeChildrenChanged(event);
-		} else if (EventType.NodeDeleted.equals(event.getType())) {
-			this.processNodeDeleted(event);
-		} else if (EventType.NodeDataChanged.equals(event.getType())) {
-			this.processNodeDataChanged(event);
-		} else {
-			this.stateChanged(event.getState());
 		}
-	}
 
-	private void processNodeCreated(WatchedEvent event) throws Exception {
-		this.curatorFramework.getChildren().usingWatcher(this).inBackground(this).forPath(event.getPath());
+		ConnectionState target = this.getCuratorConnectionState(event.getState());
+		if (target != null && target.equals(this.curatorState) == false) {
+			this.stateChanged(this.curatorFramework, target);
+		} // end-if (target != null && target.equals(this.curatorState) == false)
 	}
 
 	private void processNodeChildrenChanged(WatchedEvent event) throws Exception {
-		this.curatorFramework.getChildren().usingWatcher(this).inBackground(this).forPath(event.getPath());
+		this.getInstancesDirectorysChildrenAndRegisterWatcher();
 	}
 
-	private void processNodeDeleted(WatchedEvent event) throws Exception {
-		this.curatorFramework.checkExists().usingWatcher(this).inBackground(this).forPath(event.getPath());
+	private void getInstancesDirectorysChildrenAndRegisterWatcher() throws Exception {
+		String parent = String.format("%s/%s/instances", CONSTANTS_ROOT_PATH, CommonUtils.getApplication(this.endpoint));
+		this.curatorFramework.getChildren().usingWatcher(this).inBackground(this).forPath(parent);
 	}
 
-	private void processNodeDataChanged(WatchedEvent event) throws Exception {
-		// should never happen
+	private ConnectionState getCuratorConnectionState(final KeeperState state) {
+		if (state == null) {
+			return null;
+		} else {
+			switch (state) {
+			case SyncConnected:
+				return ConnectionState.RECONNECTED;
+			case Disconnected:
+				return ConnectionState.LOST;
+			case Expired:
+				return ConnectionState.LOST;
+			case AuthFailed:
+			case ConnectedReadOnly:
+			case SaslAuthenticated:
+			default:
+				return null;
+			}
+		}
 	}
 
 	public void setEndpoint(String identifier) {
