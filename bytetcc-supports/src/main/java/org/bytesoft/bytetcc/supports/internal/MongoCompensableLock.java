@@ -88,10 +88,11 @@ public class MongoCompensableLock implements TransactionLock, CompensableEndpoin
 
 		this.curatorFramework.getConnectionStateListenable().addListener(this);
 
+		this.initializeClusterInstancesDirectory();
 		this.initializeClusterInstanceConfig();
 	}
 
-	private void initializeClusterInstanceConfig() throws Exception {
+	private void initializeClusterInstancesDirectory() throws Exception {
 		String parent = String.format("%s/%s/instances", CONSTANTS_ROOT_PATH, CommonUtils.getApplication(this.endpoint));
 		try {
 			this.curatorFramework.create() //
@@ -99,11 +100,21 @@ public class MongoCompensableLock implements TransactionLock, CompensableEndpoin
 		} catch (NodeExistsException nex) {
 			logger.debug("Path exists(path= {})!", parent);
 		}
+	}
 
-		String path = String.format("%s/%s", parent, this.endpoint);
-		this.curatorFramework.create().withMode(CreateMode.EPHEMERAL).forPath(path);
-
+	private void initializeClusterInstanceConfig() throws Exception {
+		this.initializeCurrentClusterInstanceConfigIfNecessary();
 		this.getInstancesDirectorysChildrenAndRegisterWatcher();
+	}
+
+	private void initializeCurrentClusterInstanceConfigIfNecessary() throws Exception {
+		String parent = String.format("%s/%s/instances", CONSTANTS_ROOT_PATH, CommonUtils.getApplication(this.endpoint));
+		String path = String.format("%s/%s", parent, this.endpoint);
+		try {
+			this.curatorFramework.create().withMode(CreateMode.EPHEMERAL).forPath(path);
+		} catch (NodeExistsException error) {
+			logger.debug("Node exists, ignore!"); // ignore
+		}
 	}
 
 	private void initializeIndexIfNecessary() {
@@ -299,7 +310,7 @@ public class MongoCompensableLock implements TransactionLock, CompensableEndpoin
 		case CONNECTED:
 		case RECONNECTED:
 			try {
-				this.getInstancesDirectorysChildrenAndRegisterWatcher();
+				this.initializeClusterInstanceConfig();
 			} catch (Exception ex) {
 				logger.error("Error occurred while registering curator watcher!", ex);
 			}
