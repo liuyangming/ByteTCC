@@ -120,7 +120,7 @@ public class TransactionRecoveryImpl
 		});
 
 		CompensableCoordinator compensableCoordinator = //
-				(CompensableCoordinator) this.beanFactory.getCompensableCoordinator();
+				(CompensableCoordinator) this.beanFactory.getCompensableNativeParticipant();
 		compensableCoordinator.markParticipantReady();
 	}
 

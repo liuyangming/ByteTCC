@@ -135,7 +135,7 @@ public final class TransactionBeanFactoryImpl implements CompensableBeanFactory 
 		this.transactionRecovery = transactionRecovery;
 	}
 
-	public RemoteCoordinator getTransactionCoordinator() {
+	public RemoteCoordinator getTransactionNativeParticipant() {
 		return transactionCoordinator;
 	}
 
@@ -143,7 +143,7 @@ public final class TransactionBeanFactoryImpl implements CompensableBeanFactory 
 		this.transactionCoordinator = transactionCoordinator;
 	}
 
-	public RemoteCoordinator getCompensableCoordinator() {
+	public RemoteCoordinator getCompensableNativeParticipant() {
 		return compensableCoordinator;
 	}
 
