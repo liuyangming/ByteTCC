@@ -139,7 +139,7 @@ public class MongoCompensableLock implements TransactionLock, CompensableEndpoin
 				boolean lengthEquals = key.size() == 2;
 				transactionIndexExists = lengthEquals && globalExists && systemExists;
 
-				if (transactionIndexExists && unique == false) {
+				if (transactionIndexExists && (unique == null || unique == false)) {
 					throw new IllegalStateException();
 				}
 			}

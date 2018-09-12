@@ -112,7 +112,7 @@ public class MongoCompensableLogger
 				boolean lengthEquals = key.size() == 1;
 				applicationIndexExists = lengthEquals && systemExists;
 
-				if (applicationIndexExists && unique) {
+				if (applicationIndexExists && unique != null && unique) {
 					throw new IllegalStateException();
 				}
 			}
@@ -143,7 +143,7 @@ public class MongoCompensableLogger
 				boolean lengthEquals = key.size() == 2;
 				transactionIndexExists = lengthEquals && globalExists && systemExists;
 
-				if (transactionIndexExists && unique == false) {
+				if (transactionIndexExists && (unique == null || unique == false)) {
 					throw new IllegalStateException();
 				}
 			}
@@ -175,7 +175,7 @@ public class MongoCompensableLogger
 				boolean lengthEquals = key.size() == 2;
 				participantIndexExists = lengthEquals && globalExists && branchExists;
 
-				if (participantIndexExists && unique == false) {
+				if (participantIndexExists && (unique == null || unique == false)) {
 					throw new IllegalStateException();
 				}
 			}
@@ -207,7 +207,7 @@ public class MongoCompensableLogger
 				boolean lengthEquals = key.size() == 2;
 				compensableIndexExists = lengthEquals && globalExists && branchExists;
 
-				if (compensableIndexExists && unique == false) {
+				if (compensableIndexExists && (unique == null || unique == false)) {
 					throw new IllegalStateException();
 				}
 			}

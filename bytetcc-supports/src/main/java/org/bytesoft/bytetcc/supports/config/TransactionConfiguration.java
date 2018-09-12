@@ -19,8 +19,12 @@ package org.bytesoft.bytetcc.supports.config;
 public class TransactionConfiguration {
 
 	@org.springframework.context.annotation.Bean
-	public org.bytesoft.bytejta.supports.spring.ManagedConnectionFactoryPostProcessor managedConnectionFactoryPostProcessor() {
+	public org.bytesoft.bytejta.supports.spring.ManagedConnectionFactoryPostProcessor bytejtaManagedConnectionFactoryPostProcessor() {
 		return new org.bytesoft.bytejta.supports.spring.ManagedConnectionFactoryPostProcessor();
+	}
+
+	public org.bytesoft.bytejta.supports.spring.TransactionDebuggablePostProcessor bytejtaTransactionDebuggablePostProcessor() {
+		return new org.bytesoft.bytejta.supports.spring.TransactionDebuggablePostProcessor();
 	}
 
 	@org.springframework.context.annotation.Bean

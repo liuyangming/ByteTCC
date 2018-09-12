@@ -20,9 +20,6 @@ import java.util.Iterator;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
-import org.bytesoft.bytetcc.supports.config.CompensableConfiguration;
-import org.bytesoft.bytetcc.supports.config.ScheduleWorkConfiguration;
-import org.bytesoft.bytetcc.supports.config.TransactionConfiguration;
 import org.bytesoft.bytetcc.supports.springcloud.SpringCloudBeanRegistry;
 import org.bytesoft.bytetcc.supports.springcloud.feign.CompensableClientRegistry;
 import org.bytesoft.bytetcc.supports.springcloud.feign.CompensableFeignBeanPostProcessor;
@@ -52,7 +49,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.EnvironmentAware;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.ImportResource;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.core.env.Environment;
 import org.springframework.http.client.ClientHttpRequestFactory;
@@ -61,7 +58,8 @@ import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @PropertySource(value = "bytetcc:loadbalancer.config", factory = CompensablePropertySourceFactory.class)
-@Import({ TransactionConfiguration.class, CompensableConfiguration.class, ScheduleWorkConfiguration.class })
+// @Import({ TransactionConfiguration.class, CompensableConfiguration.class, ScheduleWorkConfiguration.class })
+@ImportResource({ "classpath:bytetcc-supports-springcloud.xml" })
 @Configuration
 public class SpringCloudConfiguration implements WebMvcConfigurer, BeanFactoryPostProcessor, InitializingBean,
 		CompensableEndpointAware, EnvironmentAware, ApplicationContextAware {

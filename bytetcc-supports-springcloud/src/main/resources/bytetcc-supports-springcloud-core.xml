@@ -25,7 +25,7 @@
 		<property name="compensableInterceptor" ref="bytetccCompensableInterceptor" />
 	</bean>
 
-	<bean id="commonResourceDeserializer" class="org.bytesoft.bytejta.supports.resource.serialize.XAResourceDeserializerImpl" />
+	<bean id="commonResourceDeserializer" class="org.bytesoft.bytejta.supports.serialize.XAResourceDeserializerImpl" />
 	<bean id="bytetccResourceDeserializer" class="org.bytesoft.bytetcc.supports.springcloud.serialize.XAResourceDeserializerImpl">
 		<property name="resourceDeserializer" ref="commonResourceDeserializer" />
 	</bean>
@@ -44,7 +44,7 @@
 		<property name="transactionArchiveDeserializer" ref="bytetccTransactionArchiveDeserializer" />
 	</bean>
 
-	<bean id="bytejtaBeanFactory" class="org.bytesoft.bytejta.TransactionBeanFactoryImpl">
+	<bean id="bytejtaBeanFactory" class="org.bytesoft.bytejta.TransactionBeanFactoryImpl" factory-method="getInstance">
 		<property name="transactionManager" ref="bytejtaTransactionManager" />
 		<property name="xidFactory" ref="bytejtaXidFactory" />
 		<property name="transactionTimer" ref="bytejtaTransactionManager" />
@@ -74,7 +74,7 @@
 		<property name="resourceDeserializer" ref="bytetccResourceDeserializer" />
 		<property name="localResourceCleaner" ref="bytetccCleanupWork" />
 		<property name="compensableContext" ref="bytetccCompensableContext" />
-		<property name="compensableLock" ref="bytejtaTransactionLock" />
+		<property name="compensableLock" ref="bytetccCompensableLock" />
 	</bean>
 
 </beans>

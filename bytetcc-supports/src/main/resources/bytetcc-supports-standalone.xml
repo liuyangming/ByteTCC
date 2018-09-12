@@ -20,7 +20,7 @@
 	<!-- <bean class="org.bytesoft.bytetcc.supports.dubbo.DubboConfigPostProcessor" /> -->
 	<!-- <bean class="org.bytesoft.bytetcc.supports.dubbo.CompensableConfigPostProcessor" /> -->
 
-	<bean id="bytetccResourceDeserializer" class="org.bytesoft.bytejta.supports.resource.serialize.XAResourceDeserializerImpl" />
+	<bean id="bytetccResourceDeserializer" class="org.bytesoft.bytejta.supports.serialize.XAResourceDeserializerImpl" />
 
 	<bean id="bytetccTransactionArchiveDeserializer" class="org.bytesoft.bytetcc.logging.deserializer.TransactionArchiveDeserializer">
 		<property name="resourceArchiveDeserializer" ref="bytetccXAResourceArchiveDeserializer" />
@@ -36,7 +36,7 @@
 		<property name="transactionArchiveDeserializer" ref="bytetccTransactionArchiveDeserializer" />
 	</bean>
 
-	<bean id="bytejtaBeanFactory" class="org.bytesoft.bytejta.TransactionBeanFactoryImpl">
+	<bean id="bytejtaBeanFactory" class="org.bytesoft.bytejta.TransactionBeanFactoryImpl" factory-method="getInstance">
 		<property name="transactionManager" ref="bytejtaTransactionManager" />
 		<property name="xidFactory" ref="bytejtaXidFactory" />
 		<property name="transactionTimer" ref="bytejtaTransactionManager" />
