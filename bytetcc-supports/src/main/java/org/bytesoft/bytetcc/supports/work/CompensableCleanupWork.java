@@ -48,7 +48,7 @@ public class CompensableCleanupWork
 	static final long CONSTANTS_SECOND_MILLIS = 1000L;
 	static final int CONSTANTS_MAX_HANDLE_RECORDS = 1000;
 
-	@javax.annotation.Resource(name = "compensableMongoClient")
+	@javax.annotation.Resource
 	private MongoClient mongoClient;
 	@javax.inject.Inject
 	private CommandManager commandManager;

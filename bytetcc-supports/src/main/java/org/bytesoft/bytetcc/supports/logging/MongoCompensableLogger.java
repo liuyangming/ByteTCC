@@ -75,7 +75,7 @@ public class MongoCompensableLogger
 
 	static final int MONGODB_ERROR_DUPLICATE_KEY = 11000;
 
-	@javax.annotation.Resource(name = "compensableMongoClient")
+	@javax.annotation.Resource
 	private MongoClient mongoClient;
 	private String endpoint;
 	@javax.inject.Inject

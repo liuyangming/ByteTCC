@@ -64,7 +64,7 @@ public class MongoCompensableRepository
 	static final String CONSTANTS_FD_BRANCH = "bxid";
 	static final String CONSTANTS_FD_SYSTEM = "system";
 
-	@javax.annotation.Resource(name = "compensableMongoClient")
+	@javax.annotation.Resource
 	private MongoClient mongoClient;
 	private String endpoint;
 	@javax.inject.Inject
