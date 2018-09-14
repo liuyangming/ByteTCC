@@ -325,6 +325,10 @@ public class UserCompensableImpl implements UserCompensable, Referenceable, Seri
 		throw new NamingException("Not supported yet!");
 	}
 
+	public CompensableBeanFactory getBeanFactory() {
+		return this.beanFactory;
+	}
+
 	public void setBeanFactory(CompensableBeanFactory beanFactory) {
 		this.beanFactory = beanFactory;
 	}

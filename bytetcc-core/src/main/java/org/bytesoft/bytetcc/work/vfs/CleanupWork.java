@@ -301,6 +301,10 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableEndpo
 		this.endpoint = identifier;
 	}
 
+	public CompensableBeanFactory getBeanFactory() {
+		return this.beanFactory;
+	}
+
 	public void setBeanFactory(CompensableBeanFactory tbf) {
 		this.beanFactory = tbf;
 	}

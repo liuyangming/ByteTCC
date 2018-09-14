@@ -170,6 +170,10 @@ public class TransactionCoordinator implements RemoteCoordinator, CompensableBea
 		throw new XAException(XAException.XAER_RMERR);
 	}
 
+	public CompensableBeanFactory getBeanFactory() {
+		return this.beanFactory;
+	}
+
 	public void setBeanFactory(CompensableBeanFactory tbf) {
 		this.beanFactory = tbf;
 	}

@@ -58,7 +58,6 @@ import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @PropertySource(value = "bytetcc:loadbalancer.config", factory = CompensablePropertySourceFactory.class)
-// @Import({ TransactionConfiguration.class, CompensableConfiguration.class, ScheduleWorkConfiguration.class })
 @ImportResource({ "classpath:bytetcc-supports-springcloud.xml" })
 @Configuration
 public class SpringCloudConfiguration implements WebMvcConfigurer, BeanFactoryPostProcessor, InitializingBean,

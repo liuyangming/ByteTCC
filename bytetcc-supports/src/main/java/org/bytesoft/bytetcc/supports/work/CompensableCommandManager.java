@@ -45,7 +45,7 @@ public class CompensableCommandManager
 
 	static final String CONSTANTS_ROOT_PATH = "/org/bytesoft/bytetcc";
 
-	@javax.annotation.Resource(name = "compensableCuratorFramework")
+	@javax.annotation.Resource
 	private CuratorFramework curatorFramework;
 
 	private Lock stateLock = new ReentrantLock();

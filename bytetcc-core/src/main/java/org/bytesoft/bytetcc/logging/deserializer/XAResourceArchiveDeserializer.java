@@ -138,6 +138,10 @@ public class XAResourceArchiveDeserializer implements ArchiveDeserializer, Compe
 		return archive;
 	}
 
+	public CompensableBeanFactory getBeanFactory() {
+		return this.beanFactory;
+	}
+
 	public void setBeanFactory(CompensableBeanFactory tbf) {
 		this.beanFactory = tbf;
 	}

@@ -370,6 +370,10 @@ public class SampleCompensableLogger extends VirtualLoggingSystemImpl
 		return "org.bytesoft.bytetcc.logging.sample";
 	}
 
+	public CompensableBeanFactory getBeanFactory() {
+		return this.beanFactory;
+	}
+
 	public void setBeanFactory(CompensableBeanFactory tbf) {
 		this.beanFactory = tbf;
 	}

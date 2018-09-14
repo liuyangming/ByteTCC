@@ -160,6 +160,10 @@ public class CompensableCoordinatorController extends PropertyEditorSupport impl
 		}
 	}
 
+	public CompensableBeanFactory getBeanFactory() {
+		return this.beanFactory;
+	}
+
 	public void setBeanFactory(CompensableBeanFactory tbf) {
 		this.beanFactory = tbf;
 	}

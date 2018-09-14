@@ -678,6 +678,10 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 	public void setTimeoutSeconds(int timeoutSeconds) {
 	}
 
+	public CompensableBeanFactory getBeanFactory() {
+		return this.beanFactory;
+	}
+
 	public void setBeanFactory(CompensableBeanFactory tbf) {
 		this.beanFactory = tbf;
 	}

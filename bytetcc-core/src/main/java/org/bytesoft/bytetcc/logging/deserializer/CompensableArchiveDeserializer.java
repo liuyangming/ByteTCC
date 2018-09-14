@@ -228,6 +228,10 @@ public class CompensableArchiveDeserializer implements ArchiveDeserializer, Comp
 		return archive;
 	}
 
+	public CompensableBeanFactory getBeanFactory() {
+		return this.beanFactory;
+	}
+
 	public void setBeanFactory(CompensableBeanFactory tbf) {
 		this.beanFactory = tbf;
 	}

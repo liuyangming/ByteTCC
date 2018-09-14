@@ -16,7 +16,9 @@
 package org.bytesoft.bytetcc.supports.spring;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
@@ -25,14 +27,52 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.FatalBeanException;
 import org.springframework.beans.MutablePropertyValues;
+import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
+import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.config.RuntimeBeanReference;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
 
-@Deprecated
-public class CompensableBeanFactoryPostProcessor implements BeanFactoryPostProcessor {
+public class CompensableBeanFactoryPostProcessor
+		implements BeanFactoryPostProcessor, BeanPostProcessor, SmartInitializingSingleton, ApplicationContextAware {
 	static final Logger logger = LoggerFactory.getLogger(CompensableBeanFactoryPostProcessor.class);
+
+	private ApplicationContext applicationContext;
+
+	public void afterSingletonsInstantiated() {
+		Map<String, CompensableBeanFactoryAware> beanMap = //
+				this.applicationContext.getBeansOfType(CompensableBeanFactoryAware.class);
+		Iterator<Map.Entry<String, CompensableBeanFactoryAware>> iterator = //
+				(beanMap == null) ? null : beanMap.entrySet().iterator();
+		while (iterator != null && iterator.hasNext()) {
+			Map.Entry<String, CompensableBeanFactoryAware> entry = iterator.next();
+			CompensableBeanFactoryAware bean = entry.getValue();
+			this.initializeCompensableBeanFactoryIfNecessary(bean);
+		}
+	}
+
+	public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
+		return bean;
+	}
+
+	public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
+		if (CompensableBeanFactoryAware.class.isInstance(bean)) {
+			this.initializeCompensableBeanFactoryIfNecessary((CompensableBeanFactoryAware) bean);
+		} // end-if (CompensableBeanFactoryAware.class.isInstance(bean))
+
+		return bean;
+	}
+
+	private void initializeCompensableBeanFactoryIfNecessary(CompensableBeanFactoryAware aware) {
+		if (aware.getBeanFactory() == null) {
+			CompensableBeanFactory beanFactory = //
+					this.applicationContext.getBean(CompensableBeanFactory.class);
+			aware.setBeanFactory(beanFactory);
+		} // end-if (aware.getBeanFactory() == null)
+	}
 
 	public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
 		ClassLoader cl = Thread.currentThread().getContextClassLoader();
@@ -95,6 +135,10 @@ public class CompensableBeanFactoryPostProcessor implements BeanFactoryPostProce
 		MutablePropertyValues mpv = beanDef.getPropertyValues();
 		RuntimeBeanReference synchronization = new RuntimeBeanReference(interceptorBeanId);
 		mpv.addPropertyValue("compensableSynchronization", synchronization);
+	}
+
+	public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+		this.applicationContext = applicationContext;
 	}
 
 }

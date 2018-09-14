@@ -59,6 +59,7 @@ import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.IndexOptions;
+import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
 
@@ -243,6 +244,7 @@ public class MongoCompensableLogger
 			String application = values[1];
 
 			byte[] global = transactionXid.getGlobalTransactionId();
+
 			String identifier = ByteUtils.byteArrayToString(global);
 
 			Document document = new Document();
@@ -267,15 +269,14 @@ public class MongoCompensableLogger
 			List<XAResourceArchive> participantList = archive.getRemoteResources();
 			for (int i = 0; participantList != null && i < participantList.size(); i++) {
 				XAResourceArchive resource = participantList.get(i);
-				this.createParticipant(resource, true);
+				this.createParticipant(resource);
 			}
 
 			List<CompensableArchive> compensableList = archive.getCompensableResourceList();
 			for (int i = 0; compensableList != null && i < compensableList.size(); i++) {
 				CompensableArchive resource = compensableList.get(i);
-				this.createCompensable(resource, true);
+				this.createCompensable(resource);
 			}
-
 		} catch (IOException error) {
 			logger.error("Error occurred while creating transaction.", error);
 			this.beanFactory.getCompensableManager().setRollbackOnlyQuietly();
@@ -328,15 +329,14 @@ public class MongoCompensableLogger
 			List<XAResourceArchive> participantList = archive.getRemoteResources();
 			for (int i = 0; participantList != null && i < participantList.size(); i++) {
 				XAResourceArchive resource = participantList.get(i);
-				this.updateParticipant(resource, true);
+				this.updateParticipant(resource);
 			}
 
 			List<CompensableArchive> compensableList = archive.getCompensableResourceList();
 			for (int i = 0; compensableList != null && i < compensableList.size(); i++) {
 				CompensableArchive resource = compensableList.get(i);
-				this.updateCompensable(resource, true);
+				this.updateCompensable(resource);
 			}
-
 		} catch (IOException error) {
 			logger.error("Error occurred while updating transaction.", error);
 			this.beanFactory.getCompensableManager().setRollbackOnlyQuietly();
@@ -369,8 +369,7 @@ public class MongoCompensableLogger
 
 			DeleteResult result = transactions.deleteOne(Filters.and(globalFilter, systemFilter));
 			if (result.getDeletedCount() != 1) {
-				throw new IllegalStateException(
-						String.format("Error occurred while deleting transaction(deleted= %s).", result.getDeletedCount()));
+				logger.error("Error occurred while deleting transaction(deleted= {}).", result.getDeletedCount());
 			}
 		} catch (RuntimeException error) {
 			logger.error("Error occurred while deleting transaction!", error);
@@ -378,23 +377,12 @@ public class MongoCompensableLogger
 	}
 
 	public void createParticipant(XAResourceArchive archive) {
+		TransactionXid transactionXid = (TransactionXid) archive.getXid();
+		byte[] global = transactionXid.getGlobalTransactionId();
+		byte[] branch = transactionXid.getBranchQualifier();
+		String globalKey = ByteUtils.byteArrayToString(global);
+		String branchKey = ByteUtils.byteArrayToString(branch);
 		try {
-			this.createParticipant(archive, true);
-		} catch (RuntimeException error) {
-			logger.error("Error occurred while creating participant!", error);
-			this.beanFactory.getCompensableManager().setRollbackOnlyQuietly();
-		}
-	}
-
-	private void createParticipant(XAResourceArchive archive, boolean redirect) {
-		try {
-			TransactionXid transactionXid = (TransactionXid) archive.getXid();
-			byte[] global = transactionXid.getGlobalTransactionId();
-			byte[] branch = transactionXid.getBranchQualifier();
-
-			MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
-			MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_PARTICIPANTS);
-
 			Document document = new Document();
 
 			XAResourceDescriptor descriptor = archive.getDescriptor();
@@ -411,10 +399,9 @@ public class MongoCompensableLogger
 			String[] values = this.endpoint.split("\\s*:\\s*");
 			String application = values[1];
 
-			document.append(CONSTANTS_FD_GLOBAL, ByteUtils.byteArrayToString(global));
-			document.append(CONSTANTS_FD_BRANCH, ByteUtils.byteArrayToString(branch));
+			document.append(CONSTANTS_FD_GLOBAL, globalKey);
+			document.append(CONSTANTS_FD_BRANCH, branchKey);
 			document.append(CONSTANTS_FD_SYSTEM, application);
-			document.append("created", this.endpoint);
 
 			document.append("type", descriptorType);
 			document.append("resource", descriptorKey);
@@ -429,33 +416,41 @@ public class MongoCompensableLogger
 			document.append("created", this.endpoint);
 			document.append("modified", this.endpoint);
 
+			MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
+			MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_PARTICIPANTS);
+
 			collection.insertOne(document);
 		} catch (com.mongodb.MongoWriteException error) {
 			com.mongodb.WriteError writeError = error.getError();
-			if (MONGODB_ERROR_DUPLICATE_KEY == writeError.getCode() && redirect) {
-				this.updateParticipant(archive, false);
+			if (MONGODB_ERROR_DUPLICATE_KEY == writeError.getCode()) {
+				this.upsertParticipant(transactionXid, archive);
 			} else {
 				throw error;
 			}
+		} catch (RuntimeException error) {
+			logger.error("Error occurred while creating participant!", error);
+			this.beanFactory.getCompensableManager().setRollbackOnlyQuietly();
 		}
 	}
 
 	public void updateParticipant(XAResourceArchive archive) {
 		try {
-			this.updateParticipant(archive, true);
+			this.upsertParticipant((TransactionXid) archive.getXid(), archive);
 		} catch (RuntimeException error) {
 			logger.error("Error occurred while updating participant.", error);
 			this.beanFactory.getCompensableManager().setRollbackOnlyQuietly();
 		}
 	}
 
-	private void updateParticipant(XAResourceArchive archive, boolean redirect) {
-		TransactionXid transactionXid = (TransactionXid) archive.getXid();
+	private void upsertParticipant(TransactionXid transactionXid, XAResourceArchive archive) {
 		byte[] global = transactionXid.getGlobalTransactionId();
 		byte[] branch = transactionXid.getBranchQualifier();
+		String globalKey = ByteUtils.byteArrayToString(global);
+		String branchKey = ByteUtils.byteArrayToString(branch);
 
-		MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
-		MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_PARTICIPANTS);
+		XAResourceDescriptor descriptor = archive.getDescriptor();
+		String descriptorType = descriptor.getClass().getName();
+		String descriptorKey = descriptor.getIdentifier();
 
 		int branchVote = archive.getVote();
 		boolean readonly = archive.isReadonly();
@@ -464,50 +459,65 @@ public class MongoCompensableLogger
 		boolean completed = archive.isCompleted();
 		boolean heuristic = archive.isHeuristic();
 
+		MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
+		MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_PARTICIPANTS);
+
+		Bson globalFilter = Filters.eq(CONSTANTS_FD_GLOBAL, globalKey);
+		Bson branchFilter = Filters.eq(CONSTANTS_FD_BRANCH, branchKey);
+		Bson condition = Filters.and(globalFilter, branchFilter);
+
 		Document variables = new Document();
+
+		variables.append("type", descriptorType);
+		variables.append("resource", descriptorKey);
+
 		variables.append("vote", branchVote);
 		variables.append("committed", committed);
 		variables.append("rolledback", rolledback);
 		variables.append("readonly", readonly);
 		variables.append("completed", completed);
 		variables.append("heuristic", heuristic);
-
 		variables.append("modified", this.endpoint);
 
-		Bson globalFilter = Filters.eq(CONSTANTS_FD_GLOBAL, ByteUtils.byteArrayToString(global));
-		Bson branchFilter = Filters.eq(CONSTANTS_FD_BRANCH, ByteUtils.byteArrayToString(branch));
+		Document document = new Document();
+		document.append("$set", variables);
 
-		UpdateResult result = collection.updateOne(Filters.and(globalFilter, branchFilter), new Document("$set", variables));
-		if (result.getModifiedCount() == 0 && redirect) {
-			this.createParticipant(archive, false);
-		} else if (result.getModifiedCount() != 1) {
+		UpdateResult result = collection.updateOne(condition, document, new UpdateOptions().upsert(true));
+		if (result.getUpsertedId() == null && result.getMatchedCount() != 1) {
 			throw new IllegalStateException(
-					String.format("Error occurred while updating participant(matched= %s, modified= %s).",
+					String.format("Error occurred while upserting participant(matched= %s, modified= %s).",
 							result.getMatchedCount(), result.getModifiedCount()));
 		}
 	}
 
 	public void deleteParticipant(XAResourceArchive archive) {
-	}
+		TransactionXid transactionXid = (TransactionXid) archive.getXid();
+		byte[] global = transactionXid.getGlobalTransactionId();
+		byte[] branch = transactionXid.getBranchQualifier();
+		String globalKey = ByteUtils.byteArrayToString(global);
+		String branchKey = ByteUtils.byteArrayToString(branch);
 
-	public void createCompensable(CompensableArchive archive) {
-		try {
-			this.createCompensable(archive, true);
-		} catch (IOException error) {
-			logger.error("Error occurred while creating compensable!", error);
-			this.beanFactory.getCompensableManager().setRollbackOnlyQuietly();
-		} catch (RuntimeException error) {
-			logger.error("Error occurred while creating compensable!", error);
-			this.beanFactory.getCompensableManager().setRollbackOnlyQuietly();
+		MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
+		MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_PARTICIPANTS);
+
+		Bson globalFilter = Filters.eq(CONSTANTS_FD_GLOBAL, globalKey);
+		Bson branchFilter = Filters.eq(CONSTANTS_FD_BRANCH, branchKey);
+
+		DeleteResult result = collection.deleteOne(Filters.and(globalFilter, branchFilter));
+		if (result.getDeletedCount() != 1) {
+			logger.error("Error occurred while deleting participant(deleted= {}).", result.getDeletedCount());
 		}
 	}
 
-	private void createCompensable(CompensableArchive archive, boolean redirect) throws IOException {
-		try {
-			TransactionXid xid = (TransactionXid) archive.getIdentifier();
-			byte[] global = xid.getGlobalTransactionId();
-			byte[] branch = xid.getBranchQualifier();
+	public void createCompensable(CompensableArchive archive) {
+		TransactionXid xid = (TransactionXid) archive.getIdentifier();
+		byte[] global = xid.getGlobalTransactionId();
+		byte[] branch = xid.getBranchQualifier();
+		String globalKey = ByteUtils.byteArrayToString(global);
+		String branchKey = ByteUtils.byteArrayToString(branch);
 
+		byte[] argsByteArray = new byte[0];
+		try {
 			MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
 			MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_COMPENSABLES);
 
@@ -518,15 +528,15 @@ public class MongoCompensableLogger
 			Object[] args = invocation.getArgs();
 
 			String methodDesc = SerializeUtils.serializeMethod(invocation.getMethod());
-			byte[] argsByteArray = SerializeUtils.serializeObject(args);
+			argsByteArray = SerializeUtils.serializeObject(args);
 			String argsValue = ByteUtils.byteArrayToString(argsByteArray);
 
 			String[] values = this.endpoint.split("\\s*:\\s*");
 			String application = values[1];
 
 			Document document = new Document();
-			document.append(CONSTANTS_FD_GLOBAL, ByteUtils.byteArrayToString(global));
-			document.append(CONSTANTS_FD_BRANCH, ByteUtils.byteArrayToString(branch));
+			document.append(CONSTANTS_FD_GLOBAL, globalKey);
+			document.append(CONSTANTS_FD_BRANCH, branchKey);
 			document.append(CONSTANTS_FD_SYSTEM, application);
 			document.append("created", this.endpoint);
 
@@ -556,17 +566,26 @@ public class MongoCompensableLogger
 			collection.insertOne(document);
 		} catch (com.mongodb.MongoWriteException error) {
 			com.mongodb.WriteError writeError = error.getError();
-			if (MONGODB_ERROR_DUPLICATE_KEY == writeError.getCode() && redirect) {
-				this.updateCompensable(archive, false);
+			if (MONGODB_ERROR_DUPLICATE_KEY == writeError.getCode()) {
+				this.upsertCompensable((TransactionXid) archive.getIdentifier(), archive, argsByteArray);
 			} else {
 				throw error;
 			}
+		} catch (IOException error) {
+			logger.error("Error occurred while creating compensable.", error);
+			this.beanFactory.getCompensableManager().setRollbackOnlyQuietly();
+		} catch (RuntimeException error) {
+			logger.error("Error occurred while creating compensable.", error);
+			this.beanFactory.getCompensableManager().setRollbackOnlyQuietly();
 		}
 	}
 
 	public void updateCompensable(CompensableArchive archive) {
 		try {
-			this.updateCompensable(archive, true);
+			CompensableInvocation invocation = archive.getCompensable();
+			Object[] args = invocation.getArgs();
+			byte[] argsByteArray = SerializeUtils.serializeObject(args);
+			this.upsertCompensable((TransactionXid) archive.getIdentifier(), archive, argsByteArray);
 		} catch (IOException error) {
 			logger.error("Error occurred while updating compensable.", error);
 			this.beanFactory.getCompensableManager().setRollbackOnlyQuietly();
@@ -576,10 +595,21 @@ public class MongoCompensableLogger
 		}
 	}
 
-	private void updateCompensable(CompensableArchive archive, boolean redirect) throws IOException {
-		TransactionXid xid = (TransactionXid) archive.getIdentifier();
+	private void upsertCompensable(TransactionXid xid, CompensableArchive archive, byte[] argsByteArray) {
 		byte[] global = xid.getGlobalTransactionId();
 		byte[] branch = xid.getBranchQualifier();
+		String globalKey = ByteUtils.byteArrayToString(global);
+		String branchKey = ByteUtils.byteArrayToString(branch);
+
+		CompensableInvocation invocation = archive.getCompensable();
+		String beanId = (String) invocation.getIdentifier();
+
+		Method method = invocation.getMethod();
+		String methodDesc = SerializeUtils.serializeMethod(method);
+		String argsValue = ByteUtils.byteArrayToString(argsByteArray);
+
+		String[] values = this.endpoint.split("\\s*:\\s*");
+		String application = values[1];
 
 		MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
 		MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_COMPENSABLES);
@@ -588,24 +618,40 @@ public class MongoCompensableLogger
 		Xid compensableXid = archive.getCompensableXid();
 
 		Document variables = new Document();
+		variables.append(CONSTANTS_FD_GLOBAL, globalKey);
+		variables.append(CONSTANTS_FD_BRANCH, branchKey);
+		variables.append(CONSTANTS_FD_SYSTEM, application);
+
+		variables.append("coordinator", archive.isCoordinator());
 		variables.append("tried", archive.isTried());
 		variables.append("confirmed", archive.isConfirmed());
 		variables.append("cancelled", archive.isCancelled());
 		variables.append("modified", this.endpoint);
+
 		variables.append("transaction_key", archive.getTransactionResourceKey());
 		variables.append("compensable_key", archive.getCompensableResourceKey());
 		variables.append("transaction_xid", String.valueOf(transactionXid));
 		variables.append("compensable_xid", String.valueOf(compensableXid));
 
-		Bson globalFilter = Filters.eq(CONSTANTS_FD_GLOBAL, ByteUtils.byteArrayToString(global));
-		Bson branchFilter = Filters.eq(CONSTANTS_FD_BRANCH, ByteUtils.byteArrayToString(branch));
-		UpdateResult result = collection.updateOne(Filters.and(globalFilter, branchFilter), new Document("$set", variables));
+		variables.append("serviceId", beanId);
+		variables.append("simplified", invocation.isSimplified());
+		variables.append("confirmable_key", invocation.getConfirmableKey());
+		variables.append("cancellable_key", invocation.getCancellableKey());
+		variables.append("args", argsValue);
+		variables.append("interface", method.getDeclaringClass().getName());
+		variables.append("method", methodDesc);
 
-		if (result.getModifiedCount() == 0 && redirect) {
-			this.createCompensable(archive, false);
-		} else if (result.getModifiedCount() != 1) {
+		Bson globalFilter = Filters.eq(CONSTANTS_FD_GLOBAL, globalKey);
+		Bson branchFilter = Filters.eq(CONSTANTS_FD_BRANCH, branchKey);
+		Bson condition = Filters.and(globalFilter, branchFilter);
+
+		Document document = new Document();
+		document.append("$set", variables);
+
+		UpdateResult result = collection.updateOne(condition, document, new UpdateOptions().upsert(true));
+		if (result.getUpsertedId() == null && result.getMatchedCount() != 1) {
 			throw new IllegalStateException(
-					String.format("Error occurred while updating compensable(matched= %s, modified= %s).",
+					String.format("Error occurred while upserting compensable(matched= %s, modified= %s).",
 							result.getMatchedCount(), result.getModifiedCount()));
 		}
 	}
@@ -632,7 +678,7 @@ public class MongoCompensableLogger
 			MongoCursor<Document> transactionCursor = null;
 			try {
 				transactionCursor = transactionItr.iterator();
-				for (; transactionCursor.hasNext();) {
+				while (transactionCursor.hasNext()) {
 					Document document = transactionCursor.next();
 					TransactionArchive archive = new TransactionArchive();
 
@@ -671,7 +717,7 @@ public class MongoCompensableLogger
 			MongoCursor<Document> participantCursor = null;
 			try {
 				participantCursor = participantItr.iterator();
-				for (; participantCursor.hasNext();) {
+				while (participantCursor.hasNext()) {
 					Document document = participantCursor.next();
 					XAResourceArchive participant = new XAResourceArchive();
 
@@ -723,7 +769,7 @@ public class MongoCompensableLogger
 			MongoCursor<Document> compensableCursor = null;
 			try {
 				compensableCursor = compensableItr.iterator();
-				for (; compensableCursor.hasNext();) {
+				while (compensableCursor.hasNext()) {
 					Document document = compensableCursor.next();
 					CompensableArchive compensable = new CompensableArchive();
 
@@ -825,7 +871,7 @@ public class MongoCompensableLogger
 		}
 
 		Iterator<Map.Entry<Xid, TransactionArchive>> itr = archiveMap.entrySet().iterator();
-		for (; itr.hasNext();) {
+		while (itr.hasNext()) {
 			Map.Entry<Xid, TransactionArchive> entry = itr.next();
 			TransactionArchive archive = entry.getValue();
 			callback.recover(archive);
@@ -839,6 +885,10 @@ public class MongoCompensableLogger
 
 	public void setInitializeEnabled(boolean initializeEnabled) {
 		this.initializeEnabled = initializeEnabled;
+	}
+
+	public CompensableBeanFactory getBeanFactory() {
+		return this.beanFactory;
 	}
 
 	public void setBeanFactory(CompensableBeanFactory tbf) {

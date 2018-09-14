@@ -107,6 +107,10 @@ public class CompensableWork implements Work, CompensableBeanFactoryAware {
 		this.delayOfStoping = delayOfStoping;
 	}
 
+	public CompensableBeanFactory getBeanFactory() {
+		return this.beanFactory;
+	}
+
 	public void setBeanFactory(CompensableBeanFactory tbf) {
 		this.beanFactory = tbf;
 	}
