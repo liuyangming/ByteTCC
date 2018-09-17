@@ -26,8 +26,12 @@ import javax.transaction.xa.Xid;
 
 import org.apache.commons.lang3.StringUtils;
 import org.bytesoft.common.utils.ByteUtils;
+import org.bytesoft.common.utils.CommonUtils;
 import org.bytesoft.common.utils.SerializeUtils;
+import org.bytesoft.transaction.TransactionParticipant;
+import org.bytesoft.transaction.remote.RemoteAddr;
 import org.bytesoft.transaction.remote.RemoteCoordinator;
+import org.bytesoft.transaction.remote.RemoteNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.env.Environment;
@@ -47,16 +51,25 @@ public class SpringCloudCoordinator implements InvocationHandler {
 	public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
 		Class<?> clazz = method.getDeclaringClass();
 		String methodName = method.getName();
+		Class<?> returnType = method.getReturnType();
 		if (Object.class.equals(clazz)) {
 			return method.invoke(this, args);
-		} else if (RemoteCoordinator.class.equals(clazz)) {
+		} else if (TransactionParticipant.class.equals(clazz)) {
 			if ("getIdentifier".equals(methodName)) {
 				return this.identifier;
-			} else if ("getApplication".equals(methodName)) {
+			} else {
+				throw new XAException(XAException.XAER_RMFAIL);
+			}
+		} else if (RemoteCoordinator.class.equals(clazz)) {
+			if ("getApplication".equals(methodName)) {
 				int firstIndex = this.identifier.indexOf(":");
 				int lastIndex = this.identifier.lastIndexOf(":");
 				return firstIndex <= 0 || lastIndex <= 0 || firstIndex > lastIndex //
 						? null : this.identifier.subSequence(firstIndex + 1, lastIndex);
+			} else if ("getRemoteAddr".equals(methodName) && RemoteAddr.class.equals(returnType)) {
+				return this.identifier == null ? null : CommonUtils.getRemoteAddr(this.identifier);
+			} else if ("getRemoteNode".equals(methodName) && RemoteNode.class.equals(returnType)) {
+				return this.identifier == null ? null : CommonUtils.getRemoteNode(this.identifier);
 			} else {
 				throw new XAException(XAException.XAER_RMFAIL);
 			}

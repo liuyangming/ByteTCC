@@ -149,7 +149,6 @@ public class CompensableInterceptorImpl implements TransactionInterceptor, Compe
 		}
 
 		try {
-
 			RemoteResourceDescriptor descriptor = new RemoteResourceDescriptor();
 			descriptor.setDelegate(resource);
 			// descriptor.setIdentifier(resource.getIdentifier());
