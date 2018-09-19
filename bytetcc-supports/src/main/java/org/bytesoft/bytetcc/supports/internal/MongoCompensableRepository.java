@@ -21,6 +21,8 @@ import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
 
+import javax.transaction.xa.XAException;
+
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.bson.Document;
@@ -34,6 +36,7 @@ import org.bytesoft.compensable.archive.TransactionArchive;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 import org.bytesoft.compensable.aware.CompensableEndpointAware;
 import org.bytesoft.transaction.Transaction;
+import org.bytesoft.transaction.TransactionException;
 import org.bytesoft.transaction.TransactionRecovery;
 import org.bytesoft.transaction.TransactionRepository;
 import org.bytesoft.transaction.archive.XAResourceArchive;
@@ -74,8 +77,8 @@ public class MongoCompensableRepository
 	}
 
 	@SuppressWarnings("unchecked")
-	public Transaction getTransaction(TransactionXid xid) {
-		TransactionRecovery compensableRecovery = this.beanFactory.getTransactionRecovery();
+	public Transaction getTransaction(TransactionXid xid) throws TransactionException {
+		TransactionRecovery compensableRecovery = this.beanFactory.getCompensableRecovery();
 		XidFactory compensableXidFactory = this.beanFactory.getCompensableXidFactory();
 
 		TransactionArchive archive = null;
@@ -130,13 +133,16 @@ public class MongoCompensableRepository
 
 			this.initializeParticipantList(archive);
 			this.initializeCompensableList(archive);
+
+			return compensableRecovery.reconstruct(archive);
 		} catch (RuntimeException error) {
 			logger.error("Error occurred while recovering transaction.", error);
+			throw new TransactionException(XAException.XAER_RMERR);
 		} catch (Exception error) {
 			logger.error("Error occurred while recovering transaction.", error);
+			throw new TransactionException(XAException.XAER_RMERR);
 		}
 
-		return compensableRecovery.reconstruct(archive);
 	}
 
 	private void initializeCompensableList(TransactionArchive archive) throws ClassNotFoundException, Exception, IOException {
@@ -355,7 +361,7 @@ public class MongoCompensableRepository
 	}
 
 	@SuppressWarnings("unchecked")
-	public Transaction getErrorTransaction(TransactionXid xid) {
+	public Transaction getErrorTransaction(TransactionXid xid) throws TransactionException {
 		TransactionRecovery compensableRecovery = this.beanFactory.getTransactionRecovery();
 		XidFactory compensableXidFactory = this.beanFactory.getCompensableXidFactory();
 

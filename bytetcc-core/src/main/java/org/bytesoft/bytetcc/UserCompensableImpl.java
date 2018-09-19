@@ -35,6 +35,7 @@ import org.bytesoft.compensable.CompensableTransaction;
 import org.bytesoft.compensable.TransactionContext;
 import org.bytesoft.compensable.UserCompensable;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
+import org.bytesoft.transaction.TransactionException;
 import org.bytesoft.transaction.TransactionManager;
 import org.bytesoft.transaction.TransactionParticipant;
 import org.bytesoft.transaction.TransactionRepository;
@@ -128,7 +129,14 @@ public class UserCompensableImpl implements UserCompensable, Referenceable, Seri
 		}
 
 		TransactionXid compensableXid = (TransactionXid) xid;
-		CompensableTransaction transaction = (CompensableTransaction) transactionRepository.getTransaction(compensableXid);
+		CompensableTransaction transaction = null;
+		try {
+			transaction = (CompensableTransaction) transactionRepository.getTransaction(compensableXid);
+		} catch (TransactionException tex) {
+			logger.error("Error occurred while getting transaction from transaction repository!", tex);
+			throw new IllegalStateException();
+		}
+
 		if (transaction == null) {
 			throw new IllegalStateException();
 		} else if (CompensableTransaction.class.isInstance(transaction) == false) {

@@ -41,6 +41,7 @@ import org.bytesoft.compensable.CompensableManager;
 import org.bytesoft.compensable.CompensableTransaction;
 import org.bytesoft.compensable.RemotingException;
 import org.bytesoft.compensable.TransactionContext;
+import org.bytesoft.transaction.TransactionException;
 import org.bytesoft.transaction.TransactionParticipant;
 import org.bytesoft.transaction.TransactionRepository;
 import org.bytesoft.transaction.remote.RemoteCoordinator;
@@ -161,7 +162,19 @@ public class CompensableServiceFilter implements Filter {
 		Xid xid = (Xid) arguments[0];
 
 		TransactionXid globalXid = xidFactory.createGlobalXid(xid.getGlobalTransactionId());
-		CompensableTransaction transaction = (CompensableTransaction) compensableRepository.getTransaction(globalXid);
+		CompensableTransaction transaction = null;
+		try {
+			transaction = (CompensableTransaction) compensableRepository.getTransaction(globalXid);
+		} catch (TransactionException tex) {
+			InvocationResult wrapped = new InvocationResult();
+			wrapped.setError(new XAException(XAException.XAER_RMERR));
+			wrapped.setVariable(RemoteCoordinator.class.getName(), compensableCoordinator.getIdentifier());
+
+			result.setException(null);
+			result.setValue(wrapped);
+			return result;
+		}
+
 		if (transaction == null) {
 			InvocationResult wrapped = new InvocationResult();
 			wrapped.setError(new XAException(XAException.XAER_NOTA));
