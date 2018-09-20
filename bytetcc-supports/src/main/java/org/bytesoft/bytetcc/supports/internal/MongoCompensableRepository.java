@@ -72,6 +72,8 @@ public class MongoCompensableRepository
 	private MongoClient mongoClient;
 	private String endpoint;
 	@javax.inject.Inject
+	private CompensableInstVersionManager versionManager;
+	@javax.inject.Inject
 	private CompensableBeanFactory beanFactory;
 
 	public void putTransaction(TransactionXid xid, Transaction transaction) {
@@ -346,7 +348,7 @@ public class MongoCompensableRepository
 			Bson systemFilter = Filters.eq(CONSTANTS_FD_SYSTEM, application);
 
 			UpdateResult result = collection.updateOne(Filters.and(globalFilter, systemFilter), document);
-			if (result.getModifiedCount() != 1) {
+			if (result.getMatchedCount() != 1) {
 				throw new IllegalStateException(
 						String.format("Error occurred while updating transaction(matched= %s, modified= %s).",
 								result.getMatchedCount(), result.getModifiedCount()));
@@ -358,7 +360,7 @@ public class MongoCompensableRepository
 
 	@SuppressWarnings("unchecked")
 	public Transaction getErrorTransaction(TransactionXid xid) throws TransactionException {
-		TransactionRecovery compensableRecovery = this.beanFactory.getTransactionRecovery();
+		TransactionRecovery compensableRecovery = this.beanFactory.getCompensableRecovery();
 		XidFactory compensableXidFactory = this.beanFactory.getCompensableXidFactory();
 
 		MongoCursor<Document> transactionCursor = null;
@@ -426,7 +428,7 @@ public class MongoCompensableRepository
 
 	@SuppressWarnings("unchecked")
 	public List<Transaction> getErrorTransactionList() throws TransactionException {
-		TransactionRecovery compensableRecovery = this.beanFactory.getTransactionRecovery();
+		TransactionRecovery compensableRecovery = this.beanFactory.getCompensableRecovery();
 		XidFactory compensableXidFactory = this.beanFactory.getCompensableXidFactory();
 
 		List<Transaction> transactionList = new ArrayList<Transaction>();
@@ -440,24 +442,33 @@ public class MongoCompensableRepository
 			String application = values[1];
 
 			Bson systemFilter = Filters.eq(CONSTANTS_FD_SYSTEM, application);
-			Bson errorFilter = Filters.eq("error", true);
 			Bson coordinatorFilter = Filters.eq("coordinator", true);
 
 			FindIterable<Document> transactionItr = //
-					transactions.find(Filters.and(systemFilter, errorFilter, coordinatorFilter));
+					transactions.find(Filters.and(systemFilter, coordinatorFilter));
 			for (transactionCursor = transactionItr.iterator(); transactionCursor.hasNext();) {
 				Document document = transactionCursor.next();
 				TransactionArchive archive = new TransactionArchive();
 
-				String global = document.getString(CONSTANTS_FD_GLOBAL);
+				String gxid = document.getString(CONSTANTS_FD_GLOBAL);
 				boolean propagated = document.getBoolean("propagated");
 				String propagatedBy = document.getString("propagated_by");
 				boolean compensable = document.getBoolean("compensable");
 				boolean coordinator = document.getBoolean("coordinator");
 				int compensableStatus = document.getInteger("status");
+				boolean error = document.getBoolean("error");
 				String textVariables = document.getString("variables");
 
-				TransactionXid globalXid = compensableXidFactory.createGlobalXid(global.getBytes());
+				String targetApplication = document.getString("created");
+				long expectVersion = document.getLong("version");
+				long actualVersion = this.versionManager.getInstanceVersion(targetApplication);
+
+				if (error == false && actualVersion <= expectVersion) {
+					continue; // ignore
+				}
+
+				byte[] global = ByteUtils.stringToByteArray(gxid);
+				TransactionXid globalXid = compensableXidFactory.createGlobalXid(global);
 				archive.setXid(globalXid);
 
 				byte[] variablesByteArray = ByteUtils.stringToByteArray(textVariables);

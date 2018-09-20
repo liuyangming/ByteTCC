@@ -30,6 +30,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.bytesoft.bytetcc.supports.CompensableInvocationImpl;
+import org.bytesoft.bytetcc.supports.internal.CompensableInstVersionManager;
 import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.common.utils.SerializeUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;
@@ -50,7 +51,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.InitializingBean;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.mongodb.BasicDBObject;
 import com.mongodb.client.FindIterable;
 import com.mongodb.client.ListIndexesIterable;
 import com.mongodb.client.MongoClient;
@@ -79,6 +79,8 @@ public class MongoCompensableLogger
 	@javax.annotation.Resource
 	private MongoClient mongoClient;
 	private String endpoint;
+	@javax.inject.Inject
+	private CompensableInstVersionManager versionManager;
 	@javax.inject.Inject
 	private CompensableBeanFactory beanFactory;
 	private boolean initializeEnabled = true;
@@ -247,6 +249,11 @@ public class MongoCompensableLogger
 
 			String identifier = ByteUtils.byteArrayToString(global);
 
+			long version = this.versionManager.getInstanceVersion(this.endpoint);
+			if (version <= 0) {
+				throw new IllegalStateException();
+			}
+
 			Document document = new Document();
 			document.append(CONSTANTS_FD_GLOBAL, identifier);
 			document.append(CONSTANTS_FD_SYSTEM, application);
@@ -262,7 +269,7 @@ public class MongoCompensableLogger
 			document.append("vars", jsonVariables);
 			document.append("variables", textVariables);
 			document.append("error", false);
-			document.append("version", 0L);
+			document.append("version", version);
 
 			collection.insertOne(document);
 
@@ -315,12 +322,11 @@ public class MongoCompensableLogger
 
 			Document document = new Document();
 			document.append("$set", target);
-			document.append("$inc", new BasicDBObject("version", 1));
 
 			Bson globalFilter = Filters.eq(CONSTANTS_FD_GLOBAL, identifier);
 			Bson systemFilter = Filters.eq(CONSTANTS_FD_SYSTEM, application);
 			UpdateResult result = collection.updateOne(Filters.and(globalFilter, systemFilter), document);
-			if (result.getModifiedCount() != 1) {
+			if (result.getMatchedCount() != 1) {
 				throw new IllegalStateException(
 						String.format("Error occurred while updating transaction(matched= %s, modified= %s).",
 								result.getMatchedCount(), result.getModifiedCount()));
@@ -675,11 +681,27 @@ public class MongoCompensableLogger
 			String[] values = this.endpoint.split("\\s*:\\s*");
 			String application = values[1];
 			Bson systemFilter = Filters.eq(CONSTANTS_FD_SYSTEM, application);
-			Bson errorFilter = Filters.eq("error", true);
+			Bson coordinatorFilter = Filters.eq("coordinator", true);
 
-			FindIterable<Document> transactionItr = transactions.find(Filters.and(systemFilter, errorFilter));
+			FindIterable<Document> transactionItr = transactions.find(Filters.and(systemFilter, coordinatorFilter));
 			for (transactionCursor = transactionItr.iterator(); transactionCursor.hasNext();) {
 				Document document = transactionCursor.next();
+
+				boolean propagated = document.getBoolean("propagated");
+				String propagatedBy = document.getString("propagated_by");
+				boolean compensable = document.getBoolean("compensable");
+				boolean coordinator = document.getBoolean("coordinator");
+				int compensableStatus = document.getInteger("status");
+				boolean error = document.getBoolean("error");
+
+				String targetApplication = document.getString(CONSTANTS_FD_SYSTEM);
+				long expectVersion = document.getLong("version");
+				long actualVersion = this.versionManager.getInstanceVersion(targetApplication);
+
+				if (error == false && actualVersion <= expectVersion) {
+					continue; // ignore
+				}
+
 				TransactionArchive archive = new TransactionArchive();
 
 				String gxid = document.getString(CONSTANTS_FD_GLOBAL);
@@ -687,17 +709,10 @@ public class MongoCompensableLogger
 				TransactionXid globalXid = compensableXidFactory.createGlobalXid(globalTransactionId);
 				archive.setXid(globalXid);
 
-				boolean propagated = document.getBoolean("propagated");
-				String propagatedBy = document.getString("propagated_by");
-				boolean compensable = document.getBoolean("compensable");
-				boolean coordinator = document.getBoolean("coordinator");
-				int compensableStatus = document.getInteger("status");
-
 				String textVariables = document.getString("variables");
 				byte[] variablesByteArray = ByteUtils.stringToByteArray(textVariables);
 				Map<String, Serializable> variables = //
 						(Map<String, Serializable>) SerializeUtils.deserializeObject(variablesByteArray);
-
 				archive.setVariables(variables);
 
 				archive.setCompensable(compensable);

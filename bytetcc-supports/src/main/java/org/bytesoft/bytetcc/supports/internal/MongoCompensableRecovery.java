@@ -26,22 +26,6 @@ public class MongoCompensableRecovery extends TransactionRecoveryImpl {
 	@javax.inject.Inject
 	private CommandManager commandManager;
 
-	public void startRecovery() throws SecurityException {
-		try {
-			this.commandManager.execute(new Runnable() {
-				public void run() {
-					fireSuperStartRecovery();
-				}
-			});
-		} catch (SecurityException error) {
-			throw error; // Only the master node can perform the recovery operation!
-		} catch (RuntimeException error) {
-			throw error;
-		} catch (Exception error) {
-			throw new RuntimeException(error);
-		}
-	}
-
 	public void timingRecover() throws SecurityException {
 		try {
 			this.commandManager.execute(new Runnable() {
@@ -56,10 +40,6 @@ public class MongoCompensableRecovery extends TransactionRecoveryImpl {
 		} catch (Exception error) {
 			throw new RuntimeException(error);
 		}
-	}
-
-	private void fireSuperStartRecovery() {
-		super.startRecovery();
 	}
 
 	private void fireSuperTimingRecovery() {

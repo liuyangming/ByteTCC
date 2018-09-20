@@ -21,6 +21,7 @@ import org.bytesoft.bytetcc.supports.logging.MongoCompensableLogger;
 import org.bytesoft.bytetcc.supports.resource.LocalResourceCleaner;
 import org.bytesoft.bytetcc.work.CommandManager;
 import org.bytesoft.common.utils.ByteUtils;
+import org.bytesoft.common.utils.CommonUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 import org.bytesoft.compensable.aware.CompensableEndpointAware;
@@ -120,7 +121,8 @@ public class CompensableCleanupWork
 		Map<String, List<Xid>> resource2XidListMap = new HashMap<String, List<Xid>>();
 		MongoCursor<Document> cursor = null;
 		try {
-			cursor = collection.find().limit(batchSize).iterator();
+			Bson systemFilter = Filters.eq(CONSTANTS_FD_SYSTEM, CommonUtils.getApplication(this.endpoint));
+			cursor = collection.find(systemFilter).limit(batchSize).iterator();
 			for (; cursor.hasNext(); length++) {
 				Document document = cursor.next();
 				String globalValue = document.getString(CONSTANTS_FD_GLOBAL);

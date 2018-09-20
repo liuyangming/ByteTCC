@@ -15,8 +15,11 @@
  */
 package org.bytesoft.bytetcc.supports.internal;
 
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.io.IOUtils;
@@ -53,16 +56,18 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
+import com.mongodb.client.model.FindOneAndUpdateOptions;
 import com.mongodb.client.model.IndexOptions;
 import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
 
-public class MongoCompensableLock implements TransactionLock, CompensableEndpointAware, CompensableBeanFactoryAware,
-		CuratorWatcher, ConnectionStateListener, BackgroundCallback, InitializingBean {
+public class MongoCompensableLock implements TransactionLock, CompensableInstVersionManager, CompensableEndpointAware,
+		CompensableBeanFactoryAware, CuratorWatcher, ConnectionStateListener, BackgroundCallback, InitializingBean {
 	static Logger logger = LoggerFactory.getLogger(MongoCompensableLock.class);
 	static final String CONSTANTS_ROOT_PATH = "/org/bytesoft/bytetcc";
 	static final String CONSTANTS_DB_NAME = "bytetcc";
 	static final String CONSTANTS_TB_LOCKS = "locks";
+	static final String CONSTANTS_TB_INSTS = "instances";
 	static final String CONSTANTS_FD_GLOBAL = "gxid";
 	static final String CONSTANTS_FD_BRANCH = "bxid";
 	static final String CONSTANTS_FD_SYSTEM = "system";
@@ -78,8 +83,10 @@ public class MongoCompensableLock implements TransactionLock, CompensableEndpoin
 	private CompensableBeanFactory beanFactory;
 	private boolean initializeEnabled = true;
 
-	private final Set<String> instances = new HashSet<String>();
+	private final Map<String, Long> instances = new HashMap<String, Long>();
 	private transient ConnectionState curatorState;
+
+	private transient long instanceVersion;
 
 	public void afterPropertiesSet() throws Exception {
 		if (this.initializeEnabled) {
@@ -89,6 +96,8 @@ public class MongoCompensableLock implements TransactionLock, CompensableEndpoin
 		this.curatorFramework.getConnectionStateListenable().addListener(this);
 
 		this.initializeClusterInstancesDirectory();
+
+		this.initializeClusterInstanceVersion();
 		this.initializeClusterInstanceConfig();
 	}
 
@@ -98,7 +107,7 @@ public class MongoCompensableLock implements TransactionLock, CompensableEndpoin
 			this.curatorFramework.create() //
 					.creatingParentContainersIfNeeded().withMode(CreateMode.PERSISTENT).forPath(parent);
 		} catch (NodeExistsException nex) {
-			logger.debug("Path exists(path= {})!", parent);
+			logger.debug("Path exists(path= {})!", parent); // ignore
 		}
 	}
 
@@ -110,10 +119,11 @@ public class MongoCompensableLock implements TransactionLock, CompensableEndpoin
 	private void initializeCurrentClusterInstanceConfigIfNecessary() throws Exception {
 		String parent = String.format("%s/%s/instances", CONSTANTS_ROOT_PATH, CommonUtils.getApplication(this.endpoint));
 		String path = String.format("%s/%s", parent, this.endpoint);
+		byte[] versionByteArray = ByteUtils.longToByteArray(this.instanceVersion);
 		try {
-			this.curatorFramework.create().withMode(CreateMode.EPHEMERAL).forPath(path);
+			this.curatorFramework.create().withMode(CreateMode.EPHEMERAL).forPath(path, versionByteArray);
 		} catch (NodeExistsException error) {
-			logger.debug("Node exists, ignore!"); // ignore
+			this.curatorFramework.setData().forPath(path, versionByteArray); // Node exists!
 		}
 	}
 
@@ -153,6 +163,25 @@ public class MongoCompensableLock implements TransactionLock, CompensableEndpoin
 		}
 	}
 
+	private void initializeClusterInstanceVersion() {
+		MongoDatabase database = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
+		MongoCollection<Document> instances = database.getCollection(CONSTANTS_TB_INSTS);
+
+		Bson condition = Filters.eq("_id", this.endpoint);
+
+		Document variables = new Document();
+		variables.append("version", 1L);
+
+		Document document = new Document();
+		document.append("$inc", variables);
+
+		FindOneAndUpdateOptions options = new FindOneAndUpdateOptions();
+		options.upsert(true);
+
+		Document target = instances.findOneAndUpdate(condition, document, new FindOneAndUpdateOptions().upsert(true));
+		this.instanceVersion = (target == null) ? 1 : (target.getLong("version") + 1);
+	}
+
 	public boolean lockTransaction(TransactionXid transactionXid, String identifier) {
 		if (this.lockTransactionInMongoDB(transactionXid, identifier)) {
 			return true;
@@ -165,7 +194,7 @@ public class MongoCompensableLock implements TransactionLock, CompensableEndpoin
 
 		boolean instanceCrashed = false;
 		synchronized (this) {
-			instanceCrashed = this.instances.contains(instanceId) == false;
+			instanceCrashed = this.instances.containsKey(instanceId) == false;
 		}
 
 		if (instanceCrashed) {
@@ -223,7 +252,7 @@ public class MongoCompensableLock implements TransactionLock, CompensableEndpoin
 			Document document = new Document("$set", new Document("identifier", target));
 
 			UpdateResult result = collection.updateOne(Filters.and(globalFilter, systemFilter, instIdFilter), document);
-			return result.getModifiedCount() == 1;
+			return result.getMatchedCount() == 1;
 		} catch (RuntimeException rex) {
 			logger.error("Error occurred while locking transaction(gxid= {}).", instanceId, rex);
 			return false;
@@ -287,15 +316,45 @@ public class MongoCompensableLock implements TransactionLock, CompensableEndpoin
 	}
 
 	public synchronized void processResult(CuratorFramework client, CuratorEvent event) throws Exception {
+		String application = CommonUtils.getApplication(this.endpoint);
+		String prefix = String.format("%s/%s/instances/", CONSTANTS_ROOT_PATH, application);
+		String parent = String.format("%s/%s/instances", CONSTANTS_ROOT_PATH, application);
+		String current = event.getPath();
 		if (CuratorEventType.CHILDREN.equals(event.getType())) {
-			return;
-		}
+			if (StringUtils.equalsIgnoreCase(parent, current) || StringUtils.equalsIgnoreCase(prefix, current)) {
+				Set<String> original = this.instances.keySet();
+				List<String> children = event.getChildren();
 
-		List<String> children = event.getChildren();
-		this.instances.clear();
-		if (children != null) {
-			this.instances.addAll(children);
-		} // end-if (children != null)
+				Set<String> deleted = new HashSet<String>(original);
+				Set<String> created = new HashSet<String>(children);
+
+				deleted.removeAll(children);
+				created.removeAll(original);
+
+				for (Iterator<String> itr = deleted.iterator(); itr.hasNext();) {
+					String element = itr.next();
+					this.instances.remove(element);
+				}
+
+				for (Iterator<String> itr = created.iterator(); itr.hasNext();) {
+					String element = itr.next();
+					String path = String.format("%s/%s", parent, element);
+					this.curatorFramework.getData().usingWatcher(this).inBackground(this).forPath(path);
+				} // end-for (Iterator<String> itr = created.iterator(); itr.hasNext();)
+			}
+		} else if (CuratorEventType.GET_DATA.equals(event.getType())) {
+			if (current.startsWith(prefix)) {
+				String system = current.substring(prefix.length());
+				long version = ByteUtils.byteArrayToLong(event.getData());
+				this.instances.put(system, version);
+			}
+		} else if (CuratorEventType.SET_DATA.equals(event.getType())) {
+			if (current.startsWith(prefix)) {
+				String system = current.substring(prefix.length());
+				long version = ByteUtils.byteArrayToLong(event.getData());
+				this.instances.put(system, version);
+			}
+		}
 	}
 
 	public synchronized void stateChanged(CuratorFramework client, final ConnectionState target) {
@@ -358,6 +417,11 @@ public class MongoCompensableLock implements TransactionLock, CompensableEndpoin
 				return null;
 			}
 		}
+	}
+
+	public long getInstanceVersion(String instanceId) {
+		Long version = this.instances.get(instanceId);
+		return version == null ? -1 : version;
 	}
 
 	public void setEndpoint(String identifier) {

@@ -1062,6 +1062,10 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 			Map.Entry<Xid, String> entry = itr.next();
 			Xid xid = entry.getKey();
 			String resource = entry.getValue();
+			if (StringUtils.isBlank(resource)) {
+				continue;
+			}
+
 			try {
 				resourceCleaner.forget(xid, resource);
 			} catch (RuntimeException rex) {
