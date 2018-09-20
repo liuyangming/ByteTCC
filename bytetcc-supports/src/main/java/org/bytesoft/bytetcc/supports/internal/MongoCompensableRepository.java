@@ -463,7 +463,7 @@ public class MongoCompensableRepository
 				long expectVersion = document.getLong("version");
 				long actualVersion = this.versionManager.getInstanceVersion(targetApplication);
 
-				if (error == false && actualVersion <= expectVersion) {
+				if (error == false && actualVersion > 0 && actualVersion <= expectVersion) {
 					continue; // ignore
 				}
 
