@@ -15,16 +15,13 @@
  */
 package org.bytesoft.bytetcc.supports.work;
 
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Queue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 import javax.resource.spi.work.Work;
+import javax.resource.spi.work.WorkManager;
 
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.leader.LeaderSelector;
@@ -40,7 +37,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.SmartInitializingSingleton;
 
 public class CompensableCommandManager
-		implements SmartInitializingSingleton, CompensableEndpointAware, LeaderSelectorListener, CommandManager, Work {
+		implements SmartInitializingSingleton, CompensableEndpointAware, LeaderSelectorListener, CommandManager {
 	static final Logger logger = LoggerFactory.getLogger(CompensableCommandManager.class);
 
 	static final String CONSTANTS_ROOT_PATH = "/org/bytesoft/bytetcc";
@@ -50,119 +47,59 @@ public class CompensableCommandManager
 
 	private Lock stateLock = new ReentrantLock();
 	private Condition stateCondition = this.stateLock.newCondition();
-
-	private Lock workLock = new ReentrantLock();
-	private Condition workCondition = this.workLock.newCondition();
+	private volatile Boolean stateDisallowed;
+	private volatile boolean permsDisallowed;
 
 	private String endpoint;
 
-	private volatile ConnectionState state;
 	private LeaderSelector leadSelector;
 
-	private volatile boolean released = false;
-
-	private final Queue<ExecutionWork> works = new LinkedList<ExecutionWork>();
+	@javax.annotation.Resource
+	private WorkManager workManager;
 
 	public void execute(Runnable runnable) throws Exception {
-		this.execute(new CallableImpl(runnable));
+		if (this.hasLeadership() == false) {
+			throw new SecurityException("Current node is not the master!");
+		}
+
+		this.checkExecutionPermission();
+
+		WorkImpl work = new WorkImpl(runnable);
+		this.workManager.startWork(work);
 	}
 
 	public Object execute(Callable<Object> callable) throws Exception {
 		if (this.hasLeadership() == false) {
-			throw new SecurityException("Current node is not master!");
-		} else if (this.state != null && ConnectionState.CONNECTED.equals(this.state) == false) {
-			throw new SecurityException("State is not Connected!");
+			throw new SecurityException("Current node is not the master!");
 		}
 
-		ExecutionWork work = new ExecutionWork();
-		work.callable = callable;
-		this.registerTask(work);
-		return this.waitForResult(work);
+		this.checkExecutionPermission();
+
+		WorkImpl work = new WorkImpl(callable);
+		this.workManager.startWork(work);
+		return work.waitForResultIfNecessary();
 	}
 
-	private void registerTask(ExecutionWork work) {
-		try {
-			this.workLock.lock();
-			this.works.offer(work);
-			this.workCondition.signalAll();
-		} finally {
-			this.workLock.unlock();
-		}
-	}
-
-	private Object waitForResult(ExecutionWork work) throws Exception {
-		try {
-			work.lock.lock();
-			work.condition.awaitUninterruptibly();
-			return this.retrieveResult(work);
-		} finally {
-			work.lock.unlock();
-		}
-	}
-
-	private Object retrieveResult(ExecutionWork work) throws Exception {
-		if (work.error == false) {
-			return work.result;
-		} else if (Exception.class.isInstance(work.result)) {
-			throw (Exception) work.result;
-		} else {
-			throw new Exception((Throwable) work.result);
-		}
-	}
-
-	public void run() {
-		while (this.released == false) {
-			this.executeTaskList();
-			this.waitForMillis(10);
-		}
-	}
-
-	private void executeTaskList() {
-		List<ExecutionWork> tasks = new ArrayList<ExecutionWork>();
-		try {
-			this.workLock.lock();
-			for (int i = 0; i < 10 && this.works.isEmpty() == false; i++) {
-				ExecutionWork task = this.works.poll();
-				tasks.add(task);
-			}
-		} finally {
-			this.workLock.unlock();
-		}
-
-		for (int i = 0; i < tasks.size(); i++) {
-			ExecutionWork task = tasks.get(i);
-			this.executeTask(task);
-		}
-	}
-
-	private void executeTask(ExecutionWork work) {
-		try {
-			work.lock.lock();
-			if (this.state != null && ConnectionState.CONNECTED.equals(this.state) == false) {
-				throw new SecurityException("Current node is no longer the master!");
-			}
-			work.result = work.callable.call();
-			work.error = false;
-			work.condition.signalAll();
-		} catch (Exception ex) {
-			work.result = ex;
-			work.error = true;
-			work.condition.signalAll();
-		} finally {
-			work.lock.unlock();
+	private void checkExecutionPermission() {
+		if (this.stateDisallowed != null && this.stateDisallowed) {
+			throw new SecurityException("Current state is no longer connected!");
+		} else if (this.permsDisallowed) {
+			throw new SecurityException("Current node is no longer the master!");
 		}
 	}
 
 	public void takeLeadership(CuratorFramework client) throws Exception {
 		try {
 			this.stateLock.lock();
-			if (this.state != null && ConnectionState.CONNECTED.equals(this.state) == false) {
+			this.permsDisallowed = false;
+			if (this.stateDisallowed != null && this.stateDisallowed) {
 				logger.debug("Wrong state! Re-elect the master node.");
 				return;
 			}
 
 			this.stateCondition.awaitUninterruptibly();
 		} finally {
+			this.permsDisallowed = true;
 			this.stateLock.unlock();
 		}
 	}
@@ -178,7 +115,7 @@ public class CompensableCommandManager
 	public void stateChanged(CuratorFramework client, ConnectionState newState) {
 		try {
 			this.stateLock.lock();
-			this.state = newState;
+			this.stateDisallowed = ConnectionState.CONNECTED.equals(newState) == false;
 			this.stateCondition.signalAll();
 		} finally {
 			this.stateLock.unlock();
@@ -208,37 +145,99 @@ public class CompensableCommandManager
 		}
 	}
 
-	public void release() {
-		this.released = true;
-	}
+	class WorkImpl implements Work {
+		private final Lock lock = new ReentrantLock();
+		private final Condition condition = this.lock.newCondition();
+		private final Callable<Object> callable;
+		private final Runnable runnable;
+		private Object result;
+		private boolean error;
 
-	private void waitForMillis(long millis) {
-		try {
-			Thread.sleep(millis);
-		} catch (InterruptedException ex) {
-			logger.debug(ex.getMessage());
+		public WorkImpl(Callable<Object> callable) {
+			this.runnable = null;
+			this.callable = callable;
 		}
-	}
 
-	static class ExecutionWork {
-		public Lock lock = new ReentrantLock();
-		public Condition condition = this.lock.newCondition();
-		public boolean error;
-		public Object result;
-		public Callable<Object> callable;
-	}
-
-	static class CallableImpl implements Callable<Object> {
-		private Runnable runnable;
-
-		public CallableImpl(Runnable runnable) {
+		public WorkImpl(Runnable runnable) {
+			this.callable = null;
 			this.runnable = runnable;
 		}
 
-		public Object call() throws Exception {
-			this.runnable.run();
-			return null;
+		public Object waitForResultIfNecessary() throws Exception {
+			if (this.callable == null) {
+				return null;
+			} else {
+				return this.waitForResult();
+			}
 		}
+
+		public Object waitForResult() throws Exception {
+			try {
+				this.lock.lock();
+				this.condition.awaitUninterruptibly();
+
+				if (this.error == false) {
+					return this.result;
+				} else if (Exception.class.isInstance(this.result)) {
+					throw (Exception) this.result;
+				} else {
+					throw new RuntimeException((Throwable) this.result);
+				}
+			} finally {
+				this.lock.unlock();
+			}
+		}
+
+		public void run() {
+			if (this.callable != null) {
+				this.executeCallable();
+			} else if (this.runnable != null) {
+				this.executeRunnable();
+			}
+		}
+
+		private void executeCallable() {
+			try {
+				this.lock.lock();
+				checkExecutionPermission();
+				this.result = this.callable.call();
+				this.condition.signalAll();
+			} catch (Exception error) {
+				this.result = error;
+				this.error = true;
+				this.condition.signalAll();
+			} finally {
+				this.lock.unlock();
+			}
+		}
+
+		private void executeRunnable() {
+			try {
+				this.runnable.run();
+			} catch (Exception ex) {
+				logger.error("Error occurred while executing task(task= {}).", this.runnable);
+			}
+		}
+
+		public void release() {
+		}
+
+		public Object getResult() {
+			return result;
+		}
+
+		public void setResult(Object result) {
+			this.result = result;
+		}
+
+		public boolean isError() {
+			return error;
+		}
+
+		public void setError(boolean error) {
+			this.error = error;
+		}
+
 	}
 
 	public CuratorFramework getCuratorFramework() {
