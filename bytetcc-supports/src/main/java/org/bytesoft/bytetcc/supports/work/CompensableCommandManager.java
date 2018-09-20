@@ -93,7 +93,7 @@ public class CompensableCommandManager
 			this.stateLock.lock();
 			this.permsDisallowed = false;
 			if (this.stateDisallowed != null && this.stateDisallowed) {
-				logger.debug("Wrong state! Re-elect the master node.");
+				logger.warn("Wrong state! Re-elect the master node.");
 				return;
 			}
 
@@ -115,8 +115,12 @@ public class CompensableCommandManager
 	public void stateChanged(CuratorFramework client, ConnectionState newState) {
 		try {
 			this.stateLock.lock();
-			this.stateDisallowed = ConnectionState.CONNECTED.equals(newState) == false;
-			this.stateCondition.signalAll();
+			this.stateDisallowed = ConnectionState.CONNECTED.equals(newState) == false
+					&& ConnectionState.RECONNECTED.equals(newState) == false;
+
+			if (this.stateDisallowed) {
+				this.stateCondition.signalAll();
+			} // end-if (this.stateDisallowed)
 		} finally {
 			this.stateLock.unlock();
 		}

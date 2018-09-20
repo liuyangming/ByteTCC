@@ -169,11 +169,15 @@ public class MongoCompensableLock implements TransactionLock, CompensableInstVer
 
 		Bson condition = Filters.eq("_id", this.endpoint);
 
+		Document increases = new Document();
+		increases.append("version", 1L);
+
 		Document variables = new Document();
-		variables.append("version", 1L);
+		variables.append(CONSTANTS_FD_SYSTEM, CommonUtils.getApplication(this.endpoint));
 
 		Document document = new Document();
-		document.append("$inc", variables);
+		document.append("$inc", increases);
+		document.append("$set", variables);
 
 		FindOneAndUpdateOptions options = new FindOneAndUpdateOptions();
 		options.upsert(true);
@@ -353,6 +357,15 @@ public class MongoCompensableLock implements TransactionLock, CompensableInstVer
 				String system = current.substring(prefix.length());
 				long version = ByteUtils.byteArrayToLong(event.getData());
 				this.instances.put(system, version);
+			}
+		} else if (CuratorEventType.DELETE.equals(event.getType())) {
+			String path = String.format("%s/%s", parent, this.endpoint);
+			if (StringUtils.equalsIgnoreCase(path, current)) {
+				try {
+					this.initializeCurrentClusterInstanceConfigIfNecessary();
+				} catch (Exception error) {
+					logger.error("Error occurred while re-initializing instance node!", error);
+				}
 			}
 		}
 	}
