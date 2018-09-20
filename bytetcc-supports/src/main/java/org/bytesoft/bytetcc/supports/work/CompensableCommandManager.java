@@ -94,10 +94,9 @@ public class CompensableCommandManager
 			this.permsDisallowed = false;
 			if (this.stateDisallowed != null && this.stateDisallowed) {
 				logger.warn("Wrong state! Re-elect the master node.");
-				return;
+			} else {
+				this.stateCondition.awaitUninterruptibly();
 			}
-
-			this.stateCondition.awaitUninterruptibly();
 		} finally {
 			this.permsDisallowed = true;
 			this.stateLock.unlock();
@@ -155,7 +154,7 @@ public class CompensableCommandManager
 		private final Callable<Object> callable;
 		private final Runnable runnable;
 		private Object result;
-		private boolean error;
+		private Boolean error;
 
 		public WorkImpl(Callable<Object> callable) {
 			this.runnable = null;
@@ -178,7 +177,9 @@ public class CompensableCommandManager
 		public Object waitForResult() throws Exception {
 			try {
 				this.lock.lock();
-				this.condition.awaitUninterruptibly();
+				if (this.error == null) {
+					this.condition.awaitUninterruptibly();
+				}
 
 				if (this.error == false) {
 					return this.result;
@@ -205,6 +206,7 @@ public class CompensableCommandManager
 				this.lock.lock();
 				checkExecutionPermission();
 				this.result = this.callable.call();
+				this.error = false;
 				this.condition.signalAll();
 			} catch (Exception error) {
 				this.result = error;
@@ -234,11 +236,11 @@ public class CompensableCommandManager
 			this.result = result;
 		}
 
-		public boolean isError() {
+		public Boolean getError() {
 			return error;
 		}
 
-		public void setError(boolean error) {
+		public void setError(Boolean error) {
 			this.error = error;
 		}
 
