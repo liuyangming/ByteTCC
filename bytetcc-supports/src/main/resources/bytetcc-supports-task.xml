@@ -18,6 +18,7 @@
 		<property name="workList">
 			<list>
 				<ref bean="compensableWork" />
+				<ref bean="bytetccElectionManager" />
 				<ref bean="bytetccCleanupWork" />
 			</list>
 		</property>

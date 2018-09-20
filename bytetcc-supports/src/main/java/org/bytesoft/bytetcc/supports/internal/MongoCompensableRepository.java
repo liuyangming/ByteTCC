@@ -18,6 +18,7 @@ package org.bytesoft.bytetcc.supports.internal;
 import java.io.IOException;
 import java.io.Serializable;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -81,7 +82,7 @@ public class MongoCompensableRepository
 		TransactionRecovery compensableRecovery = this.beanFactory.getCompensableRecovery();
 		XidFactory compensableXidFactory = this.beanFactory.getCompensableXidFactory();
 
-		TransactionArchive archive = null;
+		MongoCursor<Document> transactionCursor = null;
 		try {
 			MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
 			MongoCollection<Document> transactions = mdb.getCollection(CONSTANTS_TB_TRANSACTIONS);
@@ -94,55 +95,48 @@ public class MongoCompensableRepository
 			Bson systemFilter = Filters.eq(CONSTANTS_FD_SYSTEM, application);
 
 			FindIterable<Document> transactionItr = transactions.find(Filters.and(globalFilter, systemFilter));
-			MongoCursor<Document> transactionCursor = null;
-			try {
-				transactionCursor = transactionItr.iterator();
-				if (transactionCursor.hasNext()) {
-					Document document = transactionCursor.next();
-					archive = new TransactionArchive();
-
-					TransactionXid globalXid = compensableXidFactory.createGlobalXid(global);
-					archive.setXid(globalXid);
-
-					boolean propagated = document.getBoolean("propagated");
-					String propagatedBy = document.getString("propagated_by");
-					boolean compensable = document.getBoolean("compensable");
-					boolean coordinator = document.getBoolean("coordinator");
-					int compensableStatus = document.getInteger("status");
-
-					String textVariables = document.getString("variables");
-					byte[] variablesByteArray = ByteUtils.stringToByteArray(textVariables);
-					Map<String, Serializable> variables = //
-							(Map<String, Serializable>) SerializeUtils.deserializeObject(variablesByteArray);
-
-					archive.setVariables(variables);
-
-					archive.setCompensable(compensable);
-					archive.setCoordinator(coordinator);
-					archive.setCompensableStatus(compensableStatus);
-					archive.setPropagated(propagated);
-					archive.setPropagatedBy(propagatedBy);
-				}
-			} finally {
-				IOUtils.closeQuietly(transactionCursor);
-			}
-
-			if (archive == null) {
+			transactionCursor = transactionItr.iterator();
+			if (transactionCursor.hasNext() == false) {
 				return null;
 			}
+			Document document = transactionCursor.next();
+			TransactionArchive archive = new TransactionArchive();
+
+			TransactionXid globalXid = compensableXidFactory.createGlobalXid(global);
+			archive.setXid(globalXid);
+
+			boolean propagated = document.getBoolean("propagated");
+			String propagatedBy = document.getString("propagated_by");
+			boolean compensable = document.getBoolean("compensable");
+			boolean coordinator = document.getBoolean("coordinator");
+			int compensableStatus = document.getInteger("status");
+
+			String textVariables = document.getString("variables");
+			byte[] variablesByteArray = ByteUtils.stringToByteArray(textVariables);
+			Map<String, Serializable> variables = //
+					(Map<String, Serializable>) SerializeUtils.deserializeObject(variablesByteArray);
+
+			archive.setVariables(variables);
+
+			archive.setCompensable(compensable);
+			archive.setCoordinator(coordinator);
+			archive.setCompensableStatus(compensableStatus);
+			archive.setPropagated(propagated);
+			archive.setPropagatedBy(propagatedBy);
 
 			this.initializeParticipantList(archive);
 			this.initializeCompensableList(archive);
 
 			return compensableRecovery.reconstruct(archive);
 		} catch (RuntimeException error) {
-			logger.error("Error occurred while recovering transaction.", error);
+			logger.error("Error occurred while getting transaction.", error);
 			throw new TransactionException(XAException.XAER_RMERR);
 		} catch (Exception error) {
-			logger.error("Error occurred while recovering transaction.", error);
+			logger.error("Error occurred while getting transaction.", error);
 			throw new TransactionException(XAException.XAER_RMERR);
+		} finally {
+			IOUtils.closeQuietly(transactionCursor);
 		}
-
 	}
 
 	private void initializeCompensableList(TransactionArchive archive) throws ClassNotFoundException, Exception, IOException {
@@ -158,9 +152,10 @@ public class MongoCompensableRepository
 
 		Bson globalFilter = Filters.eq(CONSTANTS_FD_GLOBAL, ByteUtils.byteArrayToString(global));
 		Bson systemFilter = Filters.eq(CONSTANTS_FD_SYSTEM, application);
-		FindIterable<Document> compensableItr = compensables.find(Filters.and(globalFilter, systemFilter));
+
 		MongoCursor<Document> compensableCursor = null;
 		try {
+			FindIterable<Document> compensableItr = compensables.find(Filters.and(globalFilter, systemFilter));
 			compensableCursor = compensableItr.iterator();
 			for (; compensableCursor.hasNext();) {
 				Document document = compensableCursor.next();
@@ -269,9 +264,10 @@ public class MongoCompensableRepository
 
 		Bson globalFilter = Filters.eq(CONSTANTS_FD_GLOBAL, ByteUtils.byteArrayToString(global));
 		Bson systemFilter = Filters.eq(CONSTANTS_FD_SYSTEM, application);
-		FindIterable<Document> participantItr = participants.find(Filters.and(globalFilter, systemFilter));
+
 		MongoCursor<Document> participantCursor = null;
 		try {
+			FindIterable<Document> participantItr = participants.find(Filters.and(globalFilter, systemFilter));
 			participantCursor = participantItr.iterator();
 			for (; participantCursor.hasNext();) {
 				Document document = participantCursor.next();
@@ -365,7 +361,7 @@ public class MongoCompensableRepository
 		TransactionRecovery compensableRecovery = this.beanFactory.getTransactionRecovery();
 		XidFactory compensableXidFactory = this.beanFactory.getCompensableXidFactory();
 
-		TransactionArchive archive = null;
+		MongoCursor<Document> transactionCursor = null;
 		try {
 			MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
 			MongoCollection<Document> transactions = mdb.getCollection(CONSTANTS_TB_TRANSACTIONS);
@@ -379,60 +375,120 @@ public class MongoCompensableRepository
 			Bson errorFilter = Filters.eq("error", true);
 
 			FindIterable<Document> transactionItr = transactions.find(Filters.and(globalFilter, systemFilter, errorFilter));
-			MongoCursor<Document> transactionCursor = null;
-			try {
-				transactionCursor = transactionItr.iterator();
-				if (transactionCursor.hasNext()) {
-					Document document = transactionCursor.next();
-					archive = new TransactionArchive();
-
-					TransactionXid globalXid = compensableXidFactory.createGlobalXid(global);
-					archive.setXid(globalXid);
-
-					boolean propagated = document.getBoolean("propagated");
-					String propagatedBy = document.getString("propagated_by");
-					boolean compensable = document.getBoolean("compensable");
-					boolean coordinator = document.getBoolean("coordinator");
-					int compensableStatus = document.getInteger("status");
-
-					String textVariables = document.getString("variables");
-					byte[] variablesByteArray = ByteUtils.stringToByteArray(textVariables);
-					Map<String, Serializable> variables = //
-							(Map<String, Serializable>) SerializeUtils.deserializeObject(variablesByteArray);
-
-					archive.setVariables(variables);
-
-					archive.setCompensable(compensable);
-					archive.setCoordinator(coordinator);
-					archive.setCompensableStatus(compensableStatus);
-					archive.setPropagated(propagated);
-					archive.setPropagatedBy(propagatedBy);
-				}
-			} finally {
-				IOUtils.closeQuietly(transactionCursor);
-			}
-
-			if (archive == null) {
+			transactionCursor = transactionItr.iterator();
+			if (transactionCursor.hasNext() == false) {
 				return null;
 			}
 
+			Document document = transactionCursor.next();
+			TransactionArchive archive = new TransactionArchive();
+
+			TransactionXid globalXid = compensableXidFactory.createGlobalXid(global);
+			archive.setXid(globalXid);
+
+			boolean propagated = document.getBoolean("propagated");
+			String propagatedBy = document.getString("propagated_by");
+			boolean compensable = document.getBoolean("compensable");
+			boolean coordinator = document.getBoolean("coordinator");
+			int compensableStatus = document.getInteger("status");
+
+			String textVariables = document.getString("variables");
+			byte[] variablesByteArray = ByteUtils.stringToByteArray(textVariables);
+			Map<String, Serializable> variables = //
+					(Map<String, Serializable>) SerializeUtils.deserializeObject(variablesByteArray);
+
+			archive.setVariables(variables);
+
+			archive.setCompensable(compensable);
+			archive.setCoordinator(coordinator);
+			archive.setCompensableStatus(compensableStatus);
+			archive.setPropagated(propagated);
+			archive.setPropagatedBy(propagatedBy);
+
 			this.initializeParticipantList(archive);
 			this.initializeCompensableList(archive);
-		} catch (RuntimeException error) {
-			logger.error("Error occurred while recovering transaction.", error);
-		} catch (Exception error) {
-			logger.error("Error occurred while recovering transaction.", error);
-		}
 
-		return compensableRecovery.reconstruct(archive);
+			return compensableRecovery.reconstruct(archive);
+		} catch (RuntimeException error) {
+			logger.error("Error occurred while getting error transaction.", error);
+			throw new TransactionException(XAException.XAER_RMERR);
+		} catch (Exception error) {
+			logger.error("Error occurred while getting error transaction.", error);
+			throw new TransactionException(XAException.XAER_RMERR);
+		} finally {
+			IOUtils.closeQuietly(transactionCursor);
+		}
 	}
 
 	public Transaction removeErrorTransaction(TransactionXid xid) {
 		return null;
 	}
 
-	public List<Transaction> getErrorTransactionList() {
-		return null;
+	@SuppressWarnings("unchecked")
+	public List<Transaction> getErrorTransactionList() throws TransactionException {
+		TransactionRecovery compensableRecovery = this.beanFactory.getTransactionRecovery();
+		XidFactory compensableXidFactory = this.beanFactory.getCompensableXidFactory();
+
+		List<Transaction> transactionList = new ArrayList<Transaction>();
+
+		MongoCursor<Document> transactionCursor = null;
+		try {
+			MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
+			MongoCollection<Document> transactions = mdb.getCollection(CONSTANTS_TB_TRANSACTIONS);
+
+			String[] values = this.endpoint.split("\\s*:\\s*");
+			String application = values[1];
+
+			Bson systemFilter = Filters.eq(CONSTANTS_FD_SYSTEM, application);
+			Bson errorFilter = Filters.eq("error", true);
+			Bson coordinatorFilter = Filters.eq("coordinator", true);
+
+			FindIterable<Document> transactionItr = //
+					transactions.find(Filters.and(systemFilter, errorFilter, coordinatorFilter));
+			for (transactionCursor = transactionItr.iterator(); transactionCursor.hasNext();) {
+				Document document = transactionCursor.next();
+				TransactionArchive archive = new TransactionArchive();
+
+				String global = document.getString(CONSTANTS_FD_GLOBAL);
+				boolean propagated = document.getBoolean("propagated");
+				String propagatedBy = document.getString("propagated_by");
+				boolean compensable = document.getBoolean("compensable");
+				boolean coordinator = document.getBoolean("coordinator");
+				int compensableStatus = document.getInteger("status");
+				String textVariables = document.getString("variables");
+
+				TransactionXid globalXid = compensableXidFactory.createGlobalXid(global.getBytes());
+				archive.setXid(globalXid);
+
+				byte[] variablesByteArray = ByteUtils.stringToByteArray(textVariables);
+				Map<String, Serializable> variables = //
+						(Map<String, Serializable>) SerializeUtils.deserializeObject(variablesByteArray);
+
+				archive.setVariables(variables);
+
+				archive.setCompensable(compensable);
+				archive.setCoordinator(coordinator);
+				archive.setCompensableStatus(compensableStatus);
+				archive.setPropagated(propagated);
+				archive.setPropagatedBy(propagatedBy);
+
+				this.initializeParticipantList(archive);
+				this.initializeCompensableList(archive);
+
+				Transaction transaction = compensableRecovery.reconstruct(archive);
+				transactionList.add(transaction);
+			}
+
+			return transactionList;
+		} catch (RuntimeException error) {
+			logger.error("Error occurred while getting error transactions.", error);
+			throw new TransactionException(XAException.XAER_RMERR);
+		} catch (Exception error) {
+			logger.error("Error occurred while getting error transactions.", error);
+			throw new TransactionException(XAException.XAER_RMERR);
+		} finally {
+			IOUtils.closeQuietly(transactionCursor);
+		}
 	}
 
 	public List<Transaction> getActiveTransactionList() {

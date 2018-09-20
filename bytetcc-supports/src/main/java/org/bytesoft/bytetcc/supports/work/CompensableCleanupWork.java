@@ -89,8 +89,8 @@ public class CompensableCleanupWork
 			} else {
 				int number = 0;
 				try {
-					number = this.commandManager.execute(new Callable<Integer>() {
-						public Integer call() throws Exception {
+					number = (Integer) this.commandManager.execute(new Callable<Object>() {
+						public Object call() throws Exception {
 							return timingExecution(CONSTANTS_MAX_HANDLE_RECORDS);
 						}
 					});
@@ -132,6 +132,9 @@ public class CompensableCleanupWork
 				TransactionXid branchXid = xidFactory.createBranchXid(globalXid, branch);
 
 				String resourceId = document.getString("resource_id");
+				if (StringUtils.isBlank(resourceId)) {
+					continue;
+				}
 
 				List<Xid> xidList = resource2XidListMap.get(resourceId);
 				if (xidList == null) {

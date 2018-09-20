@@ -61,10 +61,10 @@ public class TransactionRecoveryImpl
 	static final Logger logger = LoggerFactory.getLogger(TransactionRecoveryImpl.class);
 
 	@javax.inject.Inject
-	private CompensableBeanFactory beanFactory;
-	private String endpoint;
+	protected CompensableBeanFactory beanFactory;
+	protected String endpoint;
 
-	private final Map<TransactionXid, Transaction> recovered = new HashMap<TransactionXid, Transaction>();
+	protected final Map<TransactionXid, Transaction> recovered = new HashMap<TransactionXid, Transaction>();
 
 	public void onRecovery(Transaction transaction) {
 		org.bytesoft.transaction.TransactionContext transactionContext = transaction.getTransactionContext();
@@ -81,12 +81,12 @@ public class TransactionRecoveryImpl
 		this.fireCompensableStartRecovery();
 	}
 
-	private void fireTransactionStartRecovery() {
+	protected void fireTransactionStartRecovery() {
 		TransactionRecovery transactionRecovery = this.beanFactory.getTransactionRecovery();
 		transactionRecovery.startRecovery();
 	}
 
-	private void fireCompensableStartRecovery() {
+	protected void fireCompensableStartRecovery() {
 		final TransactionRepository transactionRepository = this.beanFactory.getCompensableRepository();
 		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
 
@@ -243,7 +243,7 @@ public class TransactionRecoveryImpl
 
 	}
 
-	private Boolean calculateCompensableTried(TransactionBranchKey recordKey) {
+	protected Boolean calculateCompensableTried(TransactionBranchKey recordKey) {
 		if (StringUtils.isBlank(recordKey.resource)) {
 			logger.warn(
 					"There is no valid resource participated in the trying branch transaction, the status of the branch transaction is unknown!");
@@ -328,7 +328,7 @@ public class TransactionRecoveryImpl
 
 	}
 
-	private void recoverCoordinator(Transaction transaction)
+	protected void recoverCoordinator(Transaction transaction)
 			throws CommitRequiredException, RollbackRequiredException, SystemException {
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 		TransactionLock compensableLock = this.beanFactory.getCompensableLock();
@@ -393,7 +393,7 @@ public class TransactionRecoveryImpl
 
 	}
 
-	private void recoverParticipant(Transaction transaction)
+	protected void recoverParticipant(Transaction transaction)
 			throws CommitRequiredException, RollbackRequiredException, SystemException {
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 

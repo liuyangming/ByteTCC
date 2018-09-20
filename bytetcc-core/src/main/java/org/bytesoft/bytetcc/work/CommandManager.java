@@ -19,7 +19,7 @@ import java.util.concurrent.Callable;
 
 public interface CommandManager {
 
-	public <T> T execute(Callable<T> callable) throws Exception;
+	public Object execute(Callable<Object> callable) throws Exception;
 
 	public void execute(Runnable runnable) throws Exception;
 

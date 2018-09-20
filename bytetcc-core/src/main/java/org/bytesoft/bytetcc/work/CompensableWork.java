@@ -31,7 +31,7 @@ public class CompensableWork implements Work, CompensableBeanFactoryAware {
 	private long delayOfStoping = SECOND_MILLIS * 15;
 	private long recoveryInterval = SECOND_MILLIS * 60;
 
-	private boolean initialized = false;
+	private volatile boolean initialized = false;
 
 	@javax.inject.Inject
 	private CompensableBeanFactory beanFactory;
@@ -43,6 +43,8 @@ public class CompensableWork implements Work, CompensableBeanFactoryAware {
 				compensableRecovery.startRecovery();
 				this.initialized = true;
 				compensableRecovery.timingRecover();
+			} catch (SecurityException rex) {
+				logger.debug("Only the master node can perform the initialization operation!");
 			} catch (RuntimeException rex) {
 				logger.error("Error occurred while initializing the compensable work.", rex);
 			}
@@ -56,7 +58,6 @@ public class CompensableWork implements Work, CompensableBeanFactoryAware {
 
 		long nextRecoveryTime = 0;
 		while (this.currentActive()) {
-
 			this.initializeIfNecessary();
 
 			long current = System.currentTimeMillis();
@@ -65,13 +66,14 @@ public class CompensableWork implements Work, CompensableBeanFactoryAware {
 
 				try {
 					compensableRecovery.timingRecover();
+				} catch (SecurityException rex) {
+					logger.debug("Only the master node can perform the recovery operation!");
 				} catch (RuntimeException rex) {
 					logger.error(rex.getMessage(), rex);
 				}
 			}
 
 			this.waitForMillis(100L);
-
 		} // end-while (this.currentActive())
 	}
 

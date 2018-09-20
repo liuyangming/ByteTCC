@@ -34,13 +34,13 @@ import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException.NodeExistsException;
 import org.bytesoft.bytetcc.work.CommandManager;
 import org.bytesoft.common.utils.CommonUtils;
-import org.bytesoft.transaction.aware.TransactionEndpointAware;
+import org.bytesoft.compensable.aware.CompensableEndpointAware;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.SmartInitializingSingleton;
 
 public class CompensableCommandManager
-		implements SmartInitializingSingleton, TransactionEndpointAware, LeaderSelectorListener, CommandManager, Work {
+		implements SmartInitializingSingleton, CompensableEndpointAware, LeaderSelectorListener, CommandManager, Work {
 	static final Logger logger = LoggerFactory.getLogger(CompensableCommandManager.class);
 
 	static final String CONSTANTS_ROOT_PATH = "/org/bytesoft/bytetcc";
@@ -67,17 +67,17 @@ public class CompensableCommandManager
 		this.execute(new CallableImpl(runnable));
 	}
 
-	@SuppressWarnings("unchecked")
-	public <T> T execute(Callable<T> callable) throws Exception {
+	public Object execute(Callable<Object> callable) throws Exception {
 		if (this.hasLeadership() == false) {
 			throw new SecurityException("Current node is not master!");
-		} else if (ConnectionState.CONNECTED.equals(this.state) == false) {
+		} else if (this.state != null && ConnectionState.CONNECTED.equals(this.state) == false) {
 			throw new SecurityException("State is not Connected!");
 		}
 
 		ExecutionWork work = new ExecutionWork();
+		work.callable = callable;
 		this.registerTask(work);
-		return (T) this.waitForResult(work);
+		return this.waitForResult(work);
 	}
 
 	private void registerTask(ExecutionWork work) {
@@ -138,7 +138,7 @@ public class CompensableCommandManager
 	private void executeTask(ExecutionWork work) {
 		try {
 			work.lock.lock();
-			if (ConnectionState.CONNECTED.equals(this.state) == false) {
+			if (this.state != null && ConnectionState.CONNECTED.equals(this.state) == false) {
 				throw new SecurityException("Current node is no longer the master!");
 			}
 			work.result = work.callable.call();
@@ -156,7 +156,7 @@ public class CompensableCommandManager
 	public void takeLeadership(CuratorFramework client) throws Exception {
 		try {
 			this.stateLock.lock();
-			if (ConnectionState.CONNECTED.equals(this.state) == false) {
+			if (this.state != null && ConnectionState.CONNECTED.equals(this.state) == false) {
 				logger.debug("Wrong state! Re-elect the master node.");
 				return;
 			}
@@ -195,6 +195,7 @@ public class CompensableCommandManager
 
 		String masterPath = String.format("%s/master", basePath);
 		this.leadSelector = new LeaderSelector(this.curatorFramework, masterPath, this);
+		this.leadSelector.autoRequeue();
 		this.leadSelector.start();
 	}
 

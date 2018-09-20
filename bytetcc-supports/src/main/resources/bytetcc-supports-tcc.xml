@@ -24,9 +24,10 @@
 	<bean id="bytetccCompensableCoordinator" class="org.bytesoft.bytetcc.CompensableCoordinator" />
 	<bean id="bytetccTransactionCoordinator" class="org.bytesoft.bytetcc.TransactionCoordinator" />
 
-	<bean id="bytetccTransactionRecovery" class="org.bytesoft.bytetcc.TransactionRecoveryImpl" />
-	<!-- <bean id="bytetccTransactionRepository" class="org.bytesoft.bytejta.TransactionRepositoryImpl" /> -->
+	<bean id="bytetccTransactionRecovery" class="org.bytesoft.bytetcc.supports.internal.MongoCompensableRecovery" />
+	<!-- <bean id="bytetccTransactionRecovery" class="org.bytesoft.bytetcc.TransactionRecoveryImpl" /> -->
 	<bean id="bytetccTransactionRepository" class="org.bytesoft.bytetcc.supports.internal.MongoCompensableRepository" />
+	<!-- <bean id="bytetccTransactionRepository" class="org.bytesoft.bytejta.TransactionRepositoryImpl" /> -->
 
 	<bean id="bytetccXidFactory" class="org.bytesoft.bytetcc.xa.XidFactoryImpl" />
 
