@@ -64,7 +64,7 @@ public class SpringCloudConfiguration implements WebMvcConfigurer, BeanFactoryPo
 		CompensableEndpointAware, EnvironmentAware, ApplicationContextAware {
 	static final String CONSTANT_INCLUSIONS = "org.bytesoft.bytetcc.feign.inclusions";
 	static final String CONSTANT_EXCLUSIONS = "org.bytesoft.bytetcc.feign.exclusions";
-	static final String FEIGN_FACTORY_CLASS = "org.springframework.cloud.netflix.feign.FeignClientFactoryBean";
+	static final String FEIGN_FACTORY_CLASS = "org.springframework.cloud.openfeign.FeignClientFactoryBean";
 
 	private ApplicationContext applicationContext;
 	private String identifier;

@@ -87,7 +87,7 @@ public class CompensableHystrixMethodHandler implements MethodHandler {
 					Server server = servers.get(i);
 
 					// String instanceId = metaInfo.getInstanceId();
-					String instanceId = null;
+					RemoteSvc instanceId = null;
 
 					if (DiscoveryEnabledServer.class.isInstance(server)) {
 						DiscoveryEnabledServer discoveryEnabledServer = (DiscoveryEnabledServer) server;
@@ -96,7 +96,8 @@ public class CompensableHystrixMethodHandler implements MethodHandler {
 						String appName = instanceInfo.getAppName();
 						int port = instanceInfo.getPort();
 
-						instanceId = String.format("%s:%s:%s", addr, appName, port);
+						String serverKey = String.format("%s:%s:%s", addr, appName, port);
+						instanceId = CommonUtils.getRemoteSvc(serverKey);
 					} else {
 						MetaInfo metaInfo = server.getMetaInfo();
 
@@ -104,7 +105,9 @@ public class CompensableHystrixMethodHandler implements MethodHandler {
 						String addr = host.matches("\\d+(\\.\\d+){3}") ? host : CommonUtils.getInetAddress(host);
 						String appName = metaInfo.getAppName();
 						int port = server.getPort();
-						instanceId = String.format("%s:%s:%s", addr, appName, port);
+
+						String serverKey = String.format("%s:%s:%s", addr, appName, port);
+						instanceId = CommonUtils.getRemoteSvc(serverKey);
 					}
 
 					if (participants.containsKey(instanceId)) {
