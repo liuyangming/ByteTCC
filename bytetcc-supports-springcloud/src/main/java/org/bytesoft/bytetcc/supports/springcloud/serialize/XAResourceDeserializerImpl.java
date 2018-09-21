@@ -19,10 +19,14 @@ import java.lang.reflect.Proxy;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.commons.lang3.StringUtils;
 import org.bytesoft.bytejta.supports.internal.RemoteCoordinatorRegistry;
 import org.bytesoft.bytejta.supports.resource.RemoteResourceDescriptor;
 import org.bytesoft.bytetcc.supports.springcloud.SpringCloudCoordinator;
+import org.bytesoft.common.utils.CommonUtils;
+import org.bytesoft.transaction.remote.RemoteAddr;
 import org.bytesoft.transaction.remote.RemoteCoordinator;
+import org.bytesoft.transaction.remote.RemoteNode;
 import org.bytesoft.transaction.supports.resource.XAResourceDescriptor;
 import org.bytesoft.transaction.supports.serialize.XAResourceDeserializer;
 import org.slf4j.Logger;
@@ -54,20 +58,27 @@ public class XAResourceDeserializerImpl implements XAResourceDeserializer, Appli
 		}
 
 		RemoteCoordinatorRegistry registry = RemoteCoordinatorRegistry.getInstance();
-		RemoteCoordinator coordinator = registry.getRemoteCoordinator(identifier);
-		if (coordinator == null) {
+		String application = CommonUtils.getApplication(identifier);
+		RemoteCoordinator participant = StringUtils.isBlank(application) ? null : registry.getParticipant(application);
+		if (participant == null) {
 			SpringCloudCoordinator springCloudCoordinator = new SpringCloudCoordinator();
 			springCloudCoordinator.setIdentifier(identifier);
 			springCloudCoordinator.setEnvironment(this.environment);
 
-			coordinator = (RemoteCoordinator) Proxy.newProxyInstance(SpringCloudCoordinator.class.getClassLoader(),
+			participant = (RemoteCoordinator) Proxy.newProxyInstance(SpringCloudCoordinator.class.getClassLoader(),
 					new Class[] { RemoteCoordinator.class }, springCloudCoordinator);
-			registry.putRemoteCoordinator(identifier, coordinator);
+
+			if (StringUtils.isNotBlank(application)) {
+				RemoteAddr remoteAddr = CommonUtils.getRemoteAddr(identifier);
+				RemoteNode remoteNode = CommonUtils.getRemoteNode(identifier);
+				registry.putParticipant(application, participant);
+				registry.putRemoteNode(remoteAddr, remoteNode);
+			}
 		}
 
 		RemoteResourceDescriptor descriptor = new RemoteResourceDescriptor();
 		descriptor.setIdentifier(identifier);
-		descriptor.setDelegate(registry.getRemoteCoordinator(identifier));
+		descriptor.setDelegate(registry.getParticipant(application));
 
 		return descriptor;
 	}

@@ -19,12 +19,16 @@ import java.lang.reflect.Proxy;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.commons.lang3.StringUtils;
 import org.bytesoft.bytejta.supports.dubbo.DubboRemoteCoordinator;
 import org.bytesoft.bytejta.supports.dubbo.InvocationContext;
 import org.bytesoft.bytejta.supports.dubbo.TransactionBeanRegistry;
 import org.bytesoft.bytejta.supports.internal.RemoteCoordinatorRegistry;
 import org.bytesoft.bytejta.supports.resource.RemoteResourceDescriptor;
+import org.bytesoft.common.utils.CommonUtils;
+import org.bytesoft.transaction.remote.RemoteAddr;
 import org.bytesoft.transaction.remote.RemoteCoordinator;
+import org.bytesoft.transaction.remote.RemoteNode;
 import org.bytesoft.transaction.supports.resource.XAResourceDescriptor;
 import org.bytesoft.transaction.supports.serialize.XAResourceDeserializer;
 import org.slf4j.Logger;
@@ -49,13 +53,19 @@ public class XAResourceDeserializerImpl implements XAResourceDeserializer, Appli
 		Matcher matcher = pattern.matcher(identifier);
 		if (matcher.find()) {
 			RemoteCoordinatorRegistry registry = RemoteCoordinatorRegistry.getInstance();
-			RemoteCoordinator coordinator = registry.getRemoteCoordinator(identifier);
-			if (coordinator == null) {
+			String application = CommonUtils.getApplication(identifier);
+			RemoteCoordinator participant = StringUtils.isBlank(application) ? null : registry.getParticipant(application);
+			if (participant == null) {
 				String[] array = identifier.split("\\:");
+				String serverHost = StringUtils.trimToNull(array[0]);
+				String serviceKey = StringUtils.isBlank(array[1]) || StringUtils.equalsIgnoreCase(array[1], "null") ? null
+						: StringUtils.trimToNull(array[1]);
+				String serverPort = StringUtils.trimToNull(array[2]);
+
 				InvocationContext invocationContext = new InvocationContext();
-				invocationContext.setServerHost(array[0]);
-				invocationContext.setServiceKey(array[1]);
-				invocationContext.setServerPort(Integer.valueOf(array[2]));
+				invocationContext.setServerHost(serverHost);
+				invocationContext.setServiceKey(serviceKey);
+				invocationContext.setServerPort(Integer.valueOf(serverPort));
 
 				TransactionBeanRegistry beanRegistry = TransactionBeanRegistry.getInstance();
 				RemoteCoordinator consumeCoordinator = beanRegistry.getConsumeCoordinator();
@@ -64,14 +74,21 @@ public class XAResourceDeserializerImpl implements XAResourceDeserializer, Appli
 				dubboCoordinator.setInvocationContext(invocationContext);
 				dubboCoordinator.setRemoteCoordinator(consumeCoordinator);
 
-				coordinator = (RemoteCoordinator) Proxy.newProxyInstance(DubboRemoteCoordinator.class.getClassLoader(),
+				participant = (RemoteCoordinator) Proxy.newProxyInstance(DubboRemoteCoordinator.class.getClassLoader(),
 						new Class[] { RemoteCoordinator.class }, dubboCoordinator);
-				registry.putRemoteCoordinator(identifier, coordinator);
+				dubboCoordinator.setProxyCoordinator(participant);
+
+				if (StringUtils.isNotBlank(application)) {
+					RemoteAddr remoteAddr = CommonUtils.getRemoteAddr(identifier);
+					RemoteNode remoteNode = CommonUtils.getRemoteNode(identifier);
+					registry.putParticipant(application, participant);
+					registry.putRemoteNode(remoteAddr, remoteNode);
+				}
 			}
 
 			RemoteResourceDescriptor descriptor = new RemoteResourceDescriptor();
 			descriptor.setIdentifier(identifier);
-			descriptor.setDelegate(registry.getRemoteCoordinator(identifier));
+			descriptor.setDelegate(registry.getParticipant(application));
 
 			return descriptor;
 		} else {
