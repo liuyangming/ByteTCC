@@ -21,13 +21,17 @@ import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 import org.bytesoft.transaction.remote.RemoteCoordinator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.BeansException;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.EnvironmentAware;
 import org.springframework.core.env.Environment;
 
-public final class CompensableBeanRegistry implements CompensableBeanFactoryAware, EnvironmentAware {
+public final class CompensableBeanRegistry implements CompensableBeanFactoryAware, ApplicationContextAware, EnvironmentAware {
 	static final Logger logger = LoggerFactory.getLogger(CompensableBeanRegistry.class);
 	private static final CompensableBeanRegistry instance = new CompensableBeanRegistry();
 
+	private ApplicationContext applicationContext;
 	private Environment environment;
 	@javax.inject.Inject
 	private CompensableBeanFactory beanFactory;
@@ -52,6 +56,10 @@ public final class CompensableBeanRegistry implements CompensableBeanFactoryAwar
 		transactionBeanRegistry.setConsumeCoordinator(consumeCoordinator);
 	}
 
+	public <T> T getBean(Class<T> requiredType) {
+		return this.applicationContext.getBean(requiredType);
+	}
+
 	public Environment getEnvironment() {
 		return environment;
 	}
@@ -66,6 +74,10 @@ public final class CompensableBeanRegistry implements CompensableBeanFactoryAwar
 
 	public CompensableBeanFactory getBeanFactory() {
 		return beanFactory;
+	}
+
+	public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+		this.applicationContext = applicationContext;
 	}
 
 }

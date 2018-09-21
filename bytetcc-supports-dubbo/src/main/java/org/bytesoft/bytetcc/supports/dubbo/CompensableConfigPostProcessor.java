@@ -105,7 +105,7 @@ public class CompensableConfigPostProcessor implements BeanFactoryPostProcessor 
 			throws BeansException {
 		BeanDefinitionRegistry registry = (BeanDefinitionRegistry) beanFactory;
 
-		// <dubbo:service interface="org.bytesoft.bytejta.supports.wire.RemoteCoordinator" group="org-bytesoft-bytetcc"
+		// <dubbo:service interface="org.bytesoft.transaction.remote.RemoteCoordinator" group="org-bytesoft-bytetcc"
 		// ref="dispatcherCoordinator" filter="compensable" loadbalance="compensable" cluster="failfast" />
 		GenericBeanDefinition beanDef = new GenericBeanDefinition();
 		beanDef.setBeanClass(com.alibaba.dubbo.config.spring.ServiceBean.class);
@@ -129,7 +129,7 @@ public class CompensableConfigPostProcessor implements BeanFactoryPostProcessor 
 		BeanDefinitionRegistry registry = (BeanDefinitionRegistry) beanFactory;
 
 		// <dubbo:reference id="yyy"
-		// interface="org.bytesoft.bytejta.supports.wire.RemoteCoordinator" group="org-bytesoft-bytetcc"
+		// interface="org.bytesoft.transaction.remote.RemoteCoordinator" group="org-bytesoft-bytetcc"
 		// timeout="3000" filter="compensable" loadbalance="compensable" cluster="failfast" />
 		GenericBeanDefinition beanDef = new GenericBeanDefinition();
 		beanDef.setBeanClass(com.alibaba.dubbo.config.spring.ReferenceBean.class);
