@@ -25,10 +25,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.FatalBeanException;
+import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
+
+import com.alibaba.dubbo.common.utils.ConfigUtils;
 
 public class CompensableEndpointAutoInjector implements SmartInitializingSingleton, BeanPostProcessor, ApplicationContextAware {
 	static final Logger logger = LoggerFactory.getLogger(CompensableEndpointAutoInjector.class);
@@ -36,28 +39,48 @@ public class CompensableEndpointAutoInjector implements SmartInitializingSinglet
 	private ApplicationContext applicationContext;
 
 	public void afterSingletonsInstantiated() {
-		com.alibaba.dubbo.config.ApplicationConfig applicationConfig = //
-				this.applicationContext.getBean(com.alibaba.dubbo.config.ApplicationConfig.class);
-		com.alibaba.dubbo.config.ProtocolConfig protocolConfig = //
-				this.applicationContext.getBean(com.alibaba.dubbo.config.ProtocolConfig.class);
+		String host = CommonUtils.getInetAddress();
 
-		if (applicationConfig == null || StringUtils.isBlank(applicationConfig.getName())) {
+		String name = null;
+		try {
+			com.alibaba.dubbo.config.ApplicationConfig applicationConfig = //
+					this.applicationContext.getBean(com.alibaba.dubbo.config.ApplicationConfig.class);
+			name = String.valueOf(applicationConfig.getName());
+		} catch (NoSuchBeanDefinitionException error) {
+			String application = ConfigUtils.getProperty("dubbo.application.name");
+			if (StringUtils.isBlank(application)) {
+				throw new FatalBeanException("No configuration of class com.alibaba.dubbo.config.ApplicationConfig was found.");
+			}
+
+			name = application;
+		}
+
+		String port = null;
+		try {
+			com.alibaba.dubbo.config.ProtocolConfig protocolConfig = //
+					this.applicationContext.getBean(com.alibaba.dubbo.config.ProtocolConfig.class);
+			port = String.valueOf(protocolConfig.getPort());
+		} catch (NoSuchBeanDefinitionException error) {
+			String serverPort = ConfigUtils.getProperty("dubbo.protocol.dubbo.port");
+			if (StringUtils.isBlank(serverPort)) {
+				throw new FatalBeanException("No configuration of class com.alibaba.dubbo.config.ProtocolConfig was found.");
+			}
+
+			port = serverPort;
+		}
+
+		if (StringUtils.isBlank(name)) {
 			throw new FatalBeanException("No configuration of class com.alibaba.dubbo.config.ApplicationConfig was found.");
 		}
 
-		if (protocolConfig == null) {
-			throw new FatalBeanException("No configuration of class com.alibaba.dubbo.config.ProtocolConfig was found.");
-		} else if (protocolConfig.getPort() == null) {
+		if (StringUtils.isBlank(port)) {
 			throw new FatalBeanException(
 					"The value of the attribute 'port' (<dubbo:protocol port='...' />) must be explicitly specified.");
-		} else if (protocolConfig.getPort() <= 0) {
+		} else if (Integer.valueOf(port) <= 0) {
 			throw new FatalBeanException(
 					"The value of the attribute 'port' (<dubbo:protocol port='...' />) can not equal to -1.");
 		}
 
-		String host = CommonUtils.getInetAddress();
-		String name = String.valueOf(applicationConfig.getName());
-		String port = String.valueOf(protocolConfig.getPort());
 		String identifier = String.format("%s:%s:%s", host, name, port);
 
 		Map<String, CompensableEndpointAware> beanMap = //
@@ -89,14 +112,36 @@ public class CompensableEndpointAutoInjector implements SmartInitializingSinglet
 
 	private void initializeEndpointIfNecessary(CompensableEndpointAware aware) {
 		if (StringUtils.isBlank(aware.getEndpoint())) {
-			com.alibaba.dubbo.config.ApplicationConfig applicationConfig = //
-					this.applicationContext.getBean(com.alibaba.dubbo.config.ApplicationConfig.class);
-			com.alibaba.dubbo.config.ProtocolConfig protocolConfig = //
-					this.applicationContext.getBean(com.alibaba.dubbo.config.ProtocolConfig.class);
-
 			String host = CommonUtils.getInetAddress();
-			String name = String.valueOf(applicationConfig.getName());
-			String port = String.valueOf(protocolConfig.getPort());
+
+			String name = null;
+			try {
+				com.alibaba.dubbo.config.ApplicationConfig applicationConfig = //
+						this.applicationContext.getBean(com.alibaba.dubbo.config.ApplicationConfig.class);
+				name = String.valueOf(applicationConfig.getName());
+			} catch (NoSuchBeanDefinitionException error) {
+				String application = ConfigUtils.getProperty("dubbo.application.name");
+				if (StringUtils.isBlank(application)) {
+					throw error;
+				} else {
+					name = application;
+				}
+			}
+
+			String port = null;
+			try {
+				com.alibaba.dubbo.config.ProtocolConfig protocolConfig = //
+						this.applicationContext.getBean(com.alibaba.dubbo.config.ProtocolConfig.class);
+				port = String.valueOf(protocolConfig.getPort());
+			} catch (NoSuchBeanDefinitionException error) {
+				String serverPort = ConfigUtils.getProperty("dubbo.protocol.dubbo.port");
+				if (StringUtils.isBlank(serverPort)) {
+					throw error;
+				} else {
+					port = serverPort;
+				}
+			}
+
 			aware.setEndpoint(String.format("%s:%s:%s", host, name, port));
 		}
 	}

@@ -15,7 +15,6 @@
  */
 package org.bytesoft.bytetcc.supports.dubbo.internal;
 
-import org.apache.commons.lang3.StringUtils;
 import org.bytesoft.bytetcc.supports.dubbo.CompensableBeanRegistry;
 import org.bytesoft.transaction.remote.RemoteCoordinator;
 import org.slf4j.Logger;
@@ -24,13 +23,12 @@ import org.springframework.beans.BeansException;
 import org.springframework.beans.FatalBeanException;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.BeanFactoryAware;
+import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.beans.factory.config.SingletonBeanRegistry;
 
 import com.alibaba.dubbo.common.Constants;
-import com.alibaba.dubbo.config.ProtocolConfig;
 import com.alibaba.dubbo.config.ReferenceConfig;
-import com.alibaba.dubbo.config.RegistryConfig;
 import com.alibaba.dubbo.config.ServiceConfig;
 
 public class CompensableParticipantRegistrant implements SmartInitializingSingleton, BeanFactoryAware {
@@ -39,18 +37,12 @@ public class CompensableParticipantRegistrant implements SmartInitializingSingle
 	private BeanFactory beanFactory;
 
 	public void afterSingletonsInstantiated() {
-		com.alibaba.dubbo.config.ApplicationConfig applicationConfig = //
-				this.beanFactory.getBean(com.alibaba.dubbo.config.ApplicationConfig.class);
 		org.bytesoft.bytetcc.TransactionCoordinator transactionCoordinator = //
 				this.beanFactory.getBean(org.bytesoft.bytetcc.TransactionCoordinator.class);
 		org.bytesoft.bytetcc.supports.dubbo.CompensableBeanRegistry beanRegistry = //
 				this.beanFactory.getBean(org.bytesoft.bytetcc.supports.dubbo.CompensableBeanRegistry.class);
 		org.bytesoft.bytetcc.CompensableCoordinator compensableCoordinator = //
 				this.beanFactory.getBean(org.bytesoft.bytetcc.CompensableCoordinator.class);
-
-		if (applicationConfig == null || StringUtils.isBlank(applicationConfig.getName())) {
-			throw new FatalBeanException("No application name was found!");
-		}
 
 		if (compensableCoordinator == null) {
 			throw new FatalBeanException("No configuration of class org.bytesoft.bytetcc.CompensableCoordinator was found.");
@@ -61,12 +53,11 @@ public class CompensableParticipantRegistrant implements SmartInitializingSingle
 					"No configuration of class org.bytesoft.bytetcc.supports.dubbo.CompensableBeanRegistry was found.");
 		}
 
-		this.initializeForProvider(applicationConfig, transactionCoordinator);
-		this.initializeForConsumer(applicationConfig, beanRegistry);
+		this.initializeForProvider(transactionCoordinator);
+		this.initializeForConsumer(beanRegistry);
 	}
 
-	public void initializeForProvider(com.alibaba.dubbo.config.ApplicationConfig applicationConfig, RemoteCoordinator reference)
-			throws BeansException {
+	public void initializeForProvider(RemoteCoordinator reference) throws BeansException {
 		// BeanDefinitionRegistry registry = (BeanDefinitionRegistry) this.beanFactory;
 		// GenericBeanDefinition beanDef = new GenericBeanDefinition();
 		// beanDef.setBeanClass(com.alibaba.dubbo.config.spring.ServiceBean.class);
@@ -94,9 +85,30 @@ public class CompensableParticipantRegistrant implements SmartInitializingSingle
 		serviceConfig.setGroup("org-bytesoft-bytetcc");
 		serviceConfig.setRetries(0);
 		serviceConfig.setTimeout(6000);
-		serviceConfig.setApplication(applicationConfig);
-		serviceConfig.setRegistry(this.beanFactory.getBean(RegistryConfig.class));
-		serviceConfig.setProtocol(this.beanFactory.getBean(ProtocolConfig.class));
+
+		try {
+			com.alibaba.dubbo.config.ApplicationConfig applicationConfig = //
+					this.beanFactory.getBean(com.alibaba.dubbo.config.ApplicationConfig.class);
+			serviceConfig.setApplication(applicationConfig);
+		} catch (NoSuchBeanDefinitionException error) {
+			logger.warn("No configuration of class com.alibaba.dubbo.config.ApplicationConfig was found.");
+		}
+
+		try {
+			com.alibaba.dubbo.config.RegistryConfig registryConfig = //
+					this.beanFactory.getBean(com.alibaba.dubbo.config.RegistryConfig.class);
+			serviceConfig.setRegistry(registryConfig);
+		} catch (NoSuchBeanDefinitionException error) {
+			logger.warn("No configuration of class com.alibaba.dubbo.config.RegistryConfig was found.");
+		}
+
+		try {
+			com.alibaba.dubbo.config.ProtocolConfig protocolConfig = //
+					this.beanFactory.getBean(com.alibaba.dubbo.config.ProtocolConfig.class);
+			serviceConfig.setProtocol(protocolConfig);
+		} catch (NoSuchBeanDefinitionException error) {
+			logger.warn("No configuration of class com.alibaba.dubbo.config.ProtocolConfig was found.");
+		}
 
 		serviceConfig.export();
 
@@ -104,8 +116,7 @@ public class CompensableParticipantRegistrant implements SmartInitializingSingle
 		registry.registerSingleton(skeletonBeanId, serviceConfig);
 	}
 
-	public void initializeForConsumer(com.alibaba.dubbo.config.ApplicationConfig applicationConfig,
-			CompensableBeanRegistry beanRegistry) throws BeansException {
+	public void initializeForConsumer(CompensableBeanRegistry beanRegistry) throws BeansException {
 		// BeanDefinitionRegistry registry = (BeanDefinitionRegistry) beanFactory;
 		// GenericBeanDefinition beanDef = new GenericBeanDefinition();
 		// beanDef.setBeanClass(com.alibaba.dubbo.config.spring.ReferenceBean.class);
@@ -137,10 +148,31 @@ public class CompensableParticipantRegistrant implements SmartInitializingSingle
 		referenceConfig.setGroup("org-bytesoft-bytetcc");
 		referenceConfig.setCheck(false);
 		referenceConfig.setRetries(0);
-		referenceConfig.setApplication(applicationConfig);
 		referenceConfig.setScope(Constants.SCOPE_REMOTE);
-		referenceConfig.setRegistry(this.beanFactory.getBean(RegistryConfig.class));
-		referenceConfig.setProtocol(this.beanFactory.getBean(ProtocolConfig.class).getName());
+
+		try {
+			com.alibaba.dubbo.config.ApplicationConfig applicationConfig = //
+					this.beanFactory.getBean(com.alibaba.dubbo.config.ApplicationConfig.class);
+			referenceConfig.setApplication(applicationConfig);
+		} catch (NoSuchBeanDefinitionException error) {
+			logger.warn("No configuration of class com.alibaba.dubbo.config.ApplicationConfig was found.");
+		}
+
+		try {
+			com.alibaba.dubbo.config.RegistryConfig registryConfig = //
+					this.beanFactory.getBean(com.alibaba.dubbo.config.RegistryConfig.class);
+			referenceConfig.setRegistry(registryConfig);
+		} catch (NoSuchBeanDefinitionException error) {
+			logger.warn("No configuration of class com.alibaba.dubbo.config.RegistryConfig was found.");
+		}
+
+		try {
+			com.alibaba.dubbo.config.ProtocolConfig protocolConfig = //
+					this.beanFactory.getBean(com.alibaba.dubbo.config.ProtocolConfig.class);
+			referenceConfig.setProtocol(protocolConfig.getName());
+		} catch (NoSuchBeanDefinitionException error) {
+			logger.warn("No configuration of class com.alibaba.dubbo.config.ProtocolConfig was found.");
+		}
 
 		RemoteCoordinator globalCoordinator = referenceConfig.get();
 		beanRegistry.setConsumeCoordinator(globalCoordinator);

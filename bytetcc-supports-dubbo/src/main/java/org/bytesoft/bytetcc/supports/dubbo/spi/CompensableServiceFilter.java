@@ -59,7 +59,9 @@ import org.springframework.transaction.annotation.Propagation;
 import com.alibaba.com.caucho.hessian.io.HessianHandle;
 import com.alibaba.dubbo.common.URL;
 import com.alibaba.dubbo.config.ApplicationConfig;
+import com.alibaba.dubbo.config.ProtocolConfig;
 import com.alibaba.dubbo.config.ReferenceConfig;
+import com.alibaba.dubbo.config.RegistryConfig;
 import com.alibaba.dubbo.rpc.Filter;
 import com.alibaba.dubbo.rpc.Invocation;
 import com.alibaba.dubbo.rpc.Invoker;
@@ -737,6 +739,8 @@ public class CompensableServiceFilter implements Filter {
 		RemoteCoordinator participant = participantRegistry.getPhysicalInstance(remoteAddr);
 		if (participant == null) {
 			ApplicationConfig applicationConfig = beanRegistry.getBean(ApplicationConfig.class);
+			RegistryConfig registryConfig = beanRegistry.getBean(RegistryConfig.class);
+			ProtocolConfig protocolConfig = beanRegistry.getBean(ProtocolConfig.class);
 
 			ReferenceConfig<RemoteCoordinator> referenceConfig = new ReferenceConfig<RemoteCoordinator>();
 			referenceConfig.setInterface(RemoteCoordinator.class);
@@ -749,6 +753,10 @@ public class CompensableServiceFilter implements Filter {
 			referenceConfig.setUrl(String.format("%s:%s", remoteAddr.getServerHost(), remoteAddr.getServerPort()));
 
 			referenceConfig.setApplication(applicationConfig);
+			referenceConfig.setRegistry(registryConfig);
+			if (protocolConfig != null) {
+				referenceConfig.setProtocol(protocolConfig.getName());
+			} // end-if (protocolConfig != null)
 
 			RemoteCoordinator reference = referenceConfig.get();
 			if (reference == null) {
