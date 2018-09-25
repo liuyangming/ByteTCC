@@ -90,6 +90,8 @@ public class CompensableServiceFilter implements Filter {
 			return this.providerInvokeForKey(invoker, invocation);
 		} else if (XAResource.class.getName().equals(interfaceClazz)) {
 			return this.providerInvokeForTCC(invoker, invocation);
+		} else if (TransactionParticipant.class.getName().equals(interfaceClazz)) {
+			return this.providerInvokeForTCC(invoker, invocation);
 		} else if (RemoteCoordinator.class.getName().equals(interfaceClazz)) {
 			return this.providerInvokeForTCC(invoker, invocation);
 		} else {
@@ -360,6 +362,8 @@ public class CompensableServiceFilter implements Filter {
 				&& Arrays.equals(invocation.getParameterTypes(), new Class<?>[] { Xid.class, Integer.TYPE })) {
 			return this.consumerInvokeForKey(invoker, invocation);
 		} else if (XAResource.class.getName().equals(interfaceClazz)) {
+			return this.consumerInvokeForTCC(invoker, invocation);
+		} else if (TransactionParticipant.class.getName().equals(interfaceClazz)) {
 			return this.consumerInvokeForTCC(invoker, invocation);
 		} else if (RemoteCoordinator.class.getName().equals(interfaceClazz)) {
 			return this.consumerInvokeForTCC(invoker, invocation);

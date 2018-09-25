@@ -378,6 +378,10 @@ public class SampleCompensableLogger extends VirtualLoggingSystemImpl
 		this.beanFactory = tbf;
 	}
 
+	public String getEndpoint() {
+		return this.endpoint;
+	}
+
 	public void setEndpoint(String endpoint) {
 		this.endpoint = endpoint;
 	}

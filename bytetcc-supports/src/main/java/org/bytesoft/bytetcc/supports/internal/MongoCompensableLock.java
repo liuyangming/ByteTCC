@@ -92,6 +92,7 @@ public class MongoCompensableLock implements TransactionLock, CompensableInstVer
 			this.initializeIndexIfNecessary();
 		}
 
+		this.curatorFramework.blockUntilConnected();
 		this.curatorFramework.getConnectionStateListenable().addListener(this);
 
 		this.initializeClusterInstancesDirectory();

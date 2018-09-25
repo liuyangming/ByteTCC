@@ -898,6 +898,10 @@ public class MongoCompensableLogger
 		this.beanFactory = tbf;
 	}
 
+	public String getEndpoint() {
+		return this.endpoint;
+	}
+
 	public void setEndpoint(String identifier) {
 		this.endpoint = identifier;
 	}

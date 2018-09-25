@@ -297,6 +297,10 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableEndpo
 		this.released = true;
 	}
 
+	public String getEndpoint() {
+		return this.endpoint;
+	}
+
 	public void setEndpoint(String identifier) {
 		this.endpoint = identifier;
 	}

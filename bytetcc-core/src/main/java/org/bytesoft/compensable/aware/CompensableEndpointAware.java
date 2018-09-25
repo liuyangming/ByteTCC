@@ -18,5 +18,8 @@ package org.bytesoft.compensable.aware;
 public interface CompensableEndpointAware {
 	public static final String ENDPOINT_FIELD_NAME = "endpoint";
 
+	public String getEndpoint();
+
 	public void setEndpoint(String identifier);
+
 }

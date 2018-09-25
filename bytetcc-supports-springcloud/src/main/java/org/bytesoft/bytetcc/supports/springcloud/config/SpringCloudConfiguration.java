@@ -231,6 +231,10 @@ public class SpringCloudConfiguration implements WebMvcConfigurer, BeanFactoryPo
 
 	// public void onApplicationEvent(ApplicationReadyEvent event) {}
 
+	public String getEndpoint() {
+		return this.identifier;
+	}
+
 	public void setEndpoint(String identifier) {
 		this.identifier = identifier;
 	}

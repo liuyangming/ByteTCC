@@ -258,6 +258,10 @@ public class CompensableCommandManager
 		return CommonUtils.getApplication(this.endpoint);
 	}
 
+	public String getEndpoint() {
+		return this.endpoint;
+	}
+
 	public void setEndpoint(String identifier) {
 		this.endpoint = identifier;
 	}

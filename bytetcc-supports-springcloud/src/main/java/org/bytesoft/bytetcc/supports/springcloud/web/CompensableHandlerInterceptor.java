@@ -160,6 +160,10 @@ public class CompensableHandlerInterceptor implements HandlerInterceptor, Compen
 
 	}
 
+	public String getEndpoint() {
+		return this.identifier;
+	}
+
 	public void setEndpoint(String identifier) {
 		this.identifier = identifier;
 	}
