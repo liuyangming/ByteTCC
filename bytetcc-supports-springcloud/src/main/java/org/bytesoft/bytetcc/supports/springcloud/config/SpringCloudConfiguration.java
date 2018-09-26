@@ -20,6 +20,8 @@ import java.util.Iterator;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
+import org.bytesoft.bytetcc.TransactionManagerImpl;
+import org.bytesoft.bytetcc.UserCompensableImpl;
 import org.bytesoft.bytetcc.supports.springcloud.SpringCloudBeanRegistry;
 import org.bytesoft.bytetcc.supports.springcloud.feign.CompensableClientRegistry;
 import org.bytesoft.bytetcc.supports.springcloud.feign.CompensableFeignBeanPostProcessor;
@@ -32,6 +34,8 @@ import org.bytesoft.bytetcc.supports.springcloud.property.CompensablePropertySou
 import org.bytesoft.bytetcc.supports.springcloud.web.CompensableHandlerInterceptor;
 import org.bytesoft.bytetcc.supports.springcloud.web.CompensableRequestInterceptor;
 import org.bytesoft.common.utils.CommonUtils;
+import org.bytesoft.compensable.CompensableBeanFactory;
+import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 import org.bytesoft.compensable.aware.CompensableEndpointAware;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.MutablePropertyValues;
@@ -53,6 +57,10 @@ import org.springframework.context.annotation.ImportResource;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.core.env.Environment;
 import org.springframework.http.client.ClientHttpRequestFactory;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
+import org.springframework.transaction.annotation.TransactionManagementConfigurer;
+import org.springframework.transaction.jta.JtaTransactionManager;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -60,8 +68,9 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @PropertySource(value = "bytetcc:loadbalancer.config", factory = CompensablePropertySourceFactory.class)
 @ImportResource({ "classpath:bytetcc-supports-springcloud.xml" })
 @Configuration
-public class SpringCloudConfiguration implements WebMvcConfigurer, BeanFactoryPostProcessor, InitializingBean,
-		CompensableEndpointAware, EnvironmentAware, ApplicationContextAware {
+@EnableTransactionManagement
+public class SpringCloudConfiguration implements TransactionManagementConfigurer, WebMvcConfigurer, BeanFactoryPostProcessor,
+		InitializingBean, CompensableEndpointAware, CompensableBeanFactoryAware, EnvironmentAware, ApplicationContextAware {
 	static final String CONSTANT_INCLUSIONS = "org.bytesoft.bytetcc.feign.inclusions";
 	static final String CONSTANT_EXCLUSIONS = "org.bytesoft.bytetcc.feign.exclusions";
 	static final String FEIGN_FACTORY_CLASS = "org.springframework.cloud.openfeign.FeignClientFactoryBean";
@@ -69,6 +78,7 @@ public class SpringCloudConfiguration implements WebMvcConfigurer, BeanFactoryPo
 	private ApplicationContext applicationContext;
 	private String identifier;
 	private Environment environment;
+	private CompensableBeanFactory beanFactory;
 	private transient final Set<String> transientClientSet = new HashSet<String>();
 
 	public void afterPropertiesSet() throws Exception {
@@ -76,6 +86,18 @@ public class SpringCloudConfiguration implements WebMvcConfigurer, BeanFactoryPo
 		String name = this.environment.getProperty("spring.application.name");
 		String port = this.environment.getProperty("server.port");
 		this.identifier = String.format("%s:%s:%s", host, name, port);
+	}
+
+	// <!-- <bean id="jtaTransactionManager" class="org.springframework.transaction.jta.JtaTransactionManager"> -->
+	// <!-- <property name="userTransaction" ref="bytetccUserTransaction" /> -->
+	// <!-- <property name="transactionManager" ref="transactionManager" /> -->
+	// <!-- </bean> -->
+	// <!-- <tx:annotation-driven transaction-manager="jtaTransactionManager" /> -->
+	public PlatformTransactionManager annotationDrivenTransactionManager() {
+		JtaTransactionManager jtaTransactionManager = new JtaTransactionManager();
+		jtaTransactionManager.setTransactionManager(this.applicationContext.getBean(TransactionManagerImpl.class));
+		jtaTransactionManager.setUserTransaction(this.applicationContext.getBean(UserCompensableImpl.class));
+		return jtaTransactionManager;
 	}
 
 	@org.springframework.context.annotation.Bean
@@ -233,6 +255,14 @@ public class SpringCloudConfiguration implements WebMvcConfigurer, BeanFactoryPo
 
 	public String getEndpoint() {
 		return this.identifier;
+	}
+
+	public CompensableBeanFactory getBeanFactory() {
+		return this.beanFactory;
+	}
+
+	public void setBeanFactory(CompensableBeanFactory tbf) {
+		this.beanFactory = tbf;
 	}
 
 	public void setEndpoint(String identifier) {

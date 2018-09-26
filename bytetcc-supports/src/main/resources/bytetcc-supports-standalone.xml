@@ -65,7 +65,7 @@
 		<property name="resourceDeserializer" ref="bytetccResourceDeserializer" />
 		<property name="localResourceCleaner" ref="bytetccCleanupWork" />
 		<property name="compensableContext" ref="bytetccCompensableContext" />
-		<property name="compensableLock" ref="bytejtaTransactionLock" />
+		<property name="compensableLock" ref="bytetccCompensableLock" />
 	</bean>
 
 	<import resource="classpath:bytetcc-disable-tx-advice.xml" />

@@ -15,7 +15,7 @@
 	<bean class="org.bytesoft.bytetcc.supports.spring.CompensableBeanPostProcessor" />
 	<bean class="org.bytesoft.bytetcc.supports.spring.CompensableAnnotationValidator" />
 	<bean class="org.bytesoft.bytetcc.supports.spring.CompensableContextPostProcessor" />
-	<!-- <bean class="org.bytesoft.bytetcc.supports.spring.CompensableManagerPostProcessor" /> -->
+	<bean class="org.bytesoft.bytetcc.supports.boot.LocalXADataSourcePostProcessor" />
 
 	<bean id="bytetccUserTransaction" class="org.bytesoft.bytetcc.UserCompensableImpl" />
 	<bean id="bytetccCompensableManager" class="org.bytesoft.bytetcc.CompensableManagerImpl" />

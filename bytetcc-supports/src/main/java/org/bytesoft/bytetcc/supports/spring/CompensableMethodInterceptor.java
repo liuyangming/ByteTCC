@@ -15,11 +15,15 @@
  */
 package org.bytesoft.bytetcc.supports.spring;
 
+import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Method;
 
+import org.aopalliance.intercept.Joinpoint;
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
 import org.apache.commons.lang3.StringUtils;
+import org.aspectj.lang.ProceedingJoinPoint;
+import org.aspectj.lang.reflect.MethodSignature;
 import org.bytesoft.bytetcc.supports.CompensableInvocationImpl;
 import org.bytesoft.bytetcc.supports.CompensableSynchronization;
 import org.bytesoft.bytetcc.supports.spring.aware.CompensableBeanNameAware;
@@ -42,6 +46,7 @@ import org.springframework.context.ApplicationContextAware;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+@org.aspectj.lang.annotation.Aspect
 public class CompensableMethodInterceptor
 		implements MethodInterceptor, CompensableSynchronization, ApplicationContextAware, CompensableBeanFactoryAware {
 	static final Logger logger = LoggerFactory.getLogger(CompensableMethodInterceptor.class);
@@ -67,6 +72,49 @@ public class CompensableMethodInterceptor
 		}
 
 		compensable.registerCompensable(invocation);
+	}
+
+	// <!-- <aop:config proxy-target-class="true"> -->
+	// <!-- <aop:pointcut id="compensableMethodPointcut" expression="@within(org.bytesoft.compensable.Compensable)" /> -->
+	// <!-- <aop:advisor advice-ref="compensableMethodInterceptor" pointcut-ref="compensableMethodPointcut" /> -->
+	// <!-- </aop:config> -->
+	@org.aspectj.lang.annotation.Around("@within(org.bytesoft.compensable.Compensable)")
+	public Object invoke(final ProceedingJoinPoint pjp) throws Throwable {
+		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
+		CompensableTransaction compensable = compensableManager.getCompensableTransactionQuietly();
+		if (compensable != null && compensable.getTransactionContext() != null
+				&& compensable.getTransactionContext().isCompensating()) {
+			return pjp.proceed();
+		}
+
+		String identifier = null;
+		Object bean = pjp.getThis();
+		if (CompensableBeanNameAware.class.isInstance(bean)) {
+			CompensableBeanNameAware config = (CompensableBeanNameAware) bean;
+			identifier = config.getBeanName();
+			if (StringUtils.isBlank(identifier)) {
+				logger.error("BeanId(class= {}) should not be null!", bean.getClass().getName());
+				throw new IllegalStateException(
+						String.format("BeanId(class= %s) should not be null!", bean.getClass().getName()));
+			}
+		} else {
+			String[] beanNameArray = this.applicationContext.getBeanNamesForType(bean.getClass());
+			if (beanNameArray.length == 1) {
+				identifier = beanNameArray[0];
+			} else {
+				logger.error("Class {} does not implement interface {}, and there are multiple bean definitions!",
+						bean.getClass().getName(), CompensableBeanNameAware.class.getName());
+				throw new IllegalStateException(
+						String.format("Class %s does not implement interface %s, and there are multiple bean definitions!",
+								bean.getClass().getName(), CompensableBeanNameAware.class.getName()));
+			}
+		}
+
+		MethodSignature signature = (MethodSignature) pjp.getSignature();
+		Method method = signature.getMethod();
+		Object[] args = pjp.getArgs();
+		AspectJoinpoint point = new AspectJoinpoint(pjp);
+		return this.execute(identifier, method, args, point);
 	}
 
 	public Object invoke(MethodInvocation mi) throws Throwable {
@@ -100,17 +148,19 @@ public class CompensableMethodInterceptor
 			}
 		}
 
-		return this.execute(identifier, mi);
+		Method method = mi.getMethod();
+		Object[] args = mi.getArguments();
+		return this.execute(identifier, method, args, mi);
 	}
 
-	public Object execute(String identifier, MethodInvocation mi) throws Throwable {
-		Transactional transactional = mi.getMethod().getAnnotation(Transactional.class);
+	public Object execute(String identifier, Method method, Object[] args, Joinpoint point) throws Throwable {
+		Transactional transactional = method.getAnnotation(Transactional.class);
 		if (transactional == null) {
-			transactional = mi.getMethod().getDeclaringClass().getAnnotation(Transactional.class);
+			transactional = method.getDeclaringClass().getAnnotation(Transactional.class);
 		}
 
 		CompensableInvocationRegistry registry = CompensableInvocationRegistry.getInstance();
-		Compensable annotation = mi.getMethod().getDeclaringClass().getAnnotation(Compensable.class);
+		Compensable annotation = method.getDeclaringClass().getAnnotation(Compensable.class);
 
 		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
@@ -118,8 +168,7 @@ public class CompensableMethodInterceptor
 		boolean desociateRequired = false;
 		try {
 			CompensableInvocationImpl invocation = new CompensableInvocationImpl();
-			Method method = mi.getMethod();
-			invocation.setArgs(mi.getArguments());
+			invocation.setArgs(args);
 
 			invocation.setIdentifier(identifier);
 			invocation.setSimplified(annotation.simplified());
@@ -132,13 +181,13 @@ public class CompensableMethodInterceptor
 			try {
 				invokeMethod = interfaceClass.getMethod(methodName, parameterTypes);
 			} catch (NoSuchMethodException ex) {
-				logger.warn("Current compensable-service {} is invoking a non-TCC operation!", mi.getMethod());
+				logger.warn("Current compensable-service {} is invoking a non-TCC operation!", method);
 			}
 
 			if (annotation.simplified()) {
 				invocation.setMethod(method); // class-method
 
-				Class<?> currentClazz = mi.getThis().getClass();
+				Class<?> currentClazz = point.getThis().getClass();
 				Method[] methodArray = currentClazz.getDeclaredMethods();
 				boolean confirmFlag = false;
 				boolean cancelFlag = false;
@@ -155,7 +204,7 @@ public class CompensableMethodInterceptor
 					}
 				}
 			} else if (invokeMethod == null) {
-				return mi.proceed();
+				return point.proceed();
 			} else {
 				invocation.setMethod(invokeMethod);
 				invocation.setConfirmableKey(annotation.confirmableKey());
@@ -173,8 +222,8 @@ public class CompensableMethodInterceptor
 			}
 
 			if (transaction != null && compensable == null) {
-				logger.warn("Compensable-service {} is participanting in a non-TCC transaction which was created at:",
-						mi.getMethod(), transaction.getCreatedAt());
+				logger.warn("Compensable-service {} is participanting in a non-TCC transaction which was created at:", method,
+						transaction.getCreatedAt());
 			}
 
 			if (transactional != null && compensable != null && transaction != null) {
@@ -191,7 +240,7 @@ public class CompensableMethodInterceptor
 			}
 
 			registry.register(invocation);
-			return mi.proceed();
+			return point.proceed();
 		} finally {
 			registry.unRegister();
 
@@ -216,6 +265,26 @@ public class CompensableMethodInterceptor
 
 	public void setApplicationContext(ApplicationContext applicationContext) {
 		this.applicationContext = applicationContext;
+	}
+
+	static class AspectJoinpoint implements Joinpoint {
+		private final ProceedingJoinPoint delegate;
+
+		public AspectJoinpoint(ProceedingJoinPoint joinPoint) {
+			this.delegate = joinPoint;
+		}
+
+		public Object proceed() throws Throwable {
+			return this.delegate.proceed();
+		}
+
+		public Object getThis() {
+			return this.delegate.getThis();
+		}
+
+		public AccessibleObject getStaticPart() {
+			throw new IllegalStateException("Not supported yet!");
+		}
 	}
 
 }
