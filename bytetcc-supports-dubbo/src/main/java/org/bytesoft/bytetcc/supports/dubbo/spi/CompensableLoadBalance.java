@@ -20,12 +20,15 @@ import java.util.List;
 import org.apache.commons.lang3.StringUtils;
 import org.bytesoft.bytejta.supports.dubbo.InvocationContext;
 import org.bytesoft.bytejta.supports.dubbo.InvocationContextRegistry;
+import org.bytesoft.bytejta.supports.internal.RemoteCoordinatorRegistry;
 import org.bytesoft.bytetcc.CompensableTransactionImpl;
 import org.bytesoft.bytetcc.supports.dubbo.CompensableBeanRegistry;
 import org.bytesoft.bytetcc.supports.dubbo.ext.ILoadBalancer;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableManager;
 import org.bytesoft.transaction.archive.XAResourceArchive;
+import org.bytesoft.transaction.remote.RemoteAddr;
+import org.bytesoft.transaction.remote.RemoteNode;
 import org.bytesoft.transaction.supports.resource.XAResourceDescriptor;
 import org.springframework.core.env.Environment;
 
@@ -109,21 +112,55 @@ public final class CompensableLoadBalance implements LoadBalance {
 	}
 
 	public <T> Invoker<T> selectInvokerForTCC(List<Invoker<T>> invokers, URL url, Invocation invocation) throws RpcException {
-		InvocationContextRegistry registry = InvocationContextRegistry.getInstance();
-		InvocationContext invocationContext = registry.getInvocationContext();
+		InvocationContextRegistry invocationContextRegistry = InvocationContextRegistry.getInstance();
+		RemoteCoordinatorRegistry remoteCoordinatorRegistry = RemoteCoordinatorRegistry.getInstance();
+		InvocationContext invocationContext = invocationContextRegistry.getInvocationContext();
 
 		String serverHost = invocationContext.getServerHost();
 		int serverPort = invocationContext.getServerPort();
-		for (int i = 0; invokers != null && i < invokers.size(); i++) {
-			Invoker<T> invoker = invokers.get(i);
-			URL targetUrl = invoker.getUrl();
-			String targetAddr = targetUrl.getIp();
-			int targetPort = targetUrl.getPort();
-			if (StringUtils.equals(targetAddr, serverHost) && targetPort == serverPort) {
-				return invoker;
-			}
+		RemoteAddr expectRemoteAddr = new RemoteAddr();
+		expectRemoteAddr.setServerHost(serverHost);
+		expectRemoteAddr.setServerPort(serverPort);
+		RemoteNode expectRemoteNode = remoteCoordinatorRegistry.getRemoteNode(expectRemoteAddr);
+		if (expectRemoteNode == null) {
+			for (int i = 0; invokers != null && i < invokers.size(); i++) {
+				Invoker<T> invoker = invokers.get(i);
+				URL targetUrl = invoker.getUrl();
+				String targetAddr = targetUrl.getIp();
+				int targetPort = targetUrl.getPort();
+
+				RemoteAddr actualRemoteAddr = new RemoteAddr();
+				actualRemoteAddr.setServerHost(targetAddr);
+				actualRemoteAddr.setServerPort(targetPort);
+
+				if (expectRemoteAddr.equals(actualRemoteAddr)) {
+					return invoker;
+				} // end-if (expectRemoteAddr.equals(actualRemoteAddr))
+
+			} // end-for (int i = 0; invokers != null && i < invokers.size(); i++)
+		} else {
+			String expectApplication = expectRemoteNode.getServiceKey();
+			for (int i = 0; invokers != null && i < invokers.size(); i++) {
+				Invoker<T> invoker = invokers.get(i);
+				URL targetUrl = invoker.getUrl();
+				String targetAddr = targetUrl.getIp();
+				int targetPort = targetUrl.getPort();
+
+				RemoteAddr actualRemoteAddr = new RemoteAddr();
+				actualRemoteAddr.setServerHost(targetAddr);
+				actualRemoteAddr.setServerPort(targetPort);
+				RemoteNode actualRemoteNode = remoteCoordinatorRegistry.getRemoteNode(actualRemoteAddr);
+				String actualApplication = actualRemoteNode == null ? null : actualRemoteNode.getServiceKey();
+
+				if (StringUtils.equals(expectApplication, actualApplication)) {
+					return invoker;
+				} else if (expectRemoteAddr.equals(actualRemoteAddr)) {
+					return invoker;
+				}
+			} // end-for (int i = 0; invokers != null && i < invokers.size(); i++)
 		}
 
 		throw new RpcException(String.format("Invoker(%s:%s) is not found!", serverHost, serverPort));
 	}
+
 }
