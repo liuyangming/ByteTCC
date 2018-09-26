@@ -89,6 +89,7 @@ public class CompensableMethodInterceptor
 
 		String identifier = null;
 		Object bean = pjp.getThis();
+
 		if (CompensableBeanNameAware.class.isInstance(bean)) {
 			CompensableBeanNameAware config = (CompensableBeanNameAware) bean;
 			identifier = config.getBeanName();
@@ -98,7 +99,15 @@ public class CompensableMethodInterceptor
 						String.format("BeanId(class= %s) should not be null!", bean.getClass().getName()));
 			}
 		} else {
-			String[] beanNameArray = this.applicationContext.getBeanNamesForType(bean.getClass());
+			Class<?> targetClass = null;
+			if (org.springframework.aop.framework.Advised.class.isInstance(bean)) {
+				org.springframework.aop.framework.Advised advised = (org.springframework.aop.framework.Advised) bean;
+				targetClass = advised.getTargetClass();
+			} else {
+				targetClass = bean.getClass();
+			}
+
+			String[] beanNameArray = this.applicationContext.getBeanNamesForType(targetClass);
 			if (beanNameArray.length == 1) {
 				identifier = beanNameArray[0];
 			} else {
@@ -136,7 +145,15 @@ public class CompensableMethodInterceptor
 						String.format("BeanId(class= %s) should not be null!", bean.getClass().getName()));
 			}
 		} else {
-			String[] beanNameArray = this.applicationContext.getBeanNamesForType(bean.getClass());
+			Class<?> targetClass = null;
+			if (org.springframework.aop.framework.Advised.class.isInstance(bean)) {
+				org.springframework.aop.framework.Advised advised = (org.springframework.aop.framework.Advised) bean;
+				targetClass = advised.getTargetClass();
+			} else {
+				targetClass = bean.getClass();
+			}
+
+			String[] beanNameArray = this.applicationContext.getBeanNamesForType(targetClass);
 			if (beanNameArray.length == 1) {
 				identifier = beanNameArray[0];
 			} else {

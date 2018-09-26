@@ -53,6 +53,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.EnvironmentAware;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import org.springframework.context.annotation.ImportResource;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.core.env.Environment;
@@ -67,6 +68,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @PropertySource(value = "bytetcc:loadbalancer.config", factory = CompensablePropertySourceFactory.class)
 @ImportResource({ "classpath:bytetcc-supports-springcloud.xml" })
+@EnableAspectJAutoProxy(proxyTargetClass = true)
 @Configuration
 @EnableTransactionManagement
 public class SpringCloudConfiguration implements TransactionManagementConfigurer, WebMvcConfigurer, BeanFactoryPostProcessor,

@@ -30,6 +30,7 @@ import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.bytesoft.bytetcc.supports.CompensableInvocationImpl;
 import org.bytesoft.common.utils.ByteUtils;
+import org.bytesoft.common.utils.CommonUtils;
 import org.bytesoft.common.utils.SerializeUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.archive.CompensableArchive;
@@ -89,8 +90,7 @@ public class MongoCompensableRepository
 			MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
 			MongoCollection<Document> transactions = mdb.getCollection(CONSTANTS_TB_TRANSACTIONS);
 
-			String[] values = this.endpoint.split("\\s*:\\s*");
-			String application = values[1];
+			String application = CommonUtils.getApplication(this.endpoint);
 			byte[] global = xid.getGlobalTransactionId();
 
 			Bson globalFilter = Filters.eq(CONSTANTS_FD_GLOBAL, ByteUtils.byteArrayToString(global));
@@ -148,8 +148,7 @@ public class MongoCompensableRepository
 		MongoCollection<Document> compensables = mdb.getCollection(CONSTANTS_TB_COMPENSABLES);
 
 		TransactionXid xid = (TransactionXid) archive.getXid();
-		String[] values = this.endpoint.split("\\s*:\\s*");
-		String application = values[1];
+		String application = CommonUtils.getApplication(this.endpoint);
 		byte[] global = xid.getGlobalTransactionId();
 
 		Bson globalFilter = Filters.eq(CONSTANTS_FD_GLOBAL, ByteUtils.byteArrayToString(global));
@@ -260,8 +259,7 @@ public class MongoCompensableRepository
 		MongoCollection<Document> participants = mdb.getCollection(CONSTANTS_TB_PARTICIPANTS);
 
 		TransactionXid xid = (TransactionXid) archive.getXid();
-		String[] values = this.endpoint.split("\\s*:\\s*");
-		String application = values[1];
+		String application = CommonUtils.getApplication(this.endpoint);
 		byte[] global = xid.getGlobalTransactionId();
 
 		Bson globalFilter = Filters.eq(CONSTANTS_FD_GLOBAL, ByteUtils.byteArrayToString(global));
@@ -327,8 +325,7 @@ public class MongoCompensableRepository
 			byte[] global = transactionXid.getGlobalTransactionId();
 			String identifier = ByteUtils.byteArrayToString(global);
 
-			String[] values = this.endpoint.split("\\s*:\\s*");
-			String application = values[1];
+			String application = CommonUtils.getApplication(this.endpoint);
 
 			int status = archive.getCompensableStatus();
 
@@ -368,8 +365,7 @@ public class MongoCompensableRepository
 			MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
 			MongoCollection<Document> transactions = mdb.getCollection(CONSTANTS_TB_TRANSACTIONS);
 
-			String[] values = this.endpoint.split("\\s*:\\s*");
-			String application = values[1];
+			String application = CommonUtils.getApplication(this.endpoint);
 			byte[] global = xid.getGlobalTransactionId();
 
 			Bson globalFilter = Filters.eq(CONSTANTS_FD_GLOBAL, ByteUtils.byteArrayToString(global));
@@ -438,8 +434,7 @@ public class MongoCompensableRepository
 			MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
 			MongoCollection<Document> transactions = mdb.getCollection(CONSTANTS_TB_TRANSACTIONS);
 
-			String[] values = this.endpoint.split("\\s*:\\s*");
-			String application = values[1];
+			String application = CommonUtils.getApplication(this.endpoint);
 
 			Bson systemFilter = Filters.eq(CONSTANTS_FD_SYSTEM, application);
 			Bson coordinatorFilter = Filters.eq("coordinator", true);

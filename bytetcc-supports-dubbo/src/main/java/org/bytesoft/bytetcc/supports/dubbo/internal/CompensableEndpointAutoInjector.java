@@ -25,20 +25,20 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.FatalBeanException;
+import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
-import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 
 import com.alibaba.dubbo.common.utils.ConfigUtils;
 
-public class CompensableEndpointAutoInjector implements SmartInitializingSingleton, BeanPostProcessor, ApplicationContextAware {
+public class CompensableEndpointAutoInjector implements InitializingBean, BeanPostProcessor, ApplicationContextAware {
 	static final Logger logger = LoggerFactory.getLogger(CompensableEndpointAutoInjector.class);
 
 	private ApplicationContext applicationContext;
 
-	public void afterSingletonsInstantiated() {
+	public void afterPropertiesSet() throws Exception {
 		String host = CommonUtils.getInetAddress();
 
 		String name = null;

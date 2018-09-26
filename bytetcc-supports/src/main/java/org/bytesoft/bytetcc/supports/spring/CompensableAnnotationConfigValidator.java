@@ -30,27 +30,40 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.FatalBeanException;
+import org.springframework.beans.factory.BeanFactory;
+import org.springframework.beans.factory.BeanFactoryAware;
+import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.beans.factory.config.BeanDefinition;
-import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
-import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
+import org.springframework.beans.factory.support.BeanDefinitionRegistry;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-public class CompensableAnnotationValidator implements BeanFactoryPostProcessor {
-	static final Logger logger = LoggerFactory.getLogger(CompensableAnnotationValidator.class);
+public class CompensableAnnotationConfigValidator
+		implements SmartInitializingSingleton, ApplicationContextAware, BeanFactoryAware {
+	static final Logger logger = LoggerFactory.getLogger(CompensableAnnotationConfigValidator.class);
 
-	public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
-		Map<String, Class<?>> otherServiceMap = new HashMap<String, Class<?>>();
+	private ApplicationContext applicationContext;
+	private BeanFactory beanFactory;
+
+	public void afterSingletonsInstantiated() {
+		String[] beanNameArray = this.applicationContext.getBeanDefinitionNames();
+		BeanDefinitionRegistry registry = (BeanDefinitionRegistry) this.beanFactory;
+
 		Map<String, Compensable> compensables = new HashMap<String, Compensable>();
-
+		Map<String, Class<?>> otherServiceMap = new HashMap<String, Class<?>>();
 		ClassLoader cl = Thread.currentThread().getContextClassLoader();
-		String[] beanNameArray = beanFactory.getBeanDefinitionNames();
 		for (int i = 0; beanNameArray != null && i < beanNameArray.length; i++) {
 			String beanName = beanNameArray[i];
-			BeanDefinition beanDef = beanFactory.getBeanDefinition(beanName);
+			BeanDefinition beanDef = registry.getBeanDefinition(beanName);
 			String className = beanDef.getBeanClassName();
-			Class<?> clazz = null;
 
+			if (StringUtils.isBlank(className)) {
+				continue;
+			}
+
+			Class<?> clazz = null;
 			try {
 				clazz = cl.loadClass(className);
 			} catch (Exception ex) {
@@ -68,32 +81,32 @@ public class CompensableAnnotationValidator implements BeanFactoryPostProcessor 
 			if (compensable == null) {
 				otherServiceMap.put(beanName, clazz);
 				continue;
-			} else {
-				compensables.put(beanName, compensable);
 			}
 
-			try {
-				Class<?> interfaceClass = compensable.interfaceClass();
-				if (interfaceClass.isInterface() == false) {
-					throw new IllegalStateException("Compensable's interfaceClass must be a interface.");
-				}
-				Method[] methodArray = interfaceClass.getDeclaredMethods();
-				for (int j = 0; j < methodArray.length; j++) {
-					Method interfaceMethod = methodArray[j];
-					Method method = clazz.getMethod(interfaceMethod.getName(), interfaceMethod.getParameterTypes());
-					this.validateSimplifiedCompensable(method, clazz);
-					this.validateDeclaredRemotingException(method, clazz);
-					this.validateTransactionalPropagation(method, clazz);
-				}
-			} catch (IllegalStateException ex) {
-				throw new FatalBeanException(ex.getMessage(), ex);
-			} catch (NoSuchMethodException ex) {
-				throw new FatalBeanException(ex.getMessage(), ex);
-			} catch (SecurityException ex) {
-				throw new FatalBeanException(ex.getMessage(), ex);
-			} catch (RuntimeException ex) {
-				throw new FatalBeanException(ex.getMessage(), ex);
+			Class<?> interfaceClass = compensable.interfaceClass();
+			if (interfaceClass.isInterface() == false) {
+				throw new IllegalStateException("Compensable's interfaceClass must be a interface.");
 			}
+
+			Method[] methodArray = interfaceClass.getDeclaredMethods();
+			for (int j = 0; j < methodArray.length; j++) {
+				Method interfaceMethod = methodArray[j];
+				String methodName = interfaceMethod.getName();
+				Class<?>[] parameterTypes = interfaceMethod.getParameterTypes();
+				Method method = null;
+				try {
+					method = clazz.getMethod(methodName, parameterTypes);
+				} catch (NoSuchMethodException ex) {
+					throw new FatalBeanException(String.format(
+							"Compensable-service(%s) does not implement method '%s' specified by the interfaceClass.", beanName,
+							methodName));
+				}
+				this.validateSimplifiedCompensable(method, clazz);
+				this.validateDeclaredRemotingException(method, clazz);
+				this.validateTransactionalPropagation(method, clazz);
+			}
+
+			compensables.put(beanName, compensable);
 		}
 
 		Iterator<Map.Entry<String, Compensable>> itr = compensables.entrySet().iterator();
@@ -113,23 +126,24 @@ public class CompensableAnnotationValidator implements BeanFactoryPostProcessor 
 					throw new IllegalStateException(String.format("The confirm bean(id= %s) is not exists!", confirmableKey));
 				}
 
-				try {
-					Method[] methodArray = interfaceClass.getDeclaredMethods();
-					for (int j = 0; j < methodArray.length; j++) {
-						Method interfaceMethod = methodArray[j];
-						Method method = clazz.getMethod(interfaceMethod.getName(), interfaceMethod.getParameterTypes());
-						this.validateDeclaredRemotingException(method, clazz);
-						this.validateTransactionalPropagation(method, clazz);
-						this.validateTransactionalRollbackFor(method, clazz, confirmableKey);
+				Method[] methodArray = interfaceClass.getDeclaredMethods();
+				for (int j = 0; j < methodArray.length; j++) {
+					Method interfaceMethod = methodArray[j];
+					String methodName = interfaceMethod.getName();
+					Class<?>[] parameterTypes = interfaceMethod.getParameterTypes();
+					Method method = null;
+					try {
+						method = clazz.getMethod(methodName, parameterTypes);
+					} catch (NoSuchMethodException ex) {
+						throw new FatalBeanException(String.format(
+								"Confirm-service(%s) does not implement method '%s' specified by the interfaceClass.",
+								confirmableKey, methodName));
 					}
-				} catch (IllegalStateException ex) {
-					throw new FatalBeanException(ex.getMessage(), ex);
-				} catch (NoSuchMethodException ex) {
-					throw new FatalBeanException(ex.getMessage(), ex);
-				} catch (SecurityException ex) {
-					throw new FatalBeanException(ex.getMessage(), ex);
+					this.validateDeclaredRemotingException(method, clazz);
+					this.validateTransactionalPropagation(method, clazz);
+					this.validateTransactionalRollbackFor(method, clazz, confirmableKey);
 				}
-			}
+			} // end-if (StringUtils.isNotBlank(confirmableKey))
 
 			if (StringUtils.isNotBlank(cancellableKey)) {
 				if (compensables.containsKey(cancellableKey)) {
@@ -140,25 +154,26 @@ public class CompensableAnnotationValidator implements BeanFactoryPostProcessor 
 				if (clazz == null) {
 					throw new IllegalStateException(String.format("The cancel bean(id= %s) is not exists!", cancellableKey));
 				}
+				Method[] methodArray = interfaceClass.getDeclaredMethods();
+				for (int j = 0; j < methodArray.length; j++) {
+					Method interfaceMethod = methodArray[j];
+					String methodName = interfaceMethod.getName();
+					Class<?>[] parameterTypes = interfaceMethod.getParameterTypes();
 
-				try {
-					Method[] methodArray = interfaceClass.getDeclaredMethods();
-					for (int j = 0; j < methodArray.length; j++) {
-						Method interfaceMethod = methodArray[j];
-						Method method = clazz.getMethod(interfaceMethod.getName(), interfaceMethod.getParameterTypes());
-						this.validateDeclaredRemotingException(method, clazz);
-						this.validateTransactionalPropagation(method, clazz);
-						this.validateTransactionalRollbackFor(method, clazz, cancellableKey);
+					Method method = null;
+					try {
+						method = clazz.getMethod(methodName, parameterTypes);
+					} catch (NoSuchMethodException ex) {
+						throw new FatalBeanException(String.format(
+								"Cancel-service(%s) does not implement method '%s' specified by the interfaceClass.",
+								confirmableKey, methodName));
 					}
-				} catch (IllegalStateException ex) {
-					throw new FatalBeanException(ex.getMessage(), ex);
-				} catch (NoSuchMethodException ex) {
-					throw new FatalBeanException(ex.getMessage(), ex);
-				} catch (SecurityException ex) {
-					throw new FatalBeanException(ex.getMessage(), ex);
+					this.validateDeclaredRemotingException(method, clazz);
+					this.validateTransactionalPropagation(method, clazz);
+					this.validateTransactionalRollbackFor(method, clazz, cancellableKey);
 				}
+			} // end-if (StringUtils.isNotBlank(cancellableKey))
 
-			}
 		}
 	}
 
@@ -295,6 +310,14 @@ public class CompensableAnnotationValidator implements BeanFactoryPostProcessor 
 								method, errorType.getName()));
 			}
 		}
+	}
+
+	public void setBeanFactory(BeanFactory beanFactory) throws BeansException {
+		this.beanFactory = beanFactory;
+	}
+
+	public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+		this.applicationContext = applicationContext;
 	}
 
 }

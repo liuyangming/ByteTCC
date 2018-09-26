@@ -16,10 +16,6 @@
 
 	<import resource="classpath:bytetcc-supports-task.xml" />
 
-	<!-- <bean class="org.bytesoft.bytetcc.supports.dubbo.CompensableEndpointPostProcessor" /> -->
-	<!-- <bean class="org.bytesoft.bytetcc.supports.dubbo.DubboConfigPostProcessor" /> -->
-	<!-- <bean class="org.bytesoft.bytetcc.supports.dubbo.CompensableConfigPostProcessor" /> -->
-
 	<bean id="bytetccResourceDeserializer" class="org.bytesoft.bytejta.supports.serialize.XAResourceDeserializerImpl" />
 
 	<bean id="bytetccTransactionArchiveDeserializer" class="org.bytesoft.bytetcc.logging.deserializer.TransactionArchiveDeserializer">
@@ -48,6 +44,8 @@
 		<property name="transactionLock" ref="bytejtaTransactionLock" />
 	</bean>
 
+	<bean id="bytetccSynchronization" class="org.bytesoft.bytetcc.supports.spring.CompensableMethodInterceptor" />
+
 	<bean id="bytetccBeanFactory" class="org.bytesoft.bytetcc.TransactionBeanFactoryImpl">
 		<property name="transactionManager" ref="bytejtaTransactionManager" />
 		<property name="compensableManager" ref="bytetccCompensableManager" />
@@ -66,20 +64,9 @@
 		<property name="localResourceCleaner" ref="bytetccCleanupWork" />
 		<property name="compensableContext" ref="bytetccCompensableContext" />
 		<property name="compensableLock" ref="bytetccCompensableLock" />
+		<property name="compensableSynchronization" ref="bytetccSynchronization" />
 	</bean>
 
 	<import resource="classpath:bytetcc-disable-tx-advice.xml" />
-
-	<bean id="compensableMethodInterceptor" class="org.bytesoft.bytetcc.supports.spring.CompensableMethodInterceptor" />
-	<aop:config proxy-target-class="true">
-		<aop:pointcut id="compensableMethodPointcut" expression="@within(org.bytesoft.compensable.Compensable)" />
-		<aop:advisor advice-ref="compensableMethodInterceptor" pointcut-ref="compensableMethodPointcut" />
-	</aop:config>
-
-	<bean id="jtaTransactionManager" class="org.springframework.transaction.jta.JtaTransactionManager">
-		<property name="userTransaction" ref="bytetccUserTransaction" />
-		<property name="transactionManager" ref="transactionManager" />
-	</bean>
-	<tx:annotation-driven transaction-manager="jtaTransactionManager" />
 
 </beans>

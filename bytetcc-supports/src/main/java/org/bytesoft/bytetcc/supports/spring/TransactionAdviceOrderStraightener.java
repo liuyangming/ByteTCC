@@ -22,7 +22,7 @@ import org.springframework.beans.BeansException;
 import org.springframework.beans.FatalBeanException;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 
-public class CompensableBeanPostProcessor implements BeanPostProcessor {
+public class TransactionAdviceOrderStraightener implements BeanPostProcessor {
 
 	public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
 		this.switchAdvisorOrderIfNecessary(bean);
@@ -73,6 +73,10 @@ public class CompensableBeanPostProcessor implements BeanPostProcessor {
 			} else if (org.springframework.transaction.interceptor.TransactionInterceptor.class.isInstance(advice)) {
 				transactionIndex = i;
 			}
+		}
+
+		if (transactionIndex == -1 || compensableIndex == -1) {
+			throw new FatalBeanException("There may be an error in the transaction configuration.");
 		}
 
 		if (transactionIndex != -1 && compensableIndex != -1 && transactionIndex < compensableIndex) {

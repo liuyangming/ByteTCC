@@ -26,18 +26,18 @@ import org.bytesoft.transaction.xa.XidFactory;
 public class CompensableConfiguration {
 
 	@org.springframework.context.annotation.Bean
-	public org.bytesoft.bytetcc.supports.spring.CompensableBeanPostProcessor compensableBeanPostProcessor() {
-		return new org.bytesoft.bytetcc.supports.spring.CompensableBeanPostProcessor();
+	public org.bytesoft.bytetcc.supports.spring.TransactionAdviceOrderStraightener compensableBeanPostProcessor() {
+		return new org.bytesoft.bytetcc.supports.spring.TransactionAdviceOrderStraightener();
 	}
 
 	@org.springframework.context.annotation.Bean
-	public org.bytesoft.bytetcc.supports.spring.CompensableAnnotationValidator compensableAnnotationValidator() {
-		return new org.bytesoft.bytetcc.supports.spring.CompensableAnnotationValidator();
+	public org.bytesoft.bytetcc.supports.spring.CompensableAnnotationConfigValidator compensableAnnotationValidator() {
+		return new org.bytesoft.bytetcc.supports.spring.CompensableAnnotationConfigValidator();
 	}
 
 	@org.springframework.context.annotation.Bean
-	public org.bytesoft.bytetcc.supports.spring.CompensableContextPostProcessor compensableContextPostProcessor() {
-		return new org.bytesoft.bytetcc.supports.spring.CompensableContextPostProcessor();
+	public org.bytesoft.bytetcc.supports.spring.CompensableContextAutoInjector compensableContextPostProcessor() {
+		return new org.bytesoft.bytetcc.supports.spring.CompensableContextAutoInjector();
 	}
 
 	@org.springframework.context.annotation.Bean

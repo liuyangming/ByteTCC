@@ -32,6 +32,7 @@ import org.bson.conversions.Bson;
 import org.bytesoft.bytetcc.supports.CompensableInvocationImpl;
 import org.bytesoft.bytetcc.supports.internal.CompensableInstVersionManager;
 import org.bytesoft.common.utils.ByteUtils;
+import org.bytesoft.common.utils.CommonUtils;
 import org.bytesoft.common.utils.SerializeUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableInvocation;
@@ -48,7 +49,7 @@ import org.bytesoft.transaction.xa.TransactionXid;
 import org.bytesoft.transaction.xa.XidFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.SmartInitializingSingleton;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mongodb.client.FindIterable;
@@ -64,7 +65,7 @@ import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
 
 public class MongoCompensableLogger
-		implements CompensableLogger, CompensableEndpointAware, CompensableBeanFactoryAware, InitializingBean {
+		implements CompensableLogger, CompensableEndpointAware, CompensableBeanFactoryAware, SmartInitializingSingleton {
 	static Logger logger = LoggerFactory.getLogger(MongoCompensableLogger.class);
 	static final String CONSTANTS_DB_NAME = "bytetcc";
 	static final String CONSTANTS_TB_TRANSACTIONS = "transactions";
@@ -84,6 +85,14 @@ public class MongoCompensableLogger
 	@javax.inject.Inject
 	private CompensableBeanFactory beanFactory;
 	private boolean initializeEnabled = true;
+
+	public void afterSingletonsInstantiated() {
+		try {
+			this.afterPropertiesSet();
+		} catch (Exception error) {
+			throw new RuntimeException(error);
+		}
+	}
 
 	public void afterPropertiesSet() throws Exception {
 		if (this.initializeEnabled) {
@@ -242,8 +251,7 @@ public class MongoCompensableLogger
 			MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
 			MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_TRANSACTIONS);
 
-			String[] values = this.endpoint.split("\\s*:\\s*");
-			String application = values[1];
+			String application = CommonUtils.getApplication(this.endpoint);
 
 			byte[] global = transactionXid.getGlobalTransactionId();
 
@@ -251,7 +259,7 @@ public class MongoCompensableLogger
 
 			long version = this.versionManager.getInstanceVersion(this.endpoint);
 			if (version <= 0) {
-				throw new IllegalStateException();
+				throw new IllegalStateException(String.format("Invalid version(%s)!", this.endpoint));
 			}
 
 			Document document = new Document();
@@ -300,8 +308,7 @@ public class MongoCompensableLogger
 			byte[] global = transactionXid.getGlobalTransactionId();
 			String identifier = ByteUtils.byteArrayToString(global);
 
-			String[] values = this.endpoint.split("\\s*:\\s*");
-			String application = values[1];
+			String application = CommonUtils.getApplication(this.endpoint);
 
 			int status = archive.getCompensableStatus();
 
@@ -358,8 +365,7 @@ public class MongoCompensableLogger
 			byte[] global = transactionXid.getGlobalTransactionId();
 			String identifier = ByteUtils.byteArrayToString(global);
 
-			String[] values = this.endpoint.split("\\s*:\\s*");
-			String application = values[1];
+			String application = CommonUtils.getApplication(this.endpoint);
 
 			MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
 			MongoCollection<Document> transactions = mdb.getCollection(CONSTANTS_TB_TRANSACTIONS);
@@ -402,8 +408,7 @@ public class MongoCompensableLogger
 			boolean completed = archive.isCompleted();
 			boolean heuristic = archive.isHeuristic();
 
-			String[] values = this.endpoint.split("\\s*:\\s*");
-			String application = values[1];
+			String application = CommonUtils.getApplication(this.endpoint);
 
 			document.append(CONSTANTS_FD_GLOBAL, globalKey);
 			document.append(CONSTANTS_FD_BRANCH, branchKey);
@@ -537,8 +542,7 @@ public class MongoCompensableLogger
 			argsByteArray = SerializeUtils.serializeObject(args);
 			String argsValue = ByteUtils.byteArrayToString(argsByteArray);
 
-			String[] values = this.endpoint.split("\\s*:\\s*");
-			String application = values[1];
+			String application = CommonUtils.getApplication(this.endpoint);
 
 			Document document = new Document();
 			document.append(CONSTANTS_FD_GLOBAL, globalKey);
@@ -614,8 +618,7 @@ public class MongoCompensableLogger
 		String methodDesc = SerializeUtils.serializeMethod(method);
 		String argsValue = ByteUtils.byteArrayToString(argsByteArray);
 
-		String[] values = this.endpoint.split("\\s*:\\s*");
-		String application = values[1];
+		String application = CommonUtils.getApplication(this.endpoint);
 
 		MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
 		MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_COMPENSABLES);
@@ -678,8 +681,7 @@ public class MongoCompensableLogger
 			MongoCollection<Document> participants = mdb.getCollection(CONSTANTS_TB_PARTICIPANTS);
 			MongoCollection<Document> compensables = mdb.getCollection(CONSTANTS_TB_COMPENSABLES);
 
-			String[] values = this.endpoint.split("\\s*:\\s*");
-			String application = values[1];
+			String application = CommonUtils.getApplication(this.endpoint);
 			Bson systemFilter = Filters.eq(CONSTANTS_FD_SYSTEM, application);
 			Bson coordinatorFilter = Filters.eq("coordinator", true);
 

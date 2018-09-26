@@ -63,8 +63,7 @@ public class CompensableCleanupWork
 			MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
 			MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_REMOVEDRESES);
 
-			String[] values = this.endpoint.split("\\s*:\\s*");
-			String application = values[1];
+			String application = CommonUtils.getApplication(this.endpoint);
 
 			byte[] global = xid.getGlobalTransactionId();
 			byte[] branch = xid.getBranchQualifier();

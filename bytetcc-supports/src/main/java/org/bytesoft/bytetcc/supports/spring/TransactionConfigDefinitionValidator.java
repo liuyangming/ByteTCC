@@ -25,7 +25,7 @@ import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.config.RuntimeBeanReference;
 import org.springframework.transaction.annotation.AnnotationTransactionAttributeSource;
 
-public class TransactionConfigPostProcessor implements BeanFactoryPostProcessor {
+public class TransactionConfigDefinitionValidator implements BeanFactoryPostProcessor {
 
 	public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
 		String[] beanNameArray = beanFactory.getBeanDefinitionNames();
@@ -57,9 +57,10 @@ public class TransactionConfigPostProcessor implements BeanFactoryPostProcessor 
 					throw new FatalBeanException(String.format(
 							"Declaring transactions by configuration is not supported yet, please use annotations to declare transactions(beanId= %s).",
 							beanName));
-				}
-
+				} // end-if (errorExists)
 			}
-		}
+
+		} // end-for (int i = 0; i < beanNameArray.length; i++)
 	}
+
 }

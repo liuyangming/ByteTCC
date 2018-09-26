@@ -46,7 +46,7 @@ import org.bytesoft.transaction.TransactionLock;
 import org.bytesoft.transaction.xa.TransactionXid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.SmartInitializingSingleton;
 
 import com.mongodb.client.FindIterable;
 import com.mongodb.client.ListIndexesIterable;
@@ -61,7 +61,7 @@ import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
 
 public class MongoCompensableLock implements TransactionLock, CompensableInstVersionManager, CompensableEndpointAware,
-		CompensableBeanFactoryAware, CuratorWatcher, ConnectionStateListener, BackgroundCallback, InitializingBean {
+		CompensableBeanFactoryAware, CuratorWatcher, ConnectionStateListener, BackgroundCallback, SmartInitializingSingleton {
 	static Logger logger = LoggerFactory.getLogger(MongoCompensableLock.class);
 	static final String CONSTANTS_ROOT_PATH = "/org/bytesoft/bytetcc";
 	static final String CONSTANTS_DB_NAME = "bytetcc";
@@ -86,6 +86,14 @@ public class MongoCompensableLock implements TransactionLock, CompensableInstVer
 	// private transient ConnectionState curatorState;
 
 	private transient long instanceVersion;
+
+	public void afterSingletonsInstantiated() {
+		try {
+			this.afterPropertiesSet();
+		} catch (Exception error) {
+			throw new RuntimeException(error);
+		}
+	}
 
 	public void afterPropertiesSet() throws Exception {
 		if (this.initializeEnabled) {
@@ -216,8 +224,7 @@ public class MongoCompensableLock implements TransactionLock, CompensableInstVer
 			MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
 			MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_LOCKS);
 
-			String[] values = this.endpoint.split("\\s*:\\s*");
-			String application = values[1];
+			String application = CommonUtils.getApplication(this.endpoint);
 
 			Document document = new Document();
 			document.append(CONSTANTS_FD_GLOBAL, instanceId);
@@ -246,8 +253,7 @@ public class MongoCompensableLock implements TransactionLock, CompensableInstVer
 			MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
 			MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_LOCKS);
 
-			String[] values = this.endpoint.split("\\s*:\\s*");
-			String application = values[1];
+			String application = CommonUtils.getApplication(this.endpoint);
 
 			Bson globalFilter = Filters.eq(CONSTANTS_FD_GLOBAL, instanceId);
 			Bson systemFilter = Filters.eq(CONSTANTS_FD_SYSTEM, application);
@@ -271,8 +277,7 @@ public class MongoCompensableLock implements TransactionLock, CompensableInstVer
 			MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
 			MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_LOCKS);
 
-			String[] values = this.endpoint.split("\\s*:\\s*");
-			String application = values[1];
+			String application = CommonUtils.getApplication(this.endpoint);
 
 			Bson globalFilter = Filters.eq(CONSTANTS_FD_GLOBAL, instanceId);
 			Bson systemFilter = Filters.eq(CONSTANTS_FD_SYSTEM, application);
@@ -303,8 +308,7 @@ public class MongoCompensableLock implements TransactionLock, CompensableInstVer
 			MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
 			MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_LOCKS);
 
-			String[] values = this.endpoint.split("\\s*:\\s*");
-			String system = values[1];
+			String system = CommonUtils.getApplication(this.endpoint);
 
 			Bson globalFilter = Filters.eq(CONSTANTS_FD_GLOBAL, instanceId);
 			Bson systemFilter = Filters.eq(CONSTANTS_FD_SYSTEM, system);
