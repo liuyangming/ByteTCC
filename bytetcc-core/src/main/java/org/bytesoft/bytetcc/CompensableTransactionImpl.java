@@ -110,6 +110,8 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 		transactionArchive.getRemoteResources().addAll(this.resourceList);
 		transactionArchive.getCompensableResourceList().addAll(this.archiveList);
 		transactionArchive.setPropagatedBy(this.transactionContext.getPropagatedBy());
+		transactionArchive.setRecoveredAt(this.transactionContext.getCreatedTime());
+		transactionArchive.setRecoveredTimes(this.transactionContext.getRecoveredTimes());
 		return transactionArchive;
 	}
 

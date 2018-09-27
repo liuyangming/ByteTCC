@@ -60,6 +60,8 @@ public class TransactionRecoveryImpl
 		implements TransactionRecovery, TransactionRecoveryListener, CompensableBeanFactoryAware, CompensableEndpointAware {
 	static final Logger logger = LoggerFactory.getLogger(TransactionRecoveryImpl.class);
 
+	static final long SECOND_MILLIS = 1000L;
+
 	@javax.inject.Inject
 	protected CompensableBeanFactory beanFactory;
 	protected String endpoint;
@@ -137,6 +139,8 @@ public class TransactionRecoveryImpl
 		transactionContext.setRecoveried(true);
 		transactionContext.setXid(xidFactory.createGlobalXid(archive.getXid().getGlobalTransactionId()));
 		transactionContext.setPropagatedBy(transactionArchive.getPropagatedBy());
+		transactionContext.setRecoveredTimes(transactionArchive.getRecoveredTimes());
+		transactionContext.setCreatedTime(transactionArchive.getRecoveredAt());
 
 		CompensableTransactionImpl transaction = new CompensableTransactionImpl(transactionContext);
 		transaction.setBeanFactory(this.beanFactory);
@@ -290,7 +294,7 @@ public class TransactionRecoveryImpl
 			org.bytesoft.transaction.TransactionContext transactionContext = transaction.getTransactionContext();
 			TransactionXid xid = transactionContext.getXid();
 			try {
-				this.recoverTransaction(transaction);
+				this.recoverTransactionIfNecessary(transaction);
 			} catch (CommitRequiredException ex) {
 				logger.debug("{}| recover: branch={}, message= commit-required",
 						ByteUtils.byteArrayToString(xid.getGlobalTransactionId()),
@@ -312,6 +316,20 @@ public class TransactionRecoveryImpl
 			}
 		}
 		logger.debug("transaction-recovery: total= {}, success= {}", total, value);
+	}
+
+	public void recoverTransactionIfNecessary(Transaction transaction)
+			throws CommitRequiredException, RollbackRequiredException, SystemException {
+		org.bytesoft.transaction.TransactionContext transactionContext = transaction.getTransactionContext();
+		int recoveredTimes = transactionContext.getRecoveredTimes() > 10 ? 10 : transactionContext.getRecoveredTimes();
+		long recoverMillis = transactionContext.getCreatedTime() + SECOND_MILLIS * 60L * (long) Math.pow(2, recoveredTimes);
+
+		if (System.currentTimeMillis() > recoverMillis) {
+			transactionContext.setRecoveredTimes(recoveredTimes + 1);
+			transactionContext.setCreatedTime(System.currentTimeMillis());
+			this.recoverTransaction(transaction);
+		}
+
 	}
 
 	public void recoverTransaction(Transaction transaction)

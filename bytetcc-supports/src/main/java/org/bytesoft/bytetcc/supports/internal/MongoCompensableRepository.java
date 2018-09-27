@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -49,7 +50,6 @@ import org.bytesoft.transaction.xa.XidFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.mongodb.BasicDBObject;
 import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoCollection;
@@ -112,6 +112,8 @@ public class MongoCompensableRepository
 			boolean compensable = document.getBoolean("compensable");
 			boolean coordinator = document.getBoolean("coordinator");
 			int compensableStatus = document.getInteger("status");
+			Integer recoveredTimes = document.getInteger("recovered_times");
+			Date recoveredAt = document.getDate("recovered_at");
 
 			String textVariables = document.getString("variables");
 			byte[] variablesByteArray = ByteUtils.stringToByteArray(textVariables);
@@ -119,6 +121,9 @@ public class MongoCompensableRepository
 					(Map<String, Serializable>) SerializeUtils.deserializeObject(variablesByteArray);
 
 			archive.setVariables(variables);
+
+			archive.setRecoveredAt(recoveredAt == null ? 0 : recoveredAt.getTime());
+			archive.setRecoveredTimes(recoveredTimes == null ? 0 : recoveredTimes);
 
 			archive.setCompensable(compensable);
 			archive.setCoordinator(coordinator);
@@ -336,10 +341,12 @@ public class MongoCompensableRepository
 			target.append("modified", this.endpoint);
 			target.append("status", status);
 			target.append("error", true);
+			target.append("recovered_at", archive.getRecoveredAt() == 0 ? null : new Date(archive.getRecoveredAt()));
+			target.append("recovered_times", archive.getRecoveredTimes());
 
 			Document document = new Document();
 			document.append("$set", target);
-			document.append("$inc", new BasicDBObject("version", 1));
+			// document.append("$inc", new BasicDBObject("modified_time", 1));
 
 			Bson globalFilter = Filters.eq(CONSTANTS_FD_GLOBAL, identifier);
 			Bson systemFilter = Filters.eq(CONSTANTS_FD_SYSTEM, application);
@@ -389,6 +396,8 @@ public class MongoCompensableRepository
 			boolean compensable = document.getBoolean("compensable");
 			boolean coordinator = document.getBoolean("coordinator");
 			int compensableStatus = document.getInteger("status");
+			Integer recoveredTimes = document.getInteger("recovered_times");
+			Date recoveredAt = document.getDate("recovered_at");
 
 			String textVariables = document.getString("variables");
 			byte[] variablesByteArray = ByteUtils.stringToByteArray(textVariables);
@@ -396,6 +405,9 @@ public class MongoCompensableRepository
 					(Map<String, Serializable>) SerializeUtils.deserializeObject(variablesByteArray);
 
 			archive.setVariables(variables);
+
+			archive.setRecoveredAt(recoveredAt == null ? 0 : recoveredAt.getTime());
+			archive.setRecoveredTimes(recoveredTimes == null ? 0 : recoveredTimes);
 
 			archive.setCompensable(compensable);
 			archive.setCoordinator(coordinator);
@@ -452,6 +464,8 @@ public class MongoCompensableRepository
 				boolean coordinator = document.getBoolean("coordinator");
 				int compensableStatus = document.getInteger("status");
 				boolean error = document.getBoolean("error");
+				Integer recoveredTimes = document.getInteger("recovered_times");
+				Date recoveredAt = document.getDate("recovered_at");
 				String textVariables = document.getString("variables");
 
 				String targetApplication = document.getString("created");
@@ -471,6 +485,9 @@ public class MongoCompensableRepository
 						(Map<String, Serializable>) SerializeUtils.deserializeObject(variablesByteArray);
 
 				archive.setVariables(variables);
+
+				archive.setRecoveredAt(recoveredAt == null ? 0 : recoveredAt.getTime());
+				archive.setRecoveredTimes(recoveredTimes == null ? 0 : recoveredTimes);
 
 				archive.setCompensable(compensable);
 				archive.setCoordinator(coordinator);

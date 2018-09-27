@@ -18,6 +18,7 @@ package org.bytesoft.bytetcc.supports.logging;
 import java.io.IOException;
 import java.io.Serializable;
 import java.lang.reflect.Method;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -326,6 +327,8 @@ public class MongoCompensableLogger
 			target.append("status", status);
 			target.append("vars", jsonVariables);
 			target.append("variables", textVariables);
+			target.append("recovered_at", archive.getRecoveredAt() == 0 ? null : new Date(archive.getRecoveredAt()));
+			target.append("recovered_times", archive.getRecoveredTimes());
 
 			Document document = new Document();
 			document.append("$set", target);
@@ -695,6 +698,8 @@ public class MongoCompensableLogger
 				boolean coordinator = document.getBoolean("coordinator");
 				int compensableStatus = document.getInteger("status");
 				boolean error = document.getBoolean("error");
+				Integer recoveredTimes = document.getInteger("recovered_times");
+				Date recoveredAt = document.getDate("recovered_at");
 
 				String targetApplication = document.getString(CONSTANTS_FD_SYSTEM);
 				long expectVersion = document.getLong("version");
@@ -716,6 +721,9 @@ public class MongoCompensableLogger
 				Map<String, Serializable> variables = //
 						(Map<String, Serializable>) SerializeUtils.deserializeObject(variablesByteArray);
 				archive.setVariables(variables);
+
+				archive.setRecoveredAt(recoveredAt == null ? 0 : recoveredAt.getTime());
+				archive.setRecoveredTimes(recoveredTimes == null ? 0 : recoveredTimes);
 
 				archive.setCompensable(compensable);
 				archive.setCoordinator(coordinator);
