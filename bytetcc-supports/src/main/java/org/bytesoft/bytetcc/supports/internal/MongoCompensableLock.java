@@ -131,7 +131,8 @@ public class MongoCompensableLock implements TransactionLock, CompensableInstVer
 		try {
 			this.curatorFramework.create().withMode(CreateMode.EPHEMERAL).forPath(path, versionByteArray);
 		} catch (NodeExistsException error) {
-			this.curatorFramework.setData().forPath(path, versionByteArray); // Node exists!
+			this.curatorFramework.getData().usingWatcher(this).inBackground(this).forPath(path);
+			this.curatorFramework.delete().inBackground(this).forPath(path);
 		}
 	}
 
@@ -329,7 +330,7 @@ public class MongoCompensableLock implements TransactionLock, CompensableInstVer
 		String parent = String.format("%s/%s/instances", CONSTANTS_ROOT_PATH, application);
 		String current = event.getPath();
 		if (CuratorEventType.CHILDREN.equals(event.getType())) {
-			if (StringUtils.equalsIgnoreCase(parent, current) || StringUtils.equalsIgnoreCase(prefix, current)) {
+			if (StringUtils.equalsIgnoreCase(parent, current) && event.getStat() != null) {
 				Set<String> original = this.instances.keySet();
 				List<String> children = event.getChildren();
 
@@ -351,20 +352,20 @@ public class MongoCompensableLock implements TransactionLock, CompensableInstVer
 				} // end-for (Iterator<String> itr = created.iterator(); itr.hasNext();)
 			}
 		} else if (CuratorEventType.GET_DATA.equals(event.getType())) {
-			if (current.startsWith(prefix)) {
+			if (current.startsWith(prefix) && event.getStat() != null) {
 				String system = current.substring(prefix.length());
 				long version = ByteUtils.byteArrayToLong(event.getData());
 				this.instances.put(system, version);
 			}
 		} else if (CuratorEventType.SET_DATA.equals(event.getType())) {
-			if (current.startsWith(prefix)) {
+			if (current.startsWith(prefix) && event.getStat() != null) {
 				String system = current.substring(prefix.length());
 				long version = ByteUtils.byteArrayToLong(event.getData());
 				this.instances.put(system, version);
 			}
 		} else if (CuratorEventType.DELETE.equals(event.getType())) {
 			String path = String.format("%s/%s", parent, this.endpoint);
-			if (StringUtils.equalsIgnoreCase(path, current)) {
+			if (StringUtils.equalsIgnoreCase(path, current) && event.getStat() != null) {
 				try {
 					this.initializeCurrentClusterInstanceConfigIfNecessary();
 				} catch (Exception error) {
