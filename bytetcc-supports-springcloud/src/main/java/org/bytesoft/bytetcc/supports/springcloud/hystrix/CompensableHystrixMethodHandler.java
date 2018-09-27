@@ -29,9 +29,7 @@ import org.bytesoft.common.utils.CommonUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableManager;
 import org.bytesoft.compensable.TransactionContext;
-import org.bytesoft.transaction.archive.XAResourceArchive;
 import org.bytesoft.transaction.remote.RemoteCoordinator;
-import org.bytesoft.transaction.remote.RemoteSvc;
 import org.bytesoft.transaction.supports.rpc.TransactionInterceptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -77,7 +75,7 @@ public class CompensableHystrixMethodHandler implements MethodHandler {
 		final TransactionRequestImpl request = new TransactionRequestImpl();
 		final TransactionResponseImpl response = new TransactionResponseImpl();
 
-		final Map<RemoteSvc, XAResourceArchive> participants = compensable.getParticipantArchiveMap();
+		// final Map<RemoteSvc, XAResourceArchive> participants = compensable.getParticipantArchiveMap();
 		beanRegistry.setLoadBalancerInterceptor(new CompensableLoadBalancerInterceptor() {
 			public List<Server> beforeCompletion(List<Server> servers) {
 				final List<Server> readyServerList = new ArrayList<Server>();
@@ -86,35 +84,35 @@ public class CompensableHystrixMethodHandler implements MethodHandler {
 				for (int i = 0; servers != null && i < servers.size(); i++) {
 					Server server = servers.get(i);
 
-					// String instanceId = metaInfo.getInstanceId();
-					RemoteSvc instanceId = null;
-
-					if (DiscoveryEnabledServer.class.isInstance(server)) {
-						DiscoveryEnabledServer discoveryEnabledServer = (DiscoveryEnabledServer) server;
-						InstanceInfo instanceInfo = discoveryEnabledServer.getInstanceInfo();
-						String addr = instanceInfo.getIPAddr();
-						String appName = instanceInfo.getAppName();
-						int port = instanceInfo.getPort();
-
-						String serverKey = String.format("%s:%s:%s", addr, appName, port);
-						instanceId = CommonUtils.getRemoteSvc(serverKey);
-					} else {
-						MetaInfo metaInfo = server.getMetaInfo();
-
-						String host = server.getHost();
-						String addr = host.matches("\\d+(\\.\\d+){3}") ? host : CommonUtils.getInetAddress(host);
-						String appName = metaInfo.getAppName();
-						int port = server.getPort();
-
-						String serverKey = String.format("%s:%s:%s", addr, appName, port);
-						instanceId = CommonUtils.getRemoteSvc(serverKey);
-					}
-
-					if (participants.containsKey(instanceId)) {
-						List<Server> serverList = new ArrayList<Server>();
-						serverList.add(server);
-						return serverList;
-					} // end-if (participants.containsKey(instanceId))
+					// // String instanceId = metaInfo.getInstanceId();
+					// RemoteSvc instanceId = null;
+					//
+					// if (DiscoveryEnabledServer.class.isInstance(server)) {
+					// DiscoveryEnabledServer discoveryEnabledServer = (DiscoveryEnabledServer) server;
+					// InstanceInfo instanceInfo = discoveryEnabledServer.getInstanceInfo();
+					// String addr = instanceInfo.getIPAddr();
+					// String appName = instanceInfo.getAppName();
+					// int port = instanceInfo.getPort();
+					//
+					// String serverKey = String.format("%s:%s:%s", addr, appName, port);
+					// instanceId = CommonUtils.getRemoteSvc(serverKey);
+					// } else {
+					// MetaInfo metaInfo = server.getMetaInfo();
+					//
+					// String host = server.getHost();
+					// String addr = host.matches("\\d+(\\.\\d+){3}") ? host : CommonUtils.getInetAddress(host);
+					// String appName = metaInfo.getAppName();
+					// int port = server.getPort();
+					//
+					// String serverKey = String.format("%s:%s:%s", addr, appName, port);
+					// instanceId = CommonUtils.getRemoteSvc(serverKey);
+					// }
+					//
+					// if (participants.containsKey(instanceId)) {
+					// List<Server> serverList = new ArrayList<Server>();
+					// serverList.add(server);
+					// return serverList;
+					// } // end-if (participants.containsKey(instanceId))
 
 					if (server.isReadyToServe()) {
 						readyServerList.add(server);
@@ -124,7 +122,7 @@ public class CompensableHystrixMethodHandler implements MethodHandler {
 
 				}
 
-				logger.warn("There is no suitable server: expect= {}, actual= {}!", participants.keySet(), servers);
+				// logger.warn("There is no suitable server: expect= {}, actual= {}!", participants.keySet(), servers);
 				return readyServerList.isEmpty() ? unReadyServerList : readyServerList;
 			}
 
