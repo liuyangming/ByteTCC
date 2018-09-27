@@ -352,26 +352,19 @@ public class MongoCompensableLock implements TransactionLock, CompensableInstVer
 				} // end-for (Iterator<String> itr = created.iterator(); itr.hasNext();)
 			}
 		} else if (CuratorEventType.GET_DATA.equals(event.getType())) {
+			String path = String.format("%s/%s", parent, this.endpoint);
 			if (current.startsWith(prefix) && event.getStat() != null) {
 				String system = current.substring(prefix.length());
 				long version = ByteUtils.byteArrayToLong(event.getData());
 				this.instances.put(system, version);
-			}
-		} else if (CuratorEventType.SET_DATA.equals(event.getType())) {
-			if (current.startsWith(prefix) && event.getStat() != null) {
-				String system = current.substring(prefix.length());
-				long version = ByteUtils.byteArrayToLong(event.getData());
-				this.instances.put(system, version);
+			} else if (StringUtils.equals(path, current) && event.getStat() == null) {
+				this.initializeCurrentClusterInstanceConfigIfNecessary();
 			}
 		} else if (CuratorEventType.DELETE.equals(event.getType())) {
 			String path = String.format("%s/%s", parent, this.endpoint);
-			if (StringUtils.equalsIgnoreCase(path, current) && event.getStat() != null) {
-				try {
-					this.initializeCurrentClusterInstanceConfigIfNecessary();
-				} catch (Exception error) {
-					logger.error("Error occurred while re-initializing instance node!", error);
-				}
-			}
+			if (StringUtils.equalsIgnoreCase(path, current)) {
+				this.initializeCurrentClusterInstanceConfigIfNecessary();
+			} // end-if (StringUtils.equalsIgnoreCase(path, current))
 		}
 	}
 
