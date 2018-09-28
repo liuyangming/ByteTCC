@@ -131,7 +131,6 @@ public class MongoCompensableLock implements TransactionLock, CompensableInstVer
 		try {
 			this.curatorFramework.create().withMode(CreateMode.EPHEMERAL).forPath(path, versionByteArray);
 		} catch (NodeExistsException error) {
-			this.curatorFramework.getData().usingWatcher(this).inBackground(this).forPath(path);
 			this.curatorFramework.delete().inBackground(this).forPath(path);
 		}
 	}
