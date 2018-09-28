@@ -38,6 +38,7 @@ import javax.transaction.xa.Xid;
 import org.apache.commons.lang3.StringUtils;
 import org.bytesoft.bytejta.supports.jdbc.RecoveredResource;
 import org.bytesoft.bytejta.supports.resource.RemoteResourceDescriptor;
+import org.bytesoft.bytetcc.supports.CompensableRolledbackMarker;
 import org.bytesoft.bytetcc.supports.resource.LocalResourceCleaner;
 import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.common.utils.CommonUtils;
@@ -66,7 +67,8 @@ import org.bytesoft.transaction.xa.XidFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class CompensableTransactionImpl extends TransactionListenerAdapter implements CompensableTransaction {
+public class CompensableTransactionImpl extends TransactionListenerAdapter
+		implements CompensableTransaction, CompensableRolledbackMarker {
 	static final Logger logger = LoggerFactory.getLogger(CompensableTransactionImpl.class);
 
 	private final TransactionContext transactionContext;
@@ -162,7 +164,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 			logger.info("{}| confirm native branchs failed!",
 					ByteUtils.byteArrayToString(this.transactionContext.getXid().getGlobalTransactionId()), ex);
 		} catch (RuntimeException ex) {
-			systemEx = new SystemException();
+			systemEx = new SystemException(XAException.XAER_RMERR);
 			systemEx.initCause(ex);
 
 			logger.info("{}| confirm native branchs failed!",
@@ -209,25 +211,25 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 		} catch (SecurityException ex) {
 			logger.error("{}| confirm native/remote branchs failed!",
 					ByteUtils.byteArrayToString(this.transactionContext.getXid().getGlobalTransactionId()), ex);
-			SystemException sysEx = new SystemException();
+			SystemException sysEx = new SystemException(XAException.XAER_RMERR);
 			sysEx.initCause(ex);
 			throw sysEx;
 		} catch (RollbackException ex) {
 			logger.error("{}| confirm native/remote branchs failed!",
 					ByteUtils.byteArrayToString(this.transactionContext.getXid().getGlobalTransactionId()), ex);
-			SystemException sysEx = new SystemException();
+			SystemException sysEx = new SystemException(XAException.XAER_RMERR);
 			sysEx.initCause(ex);
 			throw sysEx;
 		} catch (HeuristicMixedException ex) {
 			logger.error("{}| confirm native/remote branchs failed!",
 					ByteUtils.byteArrayToString(this.transactionContext.getXid().getGlobalTransactionId()), ex);
-			SystemException sysEx = new SystemException();
+			SystemException sysEx = new SystemException(XAException.XA_HEURMIX);
 			sysEx.initCause(ex);
 			throw sysEx;
 		} catch (HeuristicRollbackException ex) {
 			logger.error("{}| confirm native/remote branchs failed!",
 					ByteUtils.byteArrayToString(this.transactionContext.getXid().getGlobalTransactionId()), ex);
-			SystemException sysEx = new SystemException();
+			SystemException sysEx = new SystemException(XAException.XA_HEURRB);
 			sysEx.initCause(ex);
 			throw sysEx;
 		}
@@ -274,7 +276,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 		}
 
 		if (errorExists) {
-			throw new SystemException();
+			throw new SystemException(XAException.XAER_RMERR);
 		}
 
 	}
@@ -405,7 +407,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 		} else if (unFinishExists) {
 			throw new CommitRequiredException();
 		} else if (errorExists) {
-			throw new SystemException();
+			throw new SystemException(XAException.XAER_RMERR);
 		} else if (rolledbackExists) {
 			throw new HeuristicRollbackException();
 		}
@@ -415,25 +417,6 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 
 	public int participantPrepare() throws RollbackRequiredException, CommitRequiredException {
 		throw new RuntimeException("Not supported!");
-	}
-
-	private void markCurrentBranchTransactionRollbackIfNecessary() {
-		List<Transaction> transactions = new ArrayList<Transaction>(this.transactionMap.values());
-		boolean recoveried = this.transactionContext.isRecoveried();
-		if (recoveried == false && transactions.isEmpty() == false) /* used by participant only. */ {
-			for (int i = 0; i < transactions.size(); i++) {
-				Transaction branch = transactions.get(i);
-				try {
-					branch.setRollbackOnly();
-				} catch (IllegalStateException ex) {
-					logger.info("The local transaction is not active.", ex); // tx in try-phase has been completed already.
-				} catch (SystemException ex) {
-					logger.warn("The local transaction is not active.", ex); // should never happen
-				} catch (RuntimeException ex) {
-					logger.warn("The local transaction is not active.", ex); // should never happen
-				}
-			} // end-for (int i = 0; i < transactions.size(); i++)
-		}
 	}
 
 	public synchronized void participantRollback() throws IllegalStateException, SystemException {
@@ -461,6 +444,36 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 		}
 	}
 
+	private void markCurrentBranchTransactionRollbackIfNecessary() throws SystemException {
+		CompensableRolledbackMarker compensableRolledbackMarker = this.beanFactory.getCompensableRolledbackMarker();
+		TransactionXid transactionXid = this.transactionContext.getXid();
+
+		this.markBusinessStageRollbackOnly(transactionXid);
+
+		if (compensableRolledbackMarker != null) {
+			compensableRolledbackMarker.markBusinessStageRollbackOnly(transactionXid);
+		} // end-if (compensableRolledbackMarker != null)
+	}
+
+	public void markBusinessStageRollbackOnly(TransactionXid transactionXid) throws SystemException {
+		List<Transaction> transactions = new ArrayList<Transaction>(this.transactionMap.values());
+		boolean recoveried = this.transactionContext.isRecoveried();
+		if (recoveried == false && transactions.isEmpty() == false) /* used by participant only. */ {
+			for (int i = 0; i < transactions.size(); i++) {
+				Transaction branch = transactions.get(i);
+				try {
+					branch.setRollbackOnly();
+				} catch (IllegalStateException ex) {
+					logger.info("The local transaction is not active.", ex); // tx in try-phase has been completed already.
+				} catch (SystemException ex) {
+					logger.warn("The local transaction is not active.", ex); // should never happen
+				} catch (RuntimeException ex) {
+					logger.warn("The local transaction is not active.", ex); // should never happen
+				}
+			} // end-for (int i = 0; i < transactions.size(); i++)
+		}
+	}
+
 	private void fireRollback() throws IllegalStateException, SystemException {
 		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
 
@@ -480,7 +493,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 			logger.info("{}| cancel native branchs failed!",
 					ByteUtils.byteArrayToString(this.transactionContext.getXid().getGlobalTransactionId()), ex);
 		} catch (RuntimeException ex) {
-			systemEx = new SystemException();
+			systemEx = new SystemException(XAException.XAER_RMERR);
 			systemEx.initCause(ex);
 
 			logger.info("{}| cancel native branchs failed!",
@@ -496,7 +509,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 		} catch (RuntimeException ex) {
 			logger.info("{}| cancel remote branchs failed!",
 					ByteUtils.byteArrayToString(this.transactionContext.getXid().getGlobalTransactionId()), ex);
-			SystemException sysEx = new SystemException();
+			SystemException sysEx = new SystemException(XAException.XAER_RMERR);
 			sysEx.initCause(ex);
 			throw sysEx;
 		}
@@ -566,7 +579,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 		}
 
 		if (errorExists) {
-			throw new SystemException();
+			throw new SystemException(XAException.XAER_RMERR);
 		}
 
 	}
@@ -991,7 +1004,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 		} // end-for
 
 		if (errorExists) {
-			throw new SystemException();
+			throw new SystemException(XAException.XAER_RMERR);
 		}
 
 	}
@@ -1114,7 +1127,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 			logger.info("{}| forget transaction.",
 					ByteUtils.byteArrayToString(this.transactionContext.getXid().getGlobalTransactionId()));
 		} else {
-			throw new SystemException();
+			throw new SystemException(XAException.XAER_RMERR);
 		}
 
 	}

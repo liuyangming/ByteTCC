@@ -366,7 +366,7 @@ public class TransactionRecoveryImpl
 			case Status.STATUS_UNKNOWN: /* TODO */ {
 				if (transactionContext.isPropagated() == false) {
 					if ((locked = compensableLock.lockTransaction(xid, this.endpoint)) == false) {
-						throw new SystemException();
+						throw new SystemException(XAException.XAER_PROTO);
 					}
 
 					transaction.recoveryRollback();
@@ -376,7 +376,7 @@ public class TransactionRecoveryImpl
 			}
 			case Status.STATUS_ROLLING_BACK: {
 				if ((locked = compensableLock.lockTransaction(xid, this.endpoint)) == false) {
-					throw new SystemException();
+					throw new SystemException(XAException.XAER_PROTO);
 				}
 
 				transaction.recoveryRollback();
@@ -386,7 +386,7 @@ public class TransactionRecoveryImpl
 			case Status.STATUS_PREPARED:
 			case Status.STATUS_COMMITTING: {
 				if ((locked = compensableLock.lockTransaction(xid, this.endpoint)) == false) {
-					throw new SystemException();
+					throw new SystemException(XAException.XAER_PROTO);
 				}
 
 				transaction.recoveryCommit();

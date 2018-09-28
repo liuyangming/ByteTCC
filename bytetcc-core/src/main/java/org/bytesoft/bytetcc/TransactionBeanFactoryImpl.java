@@ -15,6 +15,7 @@
  */
 package org.bytesoft.bytetcc;
 
+import org.bytesoft.bytetcc.supports.CompensableRolledbackMarker;
 import org.bytesoft.bytetcc.supports.CompensableSynchronization;
 import org.bytesoft.bytetcc.supports.resource.LocalResourceCleaner;
 import org.bytesoft.compensable.CompensableBeanFactory;
@@ -54,6 +55,7 @@ public final class TransactionBeanFactoryImpl implements CompensableBeanFactory 
 	@javax.inject.Inject
 	private CompensableSynchronization compensableSynchronization;
 	private TransactionLock compensableLock;
+	private CompensableRolledbackMarker compensableRolledbackMarker;
 
 	public TransactionManager getTransactionManager() {
 		return transactionManager;
@@ -205,6 +207,14 @@ public final class TransactionBeanFactoryImpl implements CompensableBeanFactory 
 
 	public void setCompensableSynchronization(CompensableSynchronization compensableSynchronization) {
 		this.compensableSynchronization = compensableSynchronization;
+	}
+
+	public CompensableRolledbackMarker getCompensableRolledbackMarker() {
+		return compensableRolledbackMarker;
+	}
+
+	public void setCompensableRolledbackMarker(CompensableRolledbackMarker compensableRolledbackMarker) {
+		this.compensableRolledbackMarker = compensableRolledbackMarker;
 	}
 
 }

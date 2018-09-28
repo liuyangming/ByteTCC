@@ -78,6 +78,7 @@
 		<property name="compensableContext" ref="bytetccCompensableContext" />
 		<property name="compensableLock" ref="bytetccCompensableLock" />
 		<property name="compensableSynchronization" ref="bytetccSynchronization" />
+		<property name="compensableRolledbackMarker" ref="bytetccTransactionRepository" />
 	</bean>
 
 </beans>

@@ -232,7 +232,7 @@ public class UserCompensableImpl implements UserCompensable, Referenceable, Seri
 			case XAException.XAER_RMERR:
 			case XAException.XAER_RMFAIL:
 			default:
-				SystemException systemEx = new SystemException();
+				SystemException systemEx = new SystemException(xaex.errorCode);
 				systemEx.initCause(xaex);
 				throw systemEx;
 			}
@@ -306,7 +306,7 @@ public class UserCompensableImpl implements UserCompensable, Referenceable, Seri
 			case XAException.XAER_RMERR:
 			case XAException.XAER_RMFAIL:
 			default:
-				SystemException systemEx = new SystemException();
+				SystemException systemEx = new SystemException(xaex.errorCode);
 				systemEx.initCause(xaex);
 				throw systemEx;
 			}

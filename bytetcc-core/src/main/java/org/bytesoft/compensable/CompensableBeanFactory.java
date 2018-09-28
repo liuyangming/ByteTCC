@@ -15,6 +15,7 @@
  */
 package org.bytesoft.compensable;
 
+import org.bytesoft.bytetcc.supports.CompensableRolledbackMarker;
 import org.bytesoft.bytetcc.supports.CompensableSynchronization;
 import org.bytesoft.bytetcc.supports.resource.LocalResourceCleaner;
 import org.bytesoft.compensable.logging.CompensableLogger;
@@ -67,5 +68,7 @@ public interface CompensableBeanFactory {
 	public CompensableContext getCompensableContext();
 
 	public CompensableSynchronization getCompensableSynchronization();
+
+	public CompensableRolledbackMarker getCompensableRolledbackMarker();
 
 }

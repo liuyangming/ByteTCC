@@ -114,7 +114,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 	public Transaction suspend() throws SystemException {
 		CompensableTransaction compensable = (CompensableTransaction) this.compensableMap.get(Thread.currentThread());
 		if (compensable == null) {
-			throw new SystemException();
+			throw new SystemException(XAException.XAER_NOTA);
 		}
 
 		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
@@ -132,7 +132,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 	public void begin() throws NotSupportedException, SystemException {
 		CompensableTransaction compensable = this.getCompensableTransactionQuietly();
 		if (compensable == null || compensable.getTransaction() != null) {
-			throw new SystemException();
+			throw new SystemException(XAException.XAER_PROTO);
 		}
 
 		TransactionContext compensableContext = compensable.getTransactionContext();
@@ -246,7 +246,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 			this.desociateThread();
 			compensableRepository.removeTransaction(compensableXid);
 
-			throw new SystemException(); // should never happen
+			throw new SystemException(XAException.XAER_PROTO); // should never happen
 		}
 
 		logger.info("{}| compensable transaction begin!", ByteUtils.byteArrayToString(compensableXid.getGlobalTransactionId()));
@@ -328,7 +328,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 			case XAException.XAER_RMERR:
 			default:
 				transactionCoordinator.forgetQuietly(transactionXid); // TODO
-				SystemException sysEx = new SystemException();
+				SystemException sysEx = new SystemException(xaEx.errorCode);
 				sysEx.initCause(xaEx);
 				throw sysEx;
 			}
@@ -355,7 +355,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 			throw new HeuristicRollbackException();
 		} catch (XAException xaEx) {
 			transactionCoordinator.forgetQuietly(transactionXid);
-			SystemException sysEx = new SystemException();
+			SystemException sysEx = new SystemException(xaEx.errorCode);
 			sysEx.initCause(xaEx);
 			throw sysEx;
 		}
@@ -413,7 +413,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 			transactionCoordinator.rollback(transactionXid);
 		} catch (XAException xaEx) {
 			transactionCoordinator.forgetQuietly(transactionXid);
-			SystemException sysEx = new SystemException();
+			SystemException sysEx = new SystemException(xaEx.errorCode);
 			sysEx.initCause(xaEx);
 			throw sysEx;
 		} finally {
@@ -553,7 +553,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 				throw hrex;
 			default:
 				transactionCoordinator.forgetQuietly(transactionXid); // TODO
-				SystemException sysEx = new SystemException();
+				SystemException sysEx = new SystemException(xaex.errorCode);
 				sysEx.initCause(xaex);
 				throw sysEx;
 			}
@@ -578,7 +578,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 			throw new HeuristicRollbackException();
 		} catch (XAException xaex) {
 			transactionCoordinator.forgetQuietly(transactionXid);
-			SystemException sysEx = new SystemException();
+			SystemException sysEx = new SystemException(xaex.errorCode);
 			sysEx.initCause(xaex);
 			throw sysEx;
 		}
