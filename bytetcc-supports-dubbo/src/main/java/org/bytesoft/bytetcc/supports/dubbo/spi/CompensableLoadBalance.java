@@ -24,6 +24,7 @@ import org.bytesoft.bytejta.supports.internal.RemoteCoordinatorRegistry;
 import org.bytesoft.bytetcc.CompensableTransactionImpl;
 import org.bytesoft.bytetcc.supports.dubbo.CompensableBeanRegistry;
 import org.bytesoft.bytetcc.supports.dubbo.ext.ILoadBalancer;
+import org.bytesoft.common.utils.CommonUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableManager;
 import org.bytesoft.transaction.archive.XAResourceArchive;
@@ -84,20 +85,17 @@ public final class CompensableLoadBalance implements LoadBalance {
 				&& i < invokers.size(); i++) {
 			Invoker<T> invoker = invokers.get(i);
 			URL invokerUrl = invoker.getUrl();
-			String invokerHost = invokerUrl.getHost();
-			int invokerPort = invokerUrl.getPort();
-			String invokerAddr = String.format("%s:%s", invokerHost, invokerPort);
+			RemoteAddr invokerAddr = new RemoteAddr();
+			invokerAddr.setServerHost(invokerUrl.getHost());
+			invokerAddr.setServerPort(invokerUrl.getPort());
 			for (int j = 0; participantList != null && j < participantList.size(); j++) {
 				XAResourceArchive archive = participantList.get(j);
 				XAResourceDescriptor descriptor = archive.getDescriptor();
 				String identifier = descriptor.getIdentifier();
-				String[] values = identifier == null ? new String[0] : identifier.split("\\s*:\\s*");
-				String targetAddr = values.length == 3 ? values[0] : null;
-				String targetPort = values.length == 3 ? values[2] : null;
-				String remoteAddr = String.format("%s:%s", targetAddr, targetPort);
-				if (StringUtils.equalsIgnoreCase(invokerAddr, remoteAddr)) {
+				RemoteAddr remoteAddr = CommonUtils.getRemoteAddr(identifier);
+				if (invokerAddr.equals(remoteAddr)) {
 					return invoker;
-				} // end-if (StringUtils.equalsIgnoreCase(invokerAddr, remoteAddr))
+				} // end-if (invokerAddr.equals(remoteAddr))
 			}
 		}
 

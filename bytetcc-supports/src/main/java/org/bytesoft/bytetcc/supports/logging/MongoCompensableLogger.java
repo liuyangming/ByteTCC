@@ -85,7 +85,7 @@ public class MongoCompensableLogger
 	private CompensableInstVersionManager versionManager;
 	@javax.inject.Inject
 	private CompensableBeanFactory beanFactory;
-	private boolean initializeEnabled = true;
+	private volatile boolean initializeEnabled = true;
 
 	public void afterSingletonsInstantiated() {
 		try {
@@ -437,7 +437,8 @@ public class MongoCompensableLogger
 		} catch (com.mongodb.MongoWriteException error) {
 			com.mongodb.WriteError writeError = error.getError();
 			if (MONGODB_ERROR_DUPLICATE_KEY == writeError.getCode()) {
-				this.upsertParticipant(transactionXid, archive);
+				// this.upsertParticipant(transactionXid, archive);
+				this.updateParticipant(archive);
 			} else {
 				throw error;
 			}
@@ -580,7 +581,8 @@ public class MongoCompensableLogger
 		} catch (com.mongodb.MongoWriteException error) {
 			com.mongodb.WriteError writeError = error.getError();
 			if (MONGODB_ERROR_DUPLICATE_KEY == writeError.getCode()) {
-				this.upsertCompensable((TransactionXid) archive.getIdentifier(), archive, argsByteArray);
+				// this.upsertCompensable((TransactionXid) archive.getIdentifier(), archive, argsByteArray);
+				this.updateCompensable(archive);
 			} else {
 				throw error;
 			}

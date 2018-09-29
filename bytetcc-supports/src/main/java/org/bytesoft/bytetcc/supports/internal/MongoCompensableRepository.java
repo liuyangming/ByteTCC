@@ -705,7 +705,7 @@ public class MongoCompensableRepository implements TransactionRepository, Compen
 	}
 
 	public List<Transaction> getActiveTransactionList() {
-		return null;
+		return new ArrayList<Transaction>();
 	}
 
 	public void setEndpoint(String identifier) {
