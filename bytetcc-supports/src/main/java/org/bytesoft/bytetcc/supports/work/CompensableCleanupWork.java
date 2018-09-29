@@ -19,12 +19,12 @@ import org.bytesoft.bytejta.supports.jdbc.RecoveredResource;
 import org.bytesoft.bytejta.supports.resource.LocalXAResourceDescriptor;
 import org.bytesoft.bytetcc.supports.logging.MongoCompensableLogger;
 import org.bytesoft.bytetcc.supports.resource.LocalResourceCleaner;
-import org.bytesoft.bytetcc.work.CommandManager;
 import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.common.utils.CommonUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 import org.bytesoft.compensable.aware.CompensableEndpointAware;
+import org.bytesoft.transaction.cmd.CommandDispatcher;
 import org.bytesoft.transaction.supports.serialize.XAResourceDeserializer;
 import org.bytesoft.transaction.xa.TransactionXid;
 import org.bytesoft.transaction.xa.XidFactory;
@@ -52,7 +52,7 @@ public class CompensableCleanupWork
 	@javax.annotation.Resource
 	private MongoClient mongoClient;
 	@javax.inject.Inject
-	private CommandManager commandManager;
+	private CommandDispatcher commandDispatcher;
 	private String endpoint;
 	private boolean released;
 	@javax.inject.Inject
@@ -89,7 +89,7 @@ public class CompensableCleanupWork
 			} else {
 				int number = 0;
 				try {
-					number = (Integer) this.commandManager.execute(new Callable<Object>() {
+					number = (Integer) this.commandDispatcher.dispatch(new Callable<Object>() {
 						public Object call() throws Exception {
 							return timingExecution(CONSTANTS_MAX_HANDLE_RECORDS);
 						}
@@ -209,6 +209,10 @@ public class CompensableCleanupWork
 		}
 	}
 
+	public void release() {
+		this.released = true;
+	}
+
 	public CompensableBeanFactory getBeanFactory() {
 		return this.beanFactory;
 	}
@@ -225,8 +229,12 @@ public class CompensableCleanupWork
 		this.endpoint = identifier;
 	}
 
-	public void release() {
-		this.released = true;
+	public CommandDispatcher getCommandDispatcher() {
+		return commandDispatcher;
+	}
+
+	public void setCommandDispatcher(CommandDispatcher commandDispatcher) {
+		this.commandDispatcher = commandDispatcher;
 	}
 
 }

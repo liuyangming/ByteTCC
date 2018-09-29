@@ -16,7 +16,7 @@
 package org.bytesoft.bytetcc.supports.internal;
 
 import org.bytesoft.bytetcc.TransactionRecoveryImpl;
-import org.bytesoft.bytetcc.work.CommandManager;
+import org.bytesoft.transaction.cmd.CommandDispatcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,11 +24,11 @@ public class MongoCompensableRecovery extends TransactionRecoveryImpl {
 	static final Logger logger = LoggerFactory.getLogger(MongoCompensableRecovery.class);
 
 	@javax.inject.Inject
-	private CommandManager commandManager;
+	private CommandDispatcher commandDispatcher;
 
 	public void timingRecover() throws SecurityException {
 		try {
-			this.commandManager.execute(new Runnable() {
+			this.commandDispatcher.dispatch(new Runnable() {
 				public void run() {
 					fireSuperTimingRecovery();
 				}
@@ -46,12 +46,12 @@ public class MongoCompensableRecovery extends TransactionRecoveryImpl {
 		super.timingRecover();
 	}
 
-	public CommandManager getCommandManager() {
-		return commandManager;
+	public CommandDispatcher getCommandDispatcher() {
+		return commandDispatcher;
 	}
 
-	public void setCommandManager(CommandManager commandManager) {
-		this.commandManager = commandManager;
+	public void setCommandDispatcher(CommandDispatcher commandDispatcher) {
+		this.commandDispatcher = commandDispatcher;
 	}
 
 }

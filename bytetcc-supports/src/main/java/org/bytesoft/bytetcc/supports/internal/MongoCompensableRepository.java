@@ -44,7 +44,6 @@ import org.bson.conversions.Bson;
 import org.bytesoft.bytetcc.CompensableTransactionImpl;
 import org.bytesoft.bytetcc.supports.CompensableInvocationImpl;
 import org.bytesoft.bytetcc.supports.CompensableRolledbackMarker;
-import org.bytesoft.bytetcc.work.CommandManager;
 import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.common.utils.CommonUtils;
 import org.bytesoft.common.utils.SerializeUtils;
@@ -58,6 +57,7 @@ import org.bytesoft.transaction.TransactionException;
 import org.bytesoft.transaction.TransactionRecovery;
 import org.bytesoft.transaction.TransactionRepository;
 import org.bytesoft.transaction.archive.XAResourceArchive;
+import org.bytesoft.transaction.cmd.CommandDispatcher;
 import org.bytesoft.transaction.supports.resource.XAResourceDescriptor;
 import org.bytesoft.transaction.supports.serialize.XAResourceDeserializer;
 import org.bytesoft.transaction.xa.TransactionXid;
@@ -98,7 +98,7 @@ public class MongoCompensableRepository implements TransactionRepository, Compen
 	@javax.inject.Inject
 	private CompensableBeanFactory beanFactory;
 	@javax.inject.Inject
-	private CommandManager commandManager;
+	private CommandDispatcher commandDispatcher;
 
 	private long rollbackEntryExpireTime = 1000L * 60 * 5;
 
@@ -180,13 +180,13 @@ public class MongoCompensableRepository implements TransactionRepository, Compen
 			} // end-if (interval < 0)
 
 			if (interval >= this.rollbackEntryExpireTime) {
-				this.commandManager.execute(new Runnable() {
+				this.commandDispatcher.dispatch(new Runnable() {
 					public void run() {
 						remvBusinessStageRollbackFlag(transactionXid);
 					}
 				});
 			} else {
-				this.commandManager.execute(new Runnable() {
+				this.commandDispatcher.dispatch(new Runnable() {
 					public void run() {
 						markTransactionRollback(transactionXid);
 					}
@@ -694,6 +694,14 @@ public class MongoCompensableRepository implements TransactionRepository, Compen
 		} finally {
 			IOUtils.closeQuietly(transactionCursor);
 		}
+	}
+
+	public CommandDispatcher getCommandDispatcher() {
+		return commandDispatcher;
+	}
+
+	public void setCommandDispatcher(CommandDispatcher commandDispatcher) {
+		this.commandDispatcher = commandDispatcher;
 	}
 
 	public long getRollbackEntryExpireTime() {

@@ -40,7 +40,9 @@
 
 	<bean id="bytetccCompensableContext" class="org.bytesoft.bytetcc.CompensableContextImpl" />
 
-	<bean id="bytetccCommandManager" class="org.bytesoft.bytetcc.supports.work.CompensableCommandManager" />
+	<bean id="bytetccCommandManager" class="org.bytesoft.bytejta.supports.internal.TransactionCommandDispatcher">
+		<property name="workDirectory" value="/org/bytesoft/bytetcc" />
+	</bean>
 
 	<!-- <bean id="bytetccCleanupWork" class="org.bytesoft.bytetcc.work.CleanupWork" init-method="initialize" /> -->
 	<bean id="bytetccCleanupWork" class="org.bytesoft.bytetcc.supports.work.CompensableCleanupWork" />
