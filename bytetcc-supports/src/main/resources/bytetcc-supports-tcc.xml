@@ -16,7 +16,7 @@
 	<bean class="org.bytesoft.bytetcc.supports.spring.TransactionAdviceOrderStraightener" />
 	<bean class="org.bytesoft.bytetcc.supports.spring.CompensableAnnotationConfigValidator" />
 
-	<bean class="org.bytesoft.bytetcc.supports.boot.LocalXADataSourcePostProcessor" />
+	<bean class="org.bytesoft.bytetcc.supports.resource.LocalXADataSourcePostProcessor" />
 
 	<bean id="bytetccUserTransaction" class="org.bytesoft.bytetcc.UserCompensableImpl" />
 	<bean id="bytetccCompensableManager" class="org.bytesoft.bytetcc.CompensableManagerImpl" />
