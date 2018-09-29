@@ -15,8 +15,9 @@
  */
 package org.bytesoft.bytetcc.supports.spring;
 
+import java.util.HashSet;
 import java.util.Iterator;
-import java.util.Map;
+import java.util.Set;
 
 import org.bytesoft.bytetcc.supports.spring.aware.CompensableContextAware;
 import org.bytesoft.compensable.CompensableBeanFactory;
@@ -24,33 +25,17 @@ import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
-import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.beans.factory.config.BeanPostProcessor;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationContextAware;
 
-public class CompensableContextAutoInjector
-		implements CompensableBeanFactoryAware, BeanPostProcessor, SmartInitializingSingleton, ApplicationContextAware {
+public class CompensableContextAutoInjector implements CompensableBeanFactoryAware, BeanPostProcessor {
 	static final Logger logger = LoggerFactory.getLogger(CompensableContextAutoInjector.class);
 
-	private ApplicationContext applicationContext;
-
+	private final Set<CompensableContextAware> awares = new HashSet<CompensableContextAware>();
 	private CompensableBeanFactory beanFactory;
-
-	public void afterSingletonsInstantiated() {
-		Map<String, CompensableContextAware> beanMap = //
-				this.applicationContext.getBeansOfType(CompensableContextAware.class);
-		for (Iterator<Map.Entry<String, CompensableContextAware>> itr = beanMap.entrySet().iterator(); itr.hasNext();) {
-			Map.Entry<String, CompensableContextAware> entry = itr.next();
-			CompensableContextAware aware = entry.getValue();
-			aware.setCompensableContext(this.beanFactory.getCompensableContext());
-		}
-	}
 
 	public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
 		if (CompensableContextAware.class.isInstance(bean)) {
-			CompensableContextAware aware = (CompensableContextAware) bean;
-			aware.setCompensableContext(this.beanFactory.getCompensableContext());
+			this.initializeCompensableContext((CompensableContextAware) bean);
 		} // end-if (CompensableContextAware.class.isInstance(bean))
 
 		return bean;
@@ -58,23 +43,35 @@ public class CompensableContextAutoInjector
 
 	public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
 		if (CompensableContextAware.class.isInstance(bean)) {
-			CompensableContextAware aware = (CompensableContextAware) bean;
-			aware.setCompensableContext(this.beanFactory.getCompensableContext());
+			this.initializeCompensableContext((CompensableContextAware) bean);
 		} // end-if (CompensableContextAware.class.isInstance(bean))
 
 		return bean;
+	}
+
+	private synchronized void initializeCompensableContext(CompensableContextAware aware) {
+		if (this.beanFactory != null) {
+			aware.setCompensableContext(this.beanFactory.getCompensableContext());
+		} else {
+			this.awares.add(aware);
+		}
+	}
+
+	private synchronized void afterBeanFactoryInitialized() {
+		for (Iterator<CompensableContextAware> itr = this.awares.iterator(); itr.hasNext();) {
+			CompensableContextAware aware = itr.next();
+			aware.setCompensableContext(this.beanFactory.getCompensableContext());
+			itr.remove();
+		} // end-for (Iterator<CompensableContextAware> itr = this.awares.iterator(); itr.hasNext();)
 	}
 
 	public CompensableBeanFactory getBeanFactory() {
 		return beanFactory;
 	}
 
-	public void setBeanFactory(CompensableBeanFactory beanFactory) {
+	public synchronized void setBeanFactory(CompensableBeanFactory beanFactory) {
 		this.beanFactory = beanFactory;
-	}
-
-	public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-		this.applicationContext = applicationContext;
+		this.afterBeanFactoryInitialized();
 	}
 
 }

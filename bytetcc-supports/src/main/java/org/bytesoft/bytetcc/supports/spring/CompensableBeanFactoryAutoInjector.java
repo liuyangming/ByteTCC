@@ -28,6 +28,7 @@ import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 
+@org.springframework.core.annotation.Order(org.springframework.core.Ordered.HIGHEST_PRECEDENCE)
 public class CompensableBeanFactoryAutoInjector
 		implements BeanPostProcessor, SmartInitializingSingleton, ApplicationContextAware {
 	static final Logger logger = LoggerFactory.getLogger(CompensableBeanFactoryAutoInjector.class);

@@ -20,7 +20,6 @@ import org.bytesoft.bytetcc.UserCompensableImpl;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import org.springframework.context.annotation.ImportResource;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -29,7 +28,6 @@ import org.springframework.transaction.annotation.TransactionManagementConfigure
 import org.springframework.transaction.jta.JtaTransactionManager;
 
 @ImportResource({ "classpath:bytetcc-supports-dubbo.xml" })
-@Configuration
 @EnableAspectJAutoProxy(proxyTargetClass = true)
 @EnableTransactionManagement
 public class DubboSupportConfiguration implements TransactionManagementConfigurer, ApplicationContextAware {

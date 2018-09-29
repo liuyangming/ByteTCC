@@ -15,22 +15,69 @@
  */
 package org.bytesoft.bytetcc.supports.spring;
 
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Set;
+
 import org.aopalliance.aop.Advice;
 import org.bytesoft.compensable.Compensable;
 import org.springframework.aop.Advisor;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.FatalBeanException;
+import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 
-public class TransactionAdviceOrderStraightener implements BeanPostProcessor {
+public class TransactionAdviceOrderStraightener implements BeanPostProcessor, SmartInitializingSingleton {
+
+	private final Set<org.springframework.aop.framework.Advised> adviseds //
+			= new HashSet<org.springframework.aop.framework.Advised>();
+	private volatile boolean initialized;
+
+	public void afterSingletonsInstantiated() {
+		for (Iterator<org.springframework.aop.framework.Advised> itr = this.adviseds.iterator(); itr.hasNext();) {
+			org.springframework.aop.framework.Advised advised = itr.next();
+			this.switchAdvisorOrderIfNecessary(advised);
+			itr.remove();
+		} // end-for (Iterator<org.springframework.aop.framework.Advised> itr = this.adviseds.iterator(); itr.hasNext();)
+
+		this.initialized = true;
+	}
 
 	public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
-		this.switchAdvisorOrderIfNecessary(bean);
+		if (this.initialized) {
+			this.switchAdvisorOrderIfNecessary(bean);
+			return bean;
+		} else if (org.springframework.aop.framework.Advised.class.isInstance(bean) == false) {
+			return bean;
+		}
+
+		org.springframework.aop.framework.Advised advised = (org.springframework.aop.framework.Advised) bean;
+		Class<?> targetClass = advised.getTargetClass();
+		if (targetClass != null //
+				&& targetClass.getAnnotation(Compensable.class) != null //
+				&& this.adviseds.contains(advised) == false) {
+			this.adviseds.add(advised);
+		}
+
 		return bean;
 	}
 
 	public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
-		this.switchAdvisorOrderIfNecessary(bean);
+		if (this.initialized) {
+			this.switchAdvisorOrderIfNecessary(bean);
+			return bean;
+		} else if (org.springframework.aop.framework.Advised.class.isInstance(bean) == false) {
+			return bean;
+		}
+
+		org.springframework.aop.framework.Advised advised = (org.springframework.aop.framework.Advised) bean;
+		Class<?> targetClass = advised.getTargetClass();
+		if (targetClass != null //
+				&& targetClass.getAnnotation(Compensable.class) != null //
+				&& this.adviseds.contains(advised) == false) {
+			this.adviseds.add(advised);
+		}
+
 		return bean;
 	}
 
