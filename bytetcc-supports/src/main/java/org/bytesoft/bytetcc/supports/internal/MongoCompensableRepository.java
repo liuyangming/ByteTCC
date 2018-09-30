@@ -15,9 +15,6 @@
  */
 package org.bytesoft.bytetcc.supports.internal;
 
-import java.io.IOException;
-import java.io.Serializable;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -42,24 +39,20 @@ import org.apache.zookeeper.Watcher.Event.EventType;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.bytesoft.bytetcc.CompensableTransactionImpl;
-import org.bytesoft.bytetcc.supports.CompensableInvocationImpl;
 import org.bytesoft.bytetcc.supports.CompensableRolledbackMarker;
+import org.bytesoft.bytetcc.supports.logging.MongoCompensableLogger;
 import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.common.utils.CommonUtils;
-import org.bytesoft.common.utils.SerializeUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;
-import org.bytesoft.compensable.archive.CompensableArchive;
 import org.bytesoft.compensable.archive.TransactionArchive;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 import org.bytesoft.compensable.aware.CompensableEndpointAware;
+import org.bytesoft.compensable.logging.CompensableLogger;
 import org.bytesoft.transaction.Transaction;
 import org.bytesoft.transaction.TransactionException;
 import org.bytesoft.transaction.TransactionRecovery;
 import org.bytesoft.transaction.TransactionRepository;
-import org.bytesoft.transaction.archive.XAResourceArchive;
 import org.bytesoft.transaction.cmd.CommandDispatcher;
-import org.bytesoft.transaction.supports.resource.XAResourceDescriptor;
-import org.bytesoft.transaction.supports.serialize.XAResourceDeserializer;
 import org.bytesoft.transaction.xa.TransactionXid;
 import org.bytesoft.transaction.xa.XidFactory;
 import org.slf4j.Logger;
@@ -80,8 +73,6 @@ public class MongoCompensableRepository implements TransactionRepository, Compen
 	static final String CONSTANTS_ROOT_PATH = "/org/bytesoft/bytetcc";
 	static final String CONSTANTS_DB_NAME = "bytetcc";
 	static final String CONSTANTS_TB_TRANSACTIONS = "transactions";
-	static final String CONSTANTS_TB_PARTICIPANTS = "participants";
-	static final String CONSTANTS_TB_COMPENSABLES = "compensables";
 	static final String CONSTANTS_FD_GLOBAL = "gxid";
 	static final String CONSTANTS_FD_BRANCH = "bxid";
 	static final String CONSTANTS_FD_SYSTEM = "system";
@@ -262,10 +253,9 @@ public class MongoCompensableRepository implements TransactionRepository, Compen
 		this.transactionMap.put(xid, transaction);
 	}
 
-	@SuppressWarnings("unchecked")
 	public Transaction getTransaction(TransactionXid xid) throws TransactionException {
 		TransactionRecovery compensableRecovery = this.beanFactory.getCompensableRecovery();
-		XidFactory compensableXidFactory = this.beanFactory.getCompensableXidFactory();
+		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
 
 		MongoCursor<Document> transactionCursor = null;
 		try {
@@ -284,37 +274,9 @@ public class MongoCompensableRepository implements TransactionRepository, Compen
 				return null;
 			}
 			Document document = transactionCursor.next();
-			TransactionArchive archive = new TransactionArchive();
 
-			TransactionXid globalXid = compensableXidFactory.createGlobalXid(global);
-			archive.setXid(globalXid);
-
-			boolean propagated = document.getBoolean("propagated");
-			String propagatedBy = document.getString("propagated_by");
-			boolean compensable = document.getBoolean("compensable");
-			boolean coordinator = document.getBoolean("coordinator");
-			int compensableStatus = document.getInteger("status");
-			Integer recoveredTimes = document.getInteger("recovered_times");
-			Date recoveredAt = document.getDate("recovered_at");
-
-			String textVariables = document.getString("variables");
-			byte[] variablesByteArray = ByteUtils.stringToByteArray(textVariables);
-			Map<String, Serializable> variables = //
-					(Map<String, Serializable>) SerializeUtils.deserializeObject(variablesByteArray);
-
-			archive.setVariables(variables);
-
-			archive.setRecoveredAt(recoveredAt == null ? 0 : recoveredAt.getTime());
-			archive.setRecoveredTimes(recoveredTimes == null ? 0 : recoveredTimes);
-
-			archive.setCompensable(compensable);
-			archive.setCoordinator(coordinator);
-			archive.setCompensableStatus(compensableStatus);
-			archive.setPropagated(propagated);
-			archive.setPropagatedBy(propagatedBy);
-
-			this.initializeParticipantList(archive);
-			this.initializeCompensableList(archive);
+			MongoCompensableLogger mongoCompensableLogger = (MongoCompensableLogger) compensableLogger;
+			TransactionArchive archive = mongoCompensableLogger.reconstructTransactionArchive(document);
 
 			return compensableRecovery.reconstruct(archive);
 		} catch (RuntimeException error) {
@@ -325,180 +287,6 @@ public class MongoCompensableRepository implements TransactionRepository, Compen
 			throw new TransactionException(XAException.XAER_RMERR);
 		} finally {
 			IOUtils.closeQuietly(transactionCursor);
-		}
-	}
-
-	private void initializeCompensableList(TransactionArchive archive) throws ClassNotFoundException, Exception, IOException {
-		XidFactory transactionXidFactory = this.beanFactory.getTransactionXidFactory();
-
-		MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
-		MongoCollection<Document> compensables = mdb.getCollection(CONSTANTS_TB_COMPENSABLES);
-
-		TransactionXid xid = (TransactionXid) archive.getXid();
-		String application = CommonUtils.getApplication(this.endpoint);
-		byte[] global = xid.getGlobalTransactionId();
-
-		Bson globalFilter = Filters.eq(CONSTANTS_FD_GLOBAL, ByteUtils.byteArrayToString(global));
-		Bson systemFilter = Filters.eq(CONSTANTS_FD_SYSTEM, application);
-
-		MongoCursor<Document> compensableCursor = null;
-		try {
-			FindIterable<Document> compensableItr = compensables.find(Filters.and(globalFilter, systemFilter));
-			compensableCursor = compensableItr.iterator();
-			for (; compensableCursor.hasNext();) {
-				Document document = compensableCursor.next();
-				CompensableArchive compensable = new CompensableArchive();
-
-				String gxid = document.getString(CONSTANTS_FD_GLOBAL);
-				String bxid = document.getString(CONSTANTS_FD_BRANCH);
-
-				boolean coordinator = document.getBoolean("coordinator");
-				boolean tried = document.getBoolean("tried");
-				boolean confirmed = document.getBoolean("confirmed");
-				boolean cancelled = document.getBoolean("cancelled");
-				String serviceId = document.getString("serviceId");
-				boolean simplified = document.getBoolean("simplified");
-				String confirmableKey = document.getString("confirmable_key");
-				String cancellableKey = document.getString("cancellable_key");
-				String argsValue = document.getString("args");
-				String clazzName = document.getString("interface");
-				String methodDesc = document.getString("method");
-
-				String transactionKey = document.getString("transaction_key");
-				String compensableKey = document.getString("compensable_key");
-
-				String transactionXid = document.getString("transaction_xid");
-				String compensableXid = document.getString("compensable_xid");
-
-				CompensableInvocationImpl invocation = new CompensableInvocationImpl();
-				invocation.setIdentifier(serviceId);
-				invocation.setSimplified(simplified);
-
-				Class<?> clazz = Thread.currentThread().getContextClassLoader().loadClass(clazzName);
-				Method method = SerializeUtils.deserializeMethod(clazz, methodDesc);
-				invocation.setMethod(method);
-
-				byte[] argsByteArray = ByteUtils.stringToByteArray(argsValue);
-				Object[] args = (Object[]) SerializeUtils.deserializeObject(argsByteArray);
-				invocation.setArgs(args);
-
-				invocation.setConfirmableKey(confirmableKey);
-				invocation.setCancellableKey(cancellableKey);
-
-				compensable.setCompensable(invocation);
-
-				compensable.setConfirmed(confirmed);
-				compensable.setCancelled(cancelled);
-				compensable.setTried(tried);
-				compensable.setCoordinator(coordinator);
-
-				compensable.setTransactionResourceKey(transactionKey);
-				compensable.setCompensableResourceKey(compensableKey);
-
-				String[] transactionArray = transactionXid.split("\\s*\\-\\s*");
-				if (transactionArray.length == 3) {
-					String transactionGlobalId = transactionArray[1];
-					String transactionBranchId = transactionArray[2];
-					TransactionXid transactionGlobalXid = transactionXidFactory
-							.createGlobalXid(ByteUtils.stringToByteArray(transactionGlobalId));
-					if (StringUtils.isNotBlank(transactionBranchId)) {
-						TransactionXid transactionBranchXid = transactionXidFactory.createBranchXid(transactionGlobalXid,
-								ByteUtils.stringToByteArray(transactionBranchId));
-						compensable.setTransactionXid(transactionBranchXid);
-					} else {
-						compensable.setTransactionXid(transactionGlobalXid);
-					}
-				}
-
-				String[] compensableArray = compensableXid.split("\\s*\\-\\s*");
-				if (compensableArray.length == 3) {
-					String compensableGlobalId = compensableArray[1];
-					String compensableBranchId = compensableArray[2];
-					TransactionXid compensableGlobalXid = transactionXidFactory
-							.createGlobalXid(ByteUtils.stringToByteArray(compensableGlobalId));
-					if (StringUtils.isNotBlank(compensableBranchId)) {
-						TransactionXid compensableBranchXid = transactionXidFactory.createBranchXid(compensableGlobalXid,
-								ByteUtils.stringToByteArray(compensableBranchId));
-						compensable.setCompensableXid(compensableBranchXid);
-					} else {
-						compensable.setCompensableXid(compensableGlobalXid);
-					}
-				}
-
-				byte[] globalTransactionId = ByteUtils.stringToByteArray(gxid);
-				byte[] branchQualifier = ByteUtils.stringToByteArray(bxid);
-				TransactionXid globalXid = transactionXidFactory.createGlobalXid(globalTransactionId);
-				TransactionXid branchXid = transactionXidFactory.createBranchXid(globalXid, branchQualifier);
-
-				compensable.setIdentifier(branchXid);
-
-				archive.getCompensableResourceList().add(compensable);
-			}
-		} finally {
-			IOUtils.closeQuietly(compensableCursor);
-		}
-	}
-
-	private void initializeParticipantList(TransactionArchive archive) {
-		XidFactory transactionXidFactory = this.beanFactory.getTransactionXidFactory();
-
-		MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
-		MongoCollection<Document> participants = mdb.getCollection(CONSTANTS_TB_PARTICIPANTS);
-
-		TransactionXid xid = (TransactionXid) archive.getXid();
-		String application = CommonUtils.getApplication(this.endpoint);
-		byte[] global = xid.getGlobalTransactionId();
-
-		Bson globalFilter = Filters.eq(CONSTANTS_FD_GLOBAL, ByteUtils.byteArrayToString(global));
-		Bson systemFilter = Filters.eq(CONSTANTS_FD_SYSTEM, application);
-
-		MongoCursor<Document> participantCursor = null;
-		try {
-			FindIterable<Document> participantItr = participants.find(Filters.and(globalFilter, systemFilter));
-			participantCursor = participantItr.iterator();
-			for (; participantCursor.hasNext();) {
-				Document document = participantCursor.next();
-				XAResourceArchive participant = new XAResourceArchive();
-
-				String gxid = document.getString(CONSTANTS_FD_GLOBAL);
-				String bxid = document.getString(CONSTANTS_FD_BRANCH);
-
-				String descriptorType = document.getString("type");
-				String identifier = document.getString("resource");
-
-				int vote = document.getInteger("vote");
-				boolean committed = document.getBoolean("committed");
-				boolean rolledback = document.getBoolean("rolledback");
-				boolean readonly = document.getBoolean("readonly");
-				boolean completed = document.getBoolean("completed");
-				boolean heuristic = document.getBoolean("heuristic");
-
-				byte[] globalTransactionId = ByteUtils.stringToByteArray(gxid);
-				byte[] branchQualifier = ByteUtils.stringToByteArray(bxid);
-				TransactionXid globalXid = transactionXidFactory.createGlobalXid(globalTransactionId);
-				TransactionXid branchXid = transactionXidFactory.createBranchXid(globalXid, branchQualifier);
-				participant.setXid(branchXid);
-
-				XAResourceDeserializer resourceDeserializer = this.beanFactory.getResourceDeserializer();
-				XAResourceDescriptor descriptor = resourceDeserializer.deserialize(identifier);
-				if (descriptor != null //
-						&& descriptor.getClass().getName().equals(descriptorType) == false) {
-					throw new IllegalStateException();
-				}
-
-				participant.setVote(vote);
-				participant.setCommitted(committed);
-				participant.setRolledback(rolledback);
-				participant.setReadonly(readonly);
-				participant.setCompleted(completed);
-				participant.setHeuristic(heuristic);
-
-				participant.setDescriptor(descriptor);
-
-				archive.getRemoteResources().add(participant);
-			}
-		} finally {
-			IOUtils.closeQuietly(participantCursor);
 		}
 	}
 
@@ -544,10 +332,9 @@ public class MongoCompensableRepository implements TransactionRepository, Compen
 		}
 	}
 
-	@SuppressWarnings("unchecked")
 	public Transaction getErrorTransaction(TransactionXid xid) throws TransactionException {
 		TransactionRecovery compensableRecovery = this.beanFactory.getCompensableRecovery();
-		XidFactory compensableXidFactory = this.beanFactory.getCompensableXidFactory();
+		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
 
 		MongoCursor<Document> transactionCursor = null;
 		try {
@@ -568,37 +355,9 @@ public class MongoCompensableRepository implements TransactionRepository, Compen
 			}
 
 			Document document = transactionCursor.next();
-			TransactionArchive archive = new TransactionArchive();
 
-			TransactionXid globalXid = compensableXidFactory.createGlobalXid(global);
-			archive.setXid(globalXid);
-
-			boolean propagated = document.getBoolean("propagated");
-			String propagatedBy = document.getString("propagated_by");
-			boolean compensable = document.getBoolean("compensable");
-			boolean coordinator = document.getBoolean("coordinator");
-			int compensableStatus = document.getInteger("status");
-			Integer recoveredTimes = document.getInteger("recovered_times");
-			Date recoveredAt = document.getDate("recovered_at");
-
-			String textVariables = document.getString("variables");
-			byte[] variablesByteArray = ByteUtils.stringToByteArray(textVariables);
-			Map<String, Serializable> variables = //
-					(Map<String, Serializable>) SerializeUtils.deserializeObject(variablesByteArray);
-
-			archive.setVariables(variables);
-
-			archive.setRecoveredAt(recoveredAt == null ? 0 : recoveredAt.getTime());
-			archive.setRecoveredTimes(recoveredTimes == null ? 0 : recoveredTimes);
-
-			archive.setCompensable(compensable);
-			archive.setCoordinator(coordinator);
-			archive.setCompensableStatus(compensableStatus);
-			archive.setPropagated(propagated);
-			archive.setPropagatedBy(propagatedBy);
-
-			this.initializeParticipantList(archive);
-			this.initializeCompensableList(archive);
+			MongoCompensableLogger mongoCompensableLogger = (MongoCompensableLogger) compensableLogger;
+			TransactionArchive archive = mongoCompensableLogger.reconstructTransactionArchive(document);
 
 			return compensableRecovery.reconstruct(archive);
 		} catch (RuntimeException error) {
@@ -616,10 +375,9 @@ public class MongoCompensableRepository implements TransactionRepository, Compen
 		return null;
 	}
 
-	@SuppressWarnings("unchecked")
 	public List<Transaction> getErrorTransactionList() throws TransactionException {
 		TransactionRecovery compensableRecovery = this.beanFactory.getCompensableRecovery();
-		XidFactory compensableXidFactory = this.beanFactory.getCompensableXidFactory();
+		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
 
 		List<Transaction> transactionList = new ArrayList<Transaction>();
 
@@ -637,18 +395,7 @@ public class MongoCompensableRepository implements TransactionRepository, Compen
 					transactions.find(Filters.and(systemFilter, coordinatorFilter));
 			for (transactionCursor = transactionItr.iterator(); transactionCursor.hasNext();) {
 				Document document = transactionCursor.next();
-				TransactionArchive archive = new TransactionArchive();
-
-				String gxid = document.getString(CONSTANTS_FD_GLOBAL);
-				boolean propagated = document.getBoolean("propagated");
-				String propagatedBy = document.getString("propagated_by");
-				boolean compensable = document.getBoolean("compensable");
-				boolean coordinator = document.getBoolean("coordinator");
-				int compensableStatus = document.getInteger("status");
 				boolean error = document.getBoolean("error");
-				Integer recoveredTimes = document.getInteger("recovered_times");
-				Date recoveredAt = document.getDate("recovered_at");
-				String textVariables = document.getString("variables");
 
 				String targetApplication = document.getString("created");
 				long expectVersion = document.getLong("version");
@@ -658,27 +405,8 @@ public class MongoCompensableRepository implements TransactionRepository, Compen
 					continue; // ignore
 				}
 
-				byte[] global = ByteUtils.stringToByteArray(gxid);
-				TransactionXid globalXid = compensableXidFactory.createGlobalXid(global);
-				archive.setXid(globalXid);
-
-				byte[] variablesByteArray = ByteUtils.stringToByteArray(textVariables);
-				Map<String, Serializable> variables = //
-						(Map<String, Serializable>) SerializeUtils.deserializeObject(variablesByteArray);
-
-				archive.setVariables(variables);
-
-				archive.setRecoveredAt(recoveredAt == null ? 0 : recoveredAt.getTime());
-				archive.setRecoveredTimes(recoveredTimes == null ? 0 : recoveredTimes);
-
-				archive.setCompensable(compensable);
-				archive.setCoordinator(coordinator);
-				archive.setCompensableStatus(compensableStatus);
-				archive.setPropagated(propagated);
-				archive.setPropagatedBy(propagatedBy);
-
-				this.initializeParticipantList(archive);
-				this.initializeCompensableList(archive);
+				MongoCompensableLogger mongoCompensableLogger = (MongoCompensableLogger) compensableLogger;
+				TransactionArchive archive = mongoCompensableLogger.reconstructTransactionArchive(document);
 
 				Transaction transaction = compensableRecovery.reconstruct(archive);
 				transactionList.add(transaction);
