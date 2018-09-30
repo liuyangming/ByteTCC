@@ -746,7 +746,7 @@ public class CompensableServiceFilter implements Filter {
 			referenceConfig.setInterface(RemoteCoordinator.class);
 			referenceConfig.setTimeout(30 * 1000);
 			referenceConfig.setCluster("failfast");
-			referenceConfig.setFilter("compensable");
+			referenceConfig.setFilter("bytetcc");
 			referenceConfig.setGroup("org-bytesoft-bytetcc");
 			referenceConfig.setCheck(false);
 			referenceConfig.setRetries(0);

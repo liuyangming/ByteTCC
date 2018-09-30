@@ -66,8 +66,8 @@ public class CompensableParticipantRegistrant implements SmartInitializingSingle
 		// mpv.addPropertyValue("interface", RemoteCoordinator.class.getName());
 		// mpv.addPropertyValue("ref", new RuntimeBeanReference(refBeanName));
 		// mpv.addPropertyValue("cluster", "failfast");
-		// mpv.addPropertyValue("loadbalance", "compensable");
-		// mpv.addPropertyValue("filter", "compensable");
+		// mpv.addPropertyValue("loadbalance", "bytetcc");
+		// mpv.addPropertyValue("filter", "bytetcc");
 		// mpv.addPropertyValue("group", "org-bytesoft-bytetcc");
 		// mpv.addPropertyValue("retries", "0");
 		// mpv.addPropertyValue("timeout", "6000");
@@ -80,8 +80,8 @@ public class CompensableParticipantRegistrant implements SmartInitializingSingle
 		serviceConfig.setInterface(RemoteCoordinator.class);
 		serviceConfig.setRef(reference);
 		serviceConfig.setCluster("failfast");
-		serviceConfig.setLoadbalance("compensable");
-		serviceConfig.setFilter("compensable");
+		serviceConfig.setLoadbalance("bytetcc");
+		serviceConfig.setFilter("bytetcc");
 		serviceConfig.setGroup("org-bytesoft-bytetcc");
 		serviceConfig.setRetries(0);
 		serviceConfig.setTimeout(6000);
@@ -125,8 +125,8 @@ public class CompensableParticipantRegistrant implements SmartInitializingSingle
 		// mpv.addPropertyValue("interface", RemoteCoordinator.class.getName());
 		// mpv.addPropertyValue("timeout", "6000");
 		// mpv.addPropertyValue("cluster", "failfast");
-		// mpv.addPropertyValue("loadbalance", "compensable");
-		// mpv.addPropertyValue("filter", "compensable");
+		// mpv.addPropertyValue("loadbalance", "bytetcc");
+		// mpv.addPropertyValue("filter", "bytetcc");
 		// mpv.addPropertyValue("group", "org-bytesoft-bytetcc");
 		// mpv.addPropertyValue("check", "false");
 		// mpv.addPropertyValue("retries", "0");
@@ -143,8 +143,8 @@ public class CompensableParticipantRegistrant implements SmartInitializingSingle
 		referenceConfig.setInterface(RemoteCoordinator.class);
 		referenceConfig.setTimeout(6000);
 		referenceConfig.setCluster("failfast");
-		referenceConfig.setLoadbalance("compensable");
-		referenceConfig.setFilter("compensable");
+		referenceConfig.setLoadbalance("bytetcc");
+		referenceConfig.setFilter("bytetcc");
 		referenceConfig.setGroup("org-bytesoft-bytetcc");
 		referenceConfig.setCheck(false);
 		referenceConfig.setRetries(0);

@@ -76,8 +76,8 @@ public class CompensableBeanConfigValidator implements SmartInitializingSingleto
 			}
 
 			String group = serviceBean.getGroup();
-			if (StringUtils.equals("org-bytesoft-bytetcc", group) == false
-					&& StringUtils.trimToEmpty(group).startsWith("org-bytesoft-bytetcc-") == false) {
+			if (StringUtils.equals("x-bytetcc", group) == false
+					&& StringUtils.trimToEmpty(group).startsWith("x-bytetcc-") == false) {
 				continue;
 			}
 
@@ -91,8 +91,8 @@ public class CompensableBeanConfigValidator implements SmartInitializingSingleto
 			ReferenceBean referenceBean = entry.getValue();
 
 			String group = referenceBean.getGroup();
-			if (StringUtils.equals("org-bytesoft-bytetcc", group) == false
-					&& StringUtils.trimToEmpty(group).startsWith("org-bytesoft-bytetcc-") == false) {
+			if (StringUtils.equals("x-bytetcc", group) == false
+					&& StringUtils.trimToEmpty(group).startsWith("x-bytetcc-") == false) {
 				continue;
 			}
 
@@ -108,11 +108,10 @@ public class CompensableBeanConfigValidator implements SmartInitializingSingleto
 		String filter = serviceBean.getFilter();
 		String group = serviceBean.getGroup();
 
-		if (StringUtils.equalsIgnoreCase("org-bytesoft-bytetcc", group) == false
-				&& StringUtils.trimToEmpty(group).startsWith("org-bytesoft-bytetcc-") == false) {
+		if (StringUtils.equalsIgnoreCase("x-bytetcc", group) == false
+				&& StringUtils.trimToEmpty(group).startsWith("x-bytetcc-") == false) {
 			throw new FatalBeanException(String.format(
-					"The value of attr 'group'(beanId= %s) should be 'org-bytesoft-bytetcc' or starts with 'org-bytesoft-bytetcc-'.",
-					beanId));
+					"The value of attr 'group'(beanId= %s) should be 'x-bytetcc' or starts with 'x-bytetcc-'.", beanId));
 		} else if (retries == null || retries != 0) {
 			throw new FatalBeanException(String.format("The value of attr 'retries'(beanId= %s) should be '0'.", beanId));
 		} else if (StringUtils.equals("failfast", cluster) == false) {
@@ -127,17 +126,17 @@ public class CompensableBeanConfigValidator implements SmartInitializingSingleto
 			int filters = 0, index = -1;
 			for (int i = 0; i < filterArray.length; i++) {
 				String element = filterArray[i];
-				boolean filterEquals = StringUtils.equalsIgnoreCase("compensable", element);
+				boolean filterEquals = StringUtils.equalsIgnoreCase("bytetcc", element);
 				index = filterEquals ? i : index;
 				filters = filterEquals ? filters + 1 : filters;
 			}
 
 			if (filters != 1) {
 				throw new FatalBeanException(
-						String.format("The value of attr 'filter'(beanId= %s) should contains 'compensable'.", beanId));
+						String.format("The value of attr 'filter'(beanId= %s) should contains 'bytetcc'.", beanId));
 			} else if (index != 0) {
 				throw new FatalBeanException(
-						String.format("The first filter of bean(beanId= %s) should be 'compensable'.", beanId));
+						String.format("The first filter of bean(beanId= %s) should be 'bytetcc'.", beanId));
 			}
 		}
 
@@ -151,11 +150,10 @@ public class CompensableBeanConfigValidator implements SmartInitializingSingleto
 		String filter = referenceBean.getFilter();
 		String group = referenceBean.getGroup();
 
-		if (StringUtils.equals(group, "org-bytesoft-bytetcc") == false
-				&& StringUtils.trimToEmpty(group).startsWith("org-bytesoft-bytetcc-") == false) {
+		if (StringUtils.equals(group, "x-bytetcc") == false
+				&& StringUtils.trimToEmpty(group).startsWith("x-bytetcc-") == false) {
 			throw new FatalBeanException(String.format(
-					"The value of attr 'group'(beanId= %s) should be 'org-bytesoft-bytetcc' or starts with 'org-bytesoft-bytetcc-'.",
-					beanId));
+					"The value of attr 'group'(beanId= %s) should be 'x-bytetcc' or starts with 'x-bytetcc-'.", beanId));
 		} else if (retries == null || retries != 0) {
 			throw new FatalBeanException(String.format("The value of attr 'retries'(beanId= %s) should be '0'.", beanId));
 		} else if (StringUtils.equals("failfast", cluster) == false) {
@@ -171,17 +169,16 @@ public class CompensableBeanConfigValidator implements SmartInitializingSingleto
 			int filters = 0, index = -1;
 			for (int i = 0; i < filterArray.length; i++) {
 				String element = filterArray[i];
-				boolean filterEquals = StringUtils.equalsIgnoreCase("compensable", element);
+				boolean filterEquals = StringUtils.equalsIgnoreCase("bytetcc", element);
 				index = filterEquals ? i : index;
 				filters = filterEquals ? filters + 1 : filters;
 			}
 
 			if (filters != 1) {
 				throw new FatalBeanException(
-						String.format("The value of attr 'filter'(beanId= %s) should contains 'compensable'.", beanId));
+						String.format("The value of attr 'filter'(beanId= %s) should contains 'bytetcc'.", beanId));
 			} else if (index != (filterArray.length - 1)) {
-				throw new FatalBeanException(
-						String.format("The last filter of bean(beanId= %s) should be 'compensable'.", beanId));
+				throw new FatalBeanException(String.format("The last filter of bean(beanId= %s) should be 'bytetcc'.", beanId));
 			}
 		}
 

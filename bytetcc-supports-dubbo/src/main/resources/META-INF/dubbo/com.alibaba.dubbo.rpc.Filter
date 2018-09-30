@@ -1,1 +1,1 @@
-compensable=org.bytesoft.bytetcc.supports.dubbo.spi.CompensableServiceFilter
+bytetcc=org.bytesoft.bytetcc.supports.dubbo.spi.CompensableServiceFilter
