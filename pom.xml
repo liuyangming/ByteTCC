@@ -386,6 +386,7 @@
 		<module>bytetcc-common</module>
 		<module>bytetcc-core</module>
 		<module>bytetcc-supports</module>
+		<module>bytetcc-supports-springboot</module>
 		<module>bytetcc-supports-springcloud</module>
 		<module>bytetcc-supports-dubbo</module>
 	</modules>

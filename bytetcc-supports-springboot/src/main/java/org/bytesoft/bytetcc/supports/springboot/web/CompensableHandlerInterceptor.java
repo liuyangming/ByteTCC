@@ -1,0 +1,172 @@
+/**
+ * Copyright 2014-2018 yangming.liu<bytefox@126.com>.
+ *
+ * This copyrighted material is made available to anyone wishing to use, modify,
+ * copy, or redistribute it subject to the terms and conditions of the GNU
+ * Lesser General Public License, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License
+ * for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this distribution; if not, see <http://www.gnu.org/licenses/>.
+ */
+package org.bytesoft.bytetcc.supports.springboot.web;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.apache.commons.lang3.StringUtils;
+import org.bytesoft.bytejta.supports.rpc.TransactionRequestImpl;
+import org.bytesoft.bytejta.supports.rpc.TransactionResponseImpl;
+import org.bytesoft.bytetcc.supports.springboot.SpringBootBeanRegistry;
+import org.bytesoft.bytetcc.supports.springboot.controller.CompensableCoordinatorController;
+import org.bytesoft.common.utils.ByteUtils;
+import org.bytesoft.common.utils.SerializeUtils;
+import org.bytesoft.compensable.Compensable;
+import org.bytesoft.compensable.CompensableBeanFactory;
+import org.bytesoft.compensable.CompensableManager;
+import org.bytesoft.compensable.CompensableTransaction;
+import org.bytesoft.compensable.TransactionContext;
+import org.bytesoft.compensable.aware.CompensableEndpointAware;
+import org.bytesoft.transaction.supports.rpc.TransactionInterceptor;
+import org.springframework.beans.BeansException;
+import org.springframework.boot.web.servlet.error.ErrorController;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
+import org.springframework.web.method.HandlerMethod;
+import org.springframework.web.servlet.HandlerInterceptor;
+import org.springframework.web.servlet.ModelAndView;
+
+public class CompensableHandlerInterceptor implements HandlerInterceptor, CompensableEndpointAware, ApplicationContextAware {
+	static final String HEADER_TRANCACTION_KEY = "X-COMPENSABLE-XID";
+	static final String HEADER_PROPAGATION_KEY = "X-PROPAGATION-KEY";
+
+	private String identifier;
+	private ApplicationContext applicationContext;
+
+	public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+		if (HandlerMethod.class.isInstance(handler) == false) {
+			return true;
+		}
+
+		HandlerMethod hm = (HandlerMethod) handler;
+		Class<?> clazz = hm.getBeanType();
+		if (CompensableCoordinatorController.class.equals(clazz)) {
+			return true;
+		} else if (ErrorController.class.isInstance(hm.getBean())) {
+			return true;
+		}
+
+		String transactionStr = request.getHeader(HEADER_TRANCACTION_KEY);
+		if (StringUtils.isBlank(transactionStr)) {
+			return true;
+		}
+
+		String propagationStr = request.getHeader(HEADER_PROPAGATION_KEY);
+
+		String transactionText = StringUtils.trimToNull(transactionStr);
+		String propagationText = StringUtils.trimToNull(propagationStr);
+
+		Compensable annotation = clazz.getAnnotation(Compensable.class);
+		if (annotation == null) {
+			return true;
+		}
+
+		SpringBootBeanRegistry beanRegistry = SpringBootBeanRegistry.getInstance();
+		CompensableBeanFactory beanFactory = beanRegistry.getBeanFactory();
+		TransactionInterceptor transactionInterceptor = beanFactory.getTransactionInterceptor();
+
+		byte[] byteArray = transactionText == null ? new byte[0] : ByteUtils.stringToByteArray(transactionText);
+
+		TransactionContext transactionContext = null;
+		if (byteArray != null && byteArray.length > 0) {
+			transactionContext = (TransactionContext) SerializeUtils.deserializeObject(byteArray);
+			transactionContext.setPropagated(true);
+			transactionContext.setPropagatedBy(propagationText);
+		}
+
+		TransactionRequestImpl req = new TransactionRequestImpl();
+		req.setTransactionContext(transactionContext);
+		req.setTargetTransactionCoordinator(beanRegistry.getConsumeCoordinator(propagationText));
+
+		transactionInterceptor.afterReceiveRequest(req);
+
+		CompensableManager compensableManager = beanFactory.getCompensableManager();
+		CompensableTransaction compensable = compensableManager.getCompensableTransactionQuietly();
+		byte[] responseByteArray = SerializeUtils.serializeObject(compensable.getTransactionContext());
+		String compensableStr = ByteUtils.byteArrayToString(responseByteArray);
+		response.addHeader(HEADER_TRANCACTION_KEY, compensableStr);
+		response.addHeader(HEADER_PROPAGATION_KEY, this.identifier);
+
+		return true;
+	}
+
+	public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, ModelAndView modelAndView)
+			throws Exception {
+	}
+
+	public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex)
+			throws Exception {
+		if (HandlerMethod.class.isInstance(handler) == false) {
+			return;
+		}
+
+		HandlerMethod hm = (HandlerMethod) handler;
+		Class<?> clazz = hm.getBeanType();
+		if (CompensableCoordinatorController.class.equals(clazz)) {
+			return;
+		} else if (ErrorController.class.isInstance(hm.getBean())) {
+			return;
+		}
+
+		String transactionStr = request.getHeader(HEADER_TRANCACTION_KEY);
+		if (StringUtils.isBlank(transactionStr)) {
+			return;
+		}
+
+		Compensable annotation = clazz.getAnnotation(Compensable.class);
+		if (annotation == null) {
+			return;
+		}
+
+		SpringBootBeanRegistry beanRegistry = SpringBootBeanRegistry.getInstance();
+		CompensableBeanFactory beanFactory = beanRegistry.getBeanFactory();
+		CompensableManager compensableManager = beanFactory.getCompensableManager();
+		TransactionInterceptor transactionInterceptor = beanFactory.getTransactionInterceptor();
+
+		CompensableTransaction compensable = compensableManager.getCompensableTransactionQuietly();
+		TransactionContext transactionContext = compensable.getTransactionContext();
+
+		byte[] byteArray = SerializeUtils.serializeObject(transactionContext);
+		String compensableStr = ByteUtils.byteArrayToString(byteArray);
+		response.addHeader(HEADER_TRANCACTION_KEY, compensableStr);
+		response.addHeader(HEADER_PROPAGATION_KEY, this.identifier);
+
+		TransactionResponseImpl resp = new TransactionResponseImpl();
+		resp.setTransactionContext(transactionContext);
+		resp.setSourceTransactionCoordinator(beanRegistry.getConsumeCoordinator(null));
+
+		transactionInterceptor.beforeSendResponse(resp);
+
+	}
+
+	public String getEndpoint() {
+		return this.identifier;
+	}
+
+	public void setEndpoint(String identifier) {
+		this.identifier = identifier;
+	}
+
+	public ApplicationContext getApplicationContext() {
+		return applicationContext;
+	}
+
+	public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+		this.applicationContext = applicationContext;
+	}
+
+}
