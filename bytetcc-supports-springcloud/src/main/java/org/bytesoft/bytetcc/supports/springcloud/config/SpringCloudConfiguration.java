@@ -184,6 +184,7 @@ public class SpringCloudConfiguration implements TransactionManagementConfigurer
 		return interceptor;
 	}
 
+	@SuppressWarnings("deprecation")
 	@org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean(ClientHttpRequestFactory.class)
 	@org.springframework.context.annotation.Bean
 	public ClientHttpRequestFactory defaultRequestFactory() {

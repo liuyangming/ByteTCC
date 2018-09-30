@@ -21,10 +21,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.bytesoft.bytejta.supports.rpc.TransactionRequestImpl;
+import org.bytesoft.bytejta.supports.rpc.TransactionResponseImpl;
 import org.bytesoft.bytetcc.CompensableTransactionImpl;
 import org.bytesoft.bytetcc.supports.springcloud.SpringCloudBeanRegistry;
 import org.bytesoft.bytetcc.supports.springcloud.loadbalancer.CompensableLoadBalancerInterceptor;
-import org.bytesoft.bytetcc.supports.springcloud.rpc.TransactionResponseImpl;
 import org.bytesoft.common.utils.CommonUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableManager;
@@ -160,7 +160,8 @@ public class CompensableFeignHandler implements InvocationHandler {
 			try {
 				return this.delegate.invoke(proxy, method, args);
 			} finally {
-				if (response.isIntercepted() == false) {
+				Object interceptedValue = response.getHeader(TransactionInterceptor.class.getName());
+				if (Boolean.valueOf(String.valueOf(interceptedValue)) == false) {
 					response.setTransactionContext(transactionContext);
 
 					RemoteCoordinator coordinator = request.getTargetTransactionCoordinator();
