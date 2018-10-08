@@ -15,6 +15,7 @@
  */
 package org.bytesoft.bytetcc.supports.dubbo.internal;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Iterator;
 import java.util.Map;
@@ -31,15 +32,18 @@ import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.BeanFactoryAware;
 import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.beans.factory.config.BeanDefinition;
+import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.beans.factory.config.RuntimeBeanReference;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 
+import com.alibaba.dubbo.config.annotation.Reference;
 import com.alibaba.dubbo.config.spring.ReferenceBean;
 import com.alibaba.dubbo.config.spring.ServiceBean;
 
-public class CompensableBeanConfigValidator implements SmartInitializingSingleton, ApplicationContextAware, BeanFactoryAware {
+public class CompensableBeanConfigValidator
+		implements SmartInitializingSingleton, BeanPostProcessor, ApplicationContextAware, BeanFactoryAware {
 	static final Logger logger = LoggerFactory.getLogger(CompensableBeanConfigValidator.class);
 
 	private ApplicationContext applicationContext;
@@ -112,7 +116,7 @@ public class CompensableBeanConfigValidator implements SmartInitializingSingleto
 				&& StringUtils.trimToEmpty(group).startsWith("x-bytetcc-") == false) {
 			throw new FatalBeanException(String.format(
 					"The value of attr 'group'(beanId= %s) should be 'x-bytetcc' or starts with 'x-bytetcc-'.", beanId));
-		} else if (retries == null || retries != 0) {
+		} else if (retries != null && retries != 0) {
 			throw new FatalBeanException(String.format("The value of attr 'retries'(beanId= %s) should be '0'.", beanId));
 		} else if (StringUtils.equals("failfast", cluster) == false) {
 			throw new FatalBeanException(
@@ -154,7 +158,7 @@ public class CompensableBeanConfigValidator implements SmartInitializingSingleto
 				&& StringUtils.trimToEmpty(group).startsWith("x-bytetcc-") == false) {
 			throw new FatalBeanException(String.format(
 					"The value of attr 'group'(beanId= %s) should be 'x-bytetcc' or starts with 'x-bytetcc-'.", beanId));
-		} else if (retries == null || retries != 0) {
+		} else if (retries != null && retries != 0) {
 			throw new FatalBeanException(String.format("The value of attr 'retries'(beanId= %s) should be '0'.", beanId));
 		} else if (StringUtils.equals("failfast", cluster) == false) {
 			throw new FatalBeanException(
@@ -216,6 +220,36 @@ public class CompensableBeanConfigValidator implements SmartInitializingSingleto
 
 		}
 
+	}
+
+	public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
+		return bean;
+	}
+
+	@SuppressWarnings("rawtypes")
+	public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
+		if (org.springframework.aop.framework.Advised.class.isInstance(bean)) {
+			org.springframework.aop.framework.Advised advised = (org.springframework.aop.framework.Advised) bean;
+			Class<?> targetClass = advised.getTargetClass();
+			Compensable compensable = targetClass.getAnnotation(Compensable.class);
+			if (compensable == null) {
+				return bean;
+			}
+
+			Field[] fields = targetClass.getDeclaredFields();
+			for (int i = 0; fields != null && i < fields.length; i++) {
+				Field field = fields[i];
+				Reference reference = field.getAnnotation(Reference.class);
+				if (reference == null) {
+					continue;
+				}
+
+				ReferenceBean referenceConfig = new ReferenceBean(reference);
+				this.validateReferenceBean(beanName, referenceConfig);
+			}
+		}
+
+		return bean;
 	}
 
 	public void setBeanFactory(BeanFactory beanFactory) throws BeansException {
