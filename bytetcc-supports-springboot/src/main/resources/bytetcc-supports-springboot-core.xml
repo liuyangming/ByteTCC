@@ -16,7 +16,7 @@
 
 	<import resource="classpath:bytetcc-supports-task.xml" />
 
-	<!-- <bean class="org.bytesoft.bytetcc.supports.springboot.SpringBootEndpointPostProcessor" /> -->
+	<bean class="org.bytesoft.bytetcc.supports.springboot.SpringBootEndpointPostProcessor" />
 
 	<bean class="org.bytesoft.bytetcc.supports.springboot.controller.CompensableCoordinatorController" />
 

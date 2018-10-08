@@ -146,7 +146,7 @@ public class MongoCompensableRepository implements TransactionRepository, Compen
 			}
 
 			byte[] instanceByteArray = event.getData();
-			String instanceId = ByteUtils.byteArrayToString(instanceByteArray);
+			String instanceId = instanceByteArray == null ? StringUtils.EMPTY : new String(instanceByteArray);
 			if (StringUtils.equalsIgnoreCase(this.endpoint, instanceId)) {
 				return;
 			}
@@ -171,17 +171,33 @@ public class MongoCompensableRepository implements TransactionRepository, Compen
 			} // end-if (interval < 0)
 
 			if (interval >= this.rollbackEntryExpireTime) {
-				this.commandDispatcher.dispatch(new Runnable() {
-					public void run() {
-						remvBusinessStageRollbackFlag(transactionXid);
-					}
-				});
+				try {
+					this.commandDispatcher.dispatch(new Runnable() {
+						public void run() {
+							remvBusinessStageRollbackFlag(transactionXid);
+						}
+					});
+				} catch (SecurityException error) {
+					// Only the master node can perform the recovery operation!
+				} catch (RuntimeException error) {
+					logger.error("Error occurred while removing transaction rolled back status from zk!", error);
+				} catch (Exception error) {
+					logger.error("Error occurred while removing transaction rolled back status from zk!", error);
+				}
 			} else {
-				this.commandDispatcher.dispatch(new Runnable() {
-					public void run() {
-						markTransactionRollback(transactionXid);
-					}
-				});
+				try {
+					this.commandDispatcher.dispatch(new Runnable() {
+						public void run() {
+							markTransactionRollback(transactionXid);
+						}
+					});
+				} catch (SecurityException error) {
+					// Only the master node can perform the recovery operation!
+				} catch (RuntimeException error) {
+					logger.error("Error occurred while marking transaction status as rolled back!", error);
+				} catch (Exception error) {
+					logger.error("Error occurred while marking transaction status as rolled back!", error);
+				}
 			}
 
 		}
@@ -210,7 +226,7 @@ public class MongoCompensableRepository implements TransactionRepository, Compen
 		String parent = String.format("%s/%s/rollback", CONSTANTS_ROOT_PATH, CommonUtils.getApplication(this.endpoint));
 		String target = String.format("%s/%s", parent, global);
 		try {
-			byte[] instanceByteArray = ByteUtils.stringToByteArray(this.endpoint);
+			byte[] instanceByteArray = this.endpoint == null ? new byte[0] : this.endpoint.getBytes();
 			this.curatorFramework.create().withMode(CreateMode.PERSISTENT).forPath(target, instanceByteArray);
 		} catch (NodeExistsException error) {
 			logger.debug("Path exists(path= {})!", target); // ignore

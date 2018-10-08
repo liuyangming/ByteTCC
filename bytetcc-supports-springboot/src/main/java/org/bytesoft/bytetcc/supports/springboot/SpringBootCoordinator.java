@@ -25,6 +25,7 @@ import javax.transaction.xa.XAResource;
 import javax.transaction.xa.Xid;
 
 import org.apache.commons.lang3.StringUtils;
+import org.bytesoft.bytejta.supports.internal.RemoteCoordinatorRegistry;
 import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.common.utils.CommonUtils;
 import org.bytesoft.common.utils.SerializeUtils;
@@ -57,25 +58,19 @@ public class SpringBootCoordinator implements InvocationHandler {
 			return method.invoke(this, args);
 		} else if (TransactionParticipant.class.equals(clazz)) {
 			if ("getIdentifier".equals(methodName)) {
-				return this.identifier;
+				return this.getParticipantsIdentifier(proxy, method, args);
 			} else {
 				throw new XAException(XAException.XAER_RMFAIL);
 			}
 		} else if (RemoteCoordinator.class.equals(clazz)) {
 			if ("getApplication".equals(methodName)) {
-				int firstIndex = this.identifier == null ? -1 : this.identifier.indexOf(":");
-				int lastIndex = this.identifier == null ? -1 : this.identifier.lastIndexOf(":");
-				String serviceKey = firstIndex <= 0 || lastIndex <= 0 || firstIndex > lastIndex //
-						? (String) null : (String) this.identifier.subSequence(firstIndex + 1, lastIndex);
-				if (StringUtils.isNotBlank(serviceKey)) {
-					return serviceKey;
-				} else {
-					return this.invokePostCoordinator(proxy, method, args);
-				}
+				return this.getParticipantsApplication(proxy, method, args);
 			} else if ("getRemoteAddr".equals(methodName) && RemoteAddr.class.equals(returnType)) {
-				return this.identifier == null ? null : CommonUtils.getRemoteAddr(this.identifier);
+				String identifier = this.getParticipantsIdentifier(proxy, method, args);
+				return identifier == null ? null : CommonUtils.getRemoteAddr(identifier);
 			} else if ("getRemoteNode".equals(methodName) && RemoteNode.class.equals(returnType)) {
-				return this.identifier == null ? null : CommonUtils.getRemoteNode(this.identifier);
+				String identifier = this.getParticipantsIdentifier(proxy, method, args);
+				return identifier == null ? null : CommonUtils.getRemoteNode(identifier);
 			} else {
 				throw new XAException(XAException.XAER_RMFAIL);
 			}
@@ -107,32 +102,12 @@ public class SpringBootCoordinator implements InvocationHandler {
 			RestTemplate transactionRestTemplate = SpringBootBeanRegistry.getInstance().getRestTemplate();
 			RestTemplate restTemplate = transactionRestTemplate == null ? new RestTemplate() : transactionRestTemplate;
 
+			RemoteAddr remoteAddr = CommonUtils.getRemoteAddr(this.identifier);
+
 			StringBuilder ber = new StringBuilder();
-
-			String versionKey = this.identifier.matches("^[^\\:]+\\:\\d+\\:[^\\:]+$") ? this.identifier : null;
-			if (StringUtils.isNotBlank(versionKey)) {
-				int firstIndex = versionKey.indexOf(":");
-				int lastIndex = versionKey.lastIndexOf(":");
-				String prefix = firstIndex <= 0 ? null : versionKey.substring(0, firstIndex);
-				String servId = firstIndex <= 0 || lastIndex <= 0 || firstIndex >= lastIndex //
-						? null : versionKey.substring(firstIndex + 1, lastIndex);
-				String suffix = lastIndex <= 0 ? null : versionKey.substring(lastIndex + 1);
-
-				ber.append("http://");
-				ber.append(prefix == null || suffix == null ? null : prefix + ":" + suffix);
-
-				ber.append("/rest/api/").append(servId).append("/");
-			} else {
-				int firstIndex = this.identifier.indexOf(":");
-				int lastIndex = this.identifier.lastIndexOf(":");
-				String prefix = firstIndex <= 0 ? null : this.identifier.substring(0, firstIndex);
-				String suffix = lastIndex <= 0 ? null : this.identifier.substring(lastIndex + 1);
-
-				ber.append("http://");
-				ber.append(prefix == null || suffix == null ? null : prefix + ":" + suffix);
-
-				ber.append("/org/bytesoft/bytetcc/");
-			}
+			ber.append("http://");
+			ber.append(remoteAddr.getServerHost()).append(":").append(remoteAddr.getServerPort());
+			ber.append("/org/bytesoft/bytetcc/");
 
 			ber.append(method.getName());
 			for (int i = 0; i < args.length; i++) {
@@ -185,32 +160,12 @@ public class SpringBootCoordinator implements InvocationHandler {
 			RestTemplate transactionRestTemplate = SpringBootBeanRegistry.getInstance().getRestTemplate();
 			RestTemplate restTemplate = transactionRestTemplate == null ? new RestTemplate() : transactionRestTemplate;
 
+			RemoteAddr remoteAddr = CommonUtils.getRemoteAddr(this.identifier);
+
 			StringBuilder ber = new StringBuilder();
-
-			String versionKey = this.identifier.matches("^[^\\:]+\\:\\d+\\:[^\\:]+$") ? this.identifier : null;
-			if (StringUtils.isNotBlank(versionKey)) {
-				int firstIndex = versionKey.indexOf(":");
-				int lastIndex = versionKey.lastIndexOf(":");
-				String prefix = firstIndex <= 0 ? null : versionKey.substring(0, firstIndex);
-				String servId = firstIndex <= 0 || lastIndex <= 0 || firstIndex >= lastIndex //
-						? null : versionKey.substring(firstIndex + 1, lastIndex);
-				String suffix = lastIndex <= 0 ? null : versionKey.substring(lastIndex + 1);
-
-				ber.append("http://");
-				ber.append(prefix == null || suffix == null ? null : prefix + ":" + suffix);
-
-				ber.append("/rest/api/").append(servId).append("/");
-			} else {
-				int firstIndex = this.identifier.indexOf(":");
-				int lastIndex = this.identifier.lastIndexOf(":");
-				String prefix = firstIndex <= 0 ? null : this.identifier.substring(0, firstIndex);
-				String suffix = lastIndex <= 0 ? null : this.identifier.substring(lastIndex + 1);
-
-				ber.append("http://");
-				ber.append(prefix == null || suffix == null ? null : prefix + ":" + suffix);
-
-				ber.append("/org/bytesoft/bytetcc/");
-			}
+			ber.append("http://");
+			ber.append(remoteAddr.getServerHost()).append(":").append(remoteAddr.getServerPort());
+			ber.append("/org/bytesoft/bytetcc/");
 
 			ber.append(method.getName());
 			for (int i = 0; i < args.length; i++) {
@@ -269,6 +224,72 @@ public class SpringBootCoordinator implements InvocationHandler {
 			byte[] byteArray = SerializeUtils.serializeObject(arg);
 			return ByteUtils.byteArrayToString(byteArray);
 		}
+	}
+
+	private String getParticipantsIdentifier(Object proxy, Method method, Object[] args) throws Throwable {
+		if (StringUtils.isBlank(this.identifier)) {
+			return null;
+		}
+
+		RemoteNode remoteNode = CommonUtils.getRemoteNode(this.identifier);
+		if (remoteNode == null) {
+			return null;
+		}
+
+		String serverHost = remoteNode.getServerHost();
+		String serviceKey = remoteNode.getServiceKey();
+		int serverPort = remoteNode.getServerPort();
+		if (StringUtils.isNotBlank(serviceKey) && StringUtils.equalsIgnoreCase(serviceKey, "null") == false) {
+			return this.identifier;
+		}
+
+		Object application = this.getParticipantsApplication(proxy, method, args);
+		return String.format("%s:%s:%s", serverHost, application, serverPort);
+	}
+
+	private Object getParticipantsApplication(Object proxy, Method method, Object[] args) throws Throwable {
+		if (StringUtils.isBlank(this.identifier)) {
+			return null;
+		}
+
+		RemoteCoordinatorRegistry participantRegistry = RemoteCoordinatorRegistry.getInstance();
+		SpringBootBeanRegistry beanRegistry = SpringBootBeanRegistry.getInstance();
+
+		RemoteNode instance = CommonUtils.getRemoteNode(this.identifier);
+		if (instance == null) {
+			return null;
+		} else if (StringUtils.isNotBlank(instance.getServiceKey())
+				&& StringUtils.equalsIgnoreCase(instance.getServiceKey(), "null") == false) {
+			return instance.getServiceKey();
+		}
+
+		String serverHost = instance.getServerHost();
+		int serverPort = instance.getServerPort();
+		RemoteAddr targetAddr = new RemoteAddr();
+		targetAddr.setServerHost(serverHost);
+		targetAddr.setServerPort(serverPort);
+		RemoteNode targetNode = participantRegistry.getRemoteNode(targetAddr);
+		if (targetNode != null) {
+			this.identifier = String.format("%s:%s:%s", serverHost, targetNode.getServiceKey(), serverPort);
+			return targetNode.getServiceKey();
+		}
+
+		StringBuilder ber = new StringBuilder();
+		ber.append("http://");
+		ber.append(serverHost).append(":").append(serverPort);
+		ber.append("/org/bytesoft/bytetcc/getIdentifier");
+
+		RestTemplate restTemplate = beanRegistry.getRestTemplate();
+		HttpHeaders headers = restTemplate.headForHeaders(ber.toString());
+		String instanceId = headers.getFirst(HEADER_PROPAGATION_KEY);
+
+		RemoteNode remoteNode = CommonUtils.getRemoteNode(instanceId);
+		if (remoteNode == null) {
+			return null;
+		}
+
+		this.identifier = instanceId;
+		return CommonUtils.getApplication(instanceId);
 	}
 
 	public String getIdentifier() {

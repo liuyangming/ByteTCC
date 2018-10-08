@@ -56,13 +56,14 @@ public final class SpringBootBeanRegistry implements CompensableBeanFactoryAware
 			return null;
 		}
 
+		RemoteAddr remoteAddr = CommonUtils.getRemoteAddr(identifier);
 		String application = CommonUtils.getApplication(identifier);
-		RemoteCoordinator participant = registry.getParticipant(application);
+
+		RemoteCoordinator participant = registry.getPhysicalInstance(remoteAddr);
 		if (participant != null) {
 			return participant;
 		}
 
-		RemoteAddr remoteAddr = CommonUtils.getRemoteAddr(identifier);
 		RemoteNode remoteNode = CommonUtils.getRemoteNode(identifier);
 
 		SpringBootCoordinator handler = new SpringBootCoordinator();
@@ -72,6 +73,7 @@ public final class SpringBootBeanRegistry implements CompensableBeanFactoryAware
 		participant = (RemoteCoordinator) Proxy.newProxyInstance(SpringBootCoordinator.class.getClassLoader(),
 				new Class[] { RemoteCoordinator.class }, handler);
 
+		registry.putPhysicalInstance(remoteAddr, participant);
 		registry.putRemoteNode(remoteAddr, remoteNode);
 		registry.putParticipant(application, participant);
 

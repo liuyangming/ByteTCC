@@ -17,6 +17,7 @@ package org.bytesoft.bytetcc.supports.springboot.config;
 
 import java.util.List;
 
+import org.apache.commons.lang3.StringUtils;
 import org.bytesoft.bytetcc.TransactionManagerImpl;
 import org.bytesoft.bytetcc.UserCompensableImpl;
 import org.bytesoft.bytetcc.supports.springboot.SpringBootBeanRegistry;
@@ -62,10 +63,16 @@ public class SpringBootConfiguration implements TransactionManagementConfigurer,
 	private CompensableBeanFactory beanFactory;
 
 	public void afterPropertiesSet() throws Exception {
-		String host = CommonUtils.getInetAddress();
-		String name = this.environment.getProperty("spring.application.name");
-		String port = this.environment.getProperty("server.port");
-		this.identifier = String.format("%s:%s:%s", host, name, port);
+		this.initializeEndpointIfNecessary();
+	}
+
+	public void initializeEndpointIfNecessary() {
+		if (StringUtils.isBlank(this.identifier)) {
+			String host = CommonUtils.getInetAddress();
+			String name = this.environment.getProperty("spring.application.name");
+			String port = this.environment.getProperty("server.port");
+			this.identifier = String.format("%s:%s:%s", host, name, port);
+		}
 	}
 
 	public PlatformTransactionManager annotationDrivenTransactionManager() {
@@ -115,6 +122,7 @@ public class SpringBootConfiguration implements TransactionManagementConfigurer,
 		return new org.springframework.http.client.Netty4ClientHttpRequestFactory();
 	}
 
+	@org.springframework.context.annotation.Bean
 	public SpringBootBeanRegistry springBootBeanRegistry(@Autowired ClientHttpRequestFactory requestFactory) {
 		SpringBootBeanRegistry springBootBeanRegistry = SpringBootBeanRegistry.getInstance();
 

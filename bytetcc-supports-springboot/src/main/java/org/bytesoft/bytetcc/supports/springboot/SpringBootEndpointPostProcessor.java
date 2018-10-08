@@ -1,5 +1,5 @@
 /**
- * Copyright 2014-2017 yangming.liu<bytefox@126.com>.
+ * Copyright 2014-2018 yangming.liu<bytefox@126.com>.
  *
  * This copyrighted material is made available to anyone wishing to use, modify,
  * copy, or redistribute it subject to the terms and conditions of the GNU
@@ -13,7 +13,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this distribution; if not, see <http://www.gnu.org/licenses/>.
  */
-package org.bytesoft.bytetcc.supports.springcloud;
+package org.bytesoft.bytetcc.supports.springboot;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -33,9 +33,9 @@ import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.context.EnvironmentAware;
 import org.springframework.core.env.Environment;
 
-public class SpringCloudEndpointPostProcessor
+public class SpringBootEndpointPostProcessor
 		implements InitializingBean, BeanFactoryPostProcessor, BeanPostProcessor, EnvironmentAware {
-	static final Logger logger = LoggerFactory.getLogger(SpringCloudEndpointPostProcessor.class);
+	static final Logger logger = LoggerFactory.getLogger(SpringBootEndpointPostProcessor.class);
 
 	private Environment environment;
 	private String identifier;

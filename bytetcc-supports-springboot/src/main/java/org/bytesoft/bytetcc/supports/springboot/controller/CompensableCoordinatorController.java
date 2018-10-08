@@ -17,14 +17,17 @@ package org.bytesoft.bytetcc.supports.springboot.controller;
 
 import java.beans.PropertyEditorSupport;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.transaction.xa.XAException;
 import javax.transaction.xa.Xid;
 
 import org.bytesoft.bytetcc.CompensableCoordinator;
 import org.bytesoft.common.utils.ByteUtils;
+import org.bytesoft.common.utils.CommonUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
+import org.bytesoft.transaction.TransactionParticipant;
 import org.bytesoft.transaction.xa.XidFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,6 +41,8 @@ import org.springframework.web.bind.annotation.ResponseBody;
 @Controller
 public class CompensableCoordinatorController extends PropertyEditorSupport implements CompensableBeanFactoryAware {
 	static final Logger logger = LoggerFactory.getLogger(CompensableCoordinatorController.class);
+
+	static final String HEADER_PROPAGATION_KEY = "X-PROPAGATION-KEY";
 
 	@Autowired
 	private CompensableCoordinator compensableCoordinator;
@@ -158,6 +163,22 @@ public class CompensableCoordinatorController extends PropertyEditorSupport impl
 			response.addHeader("failure", "true");
 			response.setStatus(500);
 		}
+	}
+
+	@RequestMapping(value = "/org/bytesoft/bytetcc/getIdentifier")
+	@ResponseBody
+	public String getIdentifier(HttpServletRequest request, HttpServletResponse response) {
+		TransactionParticipant nativePartcipant = this.beanFactory.getCompensableNativeParticipant();
+		response.addHeader(HEADER_PROPAGATION_KEY, nativePartcipant.getIdentifier());
+		return nativePartcipant.getIdentifier();
+	}
+
+	@RequestMapping(value = "/org/bytesoft/bytetcc/getApplication")
+	@ResponseBody
+	public String getApplication(HttpServletRequest request, HttpServletResponse response) {
+		TransactionParticipant nativePartcipant = this.beanFactory.getCompensableNativeParticipant();
+		response.addHeader(HEADER_PROPAGATION_KEY, nativePartcipant.getIdentifier());
+		return CommonUtils.getApplication(nativePartcipant.getIdentifier());
 	}
 
 	public CompensableBeanFactory getBeanFactory() {

@@ -83,7 +83,6 @@ public class MongoCompensableLock implements TransactionLock, CompensableInstVer
 	private boolean initializeEnabled = true;
 
 	private final Map<String, Long> instances = new HashMap<String, Long>();
-	// private transient ConnectionState curatorState;
 
 	private transient long instanceVersion;
 
@@ -368,13 +367,6 @@ public class MongoCompensableLock implements TransactionLock, CompensableInstVer
 	}
 
 	public synchronized void stateChanged(CuratorFramework client, final ConnectionState target) {
-		// ConnectionState source = this.curatorState;
-		// this.curatorState = target;
-		//
-		// if (target.equals(source)) {
-		// return; // should never happen
-		// }
-
 		switch (target) {
 		case CONNECTED:
 		case RECONNECTED:
@@ -393,11 +385,6 @@ public class MongoCompensableLock implements TransactionLock, CompensableInstVer
 		if (EventType.NodeChildrenChanged.equals(event.getType())) {
 			this.processNodeChildrenChanged(event);
 		}
-
-		// ConnectionState target = this.getCuratorConnectionState(event.getState());
-		// if (target != null && target.equals(this.curatorState) == false) {
-		// this.stateChanged(this.curatorFramework, target);
-		// } // end-if (target != null && target.equals(this.curatorState) == false)
 	}
 
 	private void processNodeChildrenChanged(WatchedEvent event) throws Exception {
@@ -408,26 +395,6 @@ public class MongoCompensableLock implements TransactionLock, CompensableInstVer
 		String parent = String.format("%s/%s/instances", CONSTANTS_ROOT_PATH, CommonUtils.getApplication(this.endpoint));
 		this.curatorFramework.getChildren().usingWatcher(this).inBackground(this).forPath(parent);
 	}
-
-	// private ConnectionState getCuratorConnectionState(final KeeperState state) {
-	// if (state == null) {
-	// return null;
-	// } else {
-	// switch (state) {
-	// case SyncConnected:
-	// return ConnectionState.RECONNECTED;
-	// case Disconnected:
-	// return ConnectionState.LOST;
-	// case Expired:
-	// return ConnectionState.LOST;
-	// case AuthFailed:
-	// case ConnectedReadOnly:
-	// case SaslAuthenticated:
-	// default:
-	// return null;
-	// }
-	// }
-	// }
 
 	public long getInstanceVersion(String instanceId) {
 		Long version = this.instances.get(instanceId);

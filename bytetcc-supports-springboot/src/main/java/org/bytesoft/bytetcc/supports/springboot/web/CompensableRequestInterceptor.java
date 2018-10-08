@@ -121,10 +121,19 @@ public class CompensableRequestInterceptor
 		TransactionRequestImpl request = new TransactionRequestImpl();
 		request.setTransactionContext(transactionContext);
 
-		String instanceId = null; // TODO
+		String targetHost = httpRequest.getURI().getHost();
+		int targetPort = httpRequest.getURI().getPort();
 
-		RemoteCoordinator coordinator = beanRegistry.getConsumeCoordinator(instanceId);
-		request.setTargetTransactionCoordinator(coordinator);
+		SpringBootCoordinator handler = new SpringBootCoordinator();
+		handler.setIdentifier(String.format("%s:%s:%s", targetHost, null, targetPort));
+		handler.setEnvironment(beanRegistry.getEnvironment());
+		RemoteCoordinator participant = (RemoteCoordinator) Proxy.newProxyInstance(SpringBootCoordinator.class.getClassLoader(),
+				new Class[] { RemoteCoordinator.class }, handler);
+
+		// String instanceId = participant.getIdentifier();
+		// RemoteCoordinator coordinator = beanRegistry.getConsumeCoordinator(instanceId);
+
+		request.setTargetTransactionCoordinator(participant);
 
 		transactionInterceptor.beforeSendRequest(request);
 	}
