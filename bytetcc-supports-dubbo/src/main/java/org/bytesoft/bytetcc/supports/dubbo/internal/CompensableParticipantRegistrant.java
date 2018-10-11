@@ -16,6 +16,8 @@
 package org.bytesoft.bytetcc.supports.dubbo.internal;
 
 import org.bytesoft.bytetcc.supports.dubbo.CompensableBeanRegistry;
+import org.bytesoft.common.utils.CommonUtils;
+import org.bytesoft.compensable.aware.CompensableEndpointAware;
 import org.bytesoft.transaction.remote.RemoteCoordinator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,10 +33,12 @@ import com.alibaba.dubbo.common.Constants;
 import com.alibaba.dubbo.config.ReferenceConfig;
 import com.alibaba.dubbo.config.ServiceConfig;
 
-public class CompensableParticipantRegistrant implements SmartInitializingSingleton, BeanFactoryAware {
+public class CompensableParticipantRegistrant
+		implements SmartInitializingSingleton, CompensableEndpointAware, BeanFactoryAware {
 	static final Logger logger = LoggerFactory.getLogger(CompensableParticipantRegistrant.class);
 
 	private BeanFactory beanFactory;
+	private String endpoint;
 
 	public void afterSingletonsInstantiated() {
 		org.bytesoft.bytetcc.TransactionCoordinator transactionCoordinator = //
@@ -58,38 +62,32 @@ public class CompensableParticipantRegistrant implements SmartInitializingSingle
 	}
 
 	public void initializeForProvider(RemoteCoordinator reference) throws BeansException {
-		// BeanDefinitionRegistry registry = (BeanDefinitionRegistry) this.beanFactory;
-		// GenericBeanDefinition beanDef = new GenericBeanDefinition();
-		// beanDef.setBeanClass(com.alibaba.dubbo.config.spring.ServiceBean.class);
-		//
-		// MutablePropertyValues mpv = beanDef.getPropertyValues();
-		// mpv.addPropertyValue("interface", RemoteCoordinator.class.getName());
-		// mpv.addPropertyValue("ref", new RuntimeBeanReference(refBeanName));
-		// mpv.addPropertyValue("cluster", "failfast");
-		// mpv.addPropertyValue("loadbalance", "bytetcc");
-		// mpv.addPropertyValue("filter", "bytetcc");
-		// mpv.addPropertyValue("group", "org-bytesoft-bytetcc");
-		// mpv.addPropertyValue("retries", "0");
-		// mpv.addPropertyValue("timeout", "6000");
-		//
-		// String skeletonBeanId = String.format("skeleton@%s", RemoteCoordinator.class.getName());
-		// registry.registerBeanDefinition(skeletonBeanId, beanDef);
-
 		SingletonBeanRegistry registry = (SingletonBeanRegistry) this.beanFactory;
-		ServiceConfig<RemoteCoordinator> serviceConfig = new ServiceConfig<RemoteCoordinator>();
-		serviceConfig.setInterface(RemoteCoordinator.class);
-		serviceConfig.setRef(reference);
-		serviceConfig.setCluster("failfast");
-		serviceConfig.setLoadbalance("bytetcc");
-		serviceConfig.setFilter("bytetcc");
-		serviceConfig.setGroup("org-bytesoft-bytetcc");
-		serviceConfig.setRetries(0);
-		serviceConfig.setTimeout(6000);
+		ServiceConfig<RemoteCoordinator> globalServiceConfig = new ServiceConfig<RemoteCoordinator>();
+		globalServiceConfig.setInterface(RemoteCoordinator.class);
+		globalServiceConfig.setRef(reference);
+		globalServiceConfig.setCluster("failfast");
+		globalServiceConfig.setLoadbalance("bytetcc");
+		globalServiceConfig.setFilter("bytetcc");
+		globalServiceConfig.setGroup("org-bytesoft-bytetcc");
+		globalServiceConfig.setRetries(0);
+		globalServiceConfig.setTimeout(6000);
+
+		ServiceConfig<RemoteCoordinator> applicationServiceConfig = new ServiceConfig<RemoteCoordinator>();
+		applicationServiceConfig.setInterface(RemoteCoordinator.class);
+		applicationServiceConfig.setRef(reference);
+		applicationServiceConfig.setCluster("failfast");
+		applicationServiceConfig.setLoadbalance("bytetcc");
+		applicationServiceConfig.setFilter("bytetcc");
+		applicationServiceConfig.setGroup(CommonUtils.getApplication(this.endpoint));
+		applicationServiceConfig.setRetries(0);
+		applicationServiceConfig.setTimeout(6000);
 
 		try {
 			com.alibaba.dubbo.config.ApplicationConfig applicationConfig = //
 					this.beanFactory.getBean(com.alibaba.dubbo.config.ApplicationConfig.class);
-			serviceConfig.setApplication(applicationConfig);
+			globalServiceConfig.setApplication(applicationConfig);
+			applicationServiceConfig.setApplication(applicationConfig);
 		} catch (NoSuchBeanDefinitionException error) {
 			logger.warn("No configuration of class com.alibaba.dubbo.config.ApplicationConfig was found.");
 		}
@@ -97,7 +95,10 @@ public class CompensableParticipantRegistrant implements SmartInitializingSingle
 		try {
 			com.alibaba.dubbo.config.RegistryConfig registryConfig = //
 					this.beanFactory.getBean(com.alibaba.dubbo.config.RegistryConfig.class);
-			serviceConfig.setRegistry(registryConfig);
+			if (registryConfig != null) {
+				globalServiceConfig.setRegistry(registryConfig);
+				applicationServiceConfig.setRegistry(registryConfig);
+			}
 		} catch (NoSuchBeanDefinitionException error) {
 			logger.warn("No configuration of class com.alibaba.dubbo.config.RegistryConfig was found.");
 		}
@@ -105,39 +106,24 @@ public class CompensableParticipantRegistrant implements SmartInitializingSingle
 		try {
 			com.alibaba.dubbo.config.ProtocolConfig protocolConfig = //
 					this.beanFactory.getBean(com.alibaba.dubbo.config.ProtocolConfig.class);
-			serviceConfig.setProtocol(protocolConfig);
+			globalServiceConfig.setProtocol(protocolConfig);
+			applicationServiceConfig.setProtocol(protocolConfig);
 		} catch (NoSuchBeanDefinitionException error) {
 			logger.warn("No configuration of class com.alibaba.dubbo.config.ProtocolConfig was found.");
 		}
 
-		serviceConfig.export();
+		globalServiceConfig.export();
+		applicationServiceConfig.export();
 
-		String skeletonBeanId = String.format("skeleton@%s", RemoteCoordinator.class.getName());
-		registry.registerSingleton(skeletonBeanId, serviceConfig);
+		String globalSkeletonBeanId = String.format("skeleton@%s", RemoteCoordinator.class.getName());
+		registry.registerSingleton(globalSkeletonBeanId, globalServiceConfig);
+
+		String applicationSkeletonBeanId = //
+				String.format("%s@%s", CommonUtils.getApplication(this.endpoint), RemoteCoordinator.class.getName());
+		registry.registerSingleton(applicationSkeletonBeanId, applicationServiceConfig);
 	}
 
 	public void initializeForConsumer(CompensableBeanRegistry beanRegistry) throws BeansException {
-		// BeanDefinitionRegistry registry = (BeanDefinitionRegistry) beanFactory;
-		// GenericBeanDefinition beanDef = new GenericBeanDefinition();
-		// beanDef.setBeanClass(com.alibaba.dubbo.config.spring.ReferenceBean.class);
-		//
-		// MutablePropertyValues mpv = beanDef.getPropertyValues();
-		// mpv.addPropertyValue("interface", RemoteCoordinator.class.getName());
-		// mpv.addPropertyValue("timeout", "6000");
-		// mpv.addPropertyValue("cluster", "failfast");
-		// mpv.addPropertyValue("loadbalance", "bytetcc");
-		// mpv.addPropertyValue("filter", "bytetcc");
-		// mpv.addPropertyValue("group", "org-bytesoft-bytetcc");
-		// mpv.addPropertyValue("check", "false");
-		// mpv.addPropertyValue("retries", "0");
-		//
-		// String stubBeanId = String.format("stub@%s", RemoteCoordinator.class.getName());
-		// registry.registerBeanDefinition(stubBeanId, beanDef);
-		//
-		// BeanDefinition targetBeanDef = this.applicationContext.getBeanDefinition(targetBeanName);
-		// MutablePropertyValues targetMpv = targetBeanDef.getPropertyValues();
-		// targetMpv.addPropertyValue("consumeCoordinator", new RuntimeBeanReference(stubBeanId));
-
 		SingletonBeanRegistry registry = (SingletonBeanRegistry) this.beanFactory;
 		ReferenceConfig<RemoteCoordinator> referenceConfig = new ReferenceConfig<RemoteCoordinator>();
 		referenceConfig.setInterface(RemoteCoordinator.class);
@@ -161,7 +147,9 @@ public class CompensableParticipantRegistrant implements SmartInitializingSingle
 		try {
 			com.alibaba.dubbo.config.RegistryConfig registryConfig = //
 					this.beanFactory.getBean(com.alibaba.dubbo.config.RegistryConfig.class);
-			referenceConfig.setRegistry(registryConfig);
+			if (registryConfig != null) {
+				referenceConfig.setRegistry(registryConfig);
+			}
 		} catch (NoSuchBeanDefinitionException error) {
 			logger.warn("No configuration of class com.alibaba.dubbo.config.RegistryConfig was found.");
 		}
@@ -183,6 +171,14 @@ public class CompensableParticipantRegistrant implements SmartInitializingSingle
 
 	public void setBeanFactory(BeanFactory beanFactory) throws BeansException {
 		this.beanFactory = beanFactory;
+	}
+
+	public String getEndpoint() {
+		return this.endpoint;
+	}
+
+	public void setEndpoint(String identifier) {
+		this.endpoint = identifier;
 	}
 
 }

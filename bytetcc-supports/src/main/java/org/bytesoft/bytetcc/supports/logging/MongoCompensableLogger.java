@@ -262,7 +262,9 @@ public class MongoCompensableLogger
 			XAResourceArchive resource = participantList.get(i);
 
 			TransactionXid resourceXid = (TransactionXid) resource.getXid();
+			byte[] globalByteArray = resourceXid.getGlobalTransactionId();
 			byte[] branchByteArray = resourceXid.getBranchQualifier();
+			String globalKey = ByteUtils.byteArrayToString(globalByteArray);
 			String branchKey = ByteUtils.byteArrayToString(branchByteArray);
 
 			XAResourceDescriptor descriptor = resource.getDescriptor();
@@ -277,6 +279,9 @@ public class MongoCompensableLogger
 			boolean heuristic = resource.isHeuristic();
 
 			Document participant = new Document();
+			participant.append(CONSTANTS_FD_GLOBAL, globalKey);
+			participant.append(CONSTANTS_FD_BRANCH, branchKey);
+			participant.append(CONSTANTS_FD_SYSTEM, application);
 
 			participant.append("type", descriptorType);
 			participant.append("resource", descriptorKey);
