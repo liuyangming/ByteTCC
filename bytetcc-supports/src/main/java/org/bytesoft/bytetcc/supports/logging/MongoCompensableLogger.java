@@ -671,8 +671,8 @@ public class MongoCompensableLogger
 
 			byte[] globalTransactionId = ByteUtils.stringToByteArray(gxid);
 			byte[] branchQualifier = ByteUtils.stringToByteArray(bxid);
-			TransactionXid globalId = transactionXidFactory.createGlobalXid(globalTransactionId);
-			TransactionXid branchId = transactionXidFactory.createBranchXid(globalId, branchQualifier);
+			TransactionXid globalId = compensableXidFactory.createGlobalXid(globalTransactionId);
+			TransactionXid branchId = compensableXidFactory.createBranchXid(globalId, branchQualifier);
 			participant.setXid(branchId);
 
 			XAResourceDeserializer resourceDeserializer = this.beanFactory.getResourceDeserializer();

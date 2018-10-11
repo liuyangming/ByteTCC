@@ -201,6 +201,8 @@ public class MongoCompensableLock implements TransactionLock, CompensableInstVer
 		String instanceId = this.getTransactionOwnerInMongoDB(transactionXid);
 		if (StringUtils.isBlank(instanceId)) {
 			return false;
+		} else if (StringUtils.equals(instanceId, this.endpoint)) {
+			return true;
 		}
 
 		boolean instanceCrashed = false;

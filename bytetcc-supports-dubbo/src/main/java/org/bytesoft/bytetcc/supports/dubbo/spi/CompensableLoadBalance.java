@@ -24,7 +24,6 @@ import org.bytesoft.bytejta.supports.internal.RemoteCoordinatorRegistry;
 import org.bytesoft.bytetcc.CompensableTransactionImpl;
 import org.bytesoft.bytetcc.supports.dubbo.CompensableBeanRegistry;
 import org.bytesoft.bytetcc.supports.dubbo.ext.ILoadBalancer;
-import org.bytesoft.common.utils.CommonUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableManager;
 import org.bytesoft.transaction.archive.XAResourceArchive;
@@ -76,6 +75,7 @@ public final class CompensableLoadBalance implements LoadBalance {
 		}
 
 		CompensableBeanFactory beanFactory = CompensableBeanRegistry.getInstance().getBeanFactory();
+		RemoteCoordinatorRegistry participantRegistry = RemoteCoordinatorRegistry.getInstance();
 		CompensableManager compensableManager = beanFactory.getCompensableManager();
 		CompensableTransactionImpl compensable = //
 				(CompensableTransactionImpl) compensableManager.getCompensableTransactionQuietly();
@@ -88,15 +88,18 @@ public final class CompensableLoadBalance implements LoadBalance {
 			RemoteAddr invokerAddr = new RemoteAddr();
 			invokerAddr.setServerHost(invokerUrl.getHost());
 			invokerAddr.setServerPort(invokerUrl.getPort());
-			for (int j = 0; participantList != null && j < participantList.size(); j++) {
-				XAResourceArchive archive = participantList.get(j);
-				XAResourceDescriptor descriptor = archive.getDescriptor();
-				String identifier = descriptor.getIdentifier();
-				RemoteAddr remoteAddr = CommonUtils.getRemoteAddr(identifier);
-				if (invokerAddr.equals(remoteAddr)) {
-					return invoker;
-				} // end-if (invokerAddr.equals(remoteAddr))
+
+			RemoteNode remoteNode = participantRegistry.getRemoteNode(invokerAddr);
+			if (remoteNode == null) {
+				continue;
 			}
+
+			XAResourceDescriptor participant = compensable.getRemoteCoordinator(remoteNode.getServiceKey());
+			if (participant == null) {
+				continue;
+			}
+
+			return invoker;
 		}
 
 		this.fireInitializeIfNecessary();

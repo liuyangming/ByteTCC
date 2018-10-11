@@ -307,11 +307,11 @@ public class TransactionRecoveryImpl
 				continue;
 			} catch (SystemException ex) {
 				logger.debug("{}| recover: branch={}, message= {}", ByteUtils.byteArrayToString(xid.getGlobalTransactionId()),
-						ByteUtils.byteArrayToString(xid.getBranchQualifier()), ex.getMessage());
+						ByteUtils.byteArrayToString(xid.getBranchQualifier()), ex.getMessage(), ex);
 				continue;
 			} catch (RuntimeException ex) {
 				logger.debug("{}| recover: branch={}, message= {}", ByteUtils.byteArrayToString(xid.getGlobalTransactionId()),
-						ByteUtils.byteArrayToString(xid.getBranchQualifier()), ex.getMessage());
+						ByteUtils.byteArrayToString(xid.getBranchQualifier()), ex.getMessage(), ex);
 				continue;
 			}
 		}

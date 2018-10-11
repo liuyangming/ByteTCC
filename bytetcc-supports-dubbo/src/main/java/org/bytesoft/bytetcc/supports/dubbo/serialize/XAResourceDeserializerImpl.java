@@ -15,14 +15,10 @@
  */
 package org.bytesoft.bytetcc.supports.dubbo.serialize;
 
-import java.lang.reflect.Proxy;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.StringUtils;
-import org.bytesoft.bytejta.supports.dubbo.DubboRemoteCoordinator;
-import org.bytesoft.bytejta.supports.dubbo.InvocationContext;
-import org.bytesoft.bytejta.supports.dubbo.TransactionBeanRegistry;
 import org.bytesoft.bytejta.supports.internal.RemoteCoordinatorRegistry;
 import org.bytesoft.bytejta.supports.resource.RemoteResourceDescriptor;
 import org.bytesoft.bytetcc.supports.dubbo.CompensableBeanRegistry;
@@ -62,37 +58,13 @@ public class XAResourceDeserializerImpl implements XAResourceDeserializer, Appli
 		if (matcher.find()) {
 			RemoteCoordinatorRegistry registry = RemoteCoordinatorRegistry.getInstance();
 			String application = CommonUtils.getApplication(identifier);
-			RemoteCoordinator participant = StringUtils.isBlank(application) ? null : registry.getParticipant(application);
+			RemoteCoordinator participant = registry.getParticipant(application);
 			if (participant == null) {
-				String[] array = identifier.split("\\:");
-				String serverHost = StringUtils.trimToNull(array[0]);
-				String serviceKey = StringUtils.isBlank(array[1]) || StringUtils.equalsIgnoreCase(array[1], "null") ? null
-						: StringUtils.trimToNull(array[1]);
-				String serverPort = StringUtils.trimToNull(array[2]);
+				RemoteAddr remoteAddr = CommonUtils.getRemoteAddr(identifier);
+				RemoteNode remoteNode = CommonUtils.getRemoteNode(identifier);
 
-				InvocationContext invocationContext = new InvocationContext();
-				invocationContext.setServerHost(serverHost);
-				invocationContext.setServiceKey(serviceKey);
-				invocationContext.setServerPort(Integer.valueOf(serverPort));
-
-				TransactionBeanRegistry beanRegistry = TransactionBeanRegistry.getInstance();
-				RemoteCoordinator consumeCoordinator = beanRegistry.getConsumeCoordinator();
-
-				DubboRemoteCoordinator dubboCoordinator = new DubboRemoteCoordinator();
-				dubboCoordinator.setInvocationContext(invocationContext);
-				dubboCoordinator.setRemoteCoordinator(consumeCoordinator);
-
-				participant = (RemoteCoordinator) Proxy.newProxyInstance(DubboRemoteCoordinator.class.getClassLoader(),
-						new Class[] { RemoteCoordinator.class }, dubboCoordinator);
-				dubboCoordinator.setProxyCoordinator(participant);
-
-				if (StringUtils.isNotBlank(application)) {
-					RemoteAddr remoteAddr = CommonUtils.getRemoteAddr(identifier);
-					RemoteNode remoteNode = CommonUtils.getRemoteNode(identifier);
-
-					this.initializeRemoteParticipantIfNecessary(application);
-					registry.putRemoteNode(remoteAddr, remoteNode);
-				}
+				this.initializeRemoteParticipantIfNecessary(application);
+				registry.putRemoteNode(remoteAddr, remoteNode);
 			}
 
 			RemoteResourceDescriptor descriptor = new RemoteResourceDescriptor();

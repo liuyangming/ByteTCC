@@ -71,7 +71,7 @@ public class CompensableParticipantRegistrant
 		globalServiceConfig.setFilter("bytetcc");
 		globalServiceConfig.setGroup("org-bytesoft-bytetcc");
 		globalServiceConfig.setRetries(0);
-		globalServiceConfig.setTimeout(6000);
+		globalServiceConfig.setTimeout(15000);
 
 		ServiceConfig<RemoteCoordinator> applicationServiceConfig = new ServiceConfig<RemoteCoordinator>();
 		applicationServiceConfig.setInterface(RemoteCoordinator.class);
@@ -81,7 +81,7 @@ public class CompensableParticipantRegistrant
 		applicationServiceConfig.setFilter("bytetcc");
 		applicationServiceConfig.setGroup(CommonUtils.getApplication(this.endpoint));
 		applicationServiceConfig.setRetries(0);
-		applicationServiceConfig.setTimeout(6000);
+		applicationServiceConfig.setTimeout(15000);
 
 		try {
 			com.alibaba.dubbo.config.ApplicationConfig applicationConfig = //
@@ -127,7 +127,7 @@ public class CompensableParticipantRegistrant
 		SingletonBeanRegistry registry = (SingletonBeanRegistry) this.beanFactory;
 		ReferenceConfig<RemoteCoordinator> referenceConfig = new ReferenceConfig<RemoteCoordinator>();
 		referenceConfig.setInterface(RemoteCoordinator.class);
-		referenceConfig.setTimeout(6000);
+		referenceConfig.setTimeout(15000);
 		referenceConfig.setCluster("failfast");
 		referenceConfig.setLoadbalance("bytetcc");
 		referenceConfig.setFilter("bytetcc");
