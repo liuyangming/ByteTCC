@@ -120,8 +120,6 @@ public final class CompensableLoadBalance implements LoadBalance {
 		expectRemoteAddr.setServerHost(serverHost);
 		expectRemoteAddr.setServerPort(serverPort);
 		RemoteNode expectRemoteNode = remoteCoordinatorRegistry.getRemoteNode(expectRemoteAddr);
-		System.out.printf("expect: %s, url.size= %s, method= %s%n", expectRemoteNode, invokers.size(),
-				invocation.getMethodName());
 		if (expectRemoteNode == null) {
 			for (int i = 0; invokers != null && i < invokers.size(); i++) {
 				Invoker<T> invoker = invokers.get(i);
@@ -145,9 +143,6 @@ public final class CompensableLoadBalance implements LoadBalance {
 				URL targetUrl = invoker.getUrl();
 				String targetAddr = targetUrl.getIp();
 				int targetPort = targetUrl.getPort();
-
-				System.out.printf("actual: invoker= %s:%s, url= %s%n", targetAddr, targetPort,
-						targetUrl.getParameter("application"));
 
 				RemoteAddr actualRemoteAddr = new RemoteAddr();
 				actualRemoteAddr.setServerHost(targetAddr);
