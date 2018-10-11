@@ -21,6 +21,7 @@ import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
 import org.bytesoft.common.utils.CommonUtils;
 import org.bytesoft.compensable.aware.CompensableEndpointAware;
+import org.bytesoft.transaction.aware.TransactionEndpointAware;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
@@ -83,13 +84,24 @@ public class CompensableEndpointAutoInjector implements InitializingBean, BeanPo
 
 		String identifier = String.format("%s:%s:%s", host, name, port);
 
-		Map<String, CompensableEndpointAware> beanMap = //
+		Map<String, TransactionEndpointAware> transactionEndpointMap = //
+				this.applicationContext.getBeansOfType(TransactionEndpointAware.class);
+		for (Iterator<Map.Entry<String, TransactionEndpointAware>> itr = transactionEndpointMap.entrySet().iterator(); itr
+				.hasNext();) {
+			Map.Entry<String, TransactionEndpointAware> entry = itr.next();
+			TransactionEndpointAware aware = entry.getValue();
+			aware.setEndpoint(identifier);
+		} // end-for (Iterator<Map.Entry<String, TransactionEndpointAware>> itr = beanMap.entrySet().iterator(); itr.hasNext();)
+
+		Map<String, CompensableEndpointAware> compensableEndpointMap = //
 				this.applicationContext.getBeansOfType(CompensableEndpointAware.class);
-		for (Iterator<Map.Entry<String, CompensableEndpointAware>> itr = beanMap.entrySet().iterator(); itr.hasNext();) {
+		for (Iterator<Map.Entry<String, CompensableEndpointAware>> itr = compensableEndpointMap.entrySet().iterator(); itr
+				.hasNext();) {
 			Map.Entry<String, CompensableEndpointAware> entry = itr.next();
 			CompensableEndpointAware aware = entry.getValue();
 			aware.setEndpoint(identifier);
 		} // end-for (Iterator<Map.Entry<String, CompensableEndpointAware>> itr = beanMap.entrySet().iterator(); itr.hasNext();)
+
 	}
 
 	public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {

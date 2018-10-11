@@ -647,7 +647,7 @@ public class MongoCompensableLogger
 		Document participants = document.get("participants", Document.class);
 		for (Iterator<String> itr = participants.keySet().iterator(); itr.hasNext();) {
 			String key = itr.next();
-			Document element = document.get(key, Document.class);
+			Document element = participants.get(key, Document.class);
 
 			XAResourceArchive participant = new XAResourceArchive();
 
