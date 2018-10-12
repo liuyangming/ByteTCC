@@ -694,27 +694,12 @@ public class CompensableServiceFilter implements Filter {
 
 	private void registerRemoteParticipantIfNecessary(String instanceId) {
 		RemoteCoordinatorRegistry participantRegistry = RemoteCoordinatorRegistry.getInstance();
-		CompensableBeanRegistry beanRegistry = CompensableBeanRegistry.getInstance();
-		RemoteCoordinator consumeCoordinator = beanRegistry.getConsumeCoordinator();
 
 		RemoteAddr remoteAddr = CommonUtils.getRemoteAddr(instanceId);
 		RemoteNode remoteNode = CommonUtils.getRemoteNode(instanceId);
 
 		if (StringUtils.isNotBlank(instanceId) && remoteAddr != null && remoteNode != null
 				&& participantRegistry.containsRemoteNode(remoteAddr) == false) {
-			InvocationContext invocationContext = new InvocationContext();
-			invocationContext.setServerHost(remoteNode.getServerHost());
-			invocationContext.setServiceKey(remoteNode.getServiceKey());
-			invocationContext.setServerPort(remoteNode.getServerPort());
-
-			DubboRemoteCoordinator dubboCoordinator = new DubboRemoteCoordinator();
-			dubboCoordinator.setInvocationContext(invocationContext);
-			dubboCoordinator.setRemoteCoordinator(consumeCoordinator);
-
-			RemoteCoordinator participant = (RemoteCoordinator) Proxy.newProxyInstance(
-					DubboRemoteCoordinator.class.getClassLoader(), new Class[] { RemoteCoordinator.class }, dubboCoordinator);
-			dubboCoordinator.setProxyCoordinator(participant);
-
 			this.initializeRemoteParticipantIfNecessary(remoteNode.getServiceKey());
 			participantRegistry.putRemoteNode(remoteAddr, remoteNode);
 		}
