@@ -45,6 +45,7 @@ public class LocalXADataSourcePostProcessor implements BeanPostProcessor {
 		DataSource delegate = (DataSource) bean;
 		LocalXADataSource dataSource = new LocalXADataSource();
 		dataSource.setDataSource(delegate);
+		dataSource.setBeanName(beanName);
 		dataSource.setTransactionManager(this.transactionManager);
 		return dataSource;
 	}

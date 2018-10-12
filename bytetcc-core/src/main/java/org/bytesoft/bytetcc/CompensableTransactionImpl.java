@@ -57,6 +57,7 @@ import org.bytesoft.transaction.TransactionParticipant;
 import org.bytesoft.transaction.TransactionRepository;
 import org.bytesoft.transaction.archive.XAResourceArchive;
 import org.bytesoft.transaction.remote.RemoteSvc;
+import org.bytesoft.transaction.supports.TransactionExtra;
 import org.bytesoft.transaction.supports.TransactionListener;
 import org.bytesoft.transaction.supports.TransactionListenerAdapter;
 import org.bytesoft.transaction.supports.TransactionResourceListener;
@@ -1243,6 +1244,16 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 		}
 	}
 
+	public TransactionXid getTransactionXid() {
+		if (this.transactionContext.isCompensating() == false) {
+			return null;
+		} else if (this.archive == null) {
+			return null;
+		}
+
+		return (TransactionXid) this.archive.getCompensableXid();
+	}
+
 	public boolean isLocalTransaction() {
 		throw new IllegalStateException();
 	}
@@ -1287,11 +1298,11 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 		this.variables.put(key, variable);
 	}
 
-	public Object getTransactionalExtra() {
+	public TransactionExtra getTransactionalExtra() {
 		return this.transactionMap.get(Thread.currentThread());
 	}
 
-	public void setTransactionalExtra(Object transactionalExtra) {
+	public void setTransactionalExtra(TransactionExtra transactionalExtra) {
 		if (transactionalExtra == null) {
 			this.transactionMap.remove(Thread.currentThread());
 		} else {
