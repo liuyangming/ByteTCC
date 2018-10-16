@@ -15,29 +15,69 @@
  */
 package org.bytesoft.bytetcc.supports.dubbo.config;
 
+import java.util.List;
+
 import org.bytesoft.bytetcc.TransactionManagerImpl;
 import org.bytesoft.bytetcc.UserCompensableImpl;
 import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
+import org.springframework.context.EnvironmentAware;
 import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import org.springframework.context.annotation.ImportResource;
+import org.springframework.core.env.Environment;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.transaction.annotation.TransactionManagementConfigurer;
 import org.springframework.transaction.jta.JtaTransactionManager;
 
+import com.mongodb.ServerAddress;
+import com.mongodb.client.MongoClients;
+
 @ImportResource({ "classpath:bytetcc-supports-dubbo.xml" })
 @EnableAspectJAutoProxy(proxyTargetClass = true)
 @EnableTransactionManagement
-public class DubboSupportConfiguration implements TransactionManagementConfigurer, ApplicationContextAware {
+public class DubboSupportConfiguration implements TransactionManagementConfigurer, ApplicationContextAware, EnvironmentAware {
+	static final String CONSTANT_MONGODBURI = "spring.data.mongodb.uri";
+
 	private ApplicationContext applicationContext;
+	private Environment environment;
 
 	public PlatformTransactionManager annotationDrivenTransactionManager() {
 		JtaTransactionManager jtaTransactionManager = new JtaTransactionManager();
 		jtaTransactionManager.setTransactionManager(this.applicationContext.getBean(TransactionManagerImpl.class));
 		jtaTransactionManager.setUserTransaction(this.applicationContext.getBean(UserCompensableImpl.class));
 		return jtaTransactionManager;
+	}
+
+	@ConditionalOnMissingBean(com.mongodb.client.MongoClient.class)
+	@ConditionalOnProperty(CONSTANT_MONGODBURI)
+	@org.springframework.context.annotation.Bean
+	public com.mongodb.client.MongoClient mongoClient(@Autowired(required = false) com.mongodb.MongoClient mongoClient) {
+		if (mongoClient == null) {
+			return MongoClients.create(this.environment.getProperty(CONSTANT_MONGODBURI));
+		} else {
+			List<ServerAddress> addressList = mongoClient.getAllAddress();
+			StringBuilder ber = new StringBuilder();
+			for (int i = 0; addressList != null && i < addressList.size(); i++) {
+				ServerAddress address = addressList.get(i);
+				String host = address.getHost();
+				int port = address.getPort();
+				if (i == 0) {
+					ber.append(host).append(":").append(port);
+				} else {
+					ber.append(",").append(host).append(":").append(port);
+				}
+			}
+			return MongoClients.create(String.format("mongodb://%s", ber.toString()));
+		}
+	}
+
+	public void setEnvironment(Environment environment) {
+		this.environment = environment;
 	}
 
 	public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {

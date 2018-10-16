@@ -46,7 +46,17 @@ public class CompensableEndpointAutoInjector implements InitializingBean, BeanPo
 		try {
 			com.alibaba.dubbo.config.ApplicationConfig applicationConfig = //
 					this.applicationContext.getBean(com.alibaba.dubbo.config.ApplicationConfig.class);
+			if (StringUtils.isBlank(applicationConfig.getName())) {
+				throw new IllegalStateException();
+			}
 			name = String.valueOf(applicationConfig.getName());
+		} catch (IllegalStateException ex) {
+			String application = ConfigUtils.getProperty("dubbo.application.name");
+			if (StringUtils.isBlank(application)) {
+				throw new FatalBeanException("No configuration of class com.alibaba.dubbo.config.ApplicationConfig was found.");
+			}
+
+			name = application;
 		} catch (NoSuchBeanDefinitionException error) {
 			String application = ConfigUtils.getProperty("dubbo.application.name");
 			if (StringUtils.isBlank(application)) {
@@ -60,8 +70,18 @@ public class CompensableEndpointAutoInjector implements InitializingBean, BeanPo
 		try {
 			com.alibaba.dubbo.config.ProtocolConfig protocolConfig = //
 					this.applicationContext.getBean(com.alibaba.dubbo.config.ProtocolConfig.class);
+			if (protocolConfig.getPort() == null) {
+				throw new IllegalStateException();
+			}
 			port = String.valueOf(protocolConfig.getPort());
 		} catch (NoSuchBeanDefinitionException error) {
+			String serverPort = ConfigUtils.getProperty("dubbo.protocol.dubbo.port");
+			if (StringUtils.isBlank(serverPort)) {
+				throw new FatalBeanException("No configuration of class com.alibaba.dubbo.config.ProtocolConfig was found.");
+			}
+
+			port = serverPort;
+		} catch (IllegalStateException error) {
 			String serverPort = ConfigUtils.getProperty("dubbo.protocol.dubbo.port");
 			if (StringUtils.isBlank(serverPort)) {
 				throw new FatalBeanException("No configuration of class com.alibaba.dubbo.config.ProtocolConfig was found.");
