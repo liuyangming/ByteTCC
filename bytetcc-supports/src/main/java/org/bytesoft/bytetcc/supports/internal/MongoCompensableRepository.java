@@ -155,7 +155,7 @@ public class MongoCompensableRepository implements TransactionRepository, Compen
 			int endIndex = target.indexOf("/", startIdx);
 			String global = endIndex == -1 ? target.substring(startIdx) : target.substring(startIdx, endIndex);
 			byte[] globalByteArray = ByteUtils.stringToByteArray(global);
-			TransactionXid transactionXid = xidFactory.createGlobalXid(globalByteArray);
+			final TransactionXid transactionXid = xidFactory.createGlobalXid(globalByteArray);
 
 			CompensableTransactionImpl transaction = //
 					(CompensableTransactionImpl) this.transactionMap.get(transactionXid);
