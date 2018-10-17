@@ -707,26 +707,32 @@ public class CompensableServiceFilter implements Filter {
 
 	private void initializeRemoteParticipantIfNecessary(RemoteAddr remoteAddr) throws RpcException {
 		RemoteCoordinatorRegistry participantRegistry = RemoteCoordinatorRegistry.getInstance();
-		String serverHost = remoteAddr.getServerHost();
-		int serverPort = remoteAddr.getServerPort();
-		final String target = String.format("%s:%s", serverHost, serverPort);
-		synchronized (target) {
-			RemoteCoordinator participant = participantRegistry.getPhysicalInstance(remoteAddr);
-			if (participant == null) {
-				this.processInitRemoteParticipantIfNecessary(remoteAddr);
-			}
-		} // end-synchronized (target)
+		RemoteCoordinator physicalInst = participantRegistry.getPhysicalInstance(remoteAddr);
+		if (physicalInst == null) {
+			String serverHost = remoteAddr.getServerHost();
+			int serverPort = remoteAddr.getServerPort();
+			final String target = String.format("%s:%s", serverHost, serverPort).intern();
+			synchronized (target) {
+				RemoteCoordinator participant = participantRegistry.getPhysicalInstance(remoteAddr);
+				if (participant == null) {
+					this.processInitRemoteParticipantIfNecessary(remoteAddr);
+				}
+			} // end-synchronized (target)
+		} // end-if (physicalInst == null)
 	}
 
 	private void initializeRemoteParticipantIfNecessary(final String system) throws RpcException {
 		RemoteCoordinatorRegistry participantRegistry = RemoteCoordinatorRegistry.getInstance();
-		final String application = StringUtils.trimToEmpty(system);
-		synchronized (application) {
-			RemoteCoordinator participant = participantRegistry.getParticipant(application);
-			if (participant == null) {
-				this.processInitRemoteParticipantIfNecessary(application);
-			}
-		} // end-synchronized (target)
+		final String application = StringUtils.trimToEmpty(system).intern();
+		RemoteCoordinator remoteParticipant = participantRegistry.getParticipant(application);
+		if (remoteParticipant == null) {
+			synchronized (application) {
+				RemoteCoordinator participant = participantRegistry.getParticipant(application);
+				if (participant == null) {
+					this.processInitRemoteParticipantIfNecessary(application);
+				}
+			} // end-synchronized (target)
+		} // end-if (remoteParticipant == null)
 	}
 
 	private void processInitRemoteParticipantIfNecessary(RemoteAddr remoteAddr) throws RpcException {

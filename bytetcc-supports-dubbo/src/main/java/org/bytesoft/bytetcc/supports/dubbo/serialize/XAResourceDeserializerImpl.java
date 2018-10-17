@@ -81,13 +81,16 @@ public class XAResourceDeserializerImpl implements XAResourceDeserializer, Appli
 
 	private void initializeRemoteParticipantIfNecessary(final String system) throws RpcException {
 		RemoteCoordinatorRegistry participantRegistry = RemoteCoordinatorRegistry.getInstance();
-		final String application = StringUtils.trimToEmpty(system);
-		synchronized (application) {
-			RemoteCoordinator participant = participantRegistry.getParticipant(application);
-			if (participant == null) {
-				this.processInitRemoteParticipantIfNecessary(application);
-			}
-		} // end-synchronized (target)
+		final String application = StringUtils.trimToEmpty(system).intern();
+		RemoteCoordinator remoteParticipant = participantRegistry.getParticipant(application);
+		if (remoteParticipant == null) {
+			synchronized (application) {
+				RemoteCoordinator participant = participantRegistry.getParticipant(application);
+				if (participant == null) {
+					this.processInitRemoteParticipantIfNecessary(application);
+				}
+			} // end-synchronized (target)
+		} // end-if (remoteParticipant == null)
 	}
 
 	private void processInitRemoteParticipantIfNecessary(String application) {
