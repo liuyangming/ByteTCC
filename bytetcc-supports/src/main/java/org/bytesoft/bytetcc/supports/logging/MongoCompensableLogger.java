@@ -81,7 +81,7 @@ public class MongoCompensableLogger
 	private CompensableInstVersionManager versionManager;
 	@javax.inject.Inject
 	private CompensableBeanFactory beanFactory;
-	private volatile boolean initializeEnabled = true;
+	private volatile boolean initializeEnabled = false;
 
 	public void afterSingletonsInstantiated() {
 		try {
