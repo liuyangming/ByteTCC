@@ -66,7 +66,6 @@ import com.mongodb.client.result.UpdateResult;
 public class MongoCompensableLogger
 		implements CompensableLogger, CompensableEndpointAware, CompensableBeanFactoryAware, SmartInitializingSingleton {
 	static Logger logger = LoggerFactory.getLogger(MongoCompensableLogger.class);
-	static final String CONSTANTS_DB_NAME = "bytetcc";
 	static final String CONSTANTS_TB_TRANSACTIONS = "transactions";
 	static final String CONSTANTS_FD_GLOBAL = "gxid";
 	static final String CONSTANTS_FD_BRANCH = "bxid";
@@ -81,7 +80,7 @@ public class MongoCompensableLogger
 	private CompensableInstVersionManager versionManager;
 	@javax.inject.Inject
 	private CompensableBeanFactory beanFactory;
-	private volatile boolean initializeEnabled = false;
+	private volatile boolean initializeEnabled = true;
 
 	public void afterSingletonsInstantiated() {
 		try {
@@ -93,47 +92,13 @@ public class MongoCompensableLogger
 
 	public void afterPropertiesSet() throws Exception {
 		if (this.initializeEnabled) {
-			this.initializeIndexIfNecessary();
-		}
-	}
-
-	private void initializeIndexIfNecessary() {
-		this.createTransactionsGlobalTxKeyIndexIfNecessary();
-		this.createTransactionsApplicationIndexIfNecessary();
-	}
-
-	private void createTransactionsApplicationIndexIfNecessary() {
-		MongoDatabase database = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
-		MongoCollection<Document> transactions = database.getCollection(CONSTANTS_TB_TRANSACTIONS);
-		ListIndexesIterable<Document> transactionIndexList = transactions.listIndexes();
-		boolean applicationIndexExists = false;
-		MongoCursor<Document> applicationCursor = null;
-		try {
-			applicationCursor = transactionIndexList.iterator();
-			while (applicationIndexExists == false && applicationCursor.hasNext()) {
-				Document document = applicationCursor.next();
-				Boolean unique = document.getBoolean("unique");
-				Document key = (Document) document.get("key");
-
-				boolean systemExists = key.containsKey(CONSTANTS_FD_SYSTEM);
-				boolean lengthEquals = key.size() == 1;
-				applicationIndexExists = lengthEquals && systemExists;
-
-				if (applicationIndexExists && unique != null && unique) {
-					throw new IllegalStateException();
-				}
-			}
-		} finally {
-			IOUtils.closeQuietly(applicationCursor);
-		}
-
-		if (applicationIndexExists == false) {
-			transactions.createIndex(new Document(CONSTANTS_FD_SYSTEM, 1), new IndexOptions().unique(false));
+			this.createTransactionsGlobalTxKeyIndexIfNecessary();
 		}
 	}
 
 	private void createTransactionsGlobalTxKeyIndexIfNecessary() {
-		MongoDatabase database = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
+		String databaseName = CommonUtils.getApplication(this.endpoint).replaceAll("\\W", "_");
+		MongoDatabase database = this.mongoClient.getDatabase(databaseName);
 		MongoCollection<Document> transactions = database.getCollection(CONSTANTS_TB_TRANSACTIONS);
 		ListIndexesIterable<Document> transactionIndexList = transactions.listIndexes();
 		boolean transactionIndexExists = false;
@@ -166,7 +131,8 @@ public class MongoCompensableLogger
 
 	public void createTransaction(TransactionArchive archive) {
 		try {
-			MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
+			String databaseName = CommonUtils.getApplication(this.endpoint).replaceAll("\\W", "_");
+			MongoDatabase mdb = this.mongoClient.getDatabase(databaseName);
 			MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_TRANSACTIONS);
 
 			long version = this.versionManager.getInstanceVersion(this.endpoint);
@@ -211,7 +177,9 @@ public class MongoCompensableLogger
 
 	public void updateTransaction(TransactionArchive archive) {
 		try {
-			MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
+			String application = CommonUtils.getApplication(this.endpoint);
+			String databaseName = application.replaceAll("\\W", "_");
+			MongoDatabase mdb = this.mongoClient.getDatabase(databaseName);
 			MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_TRANSACTIONS);
 
 			TransactionXid globalXid = (TransactionXid) archive.getXid();
@@ -222,7 +190,6 @@ public class MongoCompensableLogger
 			document.append("$set", this.constructMongoDocument(archive));
 
 			Bson globalFilter = Filters.eq(CONSTANTS_FD_GLOBAL, identifier);
-			String application = CommonUtils.getApplication(this.endpoint);
 			Bson systemFilter = Filters.eq(CONSTANTS_FD_SYSTEM, application);
 			UpdateResult result = collection.updateOne(Filters.and(globalFilter, systemFilter), document);
 			if (result.getMatchedCount() != 1) {
@@ -362,8 +329,8 @@ public class MongoCompensableLogger
 			String identifier = ByteUtils.byteArrayToString(global);
 
 			String application = CommonUtils.getApplication(this.endpoint);
-
-			MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
+			String databaseName = application.replaceAll("\\W", "_");
+			MongoDatabase mdb = this.mongoClient.getDatabase(databaseName);
 			MongoCollection<Document> transactions = mdb.getCollection(CONSTANTS_TB_TRANSACTIONS);
 
 			Bson globalFilter = Filters.eq(CONSTANTS_FD_GLOBAL, identifier);
@@ -432,7 +399,8 @@ public class MongoCompensableLogger
 
 		participant.append("modified", this.endpoint);
 
-		MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
+		String databaseName = application.replaceAll("\\W", "_");
+		MongoDatabase mdb = this.mongoClient.getDatabase(databaseName);
 		MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_TRANSACTIONS);
 
 		Bson globalFilter = Filters.eq(CONSTANTS_FD_GLOBAL, globalKey);
@@ -461,11 +429,13 @@ public class MongoCompensableLogger
 			String globalKey = ByteUtils.byteArrayToString(global);
 			String branchKey = ByteUtils.byteArrayToString(branch);
 
-			MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
+			String application = CommonUtils.getApplication(this.endpoint);
+
+			String databaseName = application.replaceAll("\\W", "_");
+			MongoDatabase mdb = this.mongoClient.getDatabase(databaseName);
 			MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_TRANSACTIONS);
 
 			Bson globalFilter = Filters.eq(CONSTANTS_FD_GLOBAL, globalKey);
-			String application = CommonUtils.getApplication(this.endpoint);
 			Bson systemFilter = Filters.eq(CONSTANTS_FD_SYSTEM, application);
 			Bson filter = Filters.and(globalFilter, systemFilter);
 
@@ -558,7 +528,8 @@ public class MongoCompensableLogger
 		compensable.append("interface", method.getDeclaringClass().getName());
 		compensable.append("method", methodDesc);
 
-		MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
+		String databaseName = application.replaceAll("\\W", "_");
+		MongoDatabase mdb = this.mongoClient.getDatabase(databaseName);
 		MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_TRANSACTIONS);
 		Bson globalFilter = Filters.eq(CONSTANTS_FD_GLOBAL, globalKey);
 		Bson systemFilter = Filters.eq(CONSTANTS_FD_SYSTEM, application);
@@ -581,14 +552,12 @@ public class MongoCompensableLogger
 	public void recover(TransactionRecoveryCallback callback) {
 		MongoCursor<Document> transactionCursor = null;
 		try {
-			MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
+			String application = CommonUtils.getApplication(this.endpoint);
+			String databaseName = application.replaceAll("\\W", "_");
+			MongoDatabase mdb = this.mongoClient.getDatabase(databaseName);
 			MongoCollection<Document> transactions = mdb.getCollection(CONSTANTS_TB_TRANSACTIONS);
 
-			String application = CommonUtils.getApplication(this.endpoint);
-			Bson systemFilter = Filters.eq(CONSTANTS_FD_SYSTEM, application);
-			Bson coordinatorFilter = Filters.eq("coordinator", true);
-
-			FindIterable<Document> transactionItr = transactions.find(Filters.and(systemFilter, coordinatorFilter));
+			FindIterable<Document> transactionItr = transactions.find(Filters.eq("coordinator", true));
 			for (transactionCursor = transactionItr.iterator(); transactionCursor.hasNext();) {
 				Document document = transactionCursor.next();
 				boolean error = document.getBoolean("error");

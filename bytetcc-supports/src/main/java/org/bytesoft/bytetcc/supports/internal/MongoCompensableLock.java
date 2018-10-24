@@ -64,7 +64,6 @@ public class MongoCompensableLock implements TransactionLock, CompensableInstVer
 		CompensableBeanFactoryAware, CuratorWatcher, ConnectionStateListener, BackgroundCallback, SmartInitializingSingleton {
 	static Logger logger = LoggerFactory.getLogger(MongoCompensableLock.class);
 	static final String CONSTANTS_ROOT_PATH = "/org/bytesoft/bytetcc";
-	static final String CONSTANTS_DB_NAME = "bytetcc";
 	static final String CONSTANTS_TB_LOCKS = "locks";
 	static final String CONSTANTS_TB_INSTS = "instances";
 	static final String CONSTANTS_FD_GLOBAL = "gxid";
@@ -139,7 +138,8 @@ public class MongoCompensableLock implements TransactionLock, CompensableInstVer
 	}
 
 	private void createLocksIndexIfNecessary() {
-		MongoDatabase database = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
+		String databaseName = CommonUtils.getApplication(this.endpoint).replaceAll("\\W", "_");
+		MongoDatabase database = this.mongoClient.getDatabase(databaseName);
 		MongoCollection<Document> locks = database.getCollection(CONSTANTS_TB_LOCKS);
 		ListIndexesIterable<Document> lockIndexList = locks.listIndexes();
 		boolean transactionIndexExists = false;
@@ -171,7 +171,8 @@ public class MongoCompensableLock implements TransactionLock, CompensableInstVer
 	}
 
 	private void initializeClusterInstanceVersion() {
-		MongoDatabase database = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
+		String databaseName = CommonUtils.getApplication(this.endpoint).replaceAll("\\W", "_");
+		MongoDatabase database = this.mongoClient.getDatabase(databaseName);
 		MongoCollection<Document> instances = database.getCollection(CONSTANTS_TB_INSTS);
 
 		Bson condition = Filters.eq("_id", this.endpoint);
@@ -222,10 +223,10 @@ public class MongoCompensableLock implements TransactionLock, CompensableInstVer
 		String instanceId = ByteUtils.byteArrayToString(global);
 
 		try {
-			MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
-			MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_LOCKS);
-
 			String application = CommonUtils.getApplication(this.endpoint);
+			String databaseName = application.replaceAll("\\W", "_");
+			MongoDatabase mdb = this.mongoClient.getDatabase(databaseName);
+			MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_LOCKS);
 
 			Document document = new Document();
 			document.append(CONSTANTS_FD_GLOBAL, instanceId);
@@ -251,10 +252,10 @@ public class MongoCompensableLock implements TransactionLock, CompensableInstVer
 		String instanceId = ByteUtils.byteArrayToString(global);
 
 		try {
-			MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
-			MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_LOCKS);
-
 			String application = CommonUtils.getApplication(this.endpoint);
+			String databaseName = application.replaceAll("\\W", "_");
+			MongoDatabase mdb = this.mongoClient.getDatabase(databaseName);
+			MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_LOCKS);
 
 			Bson globalFilter = Filters.eq(CONSTANTS_FD_GLOBAL, instanceId);
 			Bson systemFilter = Filters.eq(CONSTANTS_FD_SYSTEM, application);
@@ -275,10 +276,10 @@ public class MongoCompensableLock implements TransactionLock, CompensableInstVer
 		String instanceId = ByteUtils.byteArrayToString(global);
 
 		try {
-			MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
-			MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_LOCKS);
-
 			String application = CommonUtils.getApplication(this.endpoint);
+			String databaseName = application.replaceAll("\\W", "_");
+			MongoDatabase mdb = this.mongoClient.getDatabase(databaseName);
+			MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_LOCKS);
 
 			Bson globalFilter = Filters.eq(CONSTANTS_FD_GLOBAL, instanceId);
 			Bson systemFilter = Filters.eq(CONSTANTS_FD_SYSTEM, application);
@@ -306,13 +307,13 @@ public class MongoCompensableLock implements TransactionLock, CompensableInstVer
 		String instanceId = ByteUtils.byteArrayToString(global);
 
 		try {
-			MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
+			String application = CommonUtils.getApplication(this.endpoint);
+			String databaseName = application.replaceAll("\\W", "_");
+			MongoDatabase mdb = this.mongoClient.getDatabase(databaseName);
 			MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_LOCKS);
 
-			String system = CommonUtils.getApplication(this.endpoint);
-
 			Bson globalFilter = Filters.eq(CONSTANTS_FD_GLOBAL, instanceId);
-			Bson systemFilter = Filters.eq(CONSTANTS_FD_SYSTEM, system);
+			Bson systemFilter = Filters.eq(CONSTANTS_FD_SYSTEM, application);
 			Bson instIdFilter = Filters.eq("identifier", identifier);
 
 			DeleteResult result = collection.deleteOne(Filters.and(globalFilter, systemFilter, instIdFilter));

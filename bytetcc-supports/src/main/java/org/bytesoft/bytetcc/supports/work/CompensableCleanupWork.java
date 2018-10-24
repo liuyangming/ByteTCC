@@ -40,7 +40,6 @@ import com.mongodb.client.model.Filters;
 public class CompensableCleanupWork
 		implements Work, LocalResourceCleaner, CompensableEndpointAware, CompensableBeanFactoryAware {
 	static Logger logger = LoggerFactory.getLogger(MongoCompensableLogger.class);
-	static final String CONSTANTS_DB_NAME = "bytetcc";
 	static final String CONSTANTS_TB_REMOVEDRESES = "removedreses";
 	static final String CONSTANTS_FD_GLOBAL = "gxid";
 	static final String CONSTANTS_FD_BRANCH = "bxid";
@@ -60,10 +59,10 @@ public class CompensableCleanupWork
 
 	public void forget(Xid xid, String resourceId) throws RuntimeException {
 		try {
-			MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
-			MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_REMOVEDRESES);
-
 			String application = CommonUtils.getApplication(this.endpoint);
+			String databaseName = application.replaceAll("\\W", "_");
+			MongoDatabase mdb = this.mongoClient.getDatabase(databaseName);
+			MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_REMOVEDRESES);
 
 			byte[] global = xid.getGlobalTransactionId();
 			byte[] branch = xid.getBranchQualifier();
@@ -110,7 +109,8 @@ public class CompensableCleanupWork
 	}
 
 	public int timingExecution(int batchSize) {
-		MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
+		String databaseName = CommonUtils.getApplication(this.endpoint).replaceAll("\\W", "_");
+		MongoDatabase mdb = this.mongoClient.getDatabase(databaseName);
 		MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_REMOVEDRESES);
 
 		int length = 0;
@@ -120,8 +120,7 @@ public class CompensableCleanupWork
 		Map<String, List<Xid>> resource2XidListMap = new HashMap<String, List<Xid>>();
 		MongoCursor<Document> cursor = null;
 		try {
-			Bson systemFilter = Filters.eq(CONSTANTS_FD_SYSTEM, CommonUtils.getApplication(this.endpoint));
-			cursor = collection.find(systemFilter).limit(batchSize).iterator();
+			cursor = collection.find().limit(batchSize).iterator();
 			for (; cursor.hasNext(); length++) {
 				Document document = cursor.next();
 				String globalValue = document.getString(CONSTANTS_FD_GLOBAL);

@@ -71,7 +71,6 @@ public class MongoCompensableRepository implements TransactionRepository, Compen
 		CompensableBeanFactoryAware, CuratorWatcher, BackgroundCallback, SmartInitializingSingleton {
 	static Logger logger = LoggerFactory.getLogger(MongoCompensableRepository.class);
 	static final String CONSTANTS_ROOT_PATH = "/org/bytesoft/bytetcc";
-	static final String CONSTANTS_DB_NAME = "bytetcc";
 	static final String CONSTANTS_TB_TRANSACTIONS = "transactions";
 	static final String CONSTANTS_FD_GLOBAL = "gxid";
 	static final String CONSTANTS_FD_BRANCH = "bxid";
@@ -244,7 +243,8 @@ public class MongoCompensableRepository implements TransactionRepository, Compen
 
 			String application = CommonUtils.getApplication(this.endpoint);
 
-			MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
+			String databaseName = application.replaceAll("\\W", "_");
+			MongoDatabase mdb = this.mongoClient.getDatabase(databaseName);
 			MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_TRANSACTIONS);
 
 			Document document = new Document();
@@ -275,10 +275,12 @@ public class MongoCompensableRepository implements TransactionRepository, Compen
 
 		MongoCursor<Document> transactionCursor = null;
 		try {
-			MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
+			String application = CommonUtils.getApplication(this.endpoint);
+
+			String databaseName = application.replaceAll("\\W", "_");
+			MongoDatabase mdb = this.mongoClient.getDatabase(databaseName);
 			MongoCollection<Document> transactions = mdb.getCollection(CONSTANTS_TB_TRANSACTIONS);
 
-			String application = CommonUtils.getApplication(this.endpoint);
 			byte[] global = xid.getGlobalTransactionId();
 
 			Bson globalFilter = Filters.eq(CONSTANTS_FD_GLOBAL, ByteUtils.byteArrayToString(global));
@@ -320,7 +322,8 @@ public class MongoCompensableRepository implements TransactionRepository, Compen
 
 			int status = archive.getCompensableStatus();
 
-			MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
+			String databaseName = CommonUtils.getApplication(this.endpoint).replaceAll("\\W", "_");
+			MongoDatabase mdb = this.mongoClient.getDatabase(databaseName);
 			MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_TRANSACTIONS);
 
 			Document target = new Document();
@@ -354,10 +357,11 @@ public class MongoCompensableRepository implements TransactionRepository, Compen
 
 		MongoCursor<Document> transactionCursor = null;
 		try {
-			MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
+			String application = CommonUtils.getApplication(this.endpoint);
+			String databaseName = application.replaceAll("\\W", "_");
+			MongoDatabase mdb = this.mongoClient.getDatabase(databaseName);
 			MongoCollection<Document> transactions = mdb.getCollection(CONSTANTS_TB_TRANSACTIONS);
 
-			String application = CommonUtils.getApplication(this.endpoint);
 			byte[] global = xid.getGlobalTransactionId();
 
 			Bson globalFilter = Filters.eq(CONSTANTS_FD_GLOBAL, ByteUtils.byteArrayToString(global));
@@ -399,16 +403,12 @@ public class MongoCompensableRepository implements TransactionRepository, Compen
 
 		MongoCursor<Document> transactionCursor = null;
 		try {
-			MongoDatabase mdb = this.mongoClient.getDatabase(CONSTANTS_DB_NAME);
+			String application = CommonUtils.getApplication(this.endpoint);
+			String databaseName = application.replaceAll("\\W", "_");
+			MongoDatabase mdb = this.mongoClient.getDatabase(databaseName);
 			MongoCollection<Document> transactions = mdb.getCollection(CONSTANTS_TB_TRANSACTIONS);
 
-			String application = CommonUtils.getApplication(this.endpoint);
-
-			Bson systemFilter = Filters.eq(CONSTANTS_FD_SYSTEM, application);
-			Bson coordinatorFilter = Filters.eq("coordinator", true);
-
-			FindIterable<Document> transactionItr = //
-					transactions.find(Filters.and(systemFilter, coordinatorFilter));
+			FindIterable<Document> transactionItr = transactions.find(Filters.eq("coordinator", true));
 			for (transactionCursor = transactionItr.iterator(); transactionCursor.hasNext();) {
 				Document document = transactionCursor.next();
 				boolean error = document.getBoolean("error");

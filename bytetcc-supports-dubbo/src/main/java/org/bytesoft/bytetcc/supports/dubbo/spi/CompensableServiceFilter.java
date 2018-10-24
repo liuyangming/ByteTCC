@@ -747,7 +747,7 @@ public class CompensableServiceFilter implements Filter {
 
 			ReferenceConfig<RemoteCoordinator> referenceConfig = new ReferenceConfig<RemoteCoordinator>();
 			referenceConfig.setInterface(RemoteCoordinator.class);
-			referenceConfig.setTimeout(30 * 1000);
+			referenceConfig.setTimeout(6 * 1000);
 			referenceConfig.setCluster("failfast");
 			referenceConfig.setFilter("bytetcc");
 			referenceConfig.setGroup("org-bytesoft-bytetcc");
@@ -785,7 +785,7 @@ public class CompensableServiceFilter implements Filter {
 
 			ReferenceConfig<RemoteCoordinator> referenceConfig = new ReferenceConfig<RemoteCoordinator>();
 			referenceConfig.setInterface(RemoteCoordinator.class);
-			referenceConfig.setTimeout(30 * 1000);
+			referenceConfig.setTimeout(6 * 1000);
 			referenceConfig.setCluster("failfast");
 			referenceConfig.setFilter("bytetcc");
 			referenceConfig.setGroup(application);
