@@ -125,8 +125,8 @@
 			<!-- spring-cloud -->
 			<dependency>
 				<groupId>org.springframework.cloud</groupId>
-				<artifactId>spring-cloud-starter-eureka</artifactId>
-				<version>2.0.0.M2</version>
+				<artifactId>spring-cloud-starter-netflix-eureka-server</artifactId>
+				<version>2.0.2.RELEASE</version>
 			</dependency>
 			<dependency>
 				<groupId>org.springframework.cloud</groupId>
@@ -135,18 +135,18 @@
 			</dependency>
 			<dependency>
 				<groupId>org.springframework.cloud</groupId>
-				<artifactId>spring-cloud-starter-ribbon</artifactId>
-				<version>2.0.0.M2</version>
+				<artifactId>spring-cloud-starter-netflix-ribbon</artifactId>
+				<version>2.0.2.RELEASE</version>
 			</dependency>
 			<dependency>
 				<groupId>org.springframework.cloud</groupId>
-				<artifactId>spring-cloud-starter-feign</artifactId>
-				<version>2.0.0.M2</version>
+				<artifactId>spring-cloud-starter-openfeign</artifactId>
+				<version>2.0.2.RELEASE</version>
 			</dependency>
 			<dependency>
 				<groupId>org.springframework.cloud</groupId>
-				<artifactId>spring-cloud-starter-hystrix</artifactId>
-				<version>2.0.0.M2</version>
+				<artifactId>spring-cloud-starter-netflix-hystrix</artifactId>
+				<version>2.0.2.RELEASE</version>
 			</dependency>
 			<dependency>
 				<groupId>org.springframework.cloud</groupId>
