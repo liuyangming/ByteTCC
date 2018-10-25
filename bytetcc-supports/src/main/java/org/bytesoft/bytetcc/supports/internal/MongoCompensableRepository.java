@@ -18,8 +18,6 @@ package org.bytesoft.bytetcc.supports.internal;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 import javax.transaction.Status;
 import javax.transaction.SystemException;
@@ -38,6 +36,7 @@ import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher.Event.EventType;
 import org.bson.Document;
 import org.bson.conversions.Bson;
+import org.bytesoft.bytetcc.CompensableManagerImpl;
 import org.bytesoft.bytetcc.CompensableTransactionImpl;
 import org.bytesoft.bytetcc.supports.CompensableRolledbackMarker;
 import org.bytesoft.bytetcc.supports.logging.MongoCompensableLogger;
@@ -75,8 +74,6 @@ public class MongoCompensableRepository implements TransactionRepository, Compen
 	static final String CONSTANTS_FD_GLOBAL = "gxid";
 	static final String CONSTANTS_FD_BRANCH = "bxid";
 	static final String CONSTANTS_FD_SYSTEM = "system";
-
-	private final Map<TransactionXid, Transaction> transactionMap = new ConcurrentHashMap<TransactionXid, Transaction>();
 
 	@javax.annotation.Resource
 	private CuratorFramework curatorFramework;
@@ -156,8 +153,9 @@ public class MongoCompensableRepository implements TransactionRepository, Compen
 			byte[] globalByteArray = ByteUtils.stringToByteArray(global);
 			final TransactionXid transactionXid = xidFactory.createGlobalXid(globalByteArray);
 
+			CompensableManagerImpl compensableManager = (CompensableManagerImpl) this.beanFactory.getCompensableManager();
 			CompensableTransactionImpl transaction = //
-					(CompensableTransactionImpl) this.transactionMap.get(transactionXid);
+					(CompensableTransactionImpl) compensableManager.getTransaction(transactionXid);
 			if (transaction != null) {
 				transaction.markBusinessStageRollbackOnly(transactionXid);
 			} // end-if (transaction != null)
@@ -266,10 +264,20 @@ public class MongoCompensableRepository implements TransactionRepository, Compen
 	}
 
 	public void putTransaction(TransactionXid xid, Transaction transaction) {
-		this.transactionMap.put(xid, transaction);
 	}
 
 	public Transaction getTransaction(TransactionXid xid) throws TransactionException {
+		CompensableManagerImpl compensableManager = //
+				(CompensableManagerImpl) this.beanFactory.getCompensableManager();
+		Transaction transaction = compensableManager.getTransaction(xid);
+		if (transaction != null) {
+			return transaction;
+		}
+
+		return this.getTransactionFromMongoDB(xid);
+	}
+
+	private Transaction getTransactionFromMongoDB(TransactionXid xid) throws TransactionException {
 		TransactionRecovery compensableRecovery = this.beanFactory.getCompensableRecovery();
 		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
 
@@ -309,7 +317,7 @@ public class MongoCompensableRepository implements TransactionRepository, Compen
 	}
 
 	public Transaction removeTransaction(TransactionXid xid) {
-		return this.transactionMap.remove(xid);
+		return null;
 	}
 
 	public void putErrorTransaction(TransactionXid transactionXid, Transaction transaction) {

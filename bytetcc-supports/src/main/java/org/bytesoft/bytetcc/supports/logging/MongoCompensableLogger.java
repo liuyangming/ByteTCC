@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -51,7 +52,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.SmartInitializingSingleton;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mongodb.client.FindIterable;
 import com.mongodb.client.ListIndexesIterable;
 import com.mongodb.client.MongoClient;
@@ -150,19 +150,29 @@ public class MongoCompensableLogger
 			String identifier = ByteUtils.byteArrayToString(globalByteArray);
 			String application = CommonUtils.getApplication(this.endpoint);
 
-			Document document = this.constructMongoDocument(archive);
+			Map<String, Serializable> variables = archive.getVariables();
+			byte[] variablesByteArray = variables == null || variables.isEmpty() ? null
+					: SerializeUtils.serializeObject((Serializable) variables);
+			String textVariables = variablesByteArray == null || variablesByteArray.length == 0 ? null
+					: ByteUtils.byteArrayToString(variablesByteArray);
+
+			Document document = new Document();
 			document.append(CONSTANTS_FD_GLOBAL, identifier);
 			document.append(CONSTANTS_FD_SYSTEM, application);
-			document.append("status", archive.getCompensableStatus());
-			document.append("created", this.endpoint);
 			document.append("propagated", propagated);
 			document.append("propagated_by", propagatedBy);
 			document.append("compensable", compensable);
 			document.append("coordinator", coordinator);
-			document.append("lock", 0);
-			document.append("locked_by", this.endpoint);
-			document.append("error", false);
 			document.append("version", version);
+			document.append("status", archive.getCompensableStatus());
+			document.append("created", this.endpoint);
+			document.append("modified", this.endpoint);
+			document.append("error", false);
+			document.append("variables", textVariables);
+			document.append("participants", this.constructParticipantsDocument(archive));
+			document.append("compensables", this.constructCompensablesDocument(archive));
+			document.append("recovered_at", archive.getRecoveredAt() == 0 ? null : new Date(archive.getRecoveredAt()));
+			document.append("recovered_times", archive.getRecoveredTimes());
 
 			collection.insertOne(document);
 		} catch (IOException error) {
@@ -187,7 +197,22 @@ public class MongoCompensableLogger
 			String identifier = ByteUtils.byteArrayToString(global);
 
 			Document document = new Document();
-			document.append("$set", this.constructMongoDocument(archive));
+
+			Document target = new Document();
+			Map<String, Serializable> variables = archive.getVariables();
+			byte[] variablesByteArray = variables == null || variables.isEmpty() ? null
+					: SerializeUtils.serializeObject((Serializable) variables);
+			String textVariables = variablesByteArray == null || variablesByteArray.length == 0 ? null
+					: ByteUtils.byteArrayToString(variablesByteArray);
+			target.append("status", archive.getCompensableStatus());
+			target.append("modified", this.endpoint);
+			target.append("variables", textVariables);
+			target.append("participants", this.constructParticipantsDocument(archive));
+			target.append("compensables", this.constructCompensablesDocument(archive));
+			target.append("recovered_at", archive.getRecoveredAt() == 0 ? null : new Date(archive.getRecoveredAt()));
+			target.append("recovered_times", archive.getRecoveredTimes());
+
+			document.append("$set", target);
 
 			Bson globalFilter = Filters.eq(CONSTANTS_FD_GLOBAL, identifier);
 			Bson systemFilter = Filters.eq(CONSTANTS_FD_SYSTEM, application);
@@ -206,22 +231,8 @@ public class MongoCompensableLogger
 		}
 	}
 
-	public Document constructMongoDocument(TransactionArchive archive) throws IOException {
+	private Document constructParticipantsDocument(TransactionArchive archive) {
 		String application = CommonUtils.getApplication(this.endpoint);
-
-		Map<String, Serializable> variables = archive.getVariables();
-		ObjectMapper mapper = new ObjectMapper();
-		Object jsonVariables = mapper.writeValueAsString(variables);
-		byte[] variablesByteArray = SerializeUtils.serializeObject((Serializable) variables);
-		String textVariables = ByteUtils.byteArrayToString(variablesByteArray);
-
-		Document target = new Document();
-		target.append("modified", this.endpoint);
-		target.append("status", archive.getCompensableStatus());
-		target.append("vars", jsonVariables);
-		target.append("variables", textVariables);
-		target.append("recovered_at", archive.getRecoveredAt() == 0 ? null : new Date(archive.getRecoveredAt()));
-		target.append("recovered_times", archive.getRecoveredTimes());
 
 		List<XAResourceArchive> participantList = archive.getRemoteResources();
 		Document participants = new Document();
@@ -263,7 +274,12 @@ public class MongoCompensableLogger
 
 			participants.append(branchKey, participant);
 		}
-		target.append("participants", participants);
+
+		return participants;
+	}
+
+	private Document constructCompensablesDocument(TransactionArchive archive) throws IOException {
+		String application = CommonUtils.getApplication(this.endpoint);
 
 		List<CompensableArchive> compensableList = archive.getCompensableResourceList();
 		Document compensables = new Document();
@@ -317,9 +333,8 @@ public class MongoCompensableLogger
 
 			compensables.put(branchKey, service);
 		}
-		target.append("compensables", compensables);
 
-		return target;
+		return compensables;
 	}
 
 	public void deleteTransaction(TransactionArchive archive) {
@@ -604,10 +619,18 @@ public class MongoCompensableLogger
 		archive.setXid(globalXid);
 
 		String textVariables = document.getString("variables");
-		byte[] variablesByteArray = ByteUtils.stringToByteArray(textVariables);
-		Map<String, Serializable> variables = //
-				(Map<String, Serializable>) SerializeUtils.deserializeObject(variablesByteArray);
-		archive.setVariables(variables);
+		byte[] variablesByteArray = null;
+		if (StringUtils.isNotBlank(textVariables) && StringUtils.equals(textVariables, "null") == false) {
+			variablesByteArray = ByteUtils.stringToByteArray(textVariables);
+		}
+
+		if (variablesByteArray == null || variablesByteArray.length == 0) {
+			archive.setVariables(new HashMap<String, Serializable>());
+		} else {
+			Map<String, Serializable> variables = //
+					(Map<String, Serializable>) SerializeUtils.deserializeObject(variablesByteArray);
+			archive.setVariables(variables);
+		}
 
 		archive.setRecoveredAt(recoveredAt == null ? 0 : recoveredAt.getTime());
 		archive.setRecoveredTimes(recoveredTimes == null ? 0 : recoveredTimes);

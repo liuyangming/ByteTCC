@@ -27,6 +27,7 @@ import javax.transaction.Status;
 import javax.transaction.SystemException;
 import javax.transaction.xa.XAException;
 import javax.transaction.xa.XAResource;
+import javax.transaction.xa.Xid;
 
 import org.bytesoft.bytetcc.supports.CompensableSynchronization;
 import org.bytesoft.common.utils.ByteUtils;
@@ -54,19 +55,30 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 	private CompensableBeanFactory beanFactory;
 	private String endpoint;
 
-	private final Map<Thread, Transaction> compensableMap = new ConcurrentHashMap<Thread, Transaction>();
+	private final Map<Thread, Transaction> thread2txMap = new ConcurrentHashMap<Thread, Transaction>();
+	private final Map<Xid, Transaction> xid2txMap = new ConcurrentHashMap<Xid, Transaction>();
 
 	public void associateThread(Transaction transaction) {
-		this.compensableMap.put(Thread.currentThread(), (CompensableTransaction) transaction);
+		TransactionContext transactionContext = (TransactionContext) transaction.getTransactionContext();
+		TransactionXid transactionXid = transactionContext.getXid();
+		this.xid2txMap.put(transactionXid, (CompensableTransaction) transaction);
+		this.thread2txMap.put(Thread.currentThread(), (CompensableTransaction) transaction);
 	}
 
 	public CompensableTransaction desociateThread() {
-		return (CompensableTransaction) this.compensableMap.remove(Thread.currentThread());
+		CompensableTransaction transaction = (CompensableTransaction) this.thread2txMap.remove(Thread.currentThread());
+		TransactionContext transactionContext = (TransactionContext) transaction.getTransactionContext();
+		this.xid2txMap.remove(transactionContext.getXid());
+		return transaction;
 	}
 
 	public int getStatus() throws SystemException {
 		Transaction transaction = this.getTransactionQuietly();
 		return transaction == null ? Status.STATUS_NO_TRANSACTION : transaction.getStatus();
+	}
+
+	public Transaction getTransaction(Xid transactionXid) {
+		return this.xid2txMap.get(transactionXid);
 	}
 
 	public Transaction getTransaction(Thread thread) {
@@ -85,11 +97,11 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 	}
 
 	public CompensableTransaction getCompensableTransactionQuietly() {
-		return (CompensableTransaction) this.compensableMap.get(Thread.currentThread());
+		return (CompensableTransaction) this.thread2txMap.get(Thread.currentThread());
 	}
 
 	public CompensableTransaction getCompensableTransaction(Thread thread) {
-		return (CompensableTransaction) this.compensableMap.get(thread);
+		return (CompensableTransaction) this.thread2txMap.get(thread);
 	}
 
 	public void resume(javax.transaction.Transaction tobj)
@@ -112,7 +124,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 	}
 
 	public Transaction suspend() throws SystemException {
-		CompensableTransaction compensable = (CompensableTransaction) this.compensableMap.get(Thread.currentThread());
+		CompensableTransaction compensable = (CompensableTransaction) this.thread2txMap.get(Thread.currentThread());
 		if (compensable == null) {
 			throw new SystemException(XAException.XAER_NOTA);
 		}
