@@ -18,6 +18,7 @@ package org.bytesoft.bytetcc.supports.logging;
 import java.io.IOException;
 import java.io.Serializable;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -82,63 +83,16 @@ public class MongoCompensableLogger
 	private CompensableBeanFactory beanFactory;
 	private volatile boolean initializeEnabled = true;
 
-	public void afterSingletonsInstantiated() {
-		try {
-			this.afterPropertiesSet();
-		} catch (Exception error) {
-			throw new RuntimeException(error);
-		}
-	}
-
-	public void afterPropertiesSet() throws Exception {
-		if (this.initializeEnabled) {
-			this.createTransactionsGlobalTxKeyIndexIfNecessary();
-		}
-	}
-
-	private void createTransactionsGlobalTxKeyIndexIfNecessary() {
-		String databaseName = CommonUtils.getApplication(this.endpoint).replaceAll("\\W", "_");
-		MongoDatabase database = this.mongoClient.getDatabase(databaseName);
-		MongoCollection<Document> transactions = database.getCollection(CONSTANTS_TB_TRANSACTIONS);
-		ListIndexesIterable<Document> transactionIndexList = transactions.listIndexes();
-		boolean transactionIndexExists = false;
-		MongoCursor<Document> transactionCursor = null;
-		try {
-			transactionCursor = transactionIndexList.iterator();
-			while (transactionIndexExists == false && transactionCursor.hasNext()) {
-				Document document = transactionCursor.next();
-				Boolean unique = document.getBoolean("unique");
-				Document key = (Document) document.get("key");
-
-				boolean globalExists = key.containsKey(CONSTANTS_FD_GLOBAL);
-				boolean systemExists = key.containsKey(CONSTANTS_FD_SYSTEM);
-				boolean lengthEquals = key.size() == 2;
-				transactionIndexExists = lengthEquals && globalExists && systemExists;
-
-				if (transactionIndexExists && (unique == null || unique == false)) {
-					throw new IllegalStateException();
-				}
-			}
-		} finally {
-			IOUtils.closeQuietly(transactionCursor);
-		}
-
-		if (transactionIndexExists == false) {
-			Document index = new Document(CONSTANTS_FD_GLOBAL, 1).append(CONSTANTS_FD_SYSTEM, 1);
-			transactions.createIndex(index, new IndexOptions().unique(true));
-		}
-	}
-
 	public void createTransaction(TransactionArchive archive) {
 		try {
-			String databaseName = CommonUtils.getApplication(this.endpoint).replaceAll("\\W", "_");
-			MongoDatabase mdb = this.mongoClient.getDatabase(databaseName);
-			MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_TRANSACTIONS);
-
 			long version = this.versionManager.getInstanceVersion(this.endpoint);
 			if (version <= 0) {
 				throw new IllegalStateException(String.format("Invalid version(%s)!", this.endpoint));
 			}
+
+			String databaseName = CommonUtils.getApplication(this.endpoint).replaceAll("\\W", "_");
+			MongoDatabase mdb = this.mongoClient.getDatabase(databaseName);
+			MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_TRANSACTIONS);
 
 			TransactionXid globalXid = (TransactionXid) archive.getXid();
 			boolean compensable = archive.isCompensable();
@@ -598,9 +552,7 @@ public class MongoCompensableLogger
 
 	@SuppressWarnings("unchecked")
 	public TransactionArchive reconstructTransactionArchive(Document document) throws Exception {
-		XidFactory transactionXidFactory = this.beanFactory.getTransactionXidFactory();
 		XidFactory compensableXidFactory = this.beanFactory.getCompensableXidFactory();
-		ClassLoader cl = Thread.currentThread().getContextClassLoader();
 
 		boolean propagated = document.getBoolean("propagated");
 		String propagatedBy = document.getString("propagated_by");
@@ -641,6 +593,16 @@ public class MongoCompensableLogger
 		archive.setPropagated(propagated);
 		archive.setPropagatedBy(propagatedBy);
 
+		archive.getRemoteResources().addAll(this.constructParticipantList(document));
+		archive.getCompensableResourceList().addAll(this.constructCompensableList(document));
+
+		return archive;
+	}
+
+	private List<XAResourceArchive> constructParticipantList(Document document) {
+		XidFactory compensableXidFactory = this.beanFactory.getCompensableXidFactory();
+
+		List<XAResourceArchive> resourceList = new ArrayList<XAResourceArchive>();
 		Document participants = document.get("participants", Document.class);
 		for (Iterator<String> itr = participants.keySet().iterator(); itr.hasNext();) {
 			String key = itr.next();
@@ -683,8 +645,17 @@ public class MongoCompensableLogger
 
 			participant.setDescriptor(descriptor);
 
-			archive.getRemoteResources().add(participant);
+			resourceList.add(participant);
 		}
+
+		return resourceList;
+	}
+
+	private List<CompensableArchive> constructCompensableList(Document document) throws Exception {
+		XidFactory transactionXidFactory = this.beanFactory.getTransactionXidFactory();
+		ClassLoader cl = Thread.currentThread().getContextClassLoader();
+
+		List<CompensableArchive> resourceList = new ArrayList<CompensableArchive>();
 
 		Document compensables = document.get("compensables", Document.class);
 		for (Iterator<String> itr = compensables.keySet().iterator(); itr.hasNext();) {
@@ -774,10 +745,57 @@ public class MongoCompensableLogger
 			TransactionXid branchId = transactionXidFactory.createBranchXid(globalId, branchQualifier);
 			service.setIdentifier(branchId);
 
-			archive.getCompensableResourceList().add(service);
+			resourceList.add(service);
 		}
 
-		return archive;
+		return resourceList;
+	}
+
+	public void afterSingletonsInstantiated() {
+		try {
+			this.afterPropertiesSet();
+		} catch (Exception error) {
+			throw new RuntimeException(error);
+		}
+	}
+
+	public void afterPropertiesSet() throws Exception {
+		if (this.initializeEnabled) {
+			this.createTransactionsGlobalTxKeyIndexIfNecessary();
+		}
+	}
+
+	private void createTransactionsGlobalTxKeyIndexIfNecessary() {
+		String databaseName = CommonUtils.getApplication(this.endpoint).replaceAll("\\W", "_");
+		MongoDatabase database = this.mongoClient.getDatabase(databaseName);
+		MongoCollection<Document> transactions = database.getCollection(CONSTANTS_TB_TRANSACTIONS);
+		ListIndexesIterable<Document> transactionIndexList = transactions.listIndexes();
+		boolean transactionIndexExists = false;
+		MongoCursor<Document> transactionCursor = null;
+		try {
+			transactionCursor = transactionIndexList.iterator();
+			while (transactionIndexExists == false && transactionCursor.hasNext()) {
+				Document document = transactionCursor.next();
+				Boolean unique = document.getBoolean("unique");
+				Document key = (Document) document.get("key");
+
+				boolean globalExists = key.containsKey(CONSTANTS_FD_GLOBAL);
+				boolean systemExists = key.containsKey(CONSTANTS_FD_SYSTEM);
+				boolean lengthEquals = key.size() == 2;
+				transactionIndexExists = lengthEquals && globalExists && systemExists;
+
+				if (transactionIndexExists && (unique == null || unique == false)) {
+					throw new IllegalStateException();
+				}
+			}
+		} finally {
+			IOUtils.closeQuietly(transactionCursor);
+		}
+
+		if (transactionIndexExists == false) {
+			Document index = new Document(CONSTANTS_FD_GLOBAL, 1).append(CONSTANTS_FD_SYSTEM, 1);
+			transactions.createIndex(index, new IndexOptions().unique(true));
+		}
 	}
 
 	public boolean isInitializeEnabled() {
