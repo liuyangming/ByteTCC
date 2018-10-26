@@ -178,7 +178,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 			CompensableSynchronization synchronization = this.beanFactory.getCompensableSynchronization();
 			synchronization.afterBegin(compensable.getTransaction(), createFlag);
 		} catch (XAException tex) {
-			logger.info("[{}] begin-transaction: error occurred while starting jta-transaction: {}",
+			logger.info("{}> begin-transaction: error occurred while starting jta-transaction: {}",
 					ByteUtils.byteArrayToString(compensableXid.getGlobalTransactionId()),
 					ByteUtils.byteArrayToString(transactionXid.getGlobalTransactionId()), tex);
 			try {
@@ -202,7 +202,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 			transactionCoordinator.end(transactionContext, XAResource.TMFAIL);
 			transactionCoordinator.rollback(transactionXid);
 		} catch (XAException tex) {
-			logger.info("[{}] begin-transaction: error occurred while starting jta-transaction: {}",
+			logger.info("{}> begin-transaction: error occurred while starting jta-transaction: {}",
 					ByteUtils.byteArrayToString(compensableXid.getGlobalTransactionId()),
 					ByteUtils.byteArrayToString(transactionXid.getGlobalTransactionId()), tex);
 		}
@@ -360,7 +360,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 			transactionCoordinator.end(transactionContext, XAResource.TMSUCCESS);
 
 			TransactionContext compensableContext = compensable.getTransactionContext();
-			logger.error("[{}] jta-transaction in try-phase cannot be xa transaction.",
+			logger.error("{}> jta-transaction in try-phase cannot be xa transaction.",
 					ByteUtils.byteArrayToString(compensableContext.getXid().getGlobalTransactionId()));
 
 			transactionCoordinator.rollback(transactionXid);

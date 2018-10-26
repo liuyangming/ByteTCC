@@ -43,7 +43,6 @@ public class CompensableCleanupWork
 	static final String CONSTANTS_TB_REMOVEDRESES = "removedreses";
 	static final String CONSTANTS_FD_GLOBAL = "gxid";
 	static final String CONSTANTS_FD_BRANCH = "bxid";
-	static final String CONSTANTS_FD_SYSTEM = "system";
 
 	static final long CONSTANTS_SECOND_MILLIS = 1000L;
 	static final int CONSTANTS_MAX_HANDLE_RECORDS = 1000;
@@ -70,7 +69,6 @@ public class CompensableCleanupWork
 			Document document = new Document();
 			document.append(CONSTANTS_FD_GLOBAL, ByteUtils.byteArrayToString(global));
 			document.append(CONSTANTS_FD_BRANCH, ByteUtils.byteArrayToString(branch));
-			document.append(CONSTANTS_FD_SYSTEM, application);
 			document.append("resource_id", resourceId);
 			document.append("created", this.endpoint);
 

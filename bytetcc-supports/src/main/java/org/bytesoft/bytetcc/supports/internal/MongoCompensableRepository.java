@@ -73,7 +73,6 @@ public class MongoCompensableRepository implements TransactionRepository, Compen
 	static final String CONSTANTS_TB_TRANSACTIONS = "transactions";
 	static final String CONSTANTS_FD_GLOBAL = "gxid";
 	static final String CONSTANTS_FD_BRANCH = "bxid";
-	static final String CONSTANTS_FD_SYSTEM = "system";
 
 	@javax.annotation.Resource
 	private CuratorFramework curatorFramework;
@@ -249,15 +248,9 @@ public class MongoCompensableRepository implements TransactionRepository, Compen
 			document.append("$set", new Document("status", Status.STATUS_MARKED_ROLLBACK));
 
 			Bson globalFilter = Filters.eq(CONSTANTS_FD_GLOBAL, identifier);
-			Bson systemFilter = Filters.eq(CONSTANTS_FD_SYSTEM, application);
 			Bson statusFilter = Filters.eq("status", Status.STATUS_ACTIVE);
 
-			UpdateResult result = collection.updateOne(Filters.and(globalFilter, systemFilter, statusFilter), document);
-			if (result.getMatchedCount() != 1) {
-				throw new IllegalStateException(
-						String.format("Error occurred while updating transaction(matched= %s, modified= %s).",
-								result.getMatchedCount(), result.getModifiedCount()));
-			}
+			collection.updateOne(Filters.and(globalFilter, statusFilter), document);
 		} catch (RuntimeException error) {
 			logger.error("Error occurred while setting the error flag.", error);
 		}
@@ -290,11 +283,9 @@ public class MongoCompensableRepository implements TransactionRepository, Compen
 			MongoCollection<Document> transactions = mdb.getCollection(CONSTANTS_TB_TRANSACTIONS);
 
 			byte[] global = xid.getGlobalTransactionId();
+			String globalKey = ByteUtils.byteArrayToString(global);
 
-			Bson globalFilter = Filters.eq(CONSTANTS_FD_GLOBAL, ByteUtils.byteArrayToString(global));
-			Bson systemFilter = Filters.eq(CONSTANTS_FD_SYSTEM, application);
-
-			FindIterable<Document> transactionItr = transactions.find(Filters.and(globalFilter, systemFilter));
+			FindIterable<Document> transactionItr = transactions.find(Filters.eq(CONSTANTS_FD_GLOBAL, globalKey));
 			transactionCursor = transactionItr.iterator();
 			if (transactionCursor.hasNext() == false) {
 				return null;
@@ -326,8 +317,6 @@ public class MongoCompensableRepository implements TransactionRepository, Compen
 			byte[] global = transactionXid.getGlobalTransactionId();
 			String identifier = ByteUtils.byteArrayToString(global);
 
-			String application = CommonUtils.getApplication(this.endpoint);
-
 			int status = archive.getCompensableStatus();
 
 			String databaseName = CommonUtils.getApplication(this.endpoint).replaceAll("\\W", "_");
@@ -345,10 +334,7 @@ public class MongoCompensableRepository implements TransactionRepository, Compen
 			document.append("$set", target);
 			// document.append("$inc", new BasicDBObject("modified_time", 1));
 
-			Bson globalFilter = Filters.eq(CONSTANTS_FD_GLOBAL, identifier);
-			Bson systemFilter = Filters.eq(CONSTANTS_FD_SYSTEM, application);
-
-			UpdateResult result = collection.updateOne(Filters.and(globalFilter, systemFilter), document);
+			UpdateResult result = collection.updateOne(Filters.eq(CONSTANTS_FD_GLOBAL, identifier), document);
 			if (result.getMatchedCount() != 1) {
 				throw new IllegalStateException(
 						String.format("Error occurred while updating transaction(matched= %s, modified= %s).",
@@ -373,10 +359,9 @@ public class MongoCompensableRepository implements TransactionRepository, Compen
 			byte[] global = xid.getGlobalTransactionId();
 
 			Bson globalFilter = Filters.eq(CONSTANTS_FD_GLOBAL, ByteUtils.byteArrayToString(global));
-			Bson systemFilter = Filters.eq(CONSTANTS_FD_SYSTEM, application);
 			Bson errorFilter = Filters.eq("error", true);
 
-			FindIterable<Document> transactionItr = transactions.find(Filters.and(globalFilter, systemFilter, errorFilter));
+			FindIterable<Document> transactionItr = transactions.find(Filters.and(globalFilter, errorFilter));
 			transactionCursor = transactionItr.iterator();
 			if (transactionCursor.hasNext() == false) {
 				return null;

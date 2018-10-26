@@ -30,7 +30,6 @@ import javax.transaction.xa.Xid;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.bson.Document;
-import org.bson.conversions.Bson;
 import org.bytesoft.bytetcc.supports.CompensableInvocationImpl;
 import org.bytesoft.bytetcc.supports.internal.CompensableInstVersionManager;
 import org.bytesoft.common.utils.ByteUtils;
@@ -67,10 +66,9 @@ import com.mongodb.client.result.UpdateResult;
 public class MongoCompensableLogger
 		implements CompensableLogger, CompensableEndpointAware, CompensableBeanFactoryAware, SmartInitializingSingleton {
 	static Logger logger = LoggerFactory.getLogger(MongoCompensableLogger.class);
-	static final String CONSTANTS_TB_TRANSACTIONS = "transactions";
+	static final String CONSTANTS_TB_TRANSACTIONS = "compensables";
 	static final String CONSTANTS_FD_GLOBAL = "gxid";
 	static final String CONSTANTS_FD_BRANCH = "bxid";
-	static final String CONSTANTS_FD_SYSTEM = "system";
 
 	static final int MONGODB_ERROR_DUPLICATE_KEY = 11000;
 
@@ -112,7 +110,7 @@ public class MongoCompensableLogger
 
 			Document document = new Document();
 			document.append(CONSTANTS_FD_GLOBAL, identifier);
-			document.append(CONSTANTS_FD_SYSTEM, application);
+			document.append("system", application);
 			document.append("propagated", propagated);
 			document.append("propagated_by", propagatedBy);
 			document.append("compensable", compensable);
@@ -168,9 +166,7 @@ public class MongoCompensableLogger
 
 			document.append("$set", target);
 
-			Bson globalFilter = Filters.eq(CONSTANTS_FD_GLOBAL, identifier);
-			Bson systemFilter = Filters.eq(CONSTANTS_FD_SYSTEM, application);
-			UpdateResult result = collection.updateOne(Filters.and(globalFilter, systemFilter), document);
+			UpdateResult result = collection.updateOne(Filters.eq(CONSTANTS_FD_GLOBAL, identifier), document);
 			if (result.getMatchedCount() != 1) {
 				throw new IllegalStateException(
 						String.format("Error occurred while updating transaction(matched= %s, modified= %s).",
@@ -213,8 +209,8 @@ public class MongoCompensableLogger
 			Document participant = new Document();
 			participant.append(CONSTANTS_FD_GLOBAL, globalKey);
 			participant.append(CONSTANTS_FD_BRANCH, branchKey);
-			participant.append(CONSTANTS_FD_SYSTEM, application);
 
+			participant.append("system", application);
 			participant.append("type", descriptorType);
 			participant.append("resource", descriptorKey);
 
@@ -233,8 +229,6 @@ public class MongoCompensableLogger
 	}
 
 	private Document constructCompensablesDocument(TransactionArchive archive) throws IOException {
-		String application = CommonUtils.getApplication(this.endpoint);
-
 		List<CompensableArchive> compensableList = archive.getCompensableResourceList();
 		Document compensables = new Document();
 		for (int i = 0; compensableList != null && i < compensableList.size(); i++) {
@@ -259,8 +253,9 @@ public class MongoCompensableLogger
 			Document service = new Document();
 			service.append(CONSTANTS_FD_GLOBAL, globalKey);
 			service.append(CONSTANTS_FD_BRANCH, branchKey);
-			service.append(CONSTANTS_FD_SYSTEM, application);
-			service.append("created", this.endpoint);
+
+			// service.append("system", application);
+			// service.append("created", this.endpoint);
 
 			service.append("transaction_key", resource.getTransactionResourceKey());
 			service.append("compensable_key", resource.getCompensableResourceKey());
@@ -302,10 +297,7 @@ public class MongoCompensableLogger
 			MongoDatabase mdb = this.mongoClient.getDatabase(databaseName);
 			MongoCollection<Document> transactions = mdb.getCollection(CONSTANTS_TB_TRANSACTIONS);
 
-			Bson globalFilter = Filters.eq(CONSTANTS_FD_GLOBAL, identifier);
-			Bson systemFilter = Filters.eq(CONSTANTS_FD_SYSTEM, application);
-
-			DeleteResult result = transactions.deleteOne(Filters.and(globalFilter, systemFilter));
+			DeleteResult result = transactions.deleteOne(Filters.eq(CONSTANTS_FD_GLOBAL, identifier));
 			if (result.getDeletedCount() != 1) {
 				logger.error("Error occurred while deleting transaction(deleted= {}).", result.getDeletedCount());
 			}
@@ -354,7 +346,6 @@ public class MongoCompensableLogger
 		Document participant = new Document();
 		participant.append(CONSTANTS_FD_GLOBAL, globalKey);
 		participant.append(CONSTANTS_FD_BRANCH, branchKey);
-		participant.append(CONSTANTS_FD_SYSTEM, application);
 
 		participant.append("type", descriptorType);
 		participant.append("resource", descriptorKey);
@@ -366,15 +357,9 @@ public class MongoCompensableLogger
 		participant.append("completed", completed);
 		participant.append("heuristic", heuristic);
 
-		participant.append("modified", this.endpoint);
-
 		String databaseName = application.replaceAll("\\W", "_");
 		MongoDatabase mdb = this.mongoClient.getDatabase(databaseName);
 		MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_TRANSACTIONS);
-
-		Bson globalFilter = Filters.eq(CONSTANTS_FD_GLOBAL, globalKey);
-		Bson systemFilter = Filters.eq(CONSTANTS_FD_SYSTEM, application);
-		Bson filter = Filters.and(globalFilter, systemFilter);
 
 		Document participants = new Document();
 		participants.append(String.format("participants.%s", branchKey), participant);
@@ -382,7 +367,7 @@ public class MongoCompensableLogger
 		Document document = new Document();
 		document.append("$set", participants);
 
-		UpdateResult result = collection.updateOne(filter, document);
+		UpdateResult result = collection.updateOne(Filters.eq(CONSTANTS_FD_GLOBAL, globalKey), document);
 		if (result.getMatchedCount() != 1) {
 			throw new IllegalStateException(
 					String.format("Error occurred while creating/updating participant(matched= %s, modified= %s).",
@@ -404,17 +389,13 @@ public class MongoCompensableLogger
 			MongoDatabase mdb = this.mongoClient.getDatabase(databaseName);
 			MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_TRANSACTIONS);
 
-			Bson globalFilter = Filters.eq(CONSTANTS_FD_GLOBAL, globalKey);
-			Bson systemFilter = Filters.eq(CONSTANTS_FD_SYSTEM, application);
-			Bson filter = Filters.and(globalFilter, systemFilter);
-
 			Document participants = new Document();
 			participants.append(String.format("participants.%s", branchKey), null);
 
 			Document document = new Document();
 			document.append("$unset", participants);
 
-			UpdateResult result = collection.updateOne(filter, document);
+			UpdateResult result = collection.updateOne(Filters.eq(CONSTANTS_FD_GLOBAL, globalKey), document);
 			if (result.getMatchedCount() != 1) {
 				throw new IllegalStateException(
 						String.format("Error occurred while deleting participant(matched= %s, modified= %s).",
@@ -471,8 +452,6 @@ public class MongoCompensableLogger
 		Document compensable = new Document();
 		compensable.append(CONSTANTS_FD_GLOBAL, globalKey);
 		compensable.append(CONSTANTS_FD_BRANCH, branchKey);
-		compensable.append(CONSTANTS_FD_SYSTEM, application);
-		compensable.append("created", this.endpoint);
 
 		compensable.append("transaction_key", archive.getTransactionResourceKey());
 		compensable.append("compensable_key", archive.getCompensableResourceKey());
@@ -487,7 +466,6 @@ public class MongoCompensableLogger
 		compensable.append("tried", archive.isTried());
 		compensable.append("confirmed", archive.isConfirmed());
 		compensable.append("cancelled", archive.isCancelled());
-		compensable.append("modified", this.endpoint);
 
 		compensable.append("serviceId", beanId);
 		compensable.append("simplified", invocation.isSimplified());
@@ -500,9 +478,6 @@ public class MongoCompensableLogger
 		String databaseName = application.replaceAll("\\W", "_");
 		MongoDatabase mdb = this.mongoClient.getDatabase(databaseName);
 		MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_TRANSACTIONS);
-		Bson globalFilter = Filters.eq(CONSTANTS_FD_GLOBAL, globalKey);
-		Bson systemFilter = Filters.eq(CONSTANTS_FD_SYSTEM, application);
-		Bson filter = Filters.and(globalFilter, systemFilter);
 
 		Document compensables = new Document();
 		compensables.append(String.format("compensables.%s", branchKey), compensable);
@@ -510,7 +485,7 @@ public class MongoCompensableLogger
 		Document document = new Document();
 		document.append("$set", compensables);
 
-		UpdateResult result = collection.updateOne(filter, document);
+		UpdateResult result = collection.updateOne(Filters.eq(CONSTANTS_FD_GLOBAL, globalKey), document);
 		if (result.getMatchedCount() != 1) {
 			throw new IllegalStateException(
 					String.format("Error occurred while creating/updating compensable(matched= %s, modified= %s).",
@@ -531,7 +506,7 @@ public class MongoCompensableLogger
 				Document document = transactionCursor.next();
 				boolean error = document.getBoolean("error");
 
-				String targetApplication = document.getString(CONSTANTS_FD_SYSTEM);
+				String targetApplication = document.getString("system");
 				long expectVersion = document.getLong("version");
 				long actualVersion = this.versionManager.getInstanceVersion(targetApplication);
 
@@ -780,9 +755,8 @@ public class MongoCompensableLogger
 				Document key = (Document) document.get("key");
 
 				boolean globalExists = key.containsKey(CONSTANTS_FD_GLOBAL);
-				boolean systemExists = key.containsKey(CONSTANTS_FD_SYSTEM);
-				boolean lengthEquals = key.size() == 2;
-				transactionIndexExists = lengthEquals && globalExists && systemExists;
+				boolean lengthEquals = key.size() == 1;
+				transactionIndexExists = lengthEquals && globalExists;
 
 				if (transactionIndexExists && (unique == null || unique == false)) {
 					throw new IllegalStateException();
@@ -793,7 +767,7 @@ public class MongoCompensableLogger
 		}
 
 		if (transactionIndexExists == false) {
-			Document index = new Document(CONSTANTS_FD_GLOBAL, 1).append(CONSTANTS_FD_SYSTEM, 1);
+			Document index = new Document(CONSTANTS_FD_GLOBAL, 1);
 			transactions.createIndex(index, new IndexOptions().unique(true));
 		}
 	}

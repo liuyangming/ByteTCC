@@ -68,7 +68,6 @@ public class MongoCompensableLock implements TransactionLock, CompensableInstVer
 	static final String CONSTANTS_TB_INSTS = "instances";
 	static final String CONSTANTS_FD_GLOBAL = "gxid";
 	static final String CONSTANTS_FD_BRANCH = "bxid";
-	static final String CONSTANTS_FD_SYSTEM = "system";
 
 	static final int MONGODB_ERROR_DUPLICATE_KEY = 11000;
 
@@ -148,9 +147,8 @@ public class MongoCompensableLock implements TransactionLock, CompensableInstVer
 				Document key = (Document) document.get("key");
 
 				boolean globalExists = key.containsKey(CONSTANTS_FD_GLOBAL);
-				boolean systemExists = key.containsKey(CONSTANTS_FD_SYSTEM);
-				boolean lengthEquals = key.size() == 2;
-				transactionIndexExists = lengthEquals && globalExists && systemExists;
+				boolean lengthEquals = key.size() == 1;
+				transactionIndexExists = lengthEquals && globalExists;
 
 				if (transactionIndexExists && (unique == null || unique == false)) {
 					throw new IllegalStateException();
@@ -161,7 +159,7 @@ public class MongoCompensableLock implements TransactionLock, CompensableInstVer
 		}
 
 		if (transactionIndexExists == false) {
-			Document index = new Document(CONSTANTS_FD_GLOBAL, 1).append(CONSTANTS_FD_SYSTEM, 1);
+			Document index = new Document(CONSTANTS_FD_GLOBAL, 1);
 			locks.createIndex(index, new IndexOptions().unique(true));
 		}
 	}
@@ -176,12 +174,8 @@ public class MongoCompensableLock implements TransactionLock, CompensableInstVer
 		Document increases = new Document();
 		increases.append("version", 1L);
 
-		Document variables = new Document();
-		variables.append(CONSTANTS_FD_SYSTEM, CommonUtils.getApplication(this.endpoint));
-
 		Document document = new Document();
 		document.append("$inc", increases);
-		document.append("$set", variables);
 
 		FindOneAndUpdateOptions options = new FindOneAndUpdateOptions();
 		options.upsert(true);
@@ -226,7 +220,6 @@ public class MongoCompensableLock implements TransactionLock, CompensableInstVer
 
 			Document document = new Document();
 			document.append(CONSTANTS_FD_GLOBAL, instanceId);
-			document.append(CONSTANTS_FD_SYSTEM, application);
 			document.append("identifier", identifier);
 
 			collection.insertOne(document);
@@ -254,12 +247,11 @@ public class MongoCompensableLock implements TransactionLock, CompensableInstVer
 			MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_LOCKS);
 
 			Bson globalFilter = Filters.eq(CONSTANTS_FD_GLOBAL, instanceId);
-			Bson systemFilter = Filters.eq(CONSTANTS_FD_SYSTEM, application);
 			Bson instIdFilter = Filters.eq("identifier", source);
 
 			Document document = new Document("$set", new Document("identifier", target));
 
-			UpdateResult result = collection.updateOne(Filters.and(globalFilter, systemFilter, instIdFilter), document);
+			UpdateResult result = collection.updateOne(Filters.and(globalFilter, instIdFilter), document);
 			return result.getMatchedCount() == 1;
 		} catch (RuntimeException rex) {
 			logger.error("Error occurred while locking transaction(gxid= {}).", instanceId, rex);
@@ -277,10 +269,7 @@ public class MongoCompensableLock implements TransactionLock, CompensableInstVer
 			MongoDatabase mdb = this.mongoClient.getDatabase(databaseName);
 			MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_LOCKS);
 
-			Bson globalFilter = Filters.eq(CONSTANTS_FD_GLOBAL, instanceId);
-			Bson systemFilter = Filters.eq(CONSTANTS_FD_SYSTEM, application);
-
-			FindIterable<Document> findIterable = collection.find(Filters.and(globalFilter, systemFilter));
+			FindIterable<Document> findIterable = collection.find(Filters.eq(CONSTANTS_FD_GLOBAL, instanceId));
 			MongoCursor<Document> cursor = findIterable.iterator();
 			if (cursor.hasNext()) {
 				Document document = cursor.next();
@@ -309,10 +298,9 @@ public class MongoCompensableLock implements TransactionLock, CompensableInstVer
 			MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_LOCKS);
 
 			Bson globalFilter = Filters.eq(CONSTANTS_FD_GLOBAL, instanceId);
-			Bson systemFilter = Filters.eq(CONSTANTS_FD_SYSTEM, application);
 			Bson instIdFilter = Filters.eq("identifier", identifier);
 
-			DeleteResult result = collection.deleteOne(Filters.and(globalFilter, systemFilter, instIdFilter));
+			DeleteResult result = collection.deleteOne(Filters.and(globalFilter, instIdFilter));
 			if (result.getDeletedCount() == 0) {
 				logger.warn("Error occurred while unlocking transaction(gxid= {}).", instanceId);
 			}
