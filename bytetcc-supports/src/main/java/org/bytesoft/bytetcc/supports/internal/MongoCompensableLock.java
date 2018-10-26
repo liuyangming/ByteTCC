@@ -126,11 +126,7 @@ public class MongoCompensableLock implements TransactionLock, CompensableInstVer
 		String parent = String.format("%s/%s/instances", CONSTANTS_ROOT_PATH, CommonUtils.getApplication(this.endpoint));
 		String path = String.format("%s/%s", parent, this.endpoint);
 		byte[] versionByteArray = ByteUtils.longToByteArray(this.instanceVersion);
-		try {
-			this.curatorFramework.create().withMode(CreateMode.EPHEMERAL).forPath(path, versionByteArray);
-		} catch (NodeExistsException error) {
-			this.curatorFramework.delete().inBackground(this).forPath(path);
-		}
+		this.curatorFramework.create().withMode(CreateMode.EPHEMERAL).forPath(path, versionByteArray);
 	}
 
 	private void initializeIndexIfNecessary() {
