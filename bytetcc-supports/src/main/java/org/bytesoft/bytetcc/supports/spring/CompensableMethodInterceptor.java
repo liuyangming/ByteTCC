@@ -204,7 +204,15 @@ public class CompensableMethodInterceptor
 			if (annotation.simplified()) {
 				invocation.setMethod(method); // class-method
 
-				Class<?> currentClazz = point.getThis().getClass();
+				Object thisBean = point.getThis();
+				Class<?> currentClazz = null;
+				if (org.springframework.aop.framework.Advised.class.isInstance(thisBean)) {
+					org.springframework.aop.framework.Advised advised = (org.springframework.aop.framework.Advised) thisBean;
+					currentClazz = advised.getTargetClass();
+				} else {
+					currentClazz = thisBean.getClass();
+				}
+
 				Method[] methodArray = currentClazz.getDeclaredMethods();
 				boolean confirmFlag = false;
 				boolean cancelFlag = false;
