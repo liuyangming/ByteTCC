@@ -70,7 +70,7 @@ public class MongoCompensableRepository implements TransactionRepository, Compen
 		CompensableBeanFactoryAware, CuratorWatcher, BackgroundCallback, SmartInitializingSingleton {
 	static Logger logger = LoggerFactory.getLogger(MongoCompensableRepository.class);
 	static final String CONSTANTS_ROOT_PATH = "/org/bytesoft/bytetcc";
-	static final String CONSTANTS_TB_TRANSACTIONS = "transactions";
+	static final String CONSTANTS_TB_TRANSACTIONS = "compensables";
 	static final String CONSTANTS_FD_GLOBAL = "gxid";
 	static final String CONSTANTS_FD_BRANCH = "bxid";
 
