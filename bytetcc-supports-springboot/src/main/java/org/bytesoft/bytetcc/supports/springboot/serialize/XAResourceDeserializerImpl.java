@@ -19,7 +19,6 @@ import java.lang.reflect.Proxy;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.commons.lang3.StringUtils;
 import org.bytesoft.bytejta.supports.internal.RemoteCoordinatorRegistry;
 import org.bytesoft.bytejta.supports.resource.RemoteResourceDescriptor;
 import org.bytesoft.bytetcc.supports.springboot.SpringBootCoordinator;
@@ -59,21 +58,21 @@ public class XAResourceDeserializerImpl implements XAResourceDeserializer, Appli
 
 		RemoteCoordinatorRegistry registry = RemoteCoordinatorRegistry.getInstance();
 		String application = CommonUtils.getApplication(identifier);
-		RemoteCoordinator participant = StringUtils.isBlank(application) ? null : registry.getParticipant(application);
-		if (participant == null) {
+		if (registry.containsParticipant(application) == false) {
 			SpringBootCoordinator springCloudCoordinator = new SpringBootCoordinator();
 			springCloudCoordinator.setIdentifier(identifier);
 			springCloudCoordinator.setEnvironment(this.environment);
 
-			participant = (RemoteCoordinator) Proxy.newProxyInstance(SpringBootCoordinator.class.getClassLoader(),
-					new Class[] { RemoteCoordinator.class }, springCloudCoordinator);
+			RemoteCoordinator participant = (RemoteCoordinator) Proxy.newProxyInstance(
+					SpringBootCoordinator.class.getClassLoader(), new Class[] { RemoteCoordinator.class },
+					springCloudCoordinator);
 
-			if (StringUtils.isNotBlank(application)) {
-				RemoteAddr remoteAddr = CommonUtils.getRemoteAddr(identifier);
-				RemoteNode remoteNode = CommonUtils.getRemoteNode(identifier);
-				registry.putParticipant(application, participant);
-				registry.putRemoteNode(remoteAddr, remoteNode);
-			}
+			RemoteAddr remoteAddr = CommonUtils.getRemoteAddr(identifier);
+			RemoteNode remoteNode = CommonUtils.getRemoteNode(identifier);
+
+			registry.putParticipant(application, participant);
+			registry.putPhysicalInstance(remoteAddr, participant);
+			registry.putRemoteNode(remoteAddr, remoteNode);
 		}
 
 		RemoteResourceDescriptor descriptor = new RemoteResourceDescriptor();

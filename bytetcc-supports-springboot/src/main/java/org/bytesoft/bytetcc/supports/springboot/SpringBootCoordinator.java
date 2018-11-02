@@ -57,13 +57,11 @@ public class SpringBootCoordinator implements InvocationHandler {
 		if (Object.class.equals(clazz)) {
 			return method.invoke(this, args);
 		} else if (TransactionParticipant.class.equals(clazz)) {
+			throw new XAException(XAException.XAER_RMFAIL);
+		} else if (RemoteCoordinator.class.equals(clazz)) {
 			if ("getIdentifier".equals(methodName)) {
 				return this.getParticipantsIdentifier(proxy, method, args);
-			} else {
-				throw new XAException(XAException.XAER_RMFAIL);
-			}
-		} else if (RemoteCoordinator.class.equals(clazz)) {
-			if ("getApplication".equals(methodName)) {
+			} else if ("getApplication".equals(methodName)) {
 				return this.getParticipantsApplication(proxy, method, args);
 			} else if ("getRemoteAddr".equals(methodName) && RemoteAddr.class.equals(returnType)) {
 				String identifier = this.getParticipantsIdentifier(proxy, method, args);

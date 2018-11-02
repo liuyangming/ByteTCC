@@ -55,13 +55,11 @@ public class SpringCloudCoordinator implements InvocationHandler {
 		if (Object.class.equals(clazz)) {
 			return method.invoke(this, args);
 		} else if (TransactionParticipant.class.equals(clazz)) {
+			throw new XAException(XAException.XAER_RMFAIL);
+		} else if (RemoteCoordinator.class.equals(clazz)) {
 			if ("getIdentifier".equals(methodName)) {
 				return this.identifier;
-			} else {
-				throw new XAException(XAException.XAER_RMFAIL);
-			}
-		} else if (RemoteCoordinator.class.equals(clazz)) {
-			if ("getApplication".equals(methodName)) {
+			} else if ("getApplication".equals(methodName)) {
 				int firstIndex = this.identifier.indexOf(":");
 				int lastIndex = this.identifier.lastIndexOf(":");
 				return firstIndex <= 0 || lastIndex <= 0 || firstIndex > lastIndex //
@@ -101,21 +99,13 @@ public class SpringCloudCoordinator implements InvocationHandler {
 			RestTemplate transactionRestTemplate = SpringCloudBeanRegistry.getInstance().getRestTemplate();
 			RestTemplate restTemplate = transactionRestTemplate == null ? new RestTemplate() : transactionRestTemplate;
 
-			StringBuilder ber = new StringBuilder();
-
-			int firstIndex = this.identifier.indexOf(":");
-			int lastIndex = this.identifier.lastIndexOf(":");
-			String prefix = firstIndex <= 0 ? null : this.identifier.substring(0, firstIndex);
-			String servId = firstIndex <= 0 || lastIndex <= 0 || firstIndex >= lastIndex //
-					? null : this.identifier.substring(firstIndex + 1, lastIndex);
-			String suffix = lastIndex <= 0 ? null : this.identifier.substring(lastIndex + 1);
-
-			String contextPathKey = String.format("%s.%s", CONSTANT_CONTENT_PATH, servId);
-			String contextPath = StringUtils.isBlank(servId) //
+			RemoteNode remoteNode = CommonUtils.getRemoteNode(this.identifier);
+			String contextPathKey = String.format("%s.%s", CONSTANT_CONTENT_PATH, remoteNode.getServiceKey());
+			String contextPath = StringUtils.isBlank(remoteNode.getServiceKey()) //
 					? null : StringUtils.trimToEmpty(this.environment.getProperty(contextPathKey));
 
-			ber.append("http://");
-			ber.append(prefix == null || suffix == null ? null : prefix + ":" + suffix);
+			StringBuilder ber = new StringBuilder();
+			ber.append("http://").append("{").append(remoteNode.getServiceKey()).append("}");
 
 			if (StringUtils.isNotBlank(contextPath) || StringUtils.equals(contextPath, "/")) {
 				ber.append(contextPath.startsWith("/") ? "" : "/").append(contextPath);
@@ -173,21 +163,13 @@ public class SpringCloudCoordinator implements InvocationHandler {
 			RestTemplate transactionRestTemplate = SpringCloudBeanRegistry.getInstance().getRestTemplate();
 			RestTemplate restTemplate = transactionRestTemplate == null ? new RestTemplate() : transactionRestTemplate;
 
-			StringBuilder ber = new StringBuilder();
-
-			int firstIndex = this.identifier.indexOf(":");
-			int lastIndex = this.identifier.lastIndexOf(":");
-			String prefix = firstIndex <= 0 ? null : this.identifier.substring(0, firstIndex);
-			String servId = firstIndex <= 0 || lastIndex <= 0 || firstIndex >= lastIndex //
-					? null : this.identifier.substring(firstIndex + 1, lastIndex);
-			String suffix = lastIndex <= 0 ? null : this.identifier.substring(lastIndex + 1);
-
-			String contextPathKey = String.format("%s.%s", CONSTANT_CONTENT_PATH, servId);
-			String contextPath = StringUtils.isBlank(servId) //
+			RemoteNode remoteNode = CommonUtils.getRemoteNode(this.identifier);
+			String contextPathKey = String.format("%s.%s", CONSTANT_CONTENT_PATH, remoteNode.getServiceKey());
+			String contextPath = StringUtils.isBlank(remoteNode.getServiceKey()) //
 					? null : StringUtils.trimToEmpty(this.environment.getProperty(contextPathKey));
 
-			ber.append("http://");
-			ber.append(prefix == null || suffix == null ? null : prefix + ":" + suffix);
+			StringBuilder ber = new StringBuilder();
+			ber.append("http://").append("{").append(remoteNode.getServiceKey()).append("}");
 
 			if (StringUtils.isNotBlank(contextPath) || StringUtils.equals(contextPath, "/")) {
 				ber.append(contextPath.startsWith("/") ? "" : "/").append(contextPath);

@@ -20,7 +20,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.Serializable;
 import java.lang.reflect.Proxy;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -74,6 +73,11 @@ import com.caucho.hessian.io.HessianOutput;
 
 public class CompensableServiceFilter implements Filter {
 	static final String KEY_XA_RESOURCE_START = "start";
+	static final String KEY_XA_GET_IDENTIFIER = "getIdentifier";
+	static final String KEY_XA_GET_APPLICATION = "getApplication";
+	static final String KEY_XA_GET_REMOTEADDR = "getRemoteAddr";
+	static final String KEY_XA_GET_REMOTENODE = "getRemoteNode";
+
 	static final Logger logger = LoggerFactory.getLogger(CompensableServiceFilter.class);
 
 	public Result invoke(Invoker<?> invoker, Invocation invocation) throws RpcException, RemotingException {
@@ -85,19 +89,26 @@ public class CompensableServiceFilter implements Filter {
 	}
 
 	public Result providerInvoke(Invoker<?> invoker, Invocation invocation) throws RpcException, RemotingException {
-		URL url = RpcContext.getContext().getUrl();
-		String interfaceClazz = url.getServiceInterface();
-		if (StringUtils.equals(invocation.getMethodName(), KEY_XA_RESOURCE_START)
-				&& Arrays.equals(invocation.getParameterTypes(), new Class<?>[] { Xid.class, Integer.TYPE })) {
-			return this.providerInvokeForKey(invoker, invocation);
-		} else if (XAResource.class.getName().equals(interfaceClazz)) {
-			return this.providerInvokeForTCC(invoker, invocation);
-		} else if (TransactionParticipant.class.getName().equals(interfaceClazz)) {
-			return this.providerInvokeForTCC(invoker, invocation);
-		} else if (RemoteCoordinator.class.getName().equals(interfaceClazz)) {
-			return this.providerInvokeForTCC(invoker, invocation);
-		} else {
+		String interfaceClazz = RpcContext.getContext().getUrl().getServiceInterface();
+
+		boolean participantFlag = TransactionParticipant.class.getName().equals(interfaceClazz);
+		boolean xaResourceFlag = XAResource.class.getName().equals(interfaceClazz);
+		boolean coordinatorFlag = RemoteCoordinator.class.getName().equals(interfaceClazz);
+
+		if (participantFlag == false && xaResourceFlag == false && coordinatorFlag == false) {
 			return this.providerInvokeForSVC(invoker, invocation);
+		} else if (StringUtils.equals(invocation.getMethodName(), KEY_XA_RESOURCE_START)) {
+			return this.providerInvokeForKey(invoker, invocation);
+		} else if (StringUtils.equals(invocation.getMethodName(), KEY_XA_GET_IDENTIFIER)) {
+			return this.providerInvokeForKey(invoker, invocation);
+		} else if (StringUtils.equals(invocation.getMethodName(), KEY_XA_GET_APPLICATION)) {
+			return this.providerInvokeForKey(invoker, invocation);
+		} else if (StringUtils.equals(invocation.getMethodName(), KEY_XA_GET_REMOTEADDR)) {
+			return this.providerInvokeForKey(invoker, invocation);
+		} else if (StringUtils.equals(invocation.getMethodName(), KEY_XA_GET_REMOTENODE)) {
+			return this.providerInvokeForKey(invoker, invocation);
+		} else {
+			return this.providerInvokeForTCC(invoker, invocation);
 		}
 	}
 
@@ -358,19 +369,26 @@ public class CompensableServiceFilter implements Filter {
 	}
 
 	public Result consumerInvoke(Invoker<?> invoker, Invocation invocation) throws RpcException, RemotingException {
-		URL url = RpcContext.getContext().getUrl();
-		String interfaceClazz = url.getServiceInterface();
-		if (StringUtils.equals(invocation.getMethodName(), KEY_XA_RESOURCE_START)
-				&& Arrays.equals(invocation.getParameterTypes(), new Class<?>[] { Xid.class, Integer.TYPE })) {
-			return this.consumerInvokeForKey(invoker, invocation);
-		} else if (XAResource.class.getName().equals(interfaceClazz)) {
-			return this.consumerInvokeForTCC(invoker, invocation);
-		} else if (TransactionParticipant.class.getName().equals(interfaceClazz)) {
-			return this.consumerInvokeForTCC(invoker, invocation);
-		} else if (RemoteCoordinator.class.getName().equals(interfaceClazz)) {
-			return this.consumerInvokeForTCC(invoker, invocation);
-		} else {
+		String interfaceClazz = RpcContext.getContext().getUrl().getServiceInterface();
+
+		boolean participantFlag = TransactionParticipant.class.getName().equals(interfaceClazz);
+		boolean xaResourceFlag = XAResource.class.getName().equals(interfaceClazz);
+		boolean coordinatorFlag = RemoteCoordinator.class.getName().equals(interfaceClazz);
+
+		if (participantFlag == false && xaResourceFlag == false && coordinatorFlag == false) {
 			return this.consumerInvokeForSVC(invoker, invocation);
+		} else if (StringUtils.equals(invocation.getMethodName(), KEY_XA_RESOURCE_START)) {
+			return this.consumerInvokeForKey(invoker, invocation);
+		} else if (StringUtils.equals(invocation.getMethodName(), KEY_XA_GET_IDENTIFIER)) {
+			return this.consumerInvokeForKey(invoker, invocation);
+		} else if (StringUtils.equals(invocation.getMethodName(), KEY_XA_GET_APPLICATION)) {
+			return this.consumerInvokeForKey(invoker, invocation);
+		} else if (StringUtils.equals(invocation.getMethodName(), KEY_XA_GET_REMOTEADDR)) {
+			return this.consumerInvokeForKey(invoker, invocation);
+		} else if (StringUtils.equals(invocation.getMethodName(), KEY_XA_GET_REMOTENODE)) {
+			return this.consumerInvokeForKey(invoker, invocation);
+		} else {
+			return this.consumerInvokeForTCC(invoker, invocation);
 		}
 	}
 
@@ -399,6 +417,24 @@ public class CompensableServiceFilter implements Filter {
 			String instanceId = StringUtils.trimToEmpty(String.valueOf(wrapped.getVariable(RemoteCoordinator.class.getName())));
 
 			this.registerRemoteParticipantIfNecessary(instanceId);
+
+			String interfaceClazz = RpcContext.getContext().getUrl().getServiceInterface();
+			boolean participantFlag = TransactionParticipant.class.getName().equals(interfaceClazz);
+			boolean xaResourceFlag = XAResource.class.getName().equals(interfaceClazz);
+			boolean coordinatorFlag = RemoteCoordinator.class.getName().equals(interfaceClazz);
+			boolean resultInitRequired = (participantFlag || xaResourceFlag || coordinatorFlag) && result.getValue() == null;
+			if (resultInitRequired) {
+				if (StringUtils.equals(invocation.getMethodName(), KEY_XA_GET_IDENTIFIER)) {
+					result.setValue(instanceId);
+				} else if (StringUtils.equals(invocation.getMethodName(), KEY_XA_GET_APPLICATION)) {
+					result.setValue(instanceId);
+				} else if (StringUtils.equals(invocation.getMethodName(), KEY_XA_GET_REMOTEADDR)) {
+					result.setValue(CommonUtils.getRemoteAddr(instanceId));
+				} else if (StringUtils.equals(invocation.getMethodName(), KEY_XA_GET_REMOTENODE)) {
+					result.setValue(CommonUtils.getRemoteNode(instanceId));
+				}
+			} // end-if (resultInitRequired)
+
 		} // end-if (InvocationResult.class.isInstance(value))
 
 		return result;
@@ -534,8 +570,6 @@ public class CompensableServiceFilter implements Filter {
 
 	private RemoteCoordinator getParticipantByRemoteAddr(Invoker<?> invoker, InvocationDef invocationDef) {
 		RemoteCoordinatorRegistry participantRegistry = RemoteCoordinatorRegistry.getInstance();
-		CompensableBeanRegistry beanRegistry = CompensableBeanRegistry.getInstance();
-		RemoteCoordinator consumeCoordinator = beanRegistry.getConsumeCoordinator();
 
 		URL targetUrl = invoker.getUrl();
 		String targetAddr = targetUrl.getIp();
@@ -548,9 +582,8 @@ public class CompensableServiceFilter implements Filter {
 		RemoteNode remoteNode = participantRegistry.getRemoteNode(remoteAddr);
 		if (remoteNode != null) {
 			String application = remoteNode.getServiceKey();
-			RemoteCoordinator target = participantRegistry.getParticipant(application);
-			if (target != null) {
-				return target;
+			if (participantRegistry.containsParticipant(application) == false) {
+				this.initializeRemoteParticipantIfNecessary(application);
 			}
 
 			RemoteNode invocationContext = new RemoteNode();
@@ -558,15 +591,16 @@ public class CompensableServiceFilter implements Filter {
 			invocationContext.setServiceKey(remoteNode.getServiceKey());
 			invocationContext.setServerPort(targetPort);
 
+			RemoteCoordinator remoteCoordinator = participantRegistry.getParticipant(application);
+
 			DubboRemoteCoordinator dubboCoordinator = new DubboRemoteCoordinator();
 			dubboCoordinator.setInvocationContext(invocationContext);
-			dubboCoordinator.setRemoteCoordinator(consumeCoordinator);
+			dubboCoordinator.setRemoteCoordinator(remoteCoordinator);
+			dubboCoordinator.setCoordinatorType(DubboRemoteCoordinator.KEY_PARTICIPANT_TYPE_SYSTEM);
 
 			RemoteCoordinator participant = (RemoteCoordinator) Proxy.newProxyInstance(
 					DubboRemoteCoordinator.class.getClassLoader(), new Class[] { RemoteCoordinator.class }, dubboCoordinator);
 			dubboCoordinator.setProxyCoordinator(participant);
-
-			this.initializeRemoteParticipantIfNecessary(application);
 
 			return participant;
 		}
@@ -575,27 +609,30 @@ public class CompensableServiceFilter implements Filter {
 			return this.getParticipantByInvocationDef(invoker, invocationDef);
 		}
 
+		if (participantRegistry.containsPhysicalInstance(remoteAddr) == false) {
+			this.initializeRemoteParticipantIfNecessary(remoteAddr);
+		}
+
 		RemoteNode invocationContext = new RemoteNode();
 		invocationContext.setServerHost(targetAddr);
 		invocationContext.setServerPort(targetPort);
 
+		RemoteCoordinator remoteCoordinator = participantRegistry.getPhysicalInstance(remoteAddr);
+
 		DubboRemoteCoordinator dubboCoordinator = new DubboRemoteCoordinator();
 		dubboCoordinator.setInvocationContext(invocationContext);
-		dubboCoordinator.setRemoteCoordinator(consumeCoordinator);
+		dubboCoordinator.setRemoteCoordinator(remoteCoordinator);
+		dubboCoordinator.setCoordinatorType(DubboRemoteCoordinator.KEY_PARTICIPANT_TYPE_EXACT);
 
 		RemoteCoordinator participant = (RemoteCoordinator) Proxy.newProxyInstance(
 				DubboRemoteCoordinator.class.getClassLoader(), new Class[] { RemoteCoordinator.class }, dubboCoordinator);
 		dubboCoordinator.setProxyCoordinator(participant);
-
-		this.initializeRemoteParticipantIfNecessary(remoteAddr);
 
 		return participant;
 	}
 
 	private RemoteCoordinator getParticipantByInvocationDef(Invoker<?> invoker, InvocationDef invocationDef) {
 		RemoteCoordinatorRegistry participantRegistry = RemoteCoordinatorRegistry.getInstance();
-		CompensableBeanRegistry beanRegistry = CompensableBeanRegistry.getInstance();
-		RemoteCoordinator consumeCoordinator = beanRegistry.getConsumeCoordinator();
 
 		URL targetUrl = invoker.getUrl();
 		String targetAddr = targetUrl.getIp();
@@ -603,30 +640,31 @@ public class CompensableServiceFilter implements Filter {
 
 		RemoteNode rnode = participantRegistry.getRemoteNodeByInvocationDef(invocationDef);
 		String application = rnode.getServiceKey();
-		RemoteCoordinator participant = participantRegistry.getParticipant(application);
-		if (participant != null) {
-			return participant;
-		}
 
 		String instanceId = String.format("%s:%s:%s", targetAddr, application, targetPort);
 		RemoteAddr remoteAddr = CommonUtils.getRemoteAddr(instanceId);
 		RemoteNode remoteNode = CommonUtils.getRemoteNode(instanceId);
+
+		if (participantRegistry.containsParticipant(application) == false) {
+			this.initializeRemoteParticipantIfNecessary(application);
+			participantRegistry.putRemoteNode(remoteAddr, remoteNode);
+		}
 
 		RemoteNode invocationContext = new RemoteNode();
 		invocationContext.setServerHost(targetAddr);
 		invocationContext.setServiceKey(application);
 		invocationContext.setServerPort(targetPort);
 
+		RemoteCoordinator remoteCoordinator = participantRegistry.getParticipant(application);
+
 		DubboRemoteCoordinator dubboCoordinator = new DubboRemoteCoordinator();
 		dubboCoordinator.setInvocationContext(invocationContext);
-		dubboCoordinator.setRemoteCoordinator(consumeCoordinator);
+		dubboCoordinator.setRemoteCoordinator(remoteCoordinator);
+		dubboCoordinator.setCoordinatorType(DubboRemoteCoordinator.KEY_PARTICIPANT_TYPE_SYSTEM);
 
-		participant = (RemoteCoordinator) Proxy.newProxyInstance(DubboRemoteCoordinator.class.getClassLoader(),
-				new Class[] { RemoteCoordinator.class }, dubboCoordinator);
+		RemoteCoordinator participant = (RemoteCoordinator) Proxy.newProxyInstance(
+				DubboRemoteCoordinator.class.getClassLoader(), new Class[] { RemoteCoordinator.class }, dubboCoordinator);
 		dubboCoordinator.setProxyCoordinator(participant);
-
-		this.initializeRemoteParticipantIfNecessary(application);
-		participantRegistry.putRemoteNode(remoteAddr, remoteNode);
 
 		return participant;
 	}

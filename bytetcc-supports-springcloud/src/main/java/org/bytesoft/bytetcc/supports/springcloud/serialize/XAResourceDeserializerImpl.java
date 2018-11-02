@@ -59,21 +59,19 @@ public class XAResourceDeserializerImpl implements XAResourceDeserializer, Appli
 
 		RemoteCoordinatorRegistry registry = RemoteCoordinatorRegistry.getInstance();
 		String application = CommonUtils.getApplication(identifier);
-		RemoteCoordinator participant = StringUtils.isBlank(application) ? null : registry.getParticipant(application);
-		if (participant == null) {
+		if (registry.containsParticipant(application)) {
 			SpringCloudCoordinator springCloudCoordinator = new SpringCloudCoordinator();
 			springCloudCoordinator.setIdentifier(identifier);
 			springCloudCoordinator.setEnvironment(this.environment);
 
-			participant = (RemoteCoordinator) Proxy.newProxyInstance(SpringCloudCoordinator.class.getClassLoader(),
-					new Class[] { RemoteCoordinator.class }, springCloudCoordinator);
+			RemoteCoordinator participant = (RemoteCoordinator) Proxy.newProxyInstance(
+					SpringCloudCoordinator.class.getClassLoader(), new Class[] { RemoteCoordinator.class },
+					springCloudCoordinator);
 
-			if (StringUtils.isNotBlank(application)) {
-				RemoteAddr remoteAddr = CommonUtils.getRemoteAddr(identifier);
-				RemoteNode remoteNode = CommonUtils.getRemoteNode(identifier);
-				registry.putParticipant(application, participant);
-				registry.putRemoteNode(remoteAddr, remoteNode);
-			}
+			RemoteAddr remoteAddr = CommonUtils.getRemoteAddr(identifier);
+			RemoteNode remoteNode = CommonUtils.getRemoteNode(identifier);
+			registry.putParticipant(application, participant);
+			registry.putRemoteNode(remoteAddr, remoteNode);
 		}
 
 		RemoteResourceDescriptor descriptor = new RemoteResourceDescriptor();

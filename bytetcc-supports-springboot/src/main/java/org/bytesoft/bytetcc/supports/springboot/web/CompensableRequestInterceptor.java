@@ -101,6 +101,7 @@ public class CompensableRequestInterceptor
 	}
 
 	private void invokeBeforeSendRequest(HttpRequest httpRequest) throws IOException {
+		RemoteCoordinatorRegistry registry = RemoteCoordinatorRegistry.getInstance();
 		SpringBootBeanRegistry beanRegistry = SpringBootBeanRegistry.getInstance();
 		CompensableBeanFactory beanFactory = beanRegistry.getBeanFactory();
 		CompensableManager compensableManager = beanFactory.getCompensableManager();
@@ -124,14 +125,18 @@ public class CompensableRequestInterceptor
 		String targetHost = httpRequest.getURI().getHost();
 		int targetPort = httpRequest.getURI().getPort();
 
-		SpringBootCoordinator handler = new SpringBootCoordinator();
-		handler.setIdentifier(String.format("%s:%s:%s", targetHost, null, targetPort));
-		handler.setEnvironment(beanRegistry.getEnvironment());
-		RemoteCoordinator participant = (RemoteCoordinator) Proxy.newProxyInstance(SpringBootCoordinator.class.getClassLoader(),
-				new Class[] { RemoteCoordinator.class }, handler);
+		RemoteAddr remoteAddr = new RemoteAddr();
+		remoteAddr.setServerHost(targetHost);
+		remoteAddr.setServerPort(targetPort);
 
-		// String instanceId = participant.getIdentifier();
-		// RemoteCoordinator coordinator = beanRegistry.getConsumeCoordinator(instanceId);
+		RemoteCoordinator participant = registry.getPhysicalInstance(remoteAddr);
+		if (participant == null) {
+			SpringBootCoordinator handler = new SpringBootCoordinator();
+			handler.setIdentifier(String.format("%s:%s:%s", targetHost, null, targetPort));
+			handler.setEnvironment(beanRegistry.getEnvironment());
+			participant = (RemoteCoordinator) Proxy.newProxyInstance(SpringBootCoordinator.class.getClassLoader(),
+					new Class[] { RemoteCoordinator.class }, handler);
+		}
 
 		request.setTargetTransactionCoordinator(participant);
 
@@ -152,20 +157,8 @@ public class CompensableRequestInterceptor
 
 		RemoteAddr remoteAddr = CommonUtils.getRemoteAddr(instanceId);
 		RemoteNode remoteNode = CommonUtils.getRemoteNode(instanceId);
-		String application = remoteNode.getServiceKey();
 		if (remoteAddr != null && remoteNode != null) {
 			participantRegistry.putRemoteNode(remoteAddr, remoteNode);
-		}
-
-		RemoteCoordinator participant = participantRegistry.getParticipant(application);
-		if (participant == null) {
-			SpringBootCoordinator springBootCoordinator = new SpringBootCoordinator();
-			springBootCoordinator.setIdentifier(instanceId);
-
-			participant = (RemoteCoordinator) Proxy.newProxyInstance(SpringBootCoordinator.class.getClassLoader(),
-					new Class[] { RemoteCoordinator.class }, springBootCoordinator);
-
-			participantRegistry.putParticipant(application, participant);
 		}
 
 		byte[] byteArray = ByteUtils.stringToByteArray(StringUtils.trimToNull(respTransactionStr));

@@ -24,7 +24,6 @@ import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 import org.bytesoft.transaction.remote.RemoteAddr;
 import org.bytesoft.transaction.remote.RemoteCoordinator;
-import org.bytesoft.transaction.remote.RemoteNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.EnvironmentAware;
@@ -59,25 +58,20 @@ public final class SpringBootBeanRegistry implements CompensableBeanFactoryAware
 		RemoteAddr remoteAddr = CommonUtils.getRemoteAddr(identifier);
 		String application = CommonUtils.getApplication(identifier);
 
-		RemoteCoordinator participant = registry.getPhysicalInstance(remoteAddr);
-		if (participant != null) {
-			return participant;
+		if (registry.containsPhysicalInstance(remoteAddr) == false) {
+			SpringBootCoordinator handler = new SpringBootCoordinator();
+			handler.setIdentifier(identifier);
+			handler.setEnvironment(this.environment);
+
+			RemoteCoordinator participant = (RemoteCoordinator) Proxy.newProxyInstance(
+					SpringBootCoordinator.class.getClassLoader(), new Class[] { RemoteCoordinator.class }, handler);
+
+			registry.putPhysicalInstance(remoteAddr, participant);
+			registry.putRemoteNode(remoteAddr, CommonUtils.getRemoteNode(identifier));
+			registry.putParticipant(application, participant);
 		}
 
-		RemoteNode remoteNode = CommonUtils.getRemoteNode(identifier);
-
-		SpringBootCoordinator handler = new SpringBootCoordinator();
-		handler.setIdentifier(identifier);
-		handler.setEnvironment(this.environment);
-
-		participant = (RemoteCoordinator) Proxy.newProxyInstance(SpringBootCoordinator.class.getClassLoader(),
-				new Class[] { RemoteCoordinator.class }, handler);
-
-		registry.putPhysicalInstance(remoteAddr, participant);
-		registry.putRemoteNode(remoteAddr, remoteNode);
-		registry.putParticipant(application, participant);
-
-		return participant;
+		return registry.getPhysicalInstance(remoteAddr);
 	}
 
 	public RestTemplate getRestTemplate() {
