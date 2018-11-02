@@ -139,7 +139,7 @@ public class TransactionCoordinator implements RemoteCoordinator, CompensableBea
 	}
 
 	public String getIdentifier() {
-		return this.beanFactory.getCompensableNativeParticipant().getIdentifier();
+		return ((RemoteCoordinator) this.beanFactory.getCompensableNativeParticipant()).getIdentifier();
 	}
 
 	public void start(Xid xid, int flags) throws XAException {

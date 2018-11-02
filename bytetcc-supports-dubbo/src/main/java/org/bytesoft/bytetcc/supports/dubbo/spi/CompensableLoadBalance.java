@@ -18,7 +18,6 @@ package org.bytesoft.bytetcc.supports.dubbo.spi;
 import java.util.List;
 
 import org.apache.commons.lang3.StringUtils;
-import org.bytesoft.bytejta.supports.dubbo.InvocationContext;
 import org.bytesoft.bytejta.supports.dubbo.InvocationContextRegistry;
 import org.bytesoft.bytejta.supports.internal.RemoteCoordinatorRegistry;
 import org.bytesoft.bytetcc.CompensableTransactionImpl;
@@ -61,7 +60,7 @@ public final class CompensableLoadBalance implements LoadBalance {
 
 	public <T> Invoker<T> select(List<Invoker<T>> invokers, URL url, Invocation invocation) throws RpcException {
 		InvocationContextRegistry registry = InvocationContextRegistry.getInstance();
-		InvocationContext invocationContext = registry.getInvocationContext();
+		RemoteNode invocationContext = registry.getInvocationContext();
 		if (invocationContext == null) {
 			return this.selectInvokerForSVC(invokers, url, invocation);
 		} else {
@@ -115,7 +114,7 @@ public final class CompensableLoadBalance implements LoadBalance {
 	public <T> Invoker<T> selectInvokerForTCC(List<Invoker<T>> invokers, URL url, Invocation invocation) throws RpcException {
 		InvocationContextRegistry invocationContextRegistry = InvocationContextRegistry.getInstance();
 		RemoteCoordinatorRegistry remoteCoordinatorRegistry = RemoteCoordinatorRegistry.getInstance();
-		InvocationContext invocationContext = invocationContextRegistry.getInvocationContext();
+		RemoteNode invocationContext = invocationContextRegistry.getInvocationContext();
 
 		String serverHost = invocationContext.getServerHost();
 		int serverPort = invocationContext.getServerPort();

@@ -43,6 +43,7 @@ import org.bytesoft.transaction.TransactionLock;
 import org.bytesoft.transaction.TransactionManager;
 import org.bytesoft.transaction.TransactionParticipant;
 import org.bytesoft.transaction.TransactionRepository;
+import org.bytesoft.transaction.remote.RemoteCoordinator;
 import org.bytesoft.transaction.xa.TransactionXid;
 import org.bytesoft.transaction.xa.XidFactory;
 import org.slf4j.Logger;
@@ -216,7 +217,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
 		TransactionLock compensableLock = this.beanFactory.getCompensableLock();
 		TransactionRepository compensableRepository = this.beanFactory.getCompensableRepository();
-		TransactionParticipant compensableCoordinator = this.beanFactory.getCompensableNativeParticipant();
+		RemoteCoordinator compensableCoordinator = (RemoteCoordinator) this.beanFactory.getCompensableNativeParticipant();
 
 		XidFactory transactionXidFactory = this.beanFactory.getTransactionXidFactory();
 		XidFactory compensableXidFactory = this.beanFactory.getCompensableXidFactory();

@@ -27,7 +27,7 @@ import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.common.utils.CommonUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
-import org.bytesoft.transaction.TransactionParticipant;
+import org.bytesoft.transaction.remote.RemoteCoordinator;
 import org.bytesoft.transaction.xa.XidFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -168,7 +168,7 @@ public class CompensableCoordinatorController extends PropertyEditorSupport impl
 	@RequestMapping(value = "/org/bytesoft/bytetcc/getIdentifier")
 	@ResponseBody
 	public String getIdentifier(HttpServletRequest request, HttpServletResponse response) {
-		TransactionParticipant nativePartcipant = this.beanFactory.getCompensableNativeParticipant();
+		RemoteCoordinator nativePartcipant = (RemoteCoordinator) this.beanFactory.getCompensableNativeParticipant();
 		response.addHeader(HEADER_PROPAGATION_KEY, nativePartcipant.getIdentifier());
 		return nativePartcipant.getIdentifier();
 	}
@@ -176,7 +176,7 @@ public class CompensableCoordinatorController extends PropertyEditorSupport impl
 	@RequestMapping(value = "/org/bytesoft/bytetcc/getApplication")
 	@ResponseBody
 	public String getApplication(HttpServletRequest request, HttpServletResponse response) {
-		TransactionParticipant nativePartcipant = this.beanFactory.getCompensableNativeParticipant();
+		RemoteCoordinator nativePartcipant = (RemoteCoordinator) this.beanFactory.getCompensableNativeParticipant();
 		response.addHeader(HEADER_PROPAGATION_KEY, nativePartcipant.getIdentifier());
 		return CommonUtils.getApplication(nativePartcipant.getIdentifier());
 	}

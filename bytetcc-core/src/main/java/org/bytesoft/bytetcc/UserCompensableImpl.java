@@ -39,6 +39,7 @@ import org.bytesoft.transaction.TransactionException;
 import org.bytesoft.transaction.TransactionManager;
 import org.bytesoft.transaction.TransactionParticipant;
 import org.bytesoft.transaction.TransactionRepository;
+import org.bytesoft.transaction.remote.RemoteCoordinator;
 import org.bytesoft.transaction.xa.TransactionXid;
 import org.bytesoft.transaction.xa.XidFactory;
 import org.slf4j.Logger;
@@ -54,7 +55,7 @@ public class UserCompensableImpl implements UserCompensable, Referenceable, Seri
 	private CompensableBeanFactory beanFactory;
 
 	public TransactionXid compensableBegin() throws NotSupportedException, SystemException {
-		TransactionParticipant compensableCoordinator = this.beanFactory.getCompensableNativeParticipant();
+		RemoteCoordinator compensableCoordinator = (RemoteCoordinator) this.beanFactory.getCompensableNativeParticipant();
 		CompensableManager tompensableManager = this.beanFactory.getCompensableManager();
 		XidFactory compensableXidFactory = this.beanFactory.getCompensableXidFactory();
 

@@ -53,9 +53,9 @@ import org.bytesoft.compensable.logging.CompensableLogger;
 import org.bytesoft.transaction.CommitRequiredException;
 import org.bytesoft.transaction.RollbackRequiredException;
 import org.bytesoft.transaction.Transaction;
-import org.bytesoft.transaction.TransactionParticipant;
 import org.bytesoft.transaction.TransactionRepository;
 import org.bytesoft.transaction.archive.XAResourceArchive;
+import org.bytesoft.transaction.remote.RemoteCoordinator;
 import org.bytesoft.transaction.remote.RemoteSvc;
 import org.bytesoft.transaction.supports.TransactionExtra;
 import org.bytesoft.transaction.supports.TransactionListener;
@@ -712,7 +712,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 			throw new RollbackException(); // should never happen
 		}
 
-		TransactionParticipant transactionCoordinator = this.beanFactory.getCompensableNativeParticipant();
+		RemoteCoordinator transactionCoordinator = (RemoteCoordinator) this.beanFactory.getCompensableNativeParticipant();
 
 		RemoteSvc nativeSvc = CommonUtils.getRemoteSvc(transactionCoordinator.getIdentifier());
 		RemoteSvc parentSvc = CommonUtils.getRemoteSvc(String.valueOf(this.transactionContext.getPropagatedBy()));
@@ -746,7 +746,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 	}
 
 	public boolean delistResource(XAResource xaRes, int flag) throws IllegalStateException, SystemException {
-		TransactionParticipant transactionCoordinator = this.beanFactory.getCompensableNativeParticipant();
+		RemoteCoordinator transactionCoordinator = (RemoteCoordinator) this.beanFactory.getCompensableNativeParticipant();
 		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
 
 		if (RemoteResourceDescriptor.class.isInstance(xaRes)) {

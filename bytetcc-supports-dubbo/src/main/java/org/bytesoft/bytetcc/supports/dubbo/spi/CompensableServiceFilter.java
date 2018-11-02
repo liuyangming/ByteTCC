@@ -30,7 +30,6 @@ import javax.transaction.xa.Xid;
 
 import org.apache.commons.lang3.StringUtils;
 import org.bytesoft.bytejta.supports.dubbo.DubboRemoteCoordinator;
-import org.bytesoft.bytejta.supports.dubbo.InvocationContext;
 import org.bytesoft.bytejta.supports.internal.RemoteCoordinatorRegistry;
 import org.bytesoft.bytejta.supports.internal.RemoteCoordinatorRegistry.InvocationDef;
 import org.bytesoft.bytejta.supports.rpc.TransactionRequestImpl;
@@ -105,7 +104,7 @@ public class CompensableServiceFilter implements Filter {
 	public Result providerInvokeForKey(Invoker<?> invoker, Invocation invocation) throws RpcException {
 		CompensableBeanRegistry beanRegistry = CompensableBeanRegistry.getInstance();
 		CompensableBeanFactory beanFactory = beanRegistry.getBeanFactory();
-		TransactionParticipant transactionCoordinator = beanFactory.getCompensableNativeParticipant();
+		RemoteCoordinator transactionCoordinator = (RemoteCoordinator) beanFactory.getCompensableNativeParticipant();
 
 		String instanceId = StringUtils.trimToEmpty(invocation.getAttachment(RemoteCoordinator.class.getName()));
 		this.registerRemoteParticipantIfNecessary(instanceId);
@@ -126,7 +125,7 @@ public class CompensableServiceFilter implements Filter {
 		CompensableBeanFactory beanFactory = beanRegistry.getBeanFactory();
 		XidFactory xidFactory = beanFactory.getCompensableXidFactory();
 		TransactionRepository compensableRepository = beanFactory.getCompensableRepository();
-		TransactionParticipant compensableCoordinator = beanFactory.getCompensableNativeParticipant();
+		RemoteCoordinator compensableCoordinator = (RemoteCoordinator) beanFactory.getCompensableNativeParticipant();
 
 		Class<?>[] parameterTypeArray = invocation.getParameterTypes();
 		Class<?> parameterType = (parameterTypeArray == null || parameterTypeArray.length == 0) ? null : parameterTypeArray[0];
@@ -266,7 +265,7 @@ public class CompensableServiceFilter implements Filter {
 	private Result convertResultForProvider(RpcResult result, String propagatedBy, boolean attachRequired) {
 		CompensableBeanRegistry beanRegistry = CompensableBeanRegistry.getInstance();
 		CompensableBeanFactory beanFactory = beanRegistry.getBeanFactory();
-		TransactionParticipant compensableCoordinator = beanFactory.getCompensableNativeParticipant();
+		RemoteCoordinator compensableCoordinator = (RemoteCoordinator) beanFactory.getCompensableNativeParticipant();
 
 		Object value = result.getValue();
 
@@ -286,7 +285,7 @@ public class CompensableServiceFilter implements Filter {
 	private Result createErrorResultForProvider(Throwable throwable, String propagatedBy, boolean attachRequired) {
 		CompensableBeanRegistry beanRegistry = CompensableBeanRegistry.getInstance();
 		CompensableBeanFactory beanFactory = beanRegistry.getBeanFactory();
-		TransactionParticipant compensableCoordinator = beanFactory.getCompensableNativeParticipant();
+		RemoteCoordinator compensableCoordinator = (RemoteCoordinator) beanFactory.getCompensableNativeParticipant();
 
 		RpcResult result = new RpcResult();
 
@@ -378,7 +377,7 @@ public class CompensableServiceFilter implements Filter {
 	public Result consumerInvokeForKey(Invoker<?> invoker, Invocation invocation) throws RpcException {
 		CompensableBeanRegistry beanRegistry = CompensableBeanRegistry.getInstance();
 		CompensableBeanFactory beanFactory = beanRegistry.getBeanFactory();
-		TransactionParticipant transactionCoordinator = beanFactory.getCompensableNativeParticipant();
+		RemoteCoordinator transactionCoordinator = (RemoteCoordinator) beanFactory.getCompensableNativeParticipant();
 
 		Map<String, String> attachments = invocation.getAttachments();
 		attachments.put(RemoteCoordinator.class.getName(), transactionCoordinator.getIdentifier());
@@ -408,7 +407,7 @@ public class CompensableServiceFilter implements Filter {
 	public Result consumerInvokeForTCC(Invoker<?> invoker, Invocation invocation) throws RpcException, RemotingException {
 		CompensableBeanRegistry beanRegistry = CompensableBeanRegistry.getInstance();
 		CompensableBeanFactory beanFactory = beanRegistry.getBeanFactory();
-		TransactionParticipant compensableCoordinator = beanFactory.getCompensableNativeParticipant();
+		RemoteCoordinator compensableCoordinator = (RemoteCoordinator) beanFactory.getCompensableNativeParticipant();
 
 		Map<String, String> attachments = invocation.getAttachments();
 		attachments.put(RemoteCoordinator.class.getName(), compensableCoordinator.getIdentifier());
@@ -435,7 +434,7 @@ public class CompensableServiceFilter implements Filter {
 		RemoteCoordinatorRegistry participantRegistry = RemoteCoordinatorRegistry.getInstance();
 		CompensableBeanRegistry beanRegistry = CompensableBeanRegistry.getInstance();
 		CompensableBeanFactory beanFactory = beanRegistry.getBeanFactory();
-		TransactionParticipant compensableCoordinator = beanFactory.getCompensableNativeParticipant();
+		RemoteCoordinator compensableCoordinator = (RemoteCoordinator) beanFactory.getCompensableNativeParticipant();
 		CompensableManager transactionManager = beanFactory.getCompensableManager();
 		CompensableTransaction transaction = transactionManager.getCompensableTransactionQuietly();
 		TransactionContext nativeTransactionContext = transaction == null ? null : transaction.getTransactionContext();
@@ -554,7 +553,7 @@ public class CompensableServiceFilter implements Filter {
 				return target;
 			}
 
-			InvocationContext invocationContext = new InvocationContext();
+			RemoteNode invocationContext = new RemoteNode();
 			invocationContext.setServerHost(targetAddr);
 			invocationContext.setServiceKey(remoteNode.getServiceKey());
 			invocationContext.setServerPort(targetPort);
@@ -576,7 +575,7 @@ public class CompensableServiceFilter implements Filter {
 			return this.getParticipantByInvocationDef(invoker, invocationDef);
 		}
 
-		InvocationContext invocationContext = new InvocationContext();
+		RemoteNode invocationContext = new RemoteNode();
 		invocationContext.setServerHost(targetAddr);
 		invocationContext.setServerPort(targetPort);
 
@@ -613,7 +612,7 @@ public class CompensableServiceFilter implements Filter {
 		RemoteAddr remoteAddr = CommonUtils.getRemoteAddr(instanceId);
 		RemoteNode remoteNode = CommonUtils.getRemoteNode(instanceId);
 
-		InvocationContext invocationContext = new InvocationContext();
+		RemoteNode invocationContext = new RemoteNode();
 		invocationContext.setServerHost(targetAddr);
 		invocationContext.setServiceKey(application);
 		invocationContext.setServerPort(targetPort);
@@ -637,7 +636,7 @@ public class CompensableServiceFilter implements Filter {
 		CompensableBeanRegistry beanRegistry = CompensableBeanRegistry.getInstance();
 		CompensableBeanFactory beanFactory = beanRegistry.getBeanFactory();
 		TransactionInterceptor transactionInterceptor = beanFactory.getTransactionInterceptor();
-		TransactionParticipant compensableCoordinator = beanFactory.getCompensableNativeParticipant();
+		RemoteCoordinator compensableCoordinator = (RemoteCoordinator) beanFactory.getCompensableNativeParticipant();
 
 		Map<String, String> attachments = invocation.getAttachments();
 		attachments.put(RemoteCoordinator.class.getName(), compensableCoordinator.getIdentifier());
