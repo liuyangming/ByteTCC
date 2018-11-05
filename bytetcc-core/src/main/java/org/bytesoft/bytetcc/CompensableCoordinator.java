@@ -464,7 +464,7 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 	}
 
 	public String getApplication() {
-		return this.endpoint;
+		return CommonUtils.getApplication(this.endpoint);
 	}
 
 	public CompensableBeanFactory getBeanFactory() {

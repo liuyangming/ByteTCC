@@ -427,7 +427,7 @@ public class CompensableServiceFilter implements Filter {
 				if (StringUtils.equals(invocation.getMethodName(), KEY_XA_GET_IDENTIFIER)) {
 					result.setValue(instanceId);
 				} else if (StringUtils.equals(invocation.getMethodName(), KEY_XA_GET_APPLICATION)) {
-					result.setValue(instanceId);
+					result.setValue(CommonUtils.getApplication(instanceId));
 				} else if (StringUtils.equals(invocation.getMethodName(), KEY_XA_GET_REMOTEADDR)) {
 					result.setValue(CommonUtils.getRemoteAddr(instanceId));
 				} else if (StringUtils.equals(invocation.getMethodName(), KEY_XA_GET_REMOTENODE)) {
