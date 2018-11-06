@@ -13,6 +13,6 @@
 
 	<import resource="classpath:bytetcc-disable-tx-advice.xml" />
 
-	<import resource="classpath:bytetcc-supports-springboot-core.xml" />
+	<import resource="classpath:bytetcc-supports-springboot-primary.xml" />
 
 </beans>

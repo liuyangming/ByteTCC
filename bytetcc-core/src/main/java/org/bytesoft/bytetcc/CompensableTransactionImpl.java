@@ -204,8 +204,10 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 	}
 
 	public synchronized void recoveryCommit() throws CommitRequiredException, SystemException {
-
 		this.recoverIfNecessary(); // Recover if transaction is recovered from tx-log.
+
+		this.transactionContext.setRecoveredTimes(this.transactionContext.getRecoveredTimes() + 1);
+		this.transactionContext.setCreatedTime(System.currentTimeMillis());
 
 		try {
 			this.fireCommit();
@@ -527,9 +529,10 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 	}
 
 	public synchronized void recoveryRollback() throws RollbackRequiredException, SystemException {
+		this.recoverIfNecessary(); // Recover if transaction is recovered from tx-log.
 
-		// Recover if transaction is recovered from tx-log.
-		this.recoverIfNecessary();
+		this.transactionContext.setRecoveredTimes(this.transactionContext.getRecoveredTimes() + 1);
+		this.transactionContext.setCreatedTime(System.currentTimeMillis());
 
 		this.fireRollback();
 	}

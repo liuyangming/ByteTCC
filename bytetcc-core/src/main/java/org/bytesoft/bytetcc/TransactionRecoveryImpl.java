@@ -325,10 +325,8 @@ public class TransactionRecoveryImpl
 		long recoverMillis = transactionContext.getCreatedTime() + SECOND_MILLIS * 60L * (long) Math.pow(2, recoveredTimes);
 
 		if (System.currentTimeMillis() > recoverMillis) {
-			transactionContext.setRecoveredTimes(recoveredTimes + 1);
-			transactionContext.setCreatedTime(System.currentTimeMillis());
 			this.recoverTransaction(transaction);
-		}
+		} // end-if (System.currentTimeMillis() > recoverMillis)
 
 	}
 

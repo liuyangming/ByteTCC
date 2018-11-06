@@ -14,7 +14,7 @@
 	<import resource="classpath:bytetcc-supports-jta.xml" />
 	<import resource="classpath:bytetcc-supports-tcc.xml" />
 
-	<import resource="classpath:bytetcc-supports-task.xml" />
+	<import resource="classpath:bytetcc-supports-logger-secondary.xml" />
 
 	<bean class="org.bytesoft.bytetcc.supports.springcloud.SpringCloudEndpointPostProcessor" />
 	<bean class="org.bytesoft.bytetcc.supports.springcloud.SpringCloudBeanRegistry" factory-method="getInstance" />

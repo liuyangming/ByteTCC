@@ -39,7 +39,6 @@ import org.bson.conversions.Bson;
 import org.bytesoft.bytetcc.CompensableManagerImpl;
 import org.bytesoft.bytetcc.CompensableTransactionImpl;
 import org.bytesoft.bytetcc.supports.CompensableRolledbackMarker;
-import org.bytesoft.bytetcc.supports.logging.MongoCompensableLogger;
 import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.common.utils.CommonUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;

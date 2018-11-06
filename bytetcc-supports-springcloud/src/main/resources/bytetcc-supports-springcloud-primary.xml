@@ -14,21 +14,19 @@
 	<import resource="classpath:bytetcc-supports-jta.xml" />
 	<import resource="classpath:bytetcc-supports-tcc.xml" />
 
-	<import resource="classpath:bytetcc-supports-task.xml" />
+	<import resource="classpath:bytetcc-supports-logger-primary.xml" />
 
-	<bean class="org.bytesoft.bytetcc.supports.dubbo.internal.CompensableEndpointAutoInjector" />
-	<bean class="org.bytesoft.bytetcc.supports.dubbo.internal.CompensableBeanConfigValidator" />
-	<bean class="org.bytesoft.bytetcc.supports.dubbo.internal.CompensableParticipantRegistrant" />
+	<bean class="org.bytesoft.bytetcc.supports.springcloud.SpringCloudEndpointPostProcessor" />
+	<bean class="org.bytesoft.bytetcc.supports.springcloud.SpringCloudBeanRegistry" factory-method="getInstance" />
 
-	<bean class="org.bytesoft.bytejta.supports.dubbo.TransactionBeanRegistry" factory-method="getInstance" />
-	<bean class="org.bytesoft.bytetcc.supports.dubbo.CompensableBeanRegistry" factory-method="getInstance" />
+	<bean class="org.bytesoft.bytetcc.supports.springcloud.controller.CompensableCoordinatorController" />
 
-	<bean id="bytetccTransactionInterceptor" class="org.bytesoft.bytetcc.supports.dubbo.CompensableInterceptorImpl">
+	<bean id="bytetccTransactionInterceptor" class="org.bytesoft.bytetcc.supports.springcloud.CompensableInterceptorImpl">
 		<property name="compensableInterceptor" ref="bytetccCompensableInterceptor" />
 	</bean>
 
 	<bean id="commonResourceDeserializer" class="org.bytesoft.bytejta.supports.serialize.XAResourceDeserializerImpl" />
-	<bean id="bytetccResourceDeserializer" class="org.bytesoft.bytetcc.supports.dubbo.serialize.XAResourceDeserializerImpl">
+	<bean id="bytetccResourceDeserializer" class="org.bytesoft.bytetcc.supports.springcloud.serialize.XAResourceDeserializerImpl">
 		<property name="resourceDeserializer" ref="commonResourceDeserializer" />
 	</bean>
 

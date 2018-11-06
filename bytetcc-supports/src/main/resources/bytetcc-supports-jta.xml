@@ -13,7 +13,6 @@
 
 	<bean class="org.bytesoft.bytejta.supports.spring.ManagedConnectionFactoryPostProcessor" />
 	<bean class="org.bytesoft.bytejta.supports.spring.TransactionDebuggablePostProcessor" />
-	<!-- <bean class="org.bytesoft.bytejta.supports.spring.TransactionBeanFactoryPostProcessor" /> -->
 
 	<bean id="bytejtaTransactionManager" class="org.bytesoft.bytejta.TransactionManagerImpl" />
 	<bean id="bytejtaTransactionCoordinator" class="org.bytesoft.bytejta.TransactionCoordinator" />

@@ -13,6 +13,6 @@
 
 	<import resource="classpath:bytetcc-disable-tx-advice.xml" />
 
-	<import resource="classpath:bytetcc-supports-dubbo-core.xml" />
+	<import resource="classpath:bytetcc-supports-dubbo-primary.xml" />
 
 </beans>

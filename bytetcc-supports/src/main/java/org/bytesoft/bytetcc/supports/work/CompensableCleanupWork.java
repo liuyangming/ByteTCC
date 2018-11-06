@@ -17,7 +17,7 @@ import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.bytesoft.bytejta.supports.jdbc.RecoveredResource;
 import org.bytesoft.bytejta.supports.resource.LocalXAResourceDescriptor;
-import org.bytesoft.bytetcc.supports.logging.MongoCompensableLogger;
+import org.bytesoft.bytetcc.supports.internal.MongoCompensableLogger;
 import org.bytesoft.bytetcc.supports.resource.LocalResourceCleaner;
 import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.common.utils.CommonUtils;
@@ -79,7 +79,7 @@ public class CompensableCleanupWork
 	}
 
 	public void run() {
-		long nextMillis = System.currentTimeMillis() + CONSTANTS_SECOND_MILLIS * 30;
+		long nextMillis = System.currentTimeMillis() + CONSTANTS_SECOND_MILLIS * 60;
 		while (this.released == false) {
 			if (System.currentTimeMillis() < nextMillis) {
 				this.waitForMillis(100);

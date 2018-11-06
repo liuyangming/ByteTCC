@@ -13,7 +13,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this distribution; if not, see <http://www.gnu.org/licenses/>.
  */
-package org.bytesoft.bytetcc.supports.logging;
+package org.bytesoft.bytetcc.supports.internal;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -31,7 +31,6 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.bson.Document;
 import org.bytesoft.bytetcc.supports.CompensableInvocationImpl;
-import org.bytesoft.bytetcc.supports.internal.CompensableInstVersionManager;
 import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.common.utils.CommonUtils;
 import org.bytesoft.common.utils.SerializeUtils;

@@ -95,7 +95,10 @@ public class TransactionArchiveDeserializer extends org.bytesoft.bytejta.logging
 			}
 		}
 
-		int length = 6 + 4 + 1 + nameByteArray.length + 2 + varByteArray.length + 2;
+		long recoveredMillis = archive.getRecoveredAt();
+		int recoveredTimes = archive.getRecoveredTimes();
+
+		int length = 6 + 4 + 1 + nameByteArray.length + 2 + varByteArray.length + 2 + 8 + 1;
 		byte[][] nativeByteArray = new byte[nativeArchiveNumber][];
 		for (int i = 0; i < nativeArchiveNumber; i++) {
 			CompensableArchive compensableArchive = nativeArchiveList.get(i);
@@ -148,6 +151,11 @@ public class TransactionArchiveDeserializer extends org.bytesoft.bytejta.logging
 
 		System.arraycopy(varByteArray, 0, byteArray, position, varByteArray.length);
 		position = position + varByteArray.length;
+
+		byteArray[position++] = (byte) (recoveredTimes - 128);
+		byte[] millisByteArray = ByteUtils.longToByteArray(recoveredMillis);
+		System.arraycopy(millisByteArray, 0, byteArray, position, millisByteArray.length);
+		position = position + millisByteArray.length;
 
 		byteArray[position++] = (byte) nativeArchiveNumber;
 		byteArray[position++] = (byte) remoteArchiveNumber;
@@ -226,6 +234,13 @@ public class TransactionArchiveDeserializer extends org.bytesoft.bytejta.logging
 
 			archive.setVariables(variables);
 		}
+
+		int recoveredTimes = 128 + buffer.get();
+		byte[] millisByteArray = new byte[8];
+		buffer.get(millisByteArray);
+		long recoveredAt = ByteUtils.byteArrayToLong(millisByteArray);
+		archive.setRecoveredTimes(recoveredTimes);
+		archive.setRecoveredAt(recoveredAt);
 
 		int nativeArchiveNumber = buffer.get();
 		int remoteArchiveNumber = buffer.get();
