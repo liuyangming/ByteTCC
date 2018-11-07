@@ -53,13 +53,13 @@ public class UserCompensableImpl implements UserCompensable, Referenceable, Seri
 	private TransactionManager transactionManager;
 	@javax.inject.Inject
 	private CompensableBeanFactory beanFactory;
+	private transient boolean statefully;
 
 	public TransactionXid compensableBegin() throws NotSupportedException, SystemException {
 		RemoteCoordinator compensableCoordinator = (RemoteCoordinator) this.beanFactory.getCompensableNativeParticipant();
 		CompensableManager tompensableManager = this.beanFactory.getCompensableManager();
 		XidFactory compensableXidFactory = this.beanFactory.getCompensableXidFactory();
 
-		TransactionContext compensableContext = new TransactionContext();
 		CompensableTransactionImpl compensable = (CompensableTransactionImpl) tompensableManager
 				.getCompensableTransactionQuietly();
 		if (compensable != null) {
@@ -67,9 +67,12 @@ public class UserCompensableImpl implements UserCompensable, Referenceable, Seri
 		}
 
 		TransactionXid compensableXid = compensableXidFactory.createGlobalXid();
+
+		TransactionContext compensableContext = new TransactionContext();
 		compensableContext.setCoordinator(true);
 		compensableContext.setPropagated(true);
 		compensableContext.setCompensable(true);
+		compensableContext.setStatefully(this.statefully);
 		compensableContext.setXid(compensableXid);
 		compensableContext.setPropagatedBy(compensableCoordinator.getIdentifier());
 		compensable = new CompensableTransactionImpl(compensableContext);
@@ -340,6 +343,14 @@ public class UserCompensableImpl implements UserCompensable, Referenceable, Seri
 
 	public void setBeanFactory(CompensableBeanFactory beanFactory) {
 		this.beanFactory = beanFactory;
+	}
+
+	public boolean isStatefully() {
+		return statefully;
+	}
+
+	public void setStatefully(boolean statefully) {
+		this.statefully = statefully;
 	}
 
 	public TransactionManager getTransactionManager() {

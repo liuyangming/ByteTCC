@@ -65,6 +65,7 @@ public class TransactionRecoveryImpl
 	@javax.inject.Inject
 	protected CompensableBeanFactory beanFactory;
 	protected String endpoint;
+	protected transient boolean statefully;
 
 	protected final Map<TransactionXid, Transaction> recovered = new HashMap<TransactionXid, Transaction>();
 
@@ -133,6 +134,7 @@ public class TransactionRecoveryImpl
 
 		TransactionContext transactionContext = new TransactionContext();
 		transactionContext.setCompensable(true);
+		transactionContext.setStatefully(this.statefully);
 		transactionContext.setCoordinator(archive.isCoordinator());
 		transactionContext.setPropagated(archive.isPropagated());
 		transactionContext.setCompensating(archive.isPropagated() == false);
@@ -427,6 +429,14 @@ public class TransactionRecoveryImpl
 			compensableManager.desociateThread();
 		}
 
+	}
+
+	public boolean isStatefully() {
+		return statefully;
+	}
+
+	public void setStatefully(boolean statefully) {
+		this.statefully = statefully;
 	}
 
 	public String getEndpoint() {

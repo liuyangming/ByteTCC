@@ -48,6 +48,7 @@ public class CompensableBeanConfigValidator
 
 	private ApplicationContext applicationContext;
 	private BeanFactory beanFactory;
+	private transient boolean statefully;
 
 	@SuppressWarnings("rawtypes")
 	public void afterSingletonsInstantiated() {
@@ -107,7 +108,7 @@ public class CompensableBeanConfigValidator
 	@SuppressWarnings("rawtypes")
 	public void validateServiceBean(String beanId, ServiceBean serviceBean) throws BeansException {
 		Integer retries = serviceBean.getRetries();
-		// String loadBalance = serviceBean.getLoadbalance();
+		String loadBalance = serviceBean.getLoadbalance();
 		String cluster = serviceBean.getCluster();
 		String filter = serviceBean.getFilter();
 		String group = serviceBean.getGroup();
@@ -118,6 +119,9 @@ public class CompensableBeanConfigValidator
 					"The value of attr 'group'(beanId= %s) should be 'x-bytetcc' or starts with 'x-bytetcc-'.", beanId));
 		} else if (retries != null && retries != 0) {
 			throw new FatalBeanException(String.format("The value of attr 'retries'(beanId= %s) should be '0'.", beanId));
+		} else if (this.statefully && StringUtils.equals(loadBalance, "bytetcc") == false) {
+			throw new FatalBeanException(
+					String.format("The value of attr 'loadbalance'(beanId= %s) should be 'bytetcc'.", beanId));
 		} else if (StringUtils.equals("failfast", cluster) == false) {
 			throw new FatalBeanException(
 					String.format("The value of attribute 'cluster' (beanId= %s) must be 'failfast'.", beanId));
@@ -149,7 +153,7 @@ public class CompensableBeanConfigValidator
 	@SuppressWarnings("rawtypes")
 	public void validateReferenceBean(String beanId, ReferenceBean referenceBean) throws BeansException {
 		Integer retries = referenceBean.getRetries();
-		// String loadBalance = referenceBean.getLoadbalance();
+		String loadBalance = referenceBean.getLoadbalance();
 		String cluster = referenceBean.getCluster();
 		String filter = referenceBean.getFilter();
 		String group = referenceBean.getGroup();
@@ -160,6 +164,9 @@ public class CompensableBeanConfigValidator
 					"The value of attr 'group'(beanId= %s) should be 'x-bytetcc' or starts with 'x-bytetcc-'.", beanId));
 		} else if (retries != null && retries != 0) {
 			throw new FatalBeanException(String.format("The value of attr 'retries'(beanId= %s) should be '0'.", beanId));
+		} else if (this.statefully && StringUtils.equals(loadBalance, "bytetcc") == false) {
+			throw new FatalBeanException(
+					String.format("The value of attr 'loadbalance'(beanId= %s) should be 'bytetcc'.", beanId));
 		} else if (StringUtils.equals("failfast", cluster) == false) {
 			throw new FatalBeanException(
 					String.format("The value of attribute 'cluster' (beanId= %s) must be 'failfast'.", beanId));
@@ -250,6 +257,14 @@ public class CompensableBeanConfigValidator
 		}
 
 		return bean;
+	}
+
+	public boolean isStatefully() {
+		return statefully;
+	}
+
+	public void setStatefully(boolean statefully) {
+		this.statefully = statefully;
 	}
 
 	public void setBeanFactory(BeanFactory beanFactory) throws BeansException {

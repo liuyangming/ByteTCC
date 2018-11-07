@@ -55,6 +55,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 	@javax.inject.Inject
 	private CompensableBeanFactory beanFactory;
 	private String endpoint;
+	private transient boolean statefully;
 
 	private final Map<Thread, Transaction> thread2txMap = new ConcurrentHashMap<Thread, Transaction>();
 	private final Map<Xid, Transaction> xid2txMap = new ConcurrentHashMap<Xid, Transaction>();
@@ -228,6 +229,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 		TransactionContext compensableContext = new TransactionContext();
 		compensableContext.setCoordinator(true);
 		compensableContext.setCompensable(true);
+		compensableContext.setStatefully(this.statefully);
 		compensableContext.setXid(compensableXid);
 		compensableContext.setPropagatedBy(compensableCoordinator.getIdentifier());
 		CompensableTransactionImpl compensable = new CompensableTransactionImpl(compensableContext);
@@ -689,6 +691,14 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 	}
 
 	public void setTimeoutSeconds(int timeoutSeconds) {
+	}
+
+	public boolean isStatefully() {
+		return statefully;
+	}
+
+	public void setStatefully(boolean statefully) {
+		this.statefully = statefully;
 	}
 
 	public CompensableBeanFactory getBeanFactory() {

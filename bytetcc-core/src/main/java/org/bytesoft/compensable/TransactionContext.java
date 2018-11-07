@@ -24,6 +24,7 @@ public class TransactionContext extends org.bytesoft.transaction.TransactionCont
 	private transient int propagationLevel;
 
 	private boolean compensable;
+	private boolean statefully;
 
 	public boolean compatibleLoggingLRO() {
 		return true;
@@ -34,8 +35,17 @@ public class TransactionContext extends org.bytesoft.transaction.TransactionCont
 		that.xid = this.xid.clone();
 		that.createdTime = System.currentTimeMillis();
 		that.expiredTime = this.expiredTime;
+		that.statefully = this.statefully;
 		that.compensable = this.compensable;
 		return that;
+	}
+
+	public boolean isStatefully() {
+		return statefully;
+	}
+
+	public void setStatefully(boolean statefully) {
+		this.statefully = statefully;
 	}
 
 	public boolean isCompensating() {

@@ -59,6 +59,8 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 	private transient boolean ready = false;
 	private final Lock lock = new ReentrantLock();
 
+	private transient boolean statefully;
+
 	public Transaction getTransactionQuietly() {
 		CompensableManager transactionManager = this.beanFactory.getCompensableManager();
 		return transactionManager.getTransactionQuietly();
@@ -73,6 +75,13 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 		if (compensableManager.getTransactionQuietly() != null) {
 			throw new XAException(XAException.XAER_PROTO);
 		}
+
+		boolean transactionContextStatefully = //
+				((org.bytesoft.compensable.TransactionContext) transactionContext).isStatefully();
+		if (transactionContextStatefully != this.statefully) {
+			throw new XAException(XAException.XAER_PROTO);
+		}
+
 		TransactionXid globalXid = transactionContext.getXid();
 		Transaction transaction = null;
 		try {
@@ -465,6 +474,14 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 
 	public String getApplication() {
 		return CommonUtils.getApplication(this.endpoint);
+	}
+
+	public boolean isStatefully() {
+		return statefully;
+	}
+
+	public void setStatefully(boolean statefully) {
+		this.statefully = statefully;
 	}
 
 	public CompensableBeanFactory getBeanFactory() {
