@@ -56,6 +56,7 @@ import org.bytesoft.transaction.Transaction;
 import org.bytesoft.transaction.TransactionRepository;
 import org.bytesoft.transaction.archive.XAResourceArchive;
 import org.bytesoft.transaction.remote.RemoteCoordinator;
+import org.bytesoft.transaction.remote.RemoteNode;
 import org.bytesoft.transaction.remote.RemoteSvc;
 import org.bytesoft.transaction.supports.TransactionExtra;
 import org.bytesoft.transaction.supports.TransactionListener;
@@ -704,30 +705,23 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 		}
 
 		RemoteResourceDescriptor descriptor = (RemoteResourceDescriptor) xaRes;
+		try {
+			this.checkRemoteResourceDescriptor(descriptor);
+		} catch (IllegalStateException error) {
+			logger.warn("Endpoint {} can not be its own remote branch!", descriptor.getIdentifier());
+			return false;
+		}
 
 		XidFactory xidFactory = this.beanFactory.getCompensableXidFactory();
 		TransactionXid globalXid = this.transactionContext.getXid();
 		TransactionXid branchXid = xidFactory.createBranchXid(globalXid);
-
 		try {
 			descriptor.start(branchXid, XAResource.TMNOFLAGS);
 		} catch (XAException ex) {
 			throw new RollbackException(); // should never happen
 		}
 
-		RemoteCoordinator transactionCoordinator = (RemoteCoordinator) this.beanFactory.getCompensableNativeParticipant();
-
-		RemoteSvc nativeSvc = CommonUtils.getRemoteSvc(transactionCoordinator.getIdentifier());
-		RemoteSvc parentSvc = CommonUtils.getRemoteSvc(String.valueOf(this.transactionContext.getPropagatedBy()));
 		RemoteSvc remoteSvc = descriptor.getRemoteSvc();
-
-		boolean nativeFlag = StringUtils.equalsIgnoreCase(remoteSvc.getServiceKey(), nativeSvc.getServiceKey());
-		boolean parentFlag = StringUtils.equalsIgnoreCase(remoteSvc.getServiceKey(), parentSvc.getServiceKey());
-		if (nativeFlag || parentFlag) {
-			logger.warn("Endpoint {} can not be its own remote branch!", descriptor.getIdentifier());
-			return false;
-		} // end-if (resourceValid == false)
-
 		XAResourceArchive resourceArchive = this.resourceMap.get(remoteSvc);
 		if (resourceArchive == null) {
 			resourceArchive = new XAResourceArchive();
@@ -742,43 +736,62 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 					, ByteUtils.byteArrayToString(globalXid.getGlobalTransactionId()), descriptor.getIdentifier());
 
 			return true;
+		} else if (this.transactionContext.isStatefully()) {
+			XAResourceDescriptor xaResource = resourceArchive.getDescriptor();
+			RemoteNode oldNode = CommonUtils.getRemoteNode(xaResource.getIdentifier());
+			RemoteNode newNode = CommonUtils.getRemoteNode(descriptor.getIdentifier());
+			boolean nodeEquals = oldNode == null && newNode == null ? false
+					: (oldNode == null ? newNode.equals(oldNode) : oldNode.equals(newNode));
+			if (nodeEquals) {
+				return false;
+			}
+			throw new SystemException(XAException.XAER_PROTO);
 		} else {
 			return false;
 		}
-
 	}
 
 	public boolean delistResource(XAResource xaRes, int flag) throws IllegalStateException, SystemException {
-		RemoteCoordinator transactionCoordinator = (RemoteCoordinator) this.beanFactory.getCompensableNativeParticipant();
 		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
 
 		if (RemoteResourceDescriptor.class.isInstance(xaRes)) {
 			RemoteResourceDescriptor descriptor = (RemoteResourceDescriptor) xaRes;
-
-			RemoteSvc nativeSvc = CommonUtils.getRemoteSvc(transactionCoordinator.getIdentifier());
-			RemoteSvc parentSvc = CommonUtils.getRemoteSvc(String.valueOf(this.transactionContext.getPropagatedBy()));
-			RemoteSvc remoteSvc = descriptor.getRemoteSvc();
-
-			boolean nativeFlag = StringUtils.equalsIgnoreCase(remoteSvc.getServiceKey(), nativeSvc.getServiceKey());
-			boolean parentFlag = StringUtils.equalsIgnoreCase(remoteSvc.getServiceKey(), parentSvc.getServiceKey());
-			if (nativeFlag || parentFlag) {
+			try {
+				this.checkRemoteResourceDescriptor(descriptor);
+			} catch (IllegalStateException error) {
+				logger.debug("Endpoint {} can not be its own remote branch!", descriptor.getIdentifier());
 				return true;
 			}
 
 			if (flag == XAResource.TMFAIL) {
-				this.resourceMap.remove(remoteSvc);
+				RemoteSvc remoteSvc = descriptor.getRemoteSvc();
 
 				XAResourceArchive archive = this.resourceMap.get(remoteSvc);
 				if (archive != null) {
 					this.resourceList.remove(archive);
 				} // end-if (archive != null)
 
-				compensableLogger.updateTransaction(this.getTransactionArchive());
-			}
+				this.resourceMap.remove(remoteSvc);
 
+				compensableLogger.updateTransaction(this.getTransactionArchive());
+			} // end-if (flag == XAResource.TMFAIL)
 		} // end-if (RemoteResourceDescriptor.class.isInstance(xaRes))
 
 		return true;
+	}
+
+	private void checkRemoteResourceDescriptor(RemoteResourceDescriptor descriptor) throws IllegalStateException {
+		RemoteCoordinator transactionCoordinator = (RemoteCoordinator) this.beanFactory.getCompensableNativeParticipant();
+
+		RemoteSvc nativeSvc = CommonUtils.getRemoteSvc(transactionCoordinator.getIdentifier());
+		RemoteSvc parentSvc = CommonUtils.getRemoteSvc(String.valueOf(this.transactionContext.getPropagatedBy()));
+		RemoteSvc remoteSvc = descriptor.getRemoteSvc();
+
+		boolean nativeFlag = StringUtils.equalsIgnoreCase(remoteSvc.getServiceKey(), nativeSvc.getServiceKey());
+		boolean parentFlag = StringUtils.equalsIgnoreCase(remoteSvc.getServiceKey(), parentSvc.getServiceKey());
+		if (nativeFlag || parentFlag) {
+			throw new IllegalStateException("Endpoint can not be its own remote branch!");
+		} // end-if (nativeFlag || parentFlag)
 	}
 
 	public void resume() throws SystemException {

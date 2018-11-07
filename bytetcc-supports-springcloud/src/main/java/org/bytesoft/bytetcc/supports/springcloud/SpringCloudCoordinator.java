@@ -47,6 +47,7 @@ public class SpringCloudCoordinator implements InvocationHandler {
 
 	private String identifier;
 	private Environment environment;
+	private boolean statefully;
 
 	public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
 		Class<?> clazz = method.getDeclaringClass();
@@ -105,7 +106,13 @@ public class SpringCloudCoordinator implements InvocationHandler {
 					? null : StringUtils.trimToEmpty(this.environment.getProperty(contextPathKey));
 
 			StringBuilder ber = new StringBuilder();
-			ber.append("http://").append("{").append(remoteNode.getServiceKey()).append("}");
+			ber.append("http://");
+
+			if (this.statefully) {
+				ber.append(remoteNode.getServerHost()).append(":").append(remoteNode.getServerPort());
+			} else {
+				ber.append("{").append(remoteNode.getServiceKey()).append("}");
+			}
 
 			if (StringUtils.isNotBlank(contextPath) || StringUtils.equals(contextPath, "/")) {
 				ber.append(contextPath.startsWith("/") ? "" : "/").append(contextPath);
@@ -169,7 +176,13 @@ public class SpringCloudCoordinator implements InvocationHandler {
 					? null : StringUtils.trimToEmpty(this.environment.getProperty(contextPathKey));
 
 			StringBuilder ber = new StringBuilder();
-			ber.append("http://").append("{").append(remoteNode.getServiceKey()).append("}");
+			ber.append("http://");
+
+			if (this.statefully) {
+				ber.append(remoteNode.getServerHost()).append(":").append(remoteNode.getServerPort());
+			} else {
+				ber.append("{").append(remoteNode.getServiceKey()).append("}");
+			}
 
 			if (StringUtils.isNotBlank(contextPath) || StringUtils.equals(contextPath, "/")) {
 				ber.append(contextPath.startsWith("/") ? "" : "/").append(contextPath);
@@ -249,6 +262,14 @@ public class SpringCloudCoordinator implements InvocationHandler {
 
 	public void setEnvironment(Environment environment) {
 		this.environment = environment;
+	}
+
+	public boolean isStatefully() {
+		return statefully;
+	}
+
+	public void setStatefully(boolean statefully) {
+		this.statefully = statefully;
 	}
 
 }

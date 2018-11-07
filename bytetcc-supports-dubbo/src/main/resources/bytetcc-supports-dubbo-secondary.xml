@@ -20,7 +20,9 @@
 	<bean class="org.bytesoft.bytetcc.supports.dubbo.internal.CompensableBeanConfigValidator">
 		<property name="statefully" value="true" />
 	</bean>
-	<bean class="org.bytesoft.bytetcc.supports.dubbo.internal.CompensableParticipantRegistrant" />
+	<bean class="org.bytesoft.bytetcc.supports.dubbo.internal.CompensableParticipantRegistrant">
+		<property name="statefully" value="true" />
+	</bean>
 
 	<bean class="org.bytesoft.bytejta.supports.dubbo.TransactionBeanRegistry" factory-method="getInstance" />
 	<bean class="org.bytesoft.bytetcc.supports.dubbo.CompensableBeanRegistry" factory-method="getInstance" />
@@ -31,6 +33,7 @@
 
 	<bean id="commonResourceDeserializer" class="org.bytesoft.bytejta.supports.serialize.XAResourceDeserializerImpl" />
 	<bean id="bytetccResourceDeserializer" class="org.bytesoft.bytetcc.supports.dubbo.serialize.XAResourceDeserializerImpl">
+		<property name="statefully" value="true" />
 		<property name="resourceDeserializer" ref="commonResourceDeserializer" />
 	</bean>
 

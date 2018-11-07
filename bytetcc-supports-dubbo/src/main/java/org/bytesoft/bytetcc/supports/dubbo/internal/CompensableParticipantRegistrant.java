@@ -39,6 +39,7 @@ public class CompensableParticipantRegistrant
 
 	private BeanFactory beanFactory;
 	private String endpoint;
+	private boolean statefully;
 
 	public void afterSingletonsInstantiated() {
 		org.bytesoft.bytetcc.TransactionCoordinator transactionCoordinator = //
@@ -82,6 +83,11 @@ public class CompensableParticipantRegistrant
 		applicationServiceConfig.setGroup(CommonUtils.getApplication(this.endpoint));
 		applicationServiceConfig.setRetries(0);
 		applicationServiceConfig.setTimeout(6000);
+
+		if (this.statefully) {
+			globalServiceConfig.setLoadbalance("bytetcc");
+			applicationServiceConfig.setLoadbalance("bytetcc");
+		} // end-if (this.statefully)
 
 		try {
 			com.alibaba.dubbo.config.ApplicationConfig applicationConfig = //
@@ -135,6 +141,9 @@ public class CompensableParticipantRegistrant
 		referenceConfig.setCheck(false);
 		referenceConfig.setRetries(0);
 		referenceConfig.setScope(Constants.SCOPE_REMOTE);
+		if (this.statefully) {
+			referenceConfig.setLoadbalance("bytetcc");
+		} // end-if (this.statefully)
 
 		try {
 			com.alibaba.dubbo.config.ApplicationConfig applicationConfig = //
@@ -171,6 +180,14 @@ public class CompensableParticipantRegistrant
 
 	public void setBeanFactory(BeanFactory beanFactory) throws BeansException {
 		this.beanFactory = beanFactory;
+	}
+
+	public boolean isStatefully() {
+		return statefully;
+	}
+
+	public void setStatefully(boolean statefully) {
+		this.statefully = statefully;
 	}
 
 	public String getEndpoint() {

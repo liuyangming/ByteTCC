@@ -33,6 +33,7 @@ import org.bytesoft.bytejta.supports.internal.RemoteCoordinatorRegistry;
 import org.bytesoft.bytejta.supports.internal.RemoteCoordinatorRegistry.InvocationDef;
 import org.bytesoft.bytejta.supports.rpc.TransactionRequestImpl;
 import org.bytesoft.bytejta.supports.rpc.TransactionResponseImpl;
+import org.bytesoft.bytetcc.CompensableCoordinator;
 import org.bytesoft.bytetcc.supports.dubbo.CompensableBeanRegistry;
 import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.common.utils.CommonUtils;
@@ -813,6 +814,8 @@ public class CompensableServiceFilter implements Filter {
 	private void processInitRemoteParticipantIfNecessary(String application) {
 		RemoteCoordinatorRegistry participantRegistry = RemoteCoordinatorRegistry.getInstance();
 		CompensableBeanRegistry beanRegistry = CompensableBeanRegistry.getInstance();
+		CompensableBeanFactory beanFactory = beanRegistry.getBeanFactory();
+		CompensableCoordinator compensableCoordinator = (CompensableCoordinator) beanFactory.getCompensableNativeParticipant();
 
 		RemoteCoordinator participant = participantRegistry.getParticipant(application);
 		if (participant == null) {
@@ -830,10 +833,15 @@ public class CompensableServiceFilter implements Filter {
 			referenceConfig.setRetries(0);
 			referenceConfig.setScope(Constants.SCOPE_REMOTE);
 
+			if (compensableCoordinator.isStatefully()) {
+				referenceConfig.setLoadbalance("bytetcc");
+			} // end-if (compensableCoordinator.isStatefully())
+
 			referenceConfig.setApplication(applicationConfig);
 			if (registryConfig != null) {
 				referenceConfig.setRegistry(registryConfig);
-			}
+			} // end-if (registryConfig != null)
+
 			if (protocolConfig != null) {
 				referenceConfig.setProtocol(protocolConfig.getName());
 			} // end-if (protocolConfig != null)

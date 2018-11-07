@@ -41,6 +41,7 @@ public final class SpringCloudBeanRegistry implements CompensableBeanFactoryAwar
 	private RestTemplate restTemplate;
 	private ThreadLocal<CompensableLoadBalancerInterceptor> interceptors = new ThreadLocal<CompensableLoadBalancerInterceptor>();
 	private Environment environment;
+	private transient boolean statefully;
 
 	private SpringCloudBeanRegistry() {
 		if (instance != null) {
@@ -68,6 +69,7 @@ public final class SpringCloudBeanRegistry implements CompensableBeanFactoryAwar
 		RemoteNode remoteNode = CommonUtils.getRemoteNode(identifier);
 
 		SpringCloudCoordinator handler = new SpringCloudCoordinator();
+		handler.setStatefully(this.statefully);
 		handler.setIdentifier(identifier);
 		handler.setEnvironment(this.environment);
 
@@ -106,6 +108,14 @@ public final class SpringCloudBeanRegistry implements CompensableBeanFactoryAwar
 
 	public CompensableBeanFactory getBeanFactory() {
 		return beanFactory;
+	}
+
+	public boolean isStatefully() {
+		return statefully;
+	}
+
+	public void setStatefully(boolean statefully) {
+		this.statefully = statefully;
 	}
 
 	public Environment getEnvironment() {

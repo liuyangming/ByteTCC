@@ -45,8 +45,9 @@ public class XAResourceDeserializerImpl implements XAResourceDeserializer, Appli
 	static final Logger logger = LoggerFactory.getLogger(XAResourceDeserializerImpl.class);
 	static Pattern pattern = Pattern.compile("^[^:]+\\s*:\\s*[^:]+\\s*:\\s*\\d+$");
 
-	private XAResourceDeserializer resourceDeserializer;
 	private ApplicationContext applicationContext;
+	private XAResourceDeserializer resourceDeserializer;
+	private transient boolean statefully;
 
 	public XAResourceDescriptor deserialize(String identifier) {
 		XAResourceDescriptor resourceDescriptor = this.resourceDeserializer.deserialize(identifier);
@@ -113,10 +114,15 @@ public class XAResourceDeserializerImpl implements XAResourceDeserializer, Appli
 			referenceConfig.setRetries(0);
 			referenceConfig.setScope(Constants.SCOPE_REMOTE);
 
+			if (this.statefully) {
+				referenceConfig.setLoadbalance("bytetcc");
+			} // end-if (this.statefully)
+
 			referenceConfig.setApplication(applicationConfig);
 			if (registryConfig != null) {
 				referenceConfig.setRegistry(registryConfig);
-			}
+			} // end-if (registryConfig != null)
+
 			if (protocolConfig != null) {
 				referenceConfig.setProtocol(protocolConfig.getName());
 			} // end-if (protocolConfig != null)
@@ -124,7 +130,7 @@ public class XAResourceDeserializerImpl implements XAResourceDeserializer, Appli
 			RemoteCoordinator reference = referenceConfig.get();
 			if (reference == null) {
 				throw new RpcException("Cannot get the application name of the remote application.");
-			}
+			} // end-if (reference == null)
 
 			participantRegistry.putParticipant(application, reference);
 		}
@@ -136,6 +142,14 @@ public class XAResourceDeserializerImpl implements XAResourceDeserializer, Appli
 
 	public void setResourceDeserializer(XAResourceDeserializer resourceDeserializer) {
 		this.resourceDeserializer = resourceDeserializer;
+	}
+
+	public boolean isStatefully() {
+		return statefully;
+	}
+
+	public void setStatefully(boolean statefully) {
+		this.statefully = statefully;
 	}
 
 	public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {

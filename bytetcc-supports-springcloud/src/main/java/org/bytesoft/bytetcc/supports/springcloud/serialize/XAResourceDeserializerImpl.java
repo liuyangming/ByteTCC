@@ -19,7 +19,6 @@ import java.lang.reflect.Proxy;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.commons.lang3.StringUtils;
 import org.bytesoft.bytejta.supports.internal.RemoteCoordinatorRegistry;
 import org.bytesoft.bytejta.supports.resource.RemoteResourceDescriptor;
 import org.bytesoft.bytetcc.supports.springcloud.SpringCloudCoordinator;
@@ -44,6 +43,7 @@ public class XAResourceDeserializerImpl implements XAResourceDeserializer, Appli
 	private XAResourceDeserializer resourceDeserializer;
 	private Environment environment;
 	private ApplicationContext applicationContext;
+	private transient boolean statefully;
 
 	public XAResourceDescriptor deserialize(String identifier) {
 		XAResourceDescriptor resourceDescriptor = this.resourceDeserializer.deserialize(identifier);
@@ -63,7 +63,7 @@ public class XAResourceDeserializerImpl implements XAResourceDeserializer, Appli
 			SpringCloudCoordinator springCloudCoordinator = new SpringCloudCoordinator();
 			springCloudCoordinator.setIdentifier(identifier);
 			springCloudCoordinator.setEnvironment(this.environment);
-
+			springCloudCoordinator.setStatefully(this.statefully);
 			RemoteCoordinator participant = (RemoteCoordinator) Proxy.newProxyInstance(
 					SpringCloudCoordinator.class.getClassLoader(), new Class[] { RemoteCoordinator.class },
 					springCloudCoordinator);
@@ -91,6 +91,14 @@ public class XAResourceDeserializerImpl implements XAResourceDeserializer, Appli
 
 	public void setEnvironment(Environment environment) {
 		this.environment = environment;
+	}
+
+	public boolean isStatefully() {
+		return statefully;
+	}
+
+	public void setStatefully(boolean statefully) {
+		this.statefully = statefully;
 	}
 
 	public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {

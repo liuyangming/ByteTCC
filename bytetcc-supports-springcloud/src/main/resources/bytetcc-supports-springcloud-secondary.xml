@@ -17,7 +17,9 @@
 	<import resource="classpath:bytetcc-supports-logger-secondary.xml" />
 
 	<bean class="org.bytesoft.bytetcc.supports.springcloud.SpringCloudEndpointPostProcessor" />
-	<bean class="org.bytesoft.bytetcc.supports.springcloud.SpringCloudBeanRegistry" factory-method="getInstance" />
+	<bean class="org.bytesoft.bytetcc.supports.springcloud.SpringCloudBeanRegistry" factory-method="getInstance">
+		<property name="statefully" value="true" />
+	</bean>
 
 	<bean class="org.bytesoft.bytetcc.supports.springcloud.controller.CompensableCoordinatorController" />
 
@@ -27,6 +29,7 @@
 
 	<bean id="commonResourceDeserializer" class="org.bytesoft.bytejta.supports.serialize.XAResourceDeserializerImpl" />
 	<bean id="bytetccResourceDeserializer" class="org.bytesoft.bytetcc.supports.springcloud.serialize.XAResourceDeserializerImpl">
+		<property name="statefully" value="true" />
 		<property name="resourceDeserializer" ref="commonResourceDeserializer" />
 	</bean>
 
