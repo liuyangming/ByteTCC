@@ -47,6 +47,8 @@ public class CompensableHystrixBeanPostProcessor implements BeanPostProcessor {
 	static final String HYSTRIX_SETTER_GRPKEY = "groupKey";
 	static final String HYSTRIX_CLAZZ_NAME = "feign.hystrix.HystrixInvocationHandler";
 
+	private volatile boolean stateful;
+
 	public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
 		return bean;
 	}
@@ -135,12 +137,15 @@ public class CompensableHystrixBeanPostProcessor implements BeanPostProcessor {
 				}
 			};
 
+			CompensableHystrixMethodHandler hystrixHandler = new CompensableHystrixMethodHandler(dispatch);
+			hystrixHandler.setStateful(this.stateful);
+
 			Setter setter = Setter.withGroupKey(groupKey).andCommandKey(commandKey);
 
 			Method key = CompensableHystrixInvocationHandler.class.getDeclaredMethod(HYSTRIX_INVOKER_NAME,
 					new Class<?>[] { CompensableHystrixInvocation.class });
 			setterMap.put(key, setter);
-			dispatch.put(key, new CompensableHystrixMethodHandler(dispatch));
+			dispatch.put(key, hystrixHandler);
 			fallbackMap.put(key, key);
 		} catch (Exception ex) {
 			throw new IllegalStateException("Error occurred!");
@@ -148,4 +153,13 @@ public class CompensableHystrixBeanPostProcessor implements BeanPostProcessor {
 
 		return Proxy.newProxyInstance(loader, interfaces, feignHandler);
 	}
+
+	public boolean isStateful() {
+		return stateful;
+	}
+
+	public void setStateful(boolean stateful) {
+		this.stateful = stateful;
+	}
+
 }

@@ -25,6 +25,8 @@ import org.springframework.beans.factory.config.BeanPostProcessor;
 public class CompensableFeignBeanPostProcessor implements BeanPostProcessor {
 	static final String FEIGN_CLAZZ_NAME = "feign.ReflectiveFeign$FeignInvocationHandler";
 
+	private volatile boolean stateful;
+
 	public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
 		return bean;
 	}
@@ -43,11 +45,20 @@ public class CompensableFeignBeanPostProcessor implements BeanPostProcessor {
 
 		CompensableFeignHandler feignHandler = new CompensableFeignHandler();
 		feignHandler.setDelegate(handler);
+		feignHandler.setStateful(this.stateful);
 
 		Class<?> clazz = bean.getClass();
 		Class<?>[] interfaces = clazz.getInterfaces();
 		ClassLoader loader = clazz.getClassLoader();
 		return Proxy.newProxyInstance(loader, interfaces, feignHandler);
+	}
+
+	public boolean isStateful() {
+		return stateful;
+	}
+
+	public void setStateful(boolean stateful) {
+		this.stateful = stateful;
 	}
 
 }

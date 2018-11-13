@@ -119,14 +119,18 @@ public class SpringCloudSecondaryConfiguration
 	@org.springframework.context.annotation.Bean
 	@ConditionalOnProperty(name = "feign.hystrix.enabled", havingValue = "false", matchIfMissing = true)
 	public CompensableFeignBeanPostProcessor feignPostProcessor() {
-		return new CompensableFeignBeanPostProcessor();
+		CompensableFeignBeanPostProcessor feignPostProcessor = new CompensableFeignBeanPostProcessor();
+		feignPostProcessor.setStateful(true);
+		return feignPostProcessor;
 	}
 
 	@org.springframework.context.annotation.Bean
 	@ConditionalOnProperty(name = "feign.hystrix.enabled")
 	@ConditionalOnClass(feign.hystrix.HystrixFeign.class)
 	public CompensableHystrixBeanPostProcessor hystrixPostProcessor() {
-		return new CompensableHystrixBeanPostProcessor();
+		CompensableHystrixBeanPostProcessor hystrixPostProcessor = new CompensableHystrixBeanPostProcessor();
+		hystrixPostProcessor.setStateful(true);
+		return hystrixPostProcessor;
 	}
 
 	@org.springframework.context.annotation.Bean
@@ -166,6 +170,7 @@ public class SpringCloudSecondaryConfiguration
 	@org.springframework.context.annotation.Bean
 	public CompensableRequestInterceptor compensableRequestInterceptor() {
 		CompensableRequestInterceptor interceptor = new CompensableRequestInterceptor();
+		interceptor.setStateful(true);
 		interceptor.setEndpoint(this.identifier);
 		return interceptor;
 	}
