@@ -68,7 +68,6 @@ public class CompensableParticipantRegistrant
 		globalServiceConfig.setInterface(RemoteCoordinator.class);
 		globalServiceConfig.setRef(reference);
 		globalServiceConfig.setCluster("failfast");
-		globalServiceConfig.setLoadbalance("bytetcc");
 		globalServiceConfig.setFilter("bytetcc");
 		globalServiceConfig.setGroup("org-bytesoft-bytetcc");
 		globalServiceConfig.setRetries(0);
@@ -78,7 +77,6 @@ public class CompensableParticipantRegistrant
 		applicationServiceConfig.setInterface(RemoteCoordinator.class);
 		applicationServiceConfig.setRef(reference);
 		applicationServiceConfig.setCluster("failfast");
-		applicationServiceConfig.setLoadbalance("bytetcc");
 		applicationServiceConfig.setFilter("bytetcc");
 		applicationServiceConfig.setGroup(CommonUtils.getApplication(this.endpoint));
 		applicationServiceConfig.setRetries(0);
@@ -135,7 +133,6 @@ public class CompensableParticipantRegistrant
 		referenceConfig.setInterface(RemoteCoordinator.class);
 		referenceConfig.setTimeout(6000);
 		referenceConfig.setCluster("failfast");
-		referenceConfig.setLoadbalance("bytetcc");
 		referenceConfig.setFilter("bytetcc");
 		referenceConfig.setGroup("org-bytesoft-bytetcc");
 		referenceConfig.setCheck(false);

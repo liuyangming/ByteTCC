@@ -12,7 +12,7 @@
 <dependency>
 	<groupId>org.bytesoft</groupId>
 	<artifactId>bytetcc-supports-springcloud</artifactId>
-	<version>0.5.0-ALPHA4</version>
+	<version>0.5.0-ALPHA5</version>
 </dependency>
 ```
 ###### 1.1.2. dubbo
@@ -20,7 +20,7 @@
 <dependency>
 	<groupId>org.bytesoft</groupId>
 	<artifactId>bytetcc-supports-dubbo</artifactId>
-	<version>0.5.0-ALPHA4</version>
+	<version>0.5.0-ALPHA5</version>
 </dependency>
 ```
 
@@ -112,7 +112,7 @@ public class AccountServiceCancel implements IAccountService {
 ## 5. Contact Me
 If you have any questions or comements regarding this project, please feel free to contact me at:
 
-1. send mail to _[bytefox@126.com](bytefox@126.com)_
+1. send mail to _[bytefox#126.com](bytefox@126.com)_
 ~OR~
 2. add Tecent QQ group 537445956/606453172
 
