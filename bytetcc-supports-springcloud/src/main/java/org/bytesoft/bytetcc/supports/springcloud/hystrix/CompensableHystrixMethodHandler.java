@@ -25,7 +25,6 @@ import org.bytesoft.bytejta.supports.rpc.TransactionRequestImpl;
 import org.bytesoft.bytejta.supports.rpc.TransactionResponseImpl;
 import org.bytesoft.bytetcc.CompensableTransactionImpl;
 import org.bytesoft.bytetcc.supports.springcloud.SpringCloudBeanRegistry;
-import org.bytesoft.bytetcc.supports.springcloud.feign.CompensableFeignHandler;
 import org.bytesoft.bytetcc.supports.springcloud.loadbalancer.CompensableLoadBalancerInterceptor;
 import org.bytesoft.common.utils.CommonUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;
@@ -65,7 +64,7 @@ public class CompensableHystrixMethodHandler implements MethodHandler {
 		Method method = invocation.getMethod(); // (Method) argv[1];
 		Object[] args = invocation.getArgs(); // (Object[]) argv[2];
 
-		CompensableTransactionImpl compensable = //
+		final CompensableTransactionImpl compensable = //
 				(CompensableTransactionImpl) compensableManager.getCompensableTransaction(thread);
 		if (compensable == null) {
 			return this.dispatch.get(method).invoke(args);

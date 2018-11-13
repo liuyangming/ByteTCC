@@ -71,7 +71,7 @@ public class CompensableRequestInterceptor
 		CompensableBeanFactory beanFactory = beanRegistry.getBeanFactory();
 		CompensableManager compensableManager = beanFactory.getCompensableManager();
 
-		CompensableTransactionImpl compensable = //
+		final CompensableTransactionImpl compensable = //
 				(CompensableTransactionImpl) compensableManager.getCompensableTransactionQuietly();
 
 		String path = httpRequest.getURI().getPath();

@@ -56,7 +56,7 @@ public class CompensableFeignHandler implements InvocationHandler {
 			CompensableManager compensableManager = beanFactory.getCompensableManager();
 			final TransactionInterceptor transactionInterceptor = beanFactory.getTransactionInterceptor();
 
-			CompensableTransactionImpl compensable = //
+			final CompensableTransactionImpl compensable = //
 					(CompensableTransactionImpl) compensableManager.getCompensableTransactionQuietly();
 			if (compensable == null) {
 				return this.delegate.invoke(proxy, method, args);
