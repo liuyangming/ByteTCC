@@ -15,7 +15,6 @@
  */
 package org.bytesoft.bytetcc.supports.dubbo.internal;
 
-import org.bytesoft.bytetcc.supports.dubbo.CompensableBeanRegistry;
 import org.bytesoft.common.utils.CommonUtils;
 import org.bytesoft.compensable.aware.CompensableEndpointAware;
 import org.bytesoft.transaction.remote.RemoteCoordinator;
@@ -29,8 +28,6 @@ import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.beans.factory.config.SingletonBeanRegistry;
 
-import com.alibaba.dubbo.common.Constants;
-import com.alibaba.dubbo.config.ReferenceConfig;
 import com.alibaba.dubbo.config.ServiceConfig;
 
 public class CompensableParticipantRegistrant
@@ -59,7 +56,6 @@ public class CompensableParticipantRegistrant
 		}
 
 		this.initializeForProvider(transactionCoordinator);
-		this.initializeForConsumer(beanRegistry);
 	}
 
 	public void initializeForProvider(RemoteCoordinator reference) throws BeansException {
@@ -78,14 +74,16 @@ public class CompensableParticipantRegistrant
 		applicationServiceConfig.setRef(reference);
 		applicationServiceConfig.setCluster("failfast");
 		applicationServiceConfig.setFilter("bytetcc");
-		applicationServiceConfig.setGroup(CommonUtils.getApplication(this.endpoint));
 		applicationServiceConfig.setRetries(0);
 		applicationServiceConfig.setTimeout(6000);
 
+		String application = CommonUtils.getApplication(this.endpoint);
 		if (this.statefully) {
-			globalServiceConfig.setLoadbalance("bytetcc");
+			applicationServiceConfig.setGroup(String.format("x-%s", application));
 			applicationServiceConfig.setLoadbalance("bytetcc");
-		} // end-if (this.statefully)
+		} else {
+			applicationServiceConfig.setGroup(String.format("z-%s", application));
+		}
 
 		try {
 			com.alibaba.dubbo.config.ApplicationConfig applicationConfig = //
@@ -125,54 +123,6 @@ public class CompensableParticipantRegistrant
 		String applicationSkeletonBeanId = //
 				String.format("%s@%s", CommonUtils.getApplication(this.endpoint), RemoteCoordinator.class.getName());
 		registry.registerSingleton(applicationSkeletonBeanId, applicationServiceConfig);
-	}
-
-	public void initializeForConsumer(CompensableBeanRegistry beanRegistry) throws BeansException {
-		SingletonBeanRegistry registry = (SingletonBeanRegistry) this.beanFactory;
-		ReferenceConfig<RemoteCoordinator> referenceConfig = new ReferenceConfig<RemoteCoordinator>();
-		referenceConfig.setInterface(RemoteCoordinator.class);
-		referenceConfig.setTimeout(6000);
-		referenceConfig.setCluster("failfast");
-		referenceConfig.setFilter("bytetcc");
-		referenceConfig.setGroup("org-bytesoft-bytetcc");
-		referenceConfig.setCheck(false);
-		referenceConfig.setRetries(0);
-		referenceConfig.setScope(Constants.SCOPE_REMOTE);
-		if (this.statefully) {
-			referenceConfig.setLoadbalance("bytetcc");
-		} // end-if (this.statefully)
-
-		try {
-			com.alibaba.dubbo.config.ApplicationConfig applicationConfig = //
-					this.beanFactory.getBean(com.alibaba.dubbo.config.ApplicationConfig.class);
-			referenceConfig.setApplication(applicationConfig);
-		} catch (NoSuchBeanDefinitionException error) {
-			logger.warn("No configuration of class com.alibaba.dubbo.config.ApplicationConfig was found.");
-		}
-
-		try {
-			com.alibaba.dubbo.config.RegistryConfig registryConfig = //
-					this.beanFactory.getBean(com.alibaba.dubbo.config.RegistryConfig.class);
-			if (registryConfig != null) {
-				referenceConfig.setRegistry(registryConfig);
-			}
-		} catch (NoSuchBeanDefinitionException error) {
-			logger.warn("No configuration of class com.alibaba.dubbo.config.RegistryConfig was found.");
-		}
-
-		try {
-			com.alibaba.dubbo.config.ProtocolConfig protocolConfig = //
-					this.beanFactory.getBean(com.alibaba.dubbo.config.ProtocolConfig.class);
-			referenceConfig.setProtocol(protocolConfig.getName());
-		} catch (NoSuchBeanDefinitionException error) {
-			logger.warn("No configuration of class com.alibaba.dubbo.config.ProtocolConfig was found.");
-		}
-
-		RemoteCoordinator globalCoordinator = referenceConfig.get();
-		beanRegistry.setConsumeCoordinator(globalCoordinator);
-
-		String stubBeanId = String.format("stub@%s", RemoteCoordinator.class.getName());
-		registry.registerSingleton(stubBeanId, globalCoordinator);
 	}
 
 	public void setBeanFactory(BeanFactory beanFactory) throws BeansException {

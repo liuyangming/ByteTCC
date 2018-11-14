@@ -811,14 +811,16 @@ public class CompensablePrimaryFilter implements Filter {
 			referenceConfig.setTimeout(6 * 1000);
 			referenceConfig.setCluster("failfast");
 			referenceConfig.setFilter("bytetcc");
-			referenceConfig.setGroup(application);
 			referenceConfig.setCheck(false);
 			referenceConfig.setRetries(0);
 			referenceConfig.setScope(Constants.SCOPE_REMOTE);
 
 			if (compensableCoordinator.isStatefully()) {
+				referenceConfig.setGroup(String.format("x-%s", application));
 				referenceConfig.setLoadbalance("bytetcc");
-			} // end-if (compensableCoordinator.isStatefully())
+			} else {
+				referenceConfig.setGroup(String.format("z-%s", application));
+			}
 
 			referenceConfig.setApplication(applicationConfig);
 			if (registryConfig != null) {

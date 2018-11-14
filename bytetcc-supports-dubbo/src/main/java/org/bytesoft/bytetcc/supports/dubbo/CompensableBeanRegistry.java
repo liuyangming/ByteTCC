@@ -15,10 +15,8 @@
  */
 package org.bytesoft.bytetcc.supports.dubbo;
 
-import org.bytesoft.bytejta.supports.dubbo.TransactionBeanRegistry;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
-import org.bytesoft.transaction.remote.RemoteCoordinator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
@@ -45,16 +43,6 @@ public final class CompensableBeanRegistry implements CompensableBeanFactoryAwar
 
 	public static CompensableBeanRegistry getInstance() {
 		return instance;
-	}
-
-	public RemoteCoordinator getConsumeCoordinator() {
-		TransactionBeanRegistry transactionBeanRegistry = TransactionBeanRegistry.getInstance();
-		return transactionBeanRegistry.getConsumeCoordinator();
-	}
-
-	public void setConsumeCoordinator(RemoteCoordinator consumeCoordinator) {
-		TransactionBeanRegistry transactionBeanRegistry = TransactionBeanRegistry.getInstance();
-		transactionBeanRegistry.setConsumeCoordinator(consumeCoordinator);
 	}
 
 	public <T> T getBean(Class<T> requiredType) {

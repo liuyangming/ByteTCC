@@ -20,7 +20,7 @@
 	<bean class="org.bytesoft.bytetcc.supports.dubbo.internal.CompensableBeanConfigValidator" />
 	<bean class="org.bytesoft.bytetcc.supports.dubbo.internal.CompensableParticipantRegistrant" />
 
-	<bean class="org.bytesoft.bytejta.supports.dubbo.TransactionBeanRegistry" factory-method="getInstance" />
+	<!-- <bean class="org.bytesoft.bytejta.supports.dubbo.TransactionBeanRegistry" factory-method="getInstance" /> -->
 	<bean class="org.bytesoft.bytetcc.supports.dubbo.CompensableBeanRegistry" factory-method="getInstance" />
 
 	<bean id="bytetccTransactionInterceptor" class="org.bytesoft.bytetcc.supports.dubbo.CompensableInterceptorImpl">
