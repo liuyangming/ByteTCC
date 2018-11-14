@@ -15,6 +15,7 @@
  */
 package org.bytesoft.bytetcc.supports.springcloud.web;
 
+import java.lang.reflect.Method;
 import java.util.Base64;
 
 import javax.servlet.http.HttpServletRequest;
@@ -39,12 +40,13 @@ import org.springframework.beans.BeansException;
 import org.springframework.boot.web.servlet.error.ErrorController;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.ModelAndView;
 
 public class CompensableHandlerInterceptor implements HandlerInterceptor, CompensableEndpointAware, ApplicationContextAware {
-	private static final Logger logger = LoggerFactory.getLogger(CompensableHandlerInterceptor.class);
+	static final Logger logger = LoggerFactory.getLogger(CompensableHandlerInterceptor.class);
 
 	static final String HEADER_TRANCACTION_KEY = "X-BYTETCC-TRANSACTION"; // org.bytesoft.bytetcc.transaction
 	static final String HEADER_PROPAGATION_KEY = "X-BYTETCC-PROPAGATION"; // org.bytesoft.bytetcc.propagation
@@ -53,6 +55,11 @@ public class CompensableHandlerInterceptor implements HandlerInterceptor, Compen
 	private ApplicationContext applicationContext;
 
 	public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+		String transactionStr = request.getHeader(HEADER_TRANCACTION_KEY);
+		if (StringUtils.isBlank(transactionStr)) {
+			return true;
+		}
+
 		if (HandlerMethod.class.isInstance(handler) == false) {
 			logger.warn("CompensableHandlerInterceptor cannot handle current request(uri= {}, handler= {}) correctly.",
 					request.getRequestURI(), handler);
@@ -61,14 +68,10 @@ public class CompensableHandlerInterceptor implements HandlerInterceptor, Compen
 
 		HandlerMethod hm = (HandlerMethod) handler;
 		Class<?> clazz = hm.getBeanType();
+		Method method = hm.getMethod();
 		if (CompensableCoordinatorController.class.equals(clazz)) {
 			return true;
 		} else if (ErrorController.class.isInstance(hm.getBean())) {
-			return true;
-		}
-
-		String transactionStr = request.getHeader(HEADER_TRANCACTION_KEY);
-		if (StringUtils.isBlank(transactionStr)) {
 			return true;
 		}
 
@@ -77,8 +80,13 @@ public class CompensableHandlerInterceptor implements HandlerInterceptor, Compen
 		String transactionText = StringUtils.trimToNull(transactionStr);
 		String propagationText = StringUtils.trimToNull(propagationStr);
 
+		Transactional globalTransactional = clazz.getAnnotation(Transactional.class);
+		Transactional methodTransactional = method.getAnnotation(Transactional.class);
+		boolean transactionalDefined = globalTransactional != null || methodTransactional != null;
 		Compensable annotation = clazz.getAnnotation(Compensable.class);
-		if (annotation == null) {
+		if (transactionalDefined && annotation == null) {
+			logger.warn("Invalid transaction definition(uri={}, handler= {})!", request.getRequestURI(), handler,
+					new IllegalStateException());
 			return true;
 		}
 
@@ -117,25 +125,29 @@ public class CompensableHandlerInterceptor implements HandlerInterceptor, Compen
 
 	public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex)
 			throws Exception {
+		String transactionStr = request.getHeader(HEADER_TRANCACTION_KEY);
+		if (StringUtils.isBlank(transactionStr)) {
+			return;
+		}
+
 		if (HandlerMethod.class.isInstance(handler) == false) {
 			return;
 		}
 
 		HandlerMethod hm = (HandlerMethod) handler;
 		Class<?> clazz = hm.getBeanType();
+		Method method = hm.getMethod();
 		if (CompensableCoordinatorController.class.equals(clazz)) {
 			return;
 		} else if (ErrorController.class.isInstance(hm.getBean())) {
 			return;
 		}
 
-		String transactionStr = request.getHeader(HEADER_TRANCACTION_KEY);
-		if (StringUtils.isBlank(transactionStr)) {
-			return;
-		}
-
+		Transactional globalTransactional = clazz.getAnnotation(Transactional.class);
+		Transactional methodTransactional = method.getAnnotation(Transactional.class);
+		boolean transactionalDefined = globalTransactional != null || methodTransactional != null;
 		Compensable annotation = clazz.getAnnotation(Compensable.class);
-		if (annotation == null) {
+		if (transactionalDefined && annotation == null) {
 			return;
 		}
 
