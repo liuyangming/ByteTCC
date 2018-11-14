@@ -17,10 +17,7 @@ package org.bytesoft.bytetcc.supports.springcloud.feign;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.List;
 
-import org.apache.commons.lang3.StringUtils;
 import org.bytesoft.bytejta.supports.rpc.TransactionRequestImpl;
 import org.bytesoft.bytejta.supports.rpc.TransactionResponseImpl;
 import org.bytesoft.bytetcc.CompensableTransactionImpl;
@@ -31,7 +28,6 @@ import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableManager;
 import org.bytesoft.compensable.TransactionContext;
 import org.bytesoft.transaction.remote.RemoteCoordinator;
-import org.bytesoft.transaction.supports.resource.XAResourceDescriptor;
 import org.bytesoft.transaction.supports.rpc.TransactionInterceptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,7 +41,7 @@ public class CompensableFeignHandler implements InvocationHandler {
 	static final Logger logger = LoggerFactory.getLogger(CompensableFeignHandler.class);
 
 	private InvocationHandler delegate;
-	private volatile boolean stateful;
+	private volatile boolean statefully;
 
 	public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
 		if (Object.class.equals(method.getDeclaringClass())) {
@@ -70,75 +66,7 @@ public class CompensableFeignHandler implements InvocationHandler {
 			final TransactionRequestImpl request = new TransactionRequestImpl();
 			final TransactionResponseImpl response = new TransactionResponseImpl();
 
-			beanRegistry.setLoadBalancerInterceptor(new CompensableLoadBalancerInterceptor() {
-				public List<Server> beforeCompletion(List<Server> servers) {
-					final List<Server> readyServerList = new ArrayList<Server>();
-					final List<Server> unReadyServerList = new ArrayList<Server>();
-
-					if (CompensableFeignHandler.this.stateful) {
-						boolean systemMatched = false;
-						for (int i = 0; servers != null && i < servers.size(); i++) {
-							Server server = servers.get(i);
-
-							String application = null;
-							String instanceId = null;
-							if (DiscoveryEnabledServer.class.isInstance(server)) {
-								DiscoveryEnabledServer discoveryEnabledServer = (DiscoveryEnabledServer) server;
-								InstanceInfo instanceInfo = discoveryEnabledServer.getInstanceInfo();
-								String addr = instanceInfo.getIPAddr();
-								application = instanceInfo.getAppName();
-								int port = instanceInfo.getPort();
-
-								instanceId = String.format("%s:%s:%s", addr, application, port);
-							} else {
-								MetaInfo metaInfo = server.getMetaInfo();
-
-								String host = server.getHost();
-								String addr = host.matches("\\d+(\\.\\d+){3}") ? host : CommonUtils.getInetAddress(host);
-								application = metaInfo.getAppName();
-								int port = server.getPort();
-								instanceId = String.format("%s:%s:%s", addr, application, port);
-							}
-
-							XAResourceDescriptor descriptor = compensable.getRemoteCoordinator(application);
-							if (descriptor == null) {
-								if (server.isReadyToServe()) {
-									readyServerList.add(server);
-								} else {
-									unReadyServerList.add(server);
-								}
-							} else {
-								String identifier = descriptor.getIdentifier();
-								systemMatched = true;
-
-								if (StringUtils.equals(identifier, instanceId)) {
-									List<Server> serverList = new ArrayList<Server>();
-									serverList.add(server);
-									return serverList;
-								} // end-if (StringUtils.equals(identifier, instanceId))
-							}
-						}
-
-						if (systemMatched) {
-							return new ArrayList<Server>();
-						} // end-if (systemMatched)
-
-					} else {
-						for (int i = 0; servers != null && i < servers.size(); i++) {
-							Server server = servers.get(i);
-
-							if (server.isReadyToServe()) {
-								readyServerList.add(server);
-							} else {
-								unReadyServerList.add(server);
-							}
-						}
-					}
-
-					// logger.warn("There is no suitable server: expect= {}, actual= {}!", participants.keySet(), servers);
-					return readyServerList.isEmpty() ? unReadyServerList : readyServerList;
-				}
-
+			beanRegistry.setLoadBalancerInterceptor(new CompensableLoadBalancerInterceptor(this.statefully) {
 				public void afterCompletion(Server server) {
 					beanRegistry.removeLoadBalancerInterceptor();
 
@@ -197,12 +125,12 @@ public class CompensableFeignHandler implements InvocationHandler {
 		}
 	}
 
-	public boolean isStateful() {
-		return stateful;
+	public boolean isStatefully() {
+		return statefully;
 	}
 
-	public void setStateful(boolean stateful) {
-		this.stateful = stateful;
+	public void setStatefully(boolean statefully) {
+		this.statefully = statefully;
 	}
 
 	public InvocationHandler getDelegate() {
