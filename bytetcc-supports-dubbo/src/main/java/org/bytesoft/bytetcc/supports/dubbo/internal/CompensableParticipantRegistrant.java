@@ -65,7 +65,6 @@ public class CompensableParticipantRegistrant
 		globalServiceConfig.setRef(reference);
 		globalServiceConfig.setCluster("failfast");
 		globalServiceConfig.setFilter("bytetcc");
-		globalServiceConfig.setGroup("org-bytesoft-bytetcc");
 		globalServiceConfig.setRetries(0);
 		globalServiceConfig.setTimeout(6000);
 
@@ -80,9 +79,10 @@ public class CompensableParticipantRegistrant
 		String application = CommonUtils.getApplication(this.endpoint);
 		if (this.statefully) {
 			applicationServiceConfig.setGroup(String.format("x-%s", application));
-			applicationServiceConfig.setLoadbalance("bytetcc");
+			globalServiceConfig.setGroup("x-bytetcc");
 		} else {
 			applicationServiceConfig.setGroup(String.format("z-%s", application));
+			globalServiceConfig.setGroup("z-bytetcc");
 		}
 
 		try {

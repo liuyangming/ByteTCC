@@ -698,7 +698,7 @@ public class CompensableSecondaryFilter implements Filter {
 			referenceConfig.setTimeout(6 * 1000);
 			referenceConfig.setCluster("failfast");
 			referenceConfig.setFilter("bytetcc");
-			referenceConfig.setGroup("org-bytesoft-bytetcc");
+			referenceConfig.setGroup("x-bytetcc");
 			referenceConfig.setCheck(false);
 			referenceConfig.setRetries(0);
 			referenceConfig.setUrl(String.format("%s:%s", remoteAddr.getServerHost(), remoteAddr.getServerPort()));

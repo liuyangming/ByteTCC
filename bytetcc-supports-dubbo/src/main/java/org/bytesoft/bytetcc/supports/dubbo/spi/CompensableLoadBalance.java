@@ -19,6 +19,7 @@ import java.util.List;
 
 import org.apache.commons.lang3.StringUtils;
 import org.bytesoft.bytejta.supports.internal.RemoteCoordinatorRegistry;
+import org.bytesoft.bytetcc.CompensableCoordinator;
 import org.bytesoft.bytetcc.CompensableTransactionImpl;
 import org.bytesoft.bytetcc.supports.dubbo.CompensableBeanRegistry;
 import org.bytesoft.bytetcc.supports.dubbo.ext.ILoadBalancer;
@@ -173,6 +174,8 @@ public final class CompensableLoadBalance implements LoadBalance {
 	private void processInitRemoteParticipantIfNecessary(RemoteAddr remoteAddr) throws RpcException {
 		RemoteCoordinatorRegistry participantRegistry = RemoteCoordinatorRegistry.getInstance();
 		CompensableBeanRegistry beanRegistry = CompensableBeanRegistry.getInstance();
+		CompensableBeanFactory beanFactory = beanRegistry.getBeanFactory();
+		CompensableCoordinator compensableCoordinator = (CompensableCoordinator) beanFactory.getCompensableNativeParticipant();
 
 		RemoteCoordinator participant = participantRegistry.getPhysicalInstance(remoteAddr);
 		if (participant == null) {
@@ -185,11 +188,16 @@ public final class CompensableLoadBalance implements LoadBalance {
 			referenceConfig.setTimeout(6 * 1000);
 			referenceConfig.setCluster("failfast");
 			referenceConfig.setFilter("bytetcc");
-			referenceConfig.setGroup("org-bytesoft-bytetcc");
 			referenceConfig.setCheck(false);
 			referenceConfig.setRetries(0);
 			referenceConfig.setUrl(String.format("%s:%s", remoteAddr.getServerHost(), remoteAddr.getServerPort()));
 			referenceConfig.setScope(Constants.SCOPE_REMOTE);
+
+			if (compensableCoordinator.isStatefully()) {
+				referenceConfig.setGroup("x-bytetcc");
+			} else {
+				referenceConfig.setGroup("z-bytetcc");
+			}
 
 			referenceConfig.setApplication(applicationConfig);
 			if (registryConfig != null) {
