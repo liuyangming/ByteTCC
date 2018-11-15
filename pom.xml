@@ -4,7 +4,7 @@
 
 	<groupId>org.bytesoft</groupId>
 	<artifactId>bytetcc-parent</artifactId>
-	<version>0.5.0-ALPHA7</version>
+	<version>0.5.0-ALPHA8</version>
 	<packaging>pom</packaging>
 	<name>bytetcc-parent</name>
 	<description>ByteTCC is a transaction manager based on the TCC(Try/Confirm/Cancel) mechanism.</description>
@@ -259,32 +259,32 @@
 			<dependency>
 				<groupId>org.bytesoft</groupId>
 				<artifactId>bytetcc-common</artifactId>
-				<version>0.5.0-ALPHA7</version>
+				<version>0.5.0-ALPHA8</version>
 			</dependency>
 			<dependency>
 				<groupId>org.bytesoft</groupId>
 				<artifactId>bytetcc-core</artifactId>
-				<version>0.5.0-ALPHA7</version>
+				<version>0.5.0-ALPHA8</version>
 			</dependency>
 			<dependency>
 				<groupId>org.bytesoft</groupId>
 				<artifactId>bytetcc-supports</artifactId>
-				<version>0.5.0-ALPHA7</version>
+				<version>0.5.0-ALPHA8</version>
 			</dependency>
 			<dependency>
 				<groupId>org.bytesoft</groupId>
 				<artifactId>bytetcc-supports-dubbo</artifactId>
-				<version>0.5.0-ALPHA7</version>
+				<version>0.5.0-ALPHA8</version>
 			</dependency>
 			<dependency>
 				<groupId>org.bytesoft</groupId>
 				<artifactId>bytetcc-supports-springcloud</artifactId>
-				<version>0.5.0-ALPHA7</version>
+				<version>0.5.0-ALPHA8</version>
 			</dependency>
 			<dependency>
 				<groupId>org.bytesoft</groupId>
 				<artifactId>bytetcc-supports-springboot</artifactId>
-				<version>0.5.0-ALPHA7</version>
+				<version>0.5.0-ALPHA8</version>
 			</dependency>
 
 			<!-- logger -->
