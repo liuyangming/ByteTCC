@@ -397,8 +397,24 @@
 			</dependency>
 			<dependency>
 				<groupId>org.apache.curator</groupId>
+				<artifactId>curator-framework</artifactId>
+				<version>4.0.1</version>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.curator</groupId>
+				<artifactId>curator-client</artifactId>
+				<version>4.0.1</version>
+				<exclusions>
+					<exclusion>
+						<groupId>org.apache.zookeeper</groupId>
+						<artifactId>zookeeper</artifactId>
+					</exclusion>
+				</exclusions>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.curator</groupId>
 				<artifactId>curator-recipes</artifactId>
-				<version>2.11.0</version>
+				<version>4.0.1</version>
 				<exclusions>
 					<exclusion>
 						<groupId>io.netty</groupId>
@@ -406,6 +422,12 @@
 					</exclusion>
 				</exclusions>
 			</dependency>
+			<dependency>
+				<groupId>org.apache.zookeeper</groupId>
+				<artifactId>zookeeper</artifactId>
+				<version>3.4.8</version>
+			</dependency>
+
 			<dependency>
 				<groupId>org.reactivestreams</groupId>
 				<artifactId>reactive-streams</artifactId>

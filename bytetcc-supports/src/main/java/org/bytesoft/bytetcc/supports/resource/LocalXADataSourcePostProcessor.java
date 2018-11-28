@@ -18,14 +18,19 @@ package org.bytesoft.bytetcc.supports.resource;
 import javax.sql.DataSource;
 import javax.transaction.TransactionManager;
 
+import org.apache.commons.lang3.StringUtils;
 import org.bytesoft.bytejta.supports.jdbc.LocalXADataSource;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanPostProcessor;
+import org.springframework.context.EnvironmentAware;
+import org.springframework.core.env.Environment;
 
-public class LocalXADataSourcePostProcessor implements BeanPostProcessor {
+public class LocalXADataSourcePostProcessor implements BeanPostProcessor, EnvironmentAware {
+	static final String CONSTANT_AUTO_CONFIG = "org.bytesoft.bytetcc.datasource.autoconfig";
 
 	@javax.annotation.Resource
 	private TransactionManager transactionManager;
+	private Environment environment;
 
 	public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
 		return this.createDataSourceWrapperIfNecessary(bean, beanName);
@@ -42,12 +47,25 @@ public class LocalXADataSourcePostProcessor implements BeanPostProcessor {
 			return bean;
 		}
 
+		String value = StringUtils.trimToEmpty(this.environment.getProperty(CONSTANT_AUTO_CONFIG));
+		if (StringUtils.isNotBlank(value) && Boolean.valueOf(value) == false) {
+			return bean;
+		}
+
 		DataSource delegate = (DataSource) bean;
 		LocalXADataSource dataSource = new LocalXADataSource();
 		dataSource.setDataSource(delegate);
 		dataSource.setBeanName(beanName);
 		dataSource.setTransactionManager(this.transactionManager);
 		return dataSource;
+	}
+
+	public Environment getEnvironment() {
+		return environment;
+	}
+
+	public void setEnvironment(Environment environment) {
+		this.environment = environment;
 	}
 
 }
