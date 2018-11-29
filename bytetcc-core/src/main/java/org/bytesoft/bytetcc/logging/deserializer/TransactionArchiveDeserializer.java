@@ -23,11 +23,13 @@ import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
 import org.bytesoft.common.utils.ByteUtils;
+import org.bytesoft.common.utils.CommonUtils;
 import org.bytesoft.common.utils.SerializeUtils;
 import org.bytesoft.compensable.archive.CompensableArchive;
 import org.bytesoft.compensable.archive.TransactionArchive;
 import org.bytesoft.transaction.archive.XAResourceArchive;
 import org.bytesoft.transaction.logging.ArchiveDeserializer;
+import org.bytesoft.transaction.remote.RemoteNode;
 import org.bytesoft.transaction.xa.TransactionXid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,14 +45,14 @@ public class TransactionArchiveDeserializer extends org.bytesoft.bytejta.logging
 		TransactionArchive archive = (TransactionArchive) obj;
 
 		String propagatedBy = String.valueOf(archive.getPropagatedBy());
-		String[] address = propagatedBy.split("\\s*\\:\\s*");
+		RemoteNode remoteNode = CommonUtils.getRemoteNode(propagatedBy);
 		byte[] hostByteArray = new byte[4];
 		byte[] nameByteArray = new byte[0];
 		byte[] portByteArray = new byte[2];
-		if (address.length == 3) {
-			String hostStr = address[0];
-			String nameStr = address[1];
-			String portStr = address[2];
+		if (remoteNode != null) {
+			String hostStr = remoteNode.getServerHost();
+			String nameStr = remoteNode.getServiceKey();
+			String portStr = String.valueOf(remoteNode.getServerPort());
 
 			String[] hostArray = hostStr.split("\\s*\\.\\s*");
 			for (int i = 0; hostArray.length == 4 && i < hostArray.length; i++) {

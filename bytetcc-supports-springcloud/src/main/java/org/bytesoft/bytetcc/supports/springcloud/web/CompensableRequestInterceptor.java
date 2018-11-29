@@ -24,7 +24,6 @@ import org.bytesoft.bytejta.supports.rpc.TransactionResponseImpl;
 import org.bytesoft.bytetcc.CompensableTransactionImpl;
 import org.bytesoft.bytetcc.supports.springcloud.SpringCloudBeanRegistry;
 import org.bytesoft.bytetcc.supports.springcloud.loadbalancer.CompensableLoadBalancerInterceptor;
-import org.bytesoft.common.utils.CommonUtils;
 import org.bytesoft.common.utils.SerializeUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableManager;
@@ -44,10 +43,7 @@ import org.springframework.http.client.ClientHttpRequestInterceptor;
 import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.web.client.HttpClientErrorException;
 
-import com.netflix.appinfo.InstanceInfo;
 import com.netflix.loadbalancer.Server;
-import com.netflix.loadbalancer.Server.MetaInfo;
-import com.netflix.niws.loadbalancer.DiscoveryEnabledServer;
 
 public class CompensableRequestInterceptor
 		implements ClientHttpRequestInterceptor, CompensableEndpointAware, ApplicationContextAware {
@@ -92,26 +88,7 @@ public class CompensableRequestInterceptor
 				}
 
 				try {
-					// String instanceId = metaInfo.getInstanceId();
-					String instanceId = null;
-
-					if (DiscoveryEnabledServer.class.isInstance(server)) {
-						DiscoveryEnabledServer discoveryEnabledServer = (DiscoveryEnabledServer) server;
-						InstanceInfo instanceInfo = discoveryEnabledServer.getInstanceInfo();
-						String addr = instanceInfo.getIPAddr();
-						String appName = instanceInfo.getAppName();
-						int port = instanceInfo.getPort();
-
-						instanceId = String.format("%s:%s:%s", addr, appName, port);
-					} else {
-						MetaInfo metaInfo = server.getMetaInfo();
-
-						String host = server.getHost();
-						String addr = host.matches("\\d+(\\.\\d+){3}") ? host : CommonUtils.getInetAddress(host);
-						String appName = metaInfo.getAppName();
-						int port = server.getPort();
-						instanceId = String.format("%s:%s:%s", addr, appName, port);
-					}
+					String instanceId = this.getInstanceId(server);
 
 					invokeBeforeSendRequest(httpRequest, instanceId);
 				} catch (IOException ex) {
