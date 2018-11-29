@@ -23,9 +23,10 @@ import org.bytesoft.bytejta.supports.jdbc.LocalXADataSource;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.context.EnvironmentAware;
+import org.springframework.core.Ordered;
 import org.springframework.core.env.Environment;
 
-public class LocalXADataSourcePostProcessor implements BeanPostProcessor, EnvironmentAware {
+public class LocalXADataSourcePostProcessor implements BeanPostProcessor, Ordered, EnvironmentAware {
 	static final String CONSTANT_AUTO_CONFIG = "org.bytesoft.bytetcc.datasource.autoconfig";
 
 	@javax.annotation.Resource
@@ -58,6 +59,10 @@ public class LocalXADataSourcePostProcessor implements BeanPostProcessor, Enviro
 		dataSource.setBeanName(beanName);
 		dataSource.setTransactionManager(this.transactionManager);
 		return dataSource;
+	}
+
+	public int getOrder() {
+		return Ordered.LOWEST_PRECEDENCE;
 	}
 
 	public Environment getEnvironment() {
