@@ -397,10 +397,13 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 		boolean coordinator = transactionContext.isCoordinator();
 		boolean propagated = transactionContext.isPropagated();
 		boolean compensable = transactionContext.isCompensable();
+		boolean compensating = transactionContext.isCompensating();
 		int propagatedLevel = transactionContext.getPropagationLevel();
 
 		if (compensable == false) {
 			throw new IllegalStateException();
+		} else if (compensating) {
+			this.invokeTransactionRollback(transaction);
 		} else if (coordinator) {
 			if (propagated) {
 				this.invokeTransactionRollback(transaction);
