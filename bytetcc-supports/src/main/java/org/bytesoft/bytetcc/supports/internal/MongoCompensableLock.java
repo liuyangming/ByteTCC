@@ -21,6 +21,10 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -84,6 +88,12 @@ public class MongoCompensableLock implements TransactionLock, CompensableInstVer
 
 	private transient long instanceVersion;
 
+	private transient final Lock instanceLock = new ReentrantLock();
+	private transient final Condition instanceCond = this.instanceLock.newCondition();
+	private transient volatile boolean instanceInited;
+
+	private volatile int initializeWaitingSeconds = 15;
+
 	public void afterSingletonsInstantiated() {
 		try {
 			this.afterPropertiesSet();
@@ -103,7 +113,7 @@ public class MongoCompensableLock implements TransactionLock, CompensableInstVer
 		this.initializeClusterInstancesDirectory();
 
 		this.initializeClusterInstanceVersion();
-		this.initializeClusterInstanceConfig();
+		this.initializeClusterInstanceConfig(true);
 	}
 
 	private void initializeClusterInstancesDirectory() throws Exception {
@@ -116,16 +126,56 @@ public class MongoCompensableLock implements TransactionLock, CompensableInstVer
 		}
 	}
 
-	private void initializeClusterInstanceConfig() throws Exception {
-		this.initializeCurrentClusterInstanceConfigIfNecessary();
+	private void initializeClusterInstanceConfig(boolean init) throws Exception {
+		this.initializeCurrentClusterInstanceConfigIfNecessary(init);
 		this.getInstancesDirectorysChildrenAndRegisterWatcher();
 	}
 
-	private void initializeCurrentClusterInstanceConfigIfNecessary() throws Exception {
+	private void initializeCurrentClusterInstanceConfigIfNecessary(boolean init) throws Exception {
+		if (init) {
+			this.createInstanceNodeForInitialization();
+		} else {
+			this.createInstanceNodeForStateReConnect();
+		}
+	}
+
+	private void createInstanceNodeForInitialization() throws Exception {
 		String parent = String.format("%s/%s/instances", CONSTANTS_ROOT_PATH, CommonUtils.getApplication(this.endpoint));
 		String path = String.format("%s/%s", parent, this.endpoint);
 		byte[] versionByteArray = ByteUtils.longToByteArray(this.instanceVersion);
-		this.curatorFramework.create().withMode(CreateMode.EPHEMERAL).forPath(path, versionByteArray);
+		try {
+			this.curatorFramework.create().withMode(CreateMode.EPHEMERAL).forPath(path, versionByteArray);
+		} catch (NodeExistsException error) {
+			try {
+				this.instanceLock.lock();
+				this.instanceInited = false;
+				this.curatorFramework.checkExists().usingWatcher(this).inBackground(this).forPath(path);
+
+				this.instanceCond.await(this.initializeWaitingSeconds, TimeUnit.SECONDS);
+				if (this.instanceInited == false) {
+					throw error;
+				}
+			} catch (InterruptedException ignore) {
+				// ignore
+			} finally {
+				this.instanceLock.unlock();
+			}
+		}
+	}
+
+	private void createInstanceNodeForStateReConnect() throws Exception {
+		String parent = String.format("%s/%s/instances", CONSTANTS_ROOT_PATH, CommonUtils.getApplication(this.endpoint));
+		String path = String.format("%s/%s", parent, this.endpoint);
+		byte[] versionByteArray = ByteUtils.longToByteArray(this.instanceVersion);
+		try {
+			this.instanceLock.lock();
+			this.curatorFramework.create().withMode(CreateMode.EPHEMERAL).forPath(path, versionByteArray);
+
+			this.instanceInited = true;
+			this.instanceCond.signalAll();
+		} finally {
+			this.instanceLock.unlock();
+		}
 	}
 
 	private void initializeIndexIfNecessary() {
@@ -343,12 +393,12 @@ public class MongoCompensableLock implements TransactionLock, CompensableInstVer
 				long version = ByteUtils.byteArrayToLong(event.getData());
 				this.instances.put(system, version);
 			} else if (StringUtils.equals(path, current) && event.getStat() == null) {
-				this.initializeCurrentClusterInstanceConfigIfNecessary();
+				this.initializeCurrentClusterInstanceConfigIfNecessary(false);
 			}
 		} else if (CuratorEventType.DELETE.equals(event.getType())) {
 			String path = String.format("%s/%s", parent, this.endpoint);
 			if (StringUtils.equalsIgnoreCase(path, current)) {
-				this.initializeCurrentClusterInstanceConfigIfNecessary();
+				this.initializeCurrentClusterInstanceConfigIfNecessary(false);
 			} // end-if (StringUtils.equalsIgnoreCase(path, current))
 		}
 	}
@@ -358,7 +408,7 @@ public class MongoCompensableLock implements TransactionLock, CompensableInstVer
 		case CONNECTED:
 		case RECONNECTED:
 			try {
-				this.initializeClusterInstanceConfig();
+				this.initializeClusterInstanceConfig(false);
 			} catch (Exception ex) {
 				logger.error("Error occurred while registering curator watcher!", ex);
 			}
@@ -371,6 +421,14 @@ public class MongoCompensableLock implements TransactionLock, CompensableInstVer
 	public void process(WatchedEvent event) throws Exception {
 		if (EventType.NodeChildrenChanged.equals(event.getType())) {
 			this.processNodeChildrenChanged(event);
+		} else if (EventType.NodeDeleted.equals(event.getType())) {
+			String application = CommonUtils.getApplication(this.endpoint);
+			String parent = String.format("%s/%s/instances", CONSTANTS_ROOT_PATH, application);
+			String current = event.getPath();
+			String path = String.format("%s/%s", parent, this.endpoint);
+			if (StringUtils.equalsIgnoreCase(path, current)) {
+				this.initializeCurrentClusterInstanceConfigIfNecessary(false);
+			} // end-if (StringUtils.equalsIgnoreCase(path, current))
 		}
 	}
 
@@ -386,6 +444,14 @@ public class MongoCompensableLock implements TransactionLock, CompensableInstVer
 	public long getInstanceVersion(String instanceId) {
 		Long version = this.instances.get(instanceId);
 		return version == null ? -1 : version;
+	}
+
+	public int getInitializeWaitingSeconds() {
+		return initializeWaitingSeconds;
+	}
+
+	public void setInitializeWaitingSeconds(int initializeWaitingSeconds) {
+		this.initializeWaitingSeconds = initializeWaitingSeconds;
 	}
 
 	public void setEndpoint(String identifier) {

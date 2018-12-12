@@ -114,10 +114,18 @@
 			<groupId>org.springframework.cloud</groupId>
 			<artifactId>spring-cloud-zookeeper-core</artifactId>
 		</dependency>
-		<!-- <dependency> -->
-		<!-- <groupId>org.springframework.cloud</groupId> -->
-		<!-- <artifactId>spring-cloud-zookeeper-discovery</artifactId> -->
-		<!-- </dependency> -->
+		<dependency>
+			<groupId>org.springframework.cloud</groupId>
+			<artifactId>spring-cloud-zookeeper-discovery</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.netflix.ribbon</groupId>
+			<artifactId>ribbon-eureka</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.cloud</groupId>
+			<artifactId>spring-cloud-consul-discovery</artifactId>
+		</dependency>
 
 		<!-- netty -->
 		<dependency>
