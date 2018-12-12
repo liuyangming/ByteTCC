@@ -700,7 +700,7 @@ public class CompensableSecondaryFilter implements Filter {
 			referenceConfig.setFilter("bytetcc");
 			referenceConfig.setGroup("x-bytetcc");
 			referenceConfig.setCheck(false);
-			referenceConfig.setRetries(0);
+			referenceConfig.setRetries(-1);
 			referenceConfig.setUrl(String.format("%s:%s", remoteAddr.getServerHost(), remoteAddr.getServerPort()));
 			referenceConfig.setScope(Constants.SCOPE_REMOTE);
 

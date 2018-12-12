@@ -117,8 +117,8 @@ public class CompensableBeanConfigValidator
 				&& StringUtils.trimToEmpty(group).startsWith("x-bytetcc-") == false) {
 			throw new FatalBeanException(String.format(
 					"The value of attr 'group'(beanId= %s) should be 'x-bytetcc' or starts with 'x-bytetcc-'.", beanId));
-		} else if (retries != null && retries != 0) {
-			throw new FatalBeanException(String.format("The value of attr 'retries'(beanId= %s) should be '0'.", beanId));
+		} else if (retries != null && retries >= 0) {
+			throw new FatalBeanException(String.format("The value of attr 'retries'(beanId= %s) should be '-1'.", beanId));
 		} else if (this.statefully && StringUtils.equals(loadBalance, "bytetcc") == false) {
 			throw new FatalBeanException(
 					String.format("The value of attr 'loadbalance'(beanId= %s) should be 'bytetcc'.", beanId));
@@ -162,8 +162,8 @@ public class CompensableBeanConfigValidator
 				&& StringUtils.trimToEmpty(group).startsWith("x-bytetcc-") == false) {
 			throw new FatalBeanException(String.format(
 					"The value of attr 'group'(beanId= %s) should be 'x-bytetcc' or starts with 'x-bytetcc-'.", beanId));
-		} else if (retries != null && retries != 0) {
-			throw new FatalBeanException(String.format("The value of attr 'retries'(beanId= %s) should be '0'.", beanId));
+		} else if (retries != null && retries >= 0) {
+			throw new FatalBeanException(String.format("The value of attr 'retries'(beanId= %s) should be '-1'.", beanId));
 		} else if (this.statefully && StringUtils.equals(loadBalance, "bytetcc") == false) {
 			throw new FatalBeanException(
 					String.format("The value of attr 'loadbalance'(beanId= %s) should be 'bytetcc'.", beanId));

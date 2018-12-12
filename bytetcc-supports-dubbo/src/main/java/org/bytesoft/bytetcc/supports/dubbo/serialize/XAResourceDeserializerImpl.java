@@ -110,7 +110,7 @@ public class XAResourceDeserializerImpl implements XAResourceDeserializer, Appli
 			referenceConfig.setCluster("failfast");
 			referenceConfig.setFilter("bytetcc");
 			referenceConfig.setCheck(false);
-			referenceConfig.setRetries(0);
+			referenceConfig.setRetries(-1);
 			referenceConfig.setScope(Constants.SCOPE_REMOTE);
 
 			if (this.statefully) {

@@ -772,7 +772,7 @@ public class CompensablePrimaryFilter implements Filter {
 			referenceConfig.setFilter("bytetcc");
 			referenceConfig.setGroup("z-bytetcc");
 			referenceConfig.setCheck(false);
-			referenceConfig.setRetries(0);
+			referenceConfig.setRetries(-1);
 			referenceConfig.setUrl(String.format("%s:%s", remoteAddr.getServerHost(), remoteAddr.getServerPort()));
 			referenceConfig.setScope(Constants.SCOPE_REMOTE);
 
@@ -813,7 +813,7 @@ public class CompensablePrimaryFilter implements Filter {
 			referenceConfig.setFilter("bytetcc");
 			referenceConfig.setGroup(String.format("z-%s", application));
 			referenceConfig.setCheck(false);
-			referenceConfig.setRetries(0);
+			referenceConfig.setRetries(-1);
 			referenceConfig.setScope(Constants.SCOPE_REMOTE);
 
 			referenceConfig.setApplication(applicationConfig);

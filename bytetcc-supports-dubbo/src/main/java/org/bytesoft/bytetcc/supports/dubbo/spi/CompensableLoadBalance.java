@@ -189,7 +189,7 @@ public final class CompensableLoadBalance implements LoadBalance {
 			referenceConfig.setCluster("failfast");
 			referenceConfig.setFilter("bytetcc");
 			referenceConfig.setCheck(false);
-			referenceConfig.setRetries(0);
+			referenceConfig.setRetries(-1);
 			referenceConfig.setUrl(String.format("%s:%s", remoteAddr.getServerHost(), remoteAddr.getServerPort()));
 			referenceConfig.setScope(Constants.SCOPE_REMOTE);
 

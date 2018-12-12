@@ -65,7 +65,7 @@ public class CompensableParticipantRegistrant
 		globalServiceConfig.setRef(reference);
 		globalServiceConfig.setCluster("failfast");
 		globalServiceConfig.setFilter("bytetcc");
-		globalServiceConfig.setRetries(0);
+		globalServiceConfig.setRetries(-1);
 		globalServiceConfig.setTimeout(6000);
 
 		ServiceConfig<RemoteCoordinator> applicationServiceConfig = new ServiceConfig<RemoteCoordinator>();
@@ -73,7 +73,7 @@ public class CompensableParticipantRegistrant
 		applicationServiceConfig.setRef(reference);
 		applicationServiceConfig.setCluster("failfast");
 		applicationServiceConfig.setFilter("bytetcc");
-		applicationServiceConfig.setRetries(0);
+		applicationServiceConfig.setRetries(-1);
 		applicationServiceConfig.setTimeout(6000);
 
 		String application = CommonUtils.getApplication(this.endpoint);
