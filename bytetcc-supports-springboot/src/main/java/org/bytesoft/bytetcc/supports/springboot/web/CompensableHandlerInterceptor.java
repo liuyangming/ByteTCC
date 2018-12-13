@@ -16,6 +16,7 @@
 package org.bytesoft.bytetcc.supports.springboot.web;
 
 import java.lang.reflect.Method;
+import java.util.Base64;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -25,7 +26,6 @@ import org.bytesoft.bytejta.supports.rpc.TransactionRequestImpl;
 import org.bytesoft.bytejta.supports.rpc.TransactionResponseImpl;
 import org.bytesoft.bytetcc.supports.springboot.SpringBootBeanRegistry;
 import org.bytesoft.bytetcc.supports.springboot.controller.CompensableCoordinatorController;
-import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.common.utils.SerializeUtils;
 import org.bytesoft.compensable.Compensable;
 import org.bytesoft.compensable.CompensableBeanFactory;
@@ -47,8 +47,8 @@ import org.springframework.web.servlet.ModelAndView;
 
 public class CompensableHandlerInterceptor implements HandlerInterceptor, CompensableEndpointAware, ApplicationContextAware {
 	static final Logger logger = LoggerFactory.getLogger(CompensableHandlerInterceptor.class);
-	static final String HEADER_TRANCACTION_KEY = "X-COMPENSABLE-XID";
-	static final String HEADER_PROPAGATION_KEY = "X-PROPAGATION-KEY";
+	static final String HEADER_TRANCACTION_KEY = "X-BYTETCC-TRANSACTION";
+	static final String HEADER_PROPAGATION_KEY = "X-BYTETCC-PROPAGATION";
 
 	private String identifier;
 	private ApplicationContext applicationContext;
@@ -91,7 +91,7 @@ public class CompensableHandlerInterceptor implements HandlerInterceptor, Compen
 		CompensableBeanFactory beanFactory = beanRegistry.getBeanFactory();
 		TransactionInterceptor transactionInterceptor = beanFactory.getTransactionInterceptor();
 
-		byte[] byteArray = transactionText == null ? new byte[0] : ByteUtils.stringToByteArray(transactionText);
+		byte[] byteArray = transactionText == null ? new byte[0] : Base64.getDecoder().decode(transactionText);
 
 		TransactionContext transactionContext = null;
 		if (byteArray != null && byteArray.length > 0) {
@@ -109,7 +109,7 @@ public class CompensableHandlerInterceptor implements HandlerInterceptor, Compen
 		CompensableManager compensableManager = beanFactory.getCompensableManager();
 		CompensableTransaction compensable = compensableManager.getCompensableTransactionQuietly();
 		byte[] responseByteArray = SerializeUtils.serializeObject(compensable.getTransactionContext());
-		String compensableStr = ByteUtils.byteArrayToString(responseByteArray);
+		String compensableStr = Base64.getEncoder().encodeToString(responseByteArray);
 		response.addHeader(HEADER_TRANCACTION_KEY, compensableStr);
 		response.addHeader(HEADER_PROPAGATION_KEY, this.identifier);
 
@@ -157,7 +157,7 @@ public class CompensableHandlerInterceptor implements HandlerInterceptor, Compen
 		TransactionContext transactionContext = compensable.getTransactionContext();
 
 		byte[] byteArray = SerializeUtils.serializeObject(transactionContext);
-		String compensableStr = ByteUtils.byteArrayToString(byteArray);
+		String compensableStr = Base64.getEncoder().encodeToString(byteArray);
 		response.addHeader(HEADER_TRANCACTION_KEY, compensableStr);
 		response.addHeader(HEADER_PROPAGATION_KEY, this.identifier);
 

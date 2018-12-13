@@ -152,8 +152,10 @@ public class CompensableRequestInterceptor
 		String respTransactionStr = respHeaders.getFirst(HEADER_TRANCACTION_KEY);
 		String respPropagationStr = respHeaders.getFirst(HEADER_PROPAGATION_KEY);
 
-		byte[] byteArray = Base64.getDecoder().decode(StringUtils.trimToNull(respTransactionStr));
-		TransactionContext serverContext = (TransactionContext) SerializeUtils.deserializeObject(byteArray);
+		String transactionText = StringUtils.trimToNull(respTransactionStr);
+		byte[] byteArray = StringUtils.isBlank(transactionText) ? null : Base64.getDecoder().decode(transactionText);
+		TransactionContext serverContext = byteArray == null || byteArray.length == 0 //
+				? null : (TransactionContext) SerializeUtils.deserializeObject(byteArray);
 
 		TransactionResponseImpl txResp = new TransactionResponseImpl();
 		txResp.setTransactionContext(serverContext);

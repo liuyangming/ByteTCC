@@ -17,6 +17,7 @@ package org.bytesoft.bytetcc.supports.springboot.web;
 
 import java.io.IOException;
 import java.lang.reflect.Proxy;
+import java.util.Base64;
 
 import org.apache.commons.lang3.StringUtils;
 import org.bytesoft.bytejta.supports.internal.RemoteCoordinatorRegistry;
@@ -25,7 +26,6 @@ import org.bytesoft.bytejta.supports.rpc.TransactionResponseImpl;
 import org.bytesoft.bytetcc.CompensableTransactionImpl;
 import org.bytesoft.bytetcc.supports.springboot.SpringBootBeanRegistry;
 import org.bytesoft.bytetcc.supports.springboot.SpringBootCoordinator;
-import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.common.utils.CommonUtils;
 import org.bytesoft.common.utils.SerializeUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;
@@ -52,8 +52,8 @@ public class CompensableRequestInterceptor
 		implements ClientHttpRequestInterceptor, CompensableEndpointAware, ApplicationContextAware {
 	static final Logger logger = LoggerFactory.getLogger(CompensableRequestInterceptor.class);
 
-	static final String HEADER_TRANCACTION_KEY = "X-COMPENSABLE-XID";
-	static final String HEADER_PROPAGATION_KEY = "X-PROPAGATION-KEY";
+	static final String HEADER_TRANCACTION_KEY = "X-BYTETCC-TRANSACTION";
+	static final String HEADER_PROPAGATION_KEY = "X-BYTETCC-PROPAGATION";
 	static final String PREFIX_TRANSACTION_KEY = "/org/bytesoft/bytetcc";
 
 	private String identifier;
@@ -113,7 +113,7 @@ public class CompensableRequestInterceptor
 		TransactionContext transactionContext = compensable.getTransactionContext();
 
 		byte[] reqByteArray = SerializeUtils.serializeObject(transactionContext);
-		String reqTransactionStr = ByteUtils.byteArrayToString(reqByteArray);
+		String reqTransactionStr = Base64.getEncoder().encodeToString(reqByteArray);
 
 		HttpHeaders reqHeaders = httpRequest.getHeaders();
 		reqHeaders.add(HEADER_TRANCACTION_KEY, reqTransactionStr);
@@ -161,8 +161,10 @@ public class CompensableRequestInterceptor
 			participantRegistry.putRemoteNode(remoteAddr, remoteNode);
 		}
 
-		byte[] byteArray = ByteUtils.stringToByteArray(StringUtils.trimToNull(respTransactionStr));
-		TransactionContext serverContext = (TransactionContext) SerializeUtils.deserializeObject(byteArray);
+		String transactionText = StringUtils.trimToNull(respTransactionStr);
+		byte[] byteArray = StringUtils.isBlank(transactionText) ? null : Base64.getDecoder().decode(transactionText);
+		TransactionContext serverContext = byteArray == null || byteArray.length == 0 //
+				? null : (TransactionContext) SerializeUtils.deserializeObject(byteArray);
 
 		TransactionResponseImpl txResp = new TransactionResponseImpl();
 		txResp.setTransactionContext(serverContext);
