@@ -22,7 +22,7 @@ import java.lang.annotation.Target;
 
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ ElementType.METHOD })
-public @interface Propagation {
+public @interface PropagationTarget {
 
 	public Class<javax.transaction.Transaction> target() default javax.transaction.Transaction.class;
 

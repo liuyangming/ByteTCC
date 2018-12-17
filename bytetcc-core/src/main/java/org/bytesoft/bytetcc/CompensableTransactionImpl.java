@@ -195,13 +195,12 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 
 		if (systemEx != null) {
 			throw systemEx;
-		} else {
-			this.transactionStatus = Status.STATUS_COMMITTED;
-			compensableLogger.updateTransaction(this.getTransactionArchive());
-			logger.info("{}| compensable transaction committed!",
-					ByteUtils.byteArrayToString(transactionContext.getXid().getGlobalTransactionId()));
 		}
 
+		this.transactionStatus = Status.STATUS_COMMITTED;
+		compensableLogger.updateTransaction(this.getTransactionArchive());
+		logger.info("{}| compensable transaction committed!",
+				ByteUtils.byteArrayToString(transactionContext.getXid().getGlobalTransactionId()));
 	}
 
 	public synchronized void recoveryCommit() throws CommitRequiredException, SystemException {
