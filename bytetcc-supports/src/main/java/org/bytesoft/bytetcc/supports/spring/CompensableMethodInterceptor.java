@@ -87,37 +87,8 @@ public class CompensableMethodInterceptor
 			return pjp.proceed();
 		}
 
-		String identifier = null;
 		Object bean = pjp.getThis();
-
-		if (CompensableBeanNameAware.class.isInstance(bean)) {
-			CompensableBeanNameAware config = (CompensableBeanNameAware) bean;
-			identifier = config.getBeanName();
-			if (StringUtils.isBlank(identifier)) {
-				logger.error("BeanId(class= {}) should not be null!", bean.getClass().getName());
-				throw new IllegalStateException(
-						String.format("BeanId(class= %s) should not be null!", bean.getClass().getName()));
-			}
-		} else {
-			Class<?> targetClass = null;
-			if (org.springframework.aop.framework.Advised.class.isInstance(bean)) {
-				org.springframework.aop.framework.Advised advised = (org.springframework.aop.framework.Advised) bean;
-				targetClass = advised.getTargetClass();
-			} else {
-				targetClass = bean.getClass();
-			}
-
-			String[] beanNameArray = this.applicationContext.getBeanNamesForType(targetClass);
-			if (beanNameArray.length == 1) {
-				identifier = beanNameArray[0];
-			} else {
-				logger.error("Class {} does not implement interface {}, and there are multiple bean definitions!",
-						bean.getClass().getName(), CompensableBeanNameAware.class.getName());
-				throw new IllegalStateException(
-						String.format("Class %s does not implement interface %s, and there are multiple bean definitions!",
-								bean.getClass().getName(), CompensableBeanNameAware.class.getName()));
-			}
-		}
+		String identifier = this.getBeanName(bean);
 
 		MethodSignature signature = (MethodSignature) pjp.getSignature();
 		Method method = signature.getMethod();
@@ -134,36 +105,8 @@ public class CompensableMethodInterceptor
 			return mi.proceed();
 		}
 
-		String identifier = null;
 		Object bean = mi.getThis();
-		if (CompensableBeanNameAware.class.isInstance(bean)) {
-			CompensableBeanNameAware config = (CompensableBeanNameAware) bean;
-			identifier = config.getBeanName();
-			if (StringUtils.isBlank(identifier)) {
-				logger.error("BeanId(class= {}) should not be null!", bean.getClass().getName());
-				throw new IllegalStateException(
-						String.format("BeanId(class= %s) should not be null!", bean.getClass().getName()));
-			}
-		} else {
-			Class<?> targetClass = null;
-			if (org.springframework.aop.framework.Advised.class.isInstance(bean)) {
-				org.springframework.aop.framework.Advised advised = (org.springframework.aop.framework.Advised) bean;
-				targetClass = advised.getTargetClass();
-			} else {
-				targetClass = bean.getClass();
-			}
-
-			String[] beanNameArray = this.applicationContext.getBeanNamesForType(targetClass);
-			if (beanNameArray.length == 1) {
-				identifier = beanNameArray[0];
-			} else {
-				logger.error("Class {} does not implement interface {}, and there are multiple bean definitions!",
-						bean.getClass().getName(), CompensableBeanNameAware.class.getName());
-				throw new IllegalStateException(
-						String.format("Class %s does not implement interface %s, and there are multiple bean definitions!",
-								bean.getClass().getName(), CompensableBeanNameAware.class.getName()));
-			}
-		}
+		String identifier = this.getBeanName(bean);
 
 		Method method = mi.getMethod();
 		Object[] args = mi.getArguments();
@@ -184,56 +127,23 @@ public class CompensableMethodInterceptor
 
 		boolean desociateRequired = false;
 		try {
-			CompensableInvocationImpl invocation = new CompensableInvocationImpl();
-			invocation.setArgs(args);
-
-			invocation.setIdentifier(identifier);
-			invocation.setSimplified(annotation.simplified());
-
 			Class<?> interfaceClass = annotation.interfaceClass();
 			String methodName = method.getName();
 			Class<?>[] parameterTypes = method.getParameterTypes();
 
-			Method invokeMethod = null;
+			Method interfaceMethod = null;
 			try {
-				invokeMethod = interfaceClass.getMethod(methodName, parameterTypes);
+				interfaceMethod = interfaceClass.getMethod(methodName, parameterTypes);
 			} catch (NoSuchMethodException ex) {
 				logger.warn("Current compensable-service {} is invoking a non-TCC operation!", method);
+				return point.proceed(); // ignore
 			}
 
+			CompensableInvocation invocation = null;
 			if (annotation.simplified()) {
-				invocation.setMethod(method); // class-method
-
-				Object thisBean = point.getThis();
-				Class<?> currentClazz = null;
-				if (org.springframework.aop.framework.Advised.class.isInstance(thisBean)) {
-					org.springframework.aop.framework.Advised advised = (org.springframework.aop.framework.Advised) thisBean;
-					currentClazz = advised.getTargetClass();
-				} else {
-					currentClazz = thisBean.getClass();
-				}
-
-				Method[] methodArray = currentClazz.getDeclaredMethods();
-				boolean confirmFlag = false;
-				boolean cancelFlag = false;
-
-				for (int i = 0; (confirmFlag == false || cancelFlag == false) && i < methodArray.length; i++) {
-					Method element = methodArray[i];
-					if (element.getAnnotation(CompensableConfirm.class) != null) {
-						confirmFlag = true;
-						invocation.setConfirmableKey(identifier);
-					}
-					if (element.getAnnotation(CompensableCancel.class) != null) {
-						cancelFlag = true;
-						invocation.setCancellableKey(identifier);
-					}
-				}
-			} else if (invokeMethod == null) {
-				return point.proceed();
+				invocation = this.getCompensableInvocation(identifier, method, args, annotation, point.getThis());
 			} else {
-				invocation.setMethod(invokeMethod);
-				invocation.setConfirmableKey(annotation.confirmableKey());
-				invocation.setCancellableKey(annotation.cancellableKey());
+				invocation = this.getCompensableInvocation(identifier, interfaceMethod, args, annotation);
 			}
 
 			Transaction transaction = transactionManager.getTransactionQuietly();
@@ -274,6 +184,92 @@ public class CompensableMethodInterceptor
 			} // end-if (associated)
 
 		}
+	}
+
+	/* simplified. */
+	private CompensableInvocation getCompensableInvocation(String identifier, Method method, Object[] args,
+			Compensable annotation, Object target) {
+		CompensableInvocationImpl invocation = new CompensableInvocationImpl();
+		invocation.setArgs(args);
+
+		invocation.setIdentifier(identifier);
+		invocation.setSimplified(annotation.simplified());
+
+		invocation.setMethod(method); // class-method
+		Class<?> currentClazz = null;
+		if (org.springframework.aop.framework.Advised.class.isInstance(target)) {
+			org.springframework.aop.framework.Advised advised = (org.springframework.aop.framework.Advised) target;
+			currentClazz = advised.getTargetClass();
+		} else {
+			currentClazz = target.getClass();
+		}
+
+		Method[] methodArray = currentClazz.getDeclaredMethods();
+		boolean confirmFlag = false;
+		boolean cancelFlag = false;
+
+		for (int i = 0; (confirmFlag == false || cancelFlag == false) && i < methodArray.length; i++) {
+			Method element = methodArray[i];
+			if (element.getAnnotation(CompensableConfirm.class) != null) {
+				confirmFlag = true;
+				invocation.setConfirmableKey(identifier);
+			}
+			if (element.getAnnotation(CompensableCancel.class) != null) {
+				cancelFlag = true;
+				invocation.setCancellableKey(identifier);
+			}
+		}
+
+		return invocation;
+	}
+
+	/* default. */
+	private CompensableInvocation getCompensableInvocation(String identifier, Method interfaceMethod, Object[] args,
+			Compensable annotation) {
+		CompensableInvocationImpl invocation = new CompensableInvocationImpl();
+		invocation.setArgs(args);
+
+		invocation.setIdentifier(identifier);
+		invocation.setSimplified(annotation.simplified());
+
+		invocation.setMethod(interfaceMethod);
+		invocation.setConfirmableKey(annotation.confirmableKey());
+		invocation.setCancellableKey(annotation.cancellableKey());
+
+		return invocation;
+	}
+
+	private String getBeanName(Object bean) throws IllegalStateException {
+		String identifier = null;
+		if (CompensableBeanNameAware.class.isInstance(bean)) {
+			CompensableBeanNameAware config = (CompensableBeanNameAware) bean;
+			identifier = config.getBeanName();
+			if (StringUtils.isBlank(identifier)) {
+				logger.error("BeanId(class= {}) should not be null!", bean.getClass().getName());
+				throw new IllegalStateException(
+						String.format("BeanId(class= %s) should not be null!", bean.getClass().getName()));
+			}
+		} else {
+			Class<?> targetClass = null;
+			if (org.springframework.aop.framework.Advised.class.isInstance(bean)) {
+				org.springframework.aop.framework.Advised advised = (org.springframework.aop.framework.Advised) bean;
+				targetClass = advised.getTargetClass();
+			} else {
+				targetClass = bean.getClass();
+			}
+
+			String[] beanNameArray = this.applicationContext.getBeanNamesForType(targetClass);
+			if (beanNameArray.length == 1) {
+				identifier = beanNameArray[0];
+			} else {
+				logger.error("Class {} does not implement interface {}, and there are multiple bean definitions!",
+						bean.getClass().getName(), CompensableBeanNameAware.class.getName());
+				throw new IllegalStateException(
+						String.format("Class %s does not implement interface %s, and there are multiple bean definitions!",
+								bean.getClass().getName(), CompensableBeanNameAware.class.getName()));
+			}
+		}
+		return identifier;
 	}
 
 	public void setBeanFactory(CompensableBeanFactory tbf) {
