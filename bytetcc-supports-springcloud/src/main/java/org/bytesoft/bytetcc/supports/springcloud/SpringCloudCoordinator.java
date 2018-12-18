@@ -248,6 +248,10 @@ public class SpringCloudCoordinator implements InvocationHandler {
 		}
 	}
 
+	public String toString() {
+		return String.format("<remote-resource| id= %s>", this.identifier);
+	}
+
 	public String getIdentifier() {
 		return identifier;
 	}

@@ -290,6 +290,10 @@ public class SpringBootCoordinator implements InvocationHandler {
 		return CommonUtils.getApplication(instanceId);
 	}
 
+	public String toString() {
+		return String.format("<remote-resource| id= %s>", this.identifier);
+	}
+
 	public String getIdentifier() {
 		return identifier;
 	}
