@@ -114,42 +114,44 @@ public class CompensableMethodInterceptor
 	}
 
 	public Object execute(String identifier, Method method, Object[] args, Joinpoint point) throws Throwable {
-		Transactional transactional = method.getAnnotation(Transactional.class);
-		if (transactional == null) {
-			transactional = method.getDeclaringClass().getAnnotation(Transactional.class);
-		}
-
 		CompensableInvocationRegistry registry = CompensableInvocationRegistry.getInstance();
-		Compensable annotation = method.getDeclaringClass().getAnnotation(Compensable.class);
-
 		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 
+		Compensable annotation = method.getDeclaringClass().getAnnotation(Compensable.class);
+		Class<?> interfaceClass = annotation.interfaceClass();
+		String methodName = method.getName();
+		Class<?>[] parameterTypes = method.getParameterTypes();
+
+		Method interfaceMethod = null;
+		try {
+			interfaceMethod = interfaceClass.getMethod(methodName, parameterTypes);
+		} catch (NoSuchMethodException ex) {
+			logger.warn("Current compensable-service {} is invoking a non-TCC operation!", method);
+			return point.proceed(); // ignore
+		}
+
+		Transactional clazzAnnotation = method.getDeclaringClass().getAnnotation(Transactional.class);
+		Transactional methodAnnotation = method.getAnnotation(Transactional.class);
+		Transactional transactional = methodAnnotation == null ? clazzAnnotation : methodAnnotation;
+		if (transactional == null) {
+			throw new IllegalStateException(
+					String.format("Compensable-service(%s) does not have a Transactional annotation!", method));
+		}
+
+		CompensableInvocation invocation = null;
+		if (annotation.simplified()) {
+			invocation = this.getCompensableInvocation(identifier, method, args, annotation, point.getThis());
+		} else {
+			invocation = this.getCompensableInvocation(identifier, interfaceMethod, args, annotation);
+		}
+
+		Transaction transaction = transactionManager.getTransactionQuietly();
+		CompensableTransaction compensable = compensableManager.getCompensableTransactionQuietly();
+		Transaction existingTxn = (compensable == null) ? null : compensable.getTransaction();
+
 		boolean desociateRequired = false;
 		try {
-			Class<?> interfaceClass = annotation.interfaceClass();
-			String methodName = method.getName();
-			Class<?>[] parameterTypes = method.getParameterTypes();
-
-			Method interfaceMethod = null;
-			try {
-				interfaceMethod = interfaceClass.getMethod(methodName, parameterTypes);
-			} catch (NoSuchMethodException ex) {
-				logger.warn("Current compensable-service {} is invoking a non-TCC operation!", method);
-				return point.proceed(); // ignore
-			}
-
-			CompensableInvocation invocation = null;
-			if (annotation.simplified()) {
-				invocation = this.getCompensableInvocation(identifier, method, args, annotation, point.getThis());
-			} else {
-				invocation = this.getCompensableInvocation(identifier, interfaceMethod, args, annotation);
-			}
-
-			Transaction transaction = transactionManager.getTransactionQuietly();
-			CompensableTransaction compensable = compensableManager.getCompensableTransactionQuietly();
-			Transaction existingTxn = (compensable == null) ? null : compensable.getTransaction();
-
 			if (transaction == null && existingTxn != null) {
 				transaction = existingTxn;
 				transactionManager.associateThread(existingTxn);

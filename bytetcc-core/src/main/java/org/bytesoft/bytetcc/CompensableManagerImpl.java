@@ -236,6 +236,7 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 		compensable.setBeanFactory(this.beanFactory);
 
 		this.associateThread(compensable);
+		logger.info("{}| compensable transaction begin!", ByteUtils.byteArrayToString(compensableXid.getGlobalTransactionId()));
 
 		TransactionContext transactionContext = new TransactionContext();
 		transactionContext.setXid(transactionXid);
@@ -246,6 +247,8 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 			failure = false;
 		} finally {
 			if (failure) {
+				logger.info("{}| compensable transaction failed!",
+						ByteUtils.byteArrayToString(compensableXid.getGlobalTransactionId()));
 				this.desociateThread();
 			}
 		}
@@ -260,11 +263,12 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 			compensableLogger.deleteTransaction(compensable.getTransactionArchive());
 			this.desociateThread();
 			compensableRepository.removeTransaction(compensableXid);
+			logger.info("{}| compensable transaction failed!",
+					ByteUtils.byteArrayToString(compensableXid.getGlobalTransactionId()));
 
 			throw new SystemException(XAException.XAER_PROTO); // should never happen
 		}
 
-		logger.info("{}| compensable transaction begin!", ByteUtils.byteArrayToString(compensableXid.getGlobalTransactionId()));
 	}
 
 	public void commit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException, SecurityException,

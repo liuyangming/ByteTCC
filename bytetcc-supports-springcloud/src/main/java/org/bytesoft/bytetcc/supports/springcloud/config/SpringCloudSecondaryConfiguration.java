@@ -33,6 +33,7 @@ import org.bytesoft.bytetcc.supports.springcloud.feign.CompensableFeignDecoder;
 import org.bytesoft.bytetcc.supports.springcloud.feign.CompensableFeignErrorDecoder;
 import org.bytesoft.bytetcc.supports.springcloud.feign.CompensableFeignInterceptor;
 import org.bytesoft.bytetcc.supports.springcloud.hystrix.CompensableHystrixBeanPostProcessor;
+import org.bytesoft.bytetcc.supports.springcloud.loadbalancer.CompensableLoadBalancerRuleImpl;
 import org.bytesoft.bytetcc.supports.springcloud.property.CompensablePropertySourceFactory;
 import org.bytesoft.bytetcc.supports.springcloud.web.CompensableHandlerInterceptor;
 import org.bytesoft.bytetcc.supports.springcloud.web.CompensableRequestInterceptor;
@@ -44,6 +45,7 @@ import org.springframework.beans.BeansException;
 import org.springframework.beans.MutablePropertyValues;
 import org.springframework.beans.PropertyValue;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.beans.factory.ObjectFactory;
 import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -86,7 +88,22 @@ public class SpringCloudSecondaryConfiguration
 	private CompensableBeanFactory beanFactory;
 	private transient final Set<String> transientClientSet = new HashSet<String>();
 
-	public void afterSingletonsInstantiated() {
+	private void checkLoadbalancerRuleCorrectly() /* Check if the rule is set correctly */ {
+		com.netflix.loadbalancer.IRule loadBalancerRule = null;
+		try {
+			loadBalancerRule = this.applicationContext.getBean(com.netflix.loadbalancer.IRule.class);
+		} catch (NoSuchBeanDefinitionException ex) {
+			return; // return quietly
+		}
+
+		if (CompensableLoadBalancerRuleImpl.class.isInstance(loadBalancerRule)) {
+			return; // return quietly
+		}
+
+		throw new IllegalStateException("CompensableLoadBalancerRuleImpl is disabled!");
+	}
+
+	public void initializeStatefullyConfig() {
 		CompensableManagerImpl compensableManager = this.applicationContext.getBean(CompensableManagerImpl.class);
 		CompensableCoordinator compensableCoordinator = this.applicationContext.getBean(CompensableCoordinator.class);
 		UserCompensableImpl userCompensable = this.applicationContext.getBean(UserCompensableImpl.class);
@@ -95,6 +112,11 @@ public class SpringCloudSecondaryConfiguration
 		compensableCoordinator.setStatefully(true);
 		userCompensable.setStatefully(true);
 		compensableRecovery.setStatefully(true);
+	}
+
+	public void afterSingletonsInstantiated() {
+		this.initializeStatefullyConfig();
+		this.checkLoadbalancerRuleCorrectly();
 	}
 
 	public void afterPropertiesSet() throws Exception {

@@ -31,6 +31,7 @@ import org.bytesoft.bytetcc.supports.springcloud.feign.CompensableFeignDecoder;
 import org.bytesoft.bytetcc.supports.springcloud.feign.CompensableFeignErrorDecoder;
 import org.bytesoft.bytetcc.supports.springcloud.feign.CompensableFeignInterceptor;
 import org.bytesoft.bytetcc.supports.springcloud.hystrix.CompensableHystrixBeanPostProcessor;
+import org.bytesoft.bytetcc.supports.springcloud.loadbalancer.CompensableLoadBalancerRuleImpl;
 import org.bytesoft.bytetcc.supports.springcloud.property.CompensablePropertySourceFactory;
 import org.bytesoft.bytetcc.supports.springcloud.web.CompensableHandlerInterceptor;
 import org.bytesoft.bytetcc.supports.springcloud.web.CompensableRequestInterceptor;
@@ -42,7 +43,9 @@ import org.springframework.beans.BeansException;
 import org.springframework.beans.MutablePropertyValues;
 import org.springframework.beans.PropertyValue;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.beans.factory.ObjectFactory;
+import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
@@ -75,7 +78,8 @@ import com.mongodb.client.MongoClients;
 @EnableAspectJAutoProxy(proxyTargetClass = true)
 @EnableTransactionManagement
 public class SpringCloudConfiguration implements TransactionManagementConfigurer, WebMvcConfigurer, BeanFactoryPostProcessor,
-		InitializingBean, CompensableEndpointAware, CompensableBeanFactoryAware, EnvironmentAware, ApplicationContextAware {
+		InitializingBean, SmartInitializingSingleton, CompensableEndpointAware, CompensableBeanFactoryAware, EnvironmentAware,
+		ApplicationContextAware {
 	static final String CONSTANT_INCLUSIONS = "org.bytesoft.bytetcc.feign.inclusions";
 	static final String CONSTANT_EXCLUSIONS = "org.bytesoft.bytetcc.feign.exclusions";
 	static final String FEIGN_FACTORY_CLASS = "org.springframework.cloud.openfeign.FeignClientFactoryBean";
@@ -87,6 +91,25 @@ public class SpringCloudConfiguration implements TransactionManagementConfigurer
 	private Environment environment;
 	private CompensableBeanFactory beanFactory;
 	private transient final Set<String> transientClientSet = new HashSet<String>();
+
+	private void checkLoadbalancerRuleCorrectly() /* Check if the rule is set correctly */ {
+		com.netflix.loadbalancer.IRule loadBalancerRule = null;
+		try {
+			loadBalancerRule = this.applicationContext.getBean(com.netflix.loadbalancer.IRule.class);
+		} catch (NoSuchBeanDefinitionException ex) {
+			return; // return quietly
+		}
+
+		if (CompensableLoadBalancerRuleImpl.class.isInstance(loadBalancerRule)) {
+			return; // return quietly
+		}
+
+		throw new IllegalStateException("CompensableLoadBalancerRuleImpl is disabled!");
+	}
+
+	public void afterSingletonsInstantiated() {
+		this.checkLoadbalancerRuleCorrectly();
+	}
 
 	public void afterPropertiesSet() throws Exception {
 		String host = CommonUtils.getInetAddress();
