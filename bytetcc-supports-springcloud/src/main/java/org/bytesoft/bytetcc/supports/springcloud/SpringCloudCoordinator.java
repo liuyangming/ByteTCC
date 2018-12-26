@@ -111,7 +111,7 @@ public class SpringCloudCoordinator implements InvocationHandler {
 			if (this.statefully) {
 				ber.append(remoteNode.getServerHost()).append(":").append(remoteNode.getServerPort());
 			} else {
-				ber.append("{").append(remoteNode.getServiceKey()).append("}");
+				ber.append(remoteNode.getServiceKey());
 			}
 
 			if (StringUtils.isNotBlank(contextPath) || StringUtils.equals(contextPath, "/")) {
@@ -181,7 +181,7 @@ public class SpringCloudCoordinator implements InvocationHandler {
 			if (this.statefully) {
 				ber.append(remoteNode.getServerHost()).append(":").append(remoteNode.getServerPort());
 			} else {
-				ber.append("{").append(remoteNode.getServiceKey()).append("}");
+				ber.append(remoteNode.getServiceKey());
 			}
 
 			if (StringUtils.isNotBlank(contextPath) || StringUtils.equals(contextPath, "/")) {

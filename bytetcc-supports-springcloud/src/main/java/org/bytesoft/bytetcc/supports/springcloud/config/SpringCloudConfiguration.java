@@ -215,6 +215,7 @@ public class SpringCloudConfiguration implements TransactionManagementConfigurer
 	}
 
 	@org.springframework.context.annotation.Bean("compensableRestTemplate")
+	@org.springframework.cloud.client.loadbalancer.LoadBalanced
 	public RestTemplate transactionTemplate(@Autowired ClientHttpRequestFactory requestFactory) {
 		RestTemplate restTemplate = new RestTemplate();
 		restTemplate.setRequestFactory(requestFactory);
