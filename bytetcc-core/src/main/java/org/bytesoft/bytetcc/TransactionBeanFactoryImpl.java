@@ -34,6 +34,7 @@ import org.bytesoft.transaction.supports.serialize.XAResourceDeserializer;
 import org.bytesoft.transaction.xa.XidFactory;
 
 public final class TransactionBeanFactoryImpl implements CompensableBeanFactory {
+	private static final TransactionBeanFactoryImpl instance = new TransactionBeanFactoryImpl();
 
 	private TransactionManager transactionManager;
 	private CompensableManager compensableManager;
@@ -56,6 +57,16 @@ public final class TransactionBeanFactoryImpl implements CompensableBeanFactory 
 	private CompensableSynchronization compensableSynchronization;
 	private TransactionLock compensableLock;
 	private CompensableRolledbackMarker compensableRolledbackMarker;
+
+	private TransactionBeanFactoryImpl() {
+		if (instance != null) {
+			throw new IllegalStateException();
+		}
+	}
+
+	public static TransactionBeanFactoryImpl getInstance() {
+		return instance;
+	}
 
 	public TransactionManager getTransactionManager() {
 		return transactionManager;
