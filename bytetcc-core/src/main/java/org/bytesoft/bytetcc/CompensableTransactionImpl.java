@@ -1200,6 +1200,15 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 		}
 	}
 
+	public void fireBeforeTransactionCompletion() throws RollbackRequiredException, SystemException {
+	}
+
+	public void fireBeforeTransactionCompletionQuietly() {
+	}
+
+	public void fireAfterTransactionCompletion() {
+	}
+
 	public CompensableArchive getCompensableArchive() {
 		return this.archive;
 	}

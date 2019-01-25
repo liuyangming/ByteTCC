@@ -18,6 +18,8 @@
 
 	<bean class="org.bytesoft.bytetcc.supports.resource.LocalXADataSourcePostProcessor" />
 
+	<bean class="org.bytesoft.bytetcc.supports.spring.SpringContextRegistry" factory-method="getInstance" />
+
 	<bean id="bytetccUserTransaction" class="org.bytesoft.bytetcc.UserCompensableImpl" />
 	<bean id="bytetccCompensableManager" class="org.bytesoft.bytetcc.CompensableManagerImpl" />
 	<bean id="transactionManager" class="org.bytesoft.bytetcc.TransactionManagerImpl" />

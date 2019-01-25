@@ -20,6 +20,9 @@ import org.bytesoft.bytetcc.CompensableManagerImpl;
 import org.bytesoft.bytetcc.TransactionManagerImpl;
 import org.bytesoft.bytetcc.TransactionRecoveryImpl;
 import org.bytesoft.bytetcc.UserCompensableImpl;
+import org.bytesoft.bytetcc.supports.spring.SpringContextRegistry;
+import org.bytesoft.compensable.CompensableBeanFactory;
+import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.SmartInitializingSingleton;
@@ -35,9 +38,10 @@ import org.springframework.transaction.jta.JtaTransactionManager;
 @ImportResource({ "classpath:bytetcc-disable-tx-advice.xml", "classpath:bytetcc-supports-dubbo-secondary.xml" })
 @EnableAspectJAutoProxy(proxyTargetClass = true)
 @EnableTransactionManagement
-public class DubboSecondaryConfiguration
-		implements TransactionManagementConfigurer, ApplicationContextAware, SmartInitializingSingleton, InitializingBean {
+public class DubboSecondaryConfiguration implements TransactionManagementConfigurer, ApplicationContextAware,
+		SmartInitializingSingleton, InitializingBean, CompensableBeanFactoryAware {
 	private ApplicationContext applicationContext;
+	private CompensableBeanFactory beanFactory;
 
 	public void afterSingletonsInstantiated() {
 		CompensableManagerImpl compensableManager = this.applicationContext.getBean(CompensableManagerImpl.class);
@@ -57,7 +61,25 @@ public class DubboSecondaryConfiguration
 		JtaTransactionManager jtaTransactionManager = new JtaTransactionManager();
 		jtaTransactionManager.setTransactionManager(this.applicationContext.getBean(TransactionManagerImpl.class));
 		jtaTransactionManager.setUserTransaction(this.applicationContext.getBean(UserCompensableImpl.class));
-		return jtaTransactionManager;
+
+		SpringContextRegistry springContextRegistry = SpringContextRegistry.getInstance();
+		springContextRegistry.setApplicationContext(this.applicationContext);
+		springContextRegistry.setBeanFactory(this.beanFactory);
+		springContextRegistry.setTransactionManager(jtaTransactionManager);
+		return springContextRegistry.getTransactionManager();
+	}
+
+	@org.springframework.context.annotation.Bean("jtaTransactionManager")
+	public PlatformTransactionManager jtaTransactionManager() {
+		return SpringContextRegistry.getInstance().getTransactionManager();
+	}
+
+	public CompensableBeanFactory getBeanFactory() {
+		return beanFactory;
+	}
+
+	public void setBeanFactory(CompensableBeanFactory beanFactory) {
+		this.beanFactory = beanFactory;
 	}
 
 	public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {

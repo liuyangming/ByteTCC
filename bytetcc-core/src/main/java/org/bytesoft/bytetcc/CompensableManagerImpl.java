@@ -69,6 +69,10 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 
 	public CompensableTransaction desociateThread() {
 		CompensableTransaction transaction = (CompensableTransaction) this.thread2txMap.remove(Thread.currentThread());
+		if (transaction == null) {
+			return null;
+		}
+
 		TransactionContext transactionContext = (TransactionContext) transaction.getTransactionContext();
 		this.xid2txMap.remove(transactionContext.getXid());
 		return transaction;

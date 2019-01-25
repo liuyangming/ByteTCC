@@ -21,6 +21,7 @@ import org.bytesoft.bytetcc.CompensableManagerImpl;
 import org.bytesoft.bytetcc.TransactionManagerImpl;
 import org.bytesoft.bytetcc.TransactionRecoveryImpl;
 import org.bytesoft.bytetcc.UserCompensableImpl;
+import org.bytesoft.bytetcc.supports.spring.SpringContextRegistry;
 import org.bytesoft.bytetcc.supports.springboot.SpringBootBeanRegistry;
 import org.bytesoft.bytetcc.supports.springboot.web.CompensableHandlerInterceptor;
 import org.bytesoft.bytetcc.supports.springboot.web.CompensableRequestInterceptor;
@@ -86,7 +87,17 @@ public class SpringBootSecondaryConfiguration
 		JtaTransactionManager jtaTransactionManager = new JtaTransactionManager();
 		jtaTransactionManager.setTransactionManager(this.applicationContext.getBean(TransactionManagerImpl.class));
 		jtaTransactionManager.setUserTransaction(this.applicationContext.getBean(UserCompensableImpl.class));
-		return jtaTransactionManager;
+
+		SpringContextRegistry springContextRegistry = SpringContextRegistry.getInstance();
+		springContextRegistry.setApplicationContext(this.applicationContext);
+		springContextRegistry.setBeanFactory(this.beanFactory);
+		springContextRegistry.setTransactionManager(jtaTransactionManager);
+		return springContextRegistry.getTransactionManager();
+	}
+
+	@org.springframework.context.annotation.Bean("jtaTransactionManager")
+	public PlatformTransactionManager jtaTransactionManager() {
+		return SpringContextRegistry.getInstance().getTransactionManager();
 	}
 
 	@org.springframework.context.annotation.Bean
