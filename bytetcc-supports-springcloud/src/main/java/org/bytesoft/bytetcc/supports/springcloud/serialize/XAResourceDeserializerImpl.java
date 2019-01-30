@@ -59,7 +59,7 @@ public class XAResourceDeserializerImpl implements XAResourceDeserializer, Appli
 
 		RemoteCoordinatorRegistry registry = RemoteCoordinatorRegistry.getInstance();
 		String application = CommonUtils.getApplication(identifier);
-		if (registry.containsParticipant(application)) {
+		if (registry.containsParticipant(application) == false) {
 			SpringCloudCoordinator springCloudCoordinator = new SpringCloudCoordinator();
 			springCloudCoordinator.setIdentifier(identifier);
 			springCloudCoordinator.setEnvironment(this.environment);
