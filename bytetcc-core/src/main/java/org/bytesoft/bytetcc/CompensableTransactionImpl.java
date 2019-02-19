@@ -845,36 +845,49 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 	}
 
 	public void onEnlistResource(Xid xid, XAResource xares) {
-		String resourceKey = null;
-		if (XAResourceDescriptor.class.isInstance(xares)) {
-			XAResourceDescriptor descriptor = (XAResourceDescriptor) xares;
-			resourceKey = descriptor.getIdentifier();
-		} else if (XAResourceArchive.class.isInstance(xares)) {
-			XAResourceArchive resourceArchive = (XAResourceArchive) xares;
-			XAResourceDescriptor descriptor = resourceArchive.getDescriptor();
-			resourceKey = descriptor == null ? null : descriptor.getIdentifier();
+		XAResourceDescriptor descriptor = null;
+		if (XAResourceArchive.class.isInstance(xares)) {
+			descriptor = ((XAResourceArchive) xares).getDescriptor();
+		} else if (XAResourceDescriptor.class.isInstance(xares)) {
+			descriptor = (XAResourceDescriptor) xares;
 		}
 
-		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
 		if (this.transactionContext.isCompensating()) {
-			// this.archive.setCompensableXid(xid); // preset the compensable-xid.
-			this.archive.setCompensableResourceKey(resourceKey);
-			compensableLogger.updateCompensable(this.archive);
+			this.onCompletionPhaseEnlistResource(xid, descriptor);
 		} else {
-			for (int i = 0; i < this.currentArchiveList.size(); i++) {
-				CompensableArchive compensableArchive = this.currentArchiveList.get(i);
-				compensableArchive.setTransactionXid(xid);
-				compensableArchive.setTransactionResourceKey(resourceKey);
-
-				XidFactory transactionXidFactory = this.beanFactory.getTransactionXidFactory();
-				TransactionXid globalXid = transactionXidFactory.createGlobalXid(xid.getGlobalTransactionId());
-				TransactionXid branchXid = transactionXidFactory.createBranchXid(globalXid);
-				compensableArchive.setCompensableXid(branchXid); // preset the compensable-xid.
-
-				compensableLogger.createCompensable(compensableArchive);
-			}
+			this.onInvocationPhaseEnlistResource(xid, descriptor);
 		}
+	}
 
+	private void onInvocationPhaseEnlistResource(Xid xid, XAResourceDescriptor descriptor) {
+		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
+
+		String resourceKey = descriptor == null ? null : descriptor.getIdentifier();
+		for (int i = 0; i < this.currentArchiveList.size(); i++) {
+			CompensableArchive compensableArchive = this.currentArchiveList.get(i);
+			compensableArchive.setTransactionXid(xid);
+			compensableArchive.setTransactionResourceKey(resourceKey);
+
+			XidFactory transactionXidFactory = this.beanFactory.getTransactionXidFactory();
+			TransactionXid globalXid = transactionXidFactory.createGlobalXid(xid.getGlobalTransactionId());
+			TransactionXid branchXid = transactionXidFactory.createBranchXid(globalXid);
+			compensableArchive.setCompensableXid(branchXid); // preset the compensable-xid.
+
+			compensableLogger.createCompensable(compensableArchive);
+		}
+	}
+
+	private void onCompletionPhaseEnlistResource(Xid actualXid, XAResourceDescriptor descriptor) {
+		Xid expectXid = this.archive == null ? null : this.archive.getCompensableXid();
+		if (CommonUtils.equals(expectXid, actualXid) == false) {
+			// enlist by the try operation, and current tx is rollingback/committing.
+			throw new IllegalStateException("Illegal state: maybe the try phase operation has timed out.!");
+		} // end-if (CommonUtils.equals(expectXid, actualXid) == false)
+
+		String resourceKey = descriptor == null ? null : descriptor.getIdentifier();
+		// this.archive.setCompensableXid(xid); // preset the compensable-xid.
+		this.archive.setCompensableResourceKey(resourceKey);
+		this.beanFactory.getCompensableLogger().updateCompensable(this.archive);
 	}
 
 	public void onDelistResource(Xid xid, XAResource xares) {
