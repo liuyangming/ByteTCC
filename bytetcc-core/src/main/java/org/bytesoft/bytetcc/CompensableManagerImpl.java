@@ -292,23 +292,33 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 		if (compensable == false) {
 			throw new IllegalStateException();
 		} else if (compensating) {
-			this.invokeTransactionCommit(transaction);
+			this.invokeTransactionCommitIfNecessary(transaction);
 		} else if (coordinator) {
 			if (propagated) {
-				this.invokeTransactionCommit(transaction);
+				this.invokeTransactionCommitIfNecessary(transaction);
 			} else if (propagatedLevel > 0) {
-				this.invokeTransactionCommit(transaction);
+				this.invokeTransactionCommitIfNecessary(transaction);
 			} else {
 				throw new IllegalStateException();
 			}
 		} else {
-			this.invokeTransactionCommit(transaction);
+			this.invokeTransactionCommitIfNecessary(transaction);
+		}
+	}
+
+	protected void invokeTransactionCommitIfNecessary(CompensableTransaction compensable) throws RollbackException,
+			HeuristicMixedException, HeuristicRollbackException, SecurityException, IllegalStateException, SystemException {
+		// compensable.getTransaction().isMarkedRollbackOnly()
+		if (compensable.getTransaction().getTransactionStatus() == Status.STATUS_MARKED_ROLLBACK) {
+			this.invokeTransactionRollback(compensable);
+			throw new HeuristicRollbackException();
+		} else {
+			this.invokeTransactionCommit(compensable);
 		}
 	}
 
 	protected void invokeTransactionCommit(CompensableTransaction compensable) throws RollbackException,
 			HeuristicMixedException, HeuristicRollbackException, SecurityException, IllegalStateException, SystemException {
-
 		Transaction transaction = compensable.getTransaction();
 		boolean isLocalTransaction = transaction.isLocalTransaction();
 		try {

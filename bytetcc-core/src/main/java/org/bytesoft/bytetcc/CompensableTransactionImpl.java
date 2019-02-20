@@ -894,28 +894,16 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 	}
 
 	public void onCommitSuccess(TransactionXid xid) {
-		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
-
 		if (this.transactionContext.isCompensating()) {
-			if (this.positive == null) {
-				// ignore
-			} else if (this.positive) {
-				this.archive.setConfirmed(true);
+			this.onCompletionPhaseCommitSuccess(xid);
+		} else {
+			this.onInvocationPhaseCommitSuccess(xid);
+		}
+	}
 
-				logger.info("{}| confirm: identifier= {}, resourceKey= {}, resourceXid= {}.",
-						ByteUtils.byteArrayToString(transactionContext.getXid().getGlobalTransactionId()),
-						ByteUtils.byteArrayToString(this.archive.getIdentifier().getGlobalTransactionId()),
-						this.archive.getCompensableResourceKey(), this.archive.getCompensableXid());
-			} else {
-				this.archive.setCancelled(true);
-
-				logger.info("{}| cancel: identifier= {}, resourceKey= {}, resourceXid= {}.",
-						ByteUtils.byteArrayToString(transactionContext.getXid().getGlobalTransactionId()),
-						ByteUtils.byteArrayToString(this.archive.getIdentifier().getGlobalTransactionId()),
-						this.archive.getCompensableResourceKey(), this.archive.getCompensableXid());
-			}
-			compensableLogger.updateCompensable(this.archive);
-		} else if (this.transactionContext.isCoordinator() && this.transactionContext.isPropagated() == false
+	private void onInvocationPhaseCommitSuccess(Xid xid) {
+		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
+		if (this.transactionContext.isCoordinator() && this.transactionContext.isPropagated() == false
 				&& this.transactionContext.getPropagationLevel() == 0) {
 			for (Iterator<CompensableArchive> itr = this.currentArchiveList.iterator(); itr.hasNext();) {
 				CompensableArchive compensableArchive = itr.next();
@@ -948,7 +936,36 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 						compensableArchive.getTransactionResourceKey(), compensableArchive.getTransactionXid());
 			}
 		}
+	}
 
+	private void onCompletionPhaseCommitSuccess(Xid actualXid) {
+		Xid expectXid = this.archive == null ? null : this.archive.getCompensableXid();
+		if (CommonUtils.equals(expectXid, actualXid) == false) {
+			throw new IllegalStateException("Illegal state: maybe the try phase operation has timed out.!");
+		} // end-if (CommonUtils.equals(expectXid, actualXid) == false)
+
+		if (this.positive == null) {
+			this.beanFactory.getCompensableLogger().updateCompensable(this.archive);
+			return;
+		}
+
+		if (this.positive) {
+			logger.info("{}| confirm: identifier= {}, resourceKey= {}, resourceXid= {}.",
+					ByteUtils.byteArrayToString(transactionContext.getXid().getGlobalTransactionId()),
+					ByteUtils.byteArrayToString(this.archive.getIdentifier().getGlobalTransactionId()),
+					this.archive.getCompensableResourceKey(), this.archive.getCompensableXid());
+
+			this.archive.setConfirmed(true);
+		} else {
+			logger.info("{}| cancel: identifier= {}, resourceKey= {}, resourceXid= {}.",
+					ByteUtils.byteArrayToString(transactionContext.getXid().getGlobalTransactionId()),
+					ByteUtils.byteArrayToString(this.archive.getIdentifier().getGlobalTransactionId()),
+					this.archive.getCompensableResourceKey(), this.archive.getCompensableXid());
+
+			this.archive.setCancelled(true);
+		}
+
+		this.beanFactory.getCompensableLogger().updateCompensable(this.archive);
 	}
 
 	public void recoverIfNecessary() throws SystemException {
