@@ -902,45 +902,53 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 	}
 
 	private void onInvocationPhaseCommitSuccess(Xid xid) {
-		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
 		if (this.transactionContext.isCoordinator() && this.transactionContext.isPropagated() == false
 				&& this.transactionContext.getPropagationLevel() == 0) {
-			for (Iterator<CompensableArchive> itr = this.currentArchiveList.iterator(); itr.hasNext();) {
-				CompensableArchive compensableArchive = itr.next();
-				itr.remove(); // remove
-				compensableArchive.setTried(true);
-				// compensableLogger.updateCompensable(compensableArchive);
-
-				logger.info("{}| try: identifier= {}, resourceKey= {}, resourceXid= {}.",
-						ByteUtils.byteArrayToString(transactionContext.getXid().getGlobalTransactionId()),
-						ByteUtils.byteArrayToString(compensableArchive.getIdentifier().getGlobalTransactionId()),
-						compensableArchive.getTransactionResourceKey(), compensableArchive.getTransactionXid());
-			}
-
-			TransactionArchive transactionArchive = this.getTransactionArchive();
-			transactionArchive.setCompensableStatus(Status.STATUS_COMMITTING);
-			compensableLogger.updateTransaction(transactionArchive);
-
-			logger.info("{}| try completed.",
-					ByteUtils.byteArrayToString(transactionContext.getXid().getGlobalTransactionId()));
+			this.onInvocationPhaseCoordinatorCommitSuccess(xid);
 		} else {
-			for (Iterator<CompensableArchive> itr = this.currentArchiveList.iterator(); itr.hasNext();) {
-				CompensableArchive compensableArchive = itr.next();
-				itr.remove(); // remove
-				compensableArchive.setTried(true);
-				compensableLogger.updateCompensable(compensableArchive);
+			this.onInvocationPhaseParticipantCommitSuccess(xid);
+		}
+	}
 
-				logger.info("{}| try: identifier= {}, resourceKey= {}, resourceXid= {}.",
-						ByteUtils.byteArrayToString(transactionContext.getXid().getGlobalTransactionId()),
-						ByteUtils.byteArrayToString(compensableArchive.getIdentifier().getGlobalTransactionId()),
-						compensableArchive.getTransactionResourceKey(), compensableArchive.getTransactionXid());
-			}
+	private void onInvocationPhaseCoordinatorCommitSuccess(Xid xid) {
+		for (Iterator<CompensableArchive> itr = this.currentArchiveList.iterator(); itr.hasNext();) {
+			CompensableArchive compensableArchive = itr.next();
+			itr.remove(); // remove
+			compensableArchive.setTried(true);
+			// compensableLogger.updateCompensable(compensableArchive);
+
+			logger.info("{}| try: identifier= {}, resourceKey= {}, resourceXid= {}.",
+					ByteUtils.byteArrayToString(transactionContext.getXid().getGlobalTransactionId()),
+					ByteUtils.byteArrayToString(compensableArchive.getIdentifier().getGlobalTransactionId()),
+					compensableArchive.getTransactionResourceKey(), compensableArchive.getTransactionXid());
+		}
+
+		TransactionArchive transactionArchive = this.getTransactionArchive();
+		transactionArchive.setCompensableStatus(Status.STATUS_COMMITTING);
+		this.beanFactory.getCompensableLogger().updateTransaction(transactionArchive);
+
+		logger.info("{}| try completed.", ByteUtils.byteArrayToString(transactionContext.getXid().getGlobalTransactionId()));
+	}
+
+	private void onInvocationPhaseParticipantCommitSuccess(Xid xid) {
+		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
+		for (Iterator<CompensableArchive> itr = this.currentArchiveList.iterator(); itr.hasNext();) {
+			CompensableArchive compensableArchive = itr.next();
+			itr.remove(); // remove
+			compensableArchive.setTried(true);
+			compensableLogger.updateCompensable(compensableArchive);
+
+			logger.info("{}| try: identifier= {}, resourceKey= {}, resourceXid= {}.",
+					ByteUtils.byteArrayToString(transactionContext.getXid().getGlobalTransactionId()),
+					ByteUtils.byteArrayToString(compensableArchive.getIdentifier().getGlobalTransactionId()),
+					compensableArchive.getTransactionResourceKey(), compensableArchive.getTransactionXid());
 		}
 	}
 
 	private void onCompletionPhaseCommitSuccess(Xid actualXid) {
 		Xid expectXid = this.archive == null ? null : this.archive.getCompensableXid();
 		if (CommonUtils.equals(expectXid, actualXid) == false) {
+			// this.onInvocationPhaseParticipantCommitSuccess(actualXid);
 			throw new IllegalStateException("Illegal state: maybe the try phase operation has timed out.!");
 		} // end-if (CommonUtils.equals(expectXid, actualXid) == false)
 
