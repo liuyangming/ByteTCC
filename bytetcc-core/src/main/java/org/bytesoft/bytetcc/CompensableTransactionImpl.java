@@ -17,6 +17,7 @@ package org.bytesoft.bytetcc;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -869,8 +870,8 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 			compensableArchive.setTransactionResourceKey(resourceKey);
 
 			XidFactory transactionXidFactory = this.beanFactory.getTransactionXidFactory();
-			TransactionXid globalXid = transactionXidFactory.createGlobalXid(xid.getGlobalTransactionId());
-			TransactionXid branchXid = transactionXidFactory.createBranchXid(globalXid);
+			TransactionXid globalXid = transactionXidFactory.createGlobalXid();
+			TransactionXid branchXid = transactionXidFactory.createBranchXid(globalXid, xid.getGlobalTransactionId());
 			compensableArchive.setCompensableXid(branchXid); // preset the compensable-xid.
 
 			compensableLogger.createCompensable(compensableArchive);
@@ -879,6 +880,8 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 
 	private void onCompletionPhaseEnlistResource(Xid actualXid, XAResourceDescriptor descriptor) {
 		Xid expectXid = this.archive == null ? null : this.archive.getCompensableXid();
+		// byte[] expectKey = expectXid == null ? null : expectXid.getBranchQualifier();
+		// byte[] actualKey = actualXid.getGlobalTransactionId();
 		if (CommonUtils.equals(expectXid, actualXid) == false) {
 			// enlist by the try operation, and current tx is rollingback/committing.
 			throw new IllegalStateException("Illegal state: maybe the try phase operation has timed out.!");
@@ -947,7 +950,9 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 
 	private void onCompletionPhaseCommitSuccess(Xid actualXid) {
 		Xid expectXid = this.archive == null ? null : this.archive.getCompensableXid();
-		if (CommonUtils.equals(expectXid, actualXid) == false) {
+		byte[] expectKey = expectXid == null ? null : expectXid.getGlobalTransactionId();
+		byte[] actualKey = actualXid.getGlobalTransactionId();
+		if (Arrays.equals(expectKey, actualKey) == false) {
 			// this.onInvocationPhaseParticipantCommitSuccess(actualXid);
 			throw new IllegalStateException("Illegal state: maybe the try phase operation has timed out.!");
 		} // end-if (CommonUtils.equals(expectXid, actualXid) == false)

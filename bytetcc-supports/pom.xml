@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.bytesoft</groupId>
 		<artifactId>bytetcc-parent</artifactId>
-		<version>0.5.0-BETA4</version>
+		<version>0.5.0-BETA5</version>
 	</parent>
 	<artifactId>bytetcc-supports</artifactId>
 	<packaging>jar</packaging>

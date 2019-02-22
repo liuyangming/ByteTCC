@@ -35,6 +35,7 @@ import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableManager;
 import org.bytesoft.compensable.CompensableTransaction;
 import org.bytesoft.compensable.TransactionContext;
+import org.bytesoft.compensable.archive.CompensableArchive;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 import org.bytesoft.compensable.aware.CompensableEndpointAware;
 import org.bytesoft.compensable.logging.CompensableLogger;
@@ -148,16 +149,21 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 	}
 
 	public void begin() throws NotSupportedException, SystemException {
+		XidFactory transactionXidFactory = this.beanFactory.getTransactionXidFactory();
+
 		CompensableTransaction compensable = this.getCompensableTransactionQuietly();
 		if (compensable == null || compensable.getTransaction() != null) {
 			throw new SystemException(XAException.XAER_PROTO);
 		}
 
+		CompensableArchive archive = compensable.getCompensableArchive();
+
+		// The current confirm/cancel operation has been assigned an xid.
+		TransactionXid transactionXid = archive != null //
+				? transactionXidFactory.createGlobalXid(archive.getCompensableXid().getGlobalTransactionId())
+				: transactionXidFactory.createGlobalXid();
+
 		TransactionContext compensableContext = compensable.getTransactionContext();
-
-		XidFactory transactionXidFactory = this.beanFactory.getTransactionXidFactory();
-		TransactionXid transactionXid = transactionXidFactory.createGlobalXid();
-
 		TransactionContext transactionContext = compensableContext.clone();
 		transactionContext.setXid(transactionXid);
 
