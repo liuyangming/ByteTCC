@@ -181,9 +181,13 @@ public class CompensableMethodInterceptor
 		} finally {
 			registry.unRegister();
 
+			if (compensable != null && invocation != null && invocation.isEnlisted()) {
+				compensable.completeCompensable(invocation);
+			} // end-if (compensable != null && invocation != null && invocation.isEnlisted())
+
 			if (desociateRequired) {
 				transactionManager.desociateThread();
-			} // end-if (associated)
+			} // end-if (desociateRequired)
 
 		}
 	}

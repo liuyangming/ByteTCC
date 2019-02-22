@@ -34,4 +34,6 @@ public interface CompensableTransaction
 
 	public void registerCompensable(CompensableInvocation invocation);
 
+	public void completeCompensable(CompensableInvocation invocation);
+
 }

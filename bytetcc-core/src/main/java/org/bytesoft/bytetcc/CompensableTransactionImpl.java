@@ -91,6 +91,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 	/* current compensable-archive list in try phase. */
 	private transient final List<CompensableArchive> currentArchiveList = new ArrayList<CompensableArchive>();
 	private transient final Map<Xid, List<CompensableArchive>> archiveMap = new HashMap<Xid, List<CompensableArchive>>();
+	private transient final Map<Xid, String> xidToResourceMap = new HashMap<Xid, String>();
 
 	private Map<String, Serializable> variables = new HashMap<String, Serializable>();
 
@@ -836,6 +837,9 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 				ByteUtils.byteArrayToString(archive.getIdentifier().getGlobalTransactionId()));
 	}
 
+	public void completeCompensable(CompensableInvocation invocation) {
+	}
+
 	public void registerSynchronization(Synchronization sync) throws RollbackException, IllegalStateException, SystemException {
 	}
 
@@ -861,15 +865,20 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 	}
 
 	private void onInvocationPhaseEnlistResource(Xid xid, XAResourceDescriptor descriptor) {
+		XidFactory transactionXidFactory = this.beanFactory.getTransactionXidFactory();
 		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
 
+		TransactionXid transactionXid = transactionXidFactory.createGlobalXid(xid.getGlobalTransactionId());
+
 		String resourceKey = descriptor == null ? null : descriptor.getIdentifier();
+
+		this.xidToResourceMap.put(transactionXid, resourceKey);
+
 		for (int i = 0; i < this.currentArchiveList.size(); i++) {
 			CompensableArchive compensableArchive = this.currentArchiveList.get(i);
 			compensableArchive.setTransactionXid(xid);
 			compensableArchive.setTransactionResourceKey(resourceKey);
 
-			XidFactory transactionXidFactory = this.beanFactory.getTransactionXidFactory();
 			TransactionXid globalXid = transactionXidFactory.createGlobalXid();
 			TransactionXid branchXid = transactionXidFactory.createBranchXid(globalXid, xid.getGlobalTransactionId());
 			compensableArchive.setCompensableXid(branchXid); // preset the compensable-xid.
@@ -893,7 +902,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 		this.beanFactory.getCompensableLogger().updateCompensable(this.archive);
 	}
 
-	public void onDelistResource(Xid xid, XAResource xares) {
+	public void onDelistResource(Xid transactionXid, XAResource xares) {
 	}
 
 	public void onCommitSuccess(TransactionXid xid) {

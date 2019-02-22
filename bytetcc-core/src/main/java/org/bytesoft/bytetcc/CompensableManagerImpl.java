@@ -159,8 +159,9 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 		CompensableArchive archive = compensable.getCompensableArchive();
 
 		// The current confirm/cancel operation has been assigned an xid.
-		TransactionXid transactionXid = archive != null //
-				? transactionXidFactory.createGlobalXid(archive.getCompensableXid().getGlobalTransactionId())
+		TransactionXid compensableXid = archive == null ? null : (TransactionXid) archive.getCompensableXid();
+		TransactionXid transactionXid = compensableXid != null //
+				? transactionXidFactory.createGlobalXid(compensableXid.getGlobalTransactionId())
 				: transactionXidFactory.createGlobalXid();
 
 		TransactionContext compensableContext = compensable.getTransactionContext();
