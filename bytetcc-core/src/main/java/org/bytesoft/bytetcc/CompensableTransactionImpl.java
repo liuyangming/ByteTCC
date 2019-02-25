@@ -120,9 +120,8 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 		return transactionArchive;
 	}
 
-	public synchronized void participantCommit(boolean opc)
-			throws RollbackException, HeuristicMixedException, HeuristicRollbackException, SecurityException,
-			IllegalStateException, CommitRequiredException, SystemException {
+	public synchronized void participantCommit(boolean opc) throws RollbackException, HeuristicMixedException,
+			HeuristicRollbackException, SecurityException, IllegalStateException, CommitRequiredException, SystemException {
 
 		// Recover if transaction is recovered from tx-log.
 		this.recoverIfNecessary();
@@ -141,17 +140,9 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 		} else if (this.transactionStatus == Status.STATUS_MARKED_ROLLBACK) {
 			this.fireRollback();
 			throw new HeuristicRollbackException();
-		} else if (this.transactionStatus == Status.STATUS_ROLLEDBACK) /*
-																		 * should
-																		 * never
-																		 * happen
-																		 */ {
+		} else if (this.transactionStatus == Status.STATUS_ROLLEDBACK) /* should never happen */ {
 			throw new RollbackException();
-		} else if (this.transactionStatus == Status.STATUS_COMMITTED) /*
-																		 * should
-																		 * never
-																		 * happen
-																		 */ {
+		} else if (this.transactionStatus == Status.STATUS_COMMITTED) /* should never happen */ {
 			logger.debug("Current transaction has already been committed.");
 		} else {
 			throw new IllegalStateException();
@@ -159,8 +150,8 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 
 	}
 
-	private void fireCommit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException,
-			SecurityException, IllegalStateException, SystemException {
+	private void fireCommit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException, SecurityException,
+			IllegalStateException, SystemException {
 		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
 
 		this.transactionContext.setCompensating(true);
@@ -282,8 +273,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 			} catch (RuntimeException rex) {
 				errorExists = true;
 				logger.error("{}| error occurred while confirming service: {}",
-						ByteUtils.byteArrayToString(this.transactionContext.getXid().getGlobalTransactionId()), current,
-						rex);
+						ByteUtils.byteArrayToString(this.transactionContext.getXid().getGlobalTransactionId()), current, rex);
 			} finally {
 				this.archive = null;
 				this.positive = null;
@@ -326,8 +316,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 				current.setCommitted(true);
 				current.setCompleted(true);
 
-				logger.info("{}| confirm remote branch: {}",
-						ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()),
+				logger.info("{}| confirm remote branch: {}", ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()),
 						current.getDescriptor().getIdentifier());
 			} catch (XAException ex) {
 				switch (ex.errorCode) {
@@ -346,8 +335,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 					current.setRolledback(true);
 					current.setCompleted(true);
 
-					logger.error(
-							"{}| error occurred while confirming remote branch: {}, transaction has been completed!",
+					logger.error("{}| error occurred while confirming remote branch: {}, transaction has been completed!",
 							ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()),
 							current.getDescriptor().getIdentifier(), ex);
 
@@ -363,16 +351,14 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 					unFinishExists = true;
 
 					current.setHeuristic(true);
-					logger.warn(
-							"{}| error occurred while confirming remote branch: {}, transaction may has been completd!",
+					logger.warn("{}| error occurred while confirming remote branch: {}, transaction may has been completd!",
 							ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()),
 							current.getDescriptor().getIdentifier(), ex);
 					break;
 				case XAException.XAER_RMFAIL:
 					unFinishExists = true;
 
-					logger.warn(
-							"{}| error occurred while confirming remote branch: {}, the remote branch is unreachable!",
+					logger.warn("{}| error occurred while confirming remote branch: {}, the remote branch is unreachable!",
 							ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()),
 							current.getDescriptor().getIdentifier(), ex);
 					break;
@@ -405,8 +391,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 					current.setRolledback(true);
 					current.setCompleted(true);
 
-					logger.error(
-							"{}| error occurred while confirming remote branch: {}, transaction has been rolled back!",
+					logger.error("{}| error occurred while confirming remote branch: {}, transaction has been rolled back!",
 							ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()),
 							current.getDescriptor().getIdentifier(), ex);
 				}
@@ -457,17 +442,9 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 			throw new IllegalStateException();
 		} else if (this.transactionStatus == Status.STATUS_NO_TRANSACTION) {
 			throw new IllegalStateException();
-		} else if (this.transactionStatus == Status.STATUS_COMMITTED) /*
-																		 * should
-																		 * never
-																		 * happen
-																		 */ {
+		} else if (this.transactionStatus == Status.STATUS_COMMITTED) /* should never happen */ {
 			throw new IllegalStateException();
-		} else if (this.transactionStatus == Status.STATUS_ROLLEDBACK) /*
-																		 * should
-																		 * never
-																		 * happen
-																		 */ {
+		} else if (this.transactionStatus == Status.STATUS_ROLLEDBACK) /* should never happen */ {
 			logger.debug("Current transaction has already been rolled back.");
 		} else {
 			this.fireRollback();
@@ -488,8 +465,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 	public void markBusinessStageRollbackOnly(TransactionXid transactionXid) throws SystemException {
 		List<Transaction> transactions = new ArrayList<Transaction>(this.transactionMap.values());
 		boolean recoveried = this.transactionContext.isRecoveried();
-		if (recoveried == false && transactions
-				.isEmpty() == false) /* used by participant only. */ {
+		if (recoveried == false && transactions.isEmpty() == false) /* used by participant only. */ {
 			for (int i = 0; i < transactions.size(); i++) {
 				Transaction branch = transactions.get(i);
 				try {
@@ -614,8 +590,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 			} catch (RuntimeException rex) {
 				errorExists = true;
 				logger.error("{}| error occurred while cancelling service: {}",
-						ByteUtils.byteArrayToString(this.transactionContext.getXid().getGlobalTransactionId()), current,
-						rex);
+						ByteUtils.byteArrayToString(this.transactionContext.getXid().getGlobalTransactionId()), current, rex);
 			} finally {
 				this.archive = null;
 				this.positive = null;
@@ -657,8 +632,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 				current.setRolledback(true);
 				current.setCompleted(true);
 
-				logger.info("{}| cancel remote branch: {}",
-						ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()),
+				logger.info("{}| cancel remote branch: {}", ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()),
 						current.getDescriptor().getIdentifier());
 			} catch (XAException xaex) {
 				switch (xaex.errorCode) {
@@ -694,8 +668,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 					break;
 				case XAException.XAER_RMFAIL:
 					unFinishExists = true;
-					logger.error(
-							"{}| error occurred while cancelling remote branch: {}, the remote branch is unreachable!",
+					logger.error("{}| error occurred while cancelling remote branch: {}, the remote branch is unreachable!",
 							ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()), current, xaex);
 					break;
 				case XAException.XAER_NOTA:
@@ -823,8 +796,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 	}
 
 	private void checkRemoteResourceDescriptor(RemoteResourceDescriptor descriptor) throws IllegalStateException {
-		RemoteCoordinator transactionCoordinator = (RemoteCoordinator) this.beanFactory
-				.getCompensableNativeParticipant();
+		RemoteCoordinator transactionCoordinator = (RemoteCoordinator) this.beanFactory.getCompensableNativeParticipant();
 
 		RemoteSvc nativeSvc = CommonUtils.getRemoteSvc(transactionCoordinator.getIdentifier());
 		RemoteSvc parentSvc = CommonUtils.getRemoteSvc(String.valueOf(this.transactionContext.getPropagatedBy()));
@@ -878,8 +850,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 			compensableArchive.setTransactionXid(branch.branchXid);
 
 			TransactionXid gxid = transactionXidFactory.createGlobalXid();
-			TransactionXid bxid = transactionXidFactory.createBranchXid(gxid,
-					branch.branchXid.getGlobalTransactionId());
+			TransactionXid bxid = transactionXidFactory.createBranchXid(gxid, branch.branchXid.getGlobalTransactionId());
 			compensableArchive.setCompensableXid(bxid);
 
 			compensableLogger.createCompensable(compensableArchive);
@@ -893,8 +864,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 	public void completeCompensable(CompensableInvocation invocation) {
 	}
 
-	public void registerSynchronization(Synchronization sync)
-			throws RollbackException, IllegalStateException, SystemException {
+	public void registerSynchronization(Synchronization sync) throws RollbackException, IllegalStateException, SystemException {
 	}
 
 	public void registerTransactionListener(TransactionListener listener) {
@@ -1002,8 +972,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 		transactionArchive.setCompensableStatus(Status.STATUS_COMMITTING);
 		this.beanFactory.getCompensableLogger().updateTransaction(transactionArchive);
 
-		logger.info("{}| try completed.",
-				ByteUtils.byteArrayToString(transactionContext.getXid().getGlobalTransactionId()));
+		logger.info("{}| try completed.", ByteUtils.byteArrayToString(transactionContext.getXid().getGlobalTransactionId()));
 	}
 
 	private void onInvocationPhaseParticipantCommitSuccess(Xid xid) {

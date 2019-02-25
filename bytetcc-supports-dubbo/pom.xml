@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.bytesoft</groupId>
 		<artifactId>bytetcc-parent</artifactId>
-		<version>0.5.0-BETA5</version>
+		<version>0.5.0-BETA6</version>
 	</parent>
 	<artifactId>bytetcc-supports-dubbo</artifactId>
 	<packaging>jar</packaging>
@@ -75,6 +75,16 @@
 		<dependency>
 			<groupId>cglib</groupId>
 			<artifactId>cglib</artifactId>
+			<exclusions>
+				<exclusion>
+					<groupId>asm</groupId>
+					<artifactId>asm</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		<dependency>
+			<groupId>org.ow2.asm</groupId>
+			<artifactId>asm</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>org.aspectj</groupId>

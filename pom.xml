@@ -4,7 +4,7 @@
 
 	<groupId>org.bytesoft</groupId>
 	<artifactId>bytetcc-parent</artifactId>
-	<version>0.5.0-BETA5</version>
+	<version>0.5.0-BETA6</version>
 	<packaging>pom</packaging>
 	<name>bytetcc-parent</name>
 	<description>ByteTCC is a transaction manager based on the TCC(Try/Confirm/Cancel) mechanism.</description>
@@ -252,54 +252,54 @@
 			<dependency>
 				<groupId>org.bytesoft</groupId>
 				<artifactId>bytejta-core</artifactId>
-				<version>0.5.0-BETA1</version>
+				<version>0.5.0-BETA2</version>
 			</dependency>
 			<dependency>
 				<groupId>org.bytesoft</groupId>
 				<artifactId>bytejta-supports</artifactId>
-				<version>0.5.0-BETA1</version>
+				<version>0.5.0-BETA2</version>
 			</dependency>
 			<dependency>
 				<groupId>org.bytesoft</groupId>
 				<artifactId>bytejta-supports-springcloud</artifactId>
-				<version>0.5.0-BETA1</version>
+				<version>0.5.0-BETA2</version>
 			</dependency>
 			<dependency>
 				<groupId>org.bytesoft</groupId>
 				<artifactId>bytejta-supports-dubbo</artifactId>
-				<version>0.5.0-BETA1</version>
+				<version>0.5.0-BETA2</version>
 			</dependency>
 
 			<!-- bytetcc -->
 			<dependency>
 				<groupId>org.bytesoft</groupId>
 				<artifactId>bytetcc-common</artifactId>
-				<version>0.5.0-BETA5</version>
+				<version>0.5.0-BETA6</version>
 			</dependency>
 			<dependency>
 				<groupId>org.bytesoft</groupId>
 				<artifactId>bytetcc-core</artifactId>
-				<version>0.5.0-BETA5</version>
+				<version>0.5.0-BETA6</version>
 			</dependency>
 			<dependency>
 				<groupId>org.bytesoft</groupId>
 				<artifactId>bytetcc-supports</artifactId>
-				<version>0.5.0-BETA5</version>
+				<version>0.5.0-BETA6</version>
 			</dependency>
 			<dependency>
 				<groupId>org.bytesoft</groupId>
 				<artifactId>bytetcc-supports-dubbo</artifactId>
-				<version>0.5.0-BETA5</version>
+				<version>0.5.0-BETA6</version>
 			</dependency>
 			<dependency>
 				<groupId>org.bytesoft</groupId>
 				<artifactId>bytetcc-supports-springcloud</artifactId>
-				<version>0.5.0-BETA5</version>
+				<version>0.5.0-BETA6</version>
 			</dependency>
 			<dependency>
 				<groupId>org.bytesoft</groupId>
 				<artifactId>bytetcc-supports-springboot</artifactId>
-				<version>0.5.0-BETA5</version>
+				<version>0.5.0-BETA6</version>
 			</dependency>
 
 			<!-- logger -->
@@ -399,6 +399,11 @@
 				<groupId>cglib</groupId>
 				<artifactId>cglib</artifactId>
 				<version>2.2.2</version>
+			</dependency>
+			<dependency>
+				<groupId>org.ow2.asm</groupId>
+				<artifactId>asm</artifactId>
+				<version>5.0.4</version>
 			</dependency>
 			<dependency>
 				<groupId>org.aspectj</groupId>
