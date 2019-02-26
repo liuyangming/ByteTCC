@@ -38,7 +38,6 @@ import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 import org.bytesoft.compensable.aware.CompensableEndpointAware;
 import org.bytesoft.transaction.supports.serialize.XAResourceDeserializer;
-import org.bytesoft.transaction.xa.XidFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,11 +47,6 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableEndpo
 
 	static final long SECOND_MILLIS = 1000L;
 	static final int MAX_HANDLE_RECORDS = 200;
-
-	static final int CONSTANTS_START_INDEX = IDENTIFIER.length + 2 + 4 + 4;
-	static final int CONSTANTS_RES_ID_MAX_SIZE = 23;
-	static final int CONSTANTS_RECORD_SIZE = CONSTANTS_RES_ID_MAX_SIZE + XidFactory.GLOBAL_TRANSACTION_LENGTH
-			+ XidFactory.BRANCH_QUALIFIER_LENGTH;
 
 	@javax.inject.Inject
 	private CompensableBeanFactory beanFactory;
@@ -66,8 +60,8 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableEndpo
 	private boolean released;
 	private String endpoint;
 
-	private final CleanupFile resourceOne = new CleanupFile("resource1.log");
-	private final CleanupFile resourceTwo = new CleanupFile("resource2.log");
+	private final CleanupFile resourceOne = new CleanupFile("resource-1.log");
+	private final CleanupFile resourceTwo = new CleanupFile("resource-2.log");
 
 	private CleanupFile master = null;
 	private CleanupFile slaver = null;
@@ -149,7 +143,6 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableEndpo
 		}
 
 		this.destroy();
-
 	}
 
 	protected void waitingFor(long millis) {

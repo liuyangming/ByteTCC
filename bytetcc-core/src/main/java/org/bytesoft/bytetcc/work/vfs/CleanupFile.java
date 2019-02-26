@@ -48,8 +48,9 @@ public class CleanupFile implements CompensableEndpointAware, CompensableBeanFac
 	static final Logger logger = LoggerFactory.getLogger(CleanupFile.class);
 	static final byte[] IDENTIFIER = "org.bytesoft.bytetcc.resource.cleanup".getBytes();
 
-	static final int CONSTANTS_START_INDEX = IDENTIFIER.length + 2 + 1 + 4 + 4;
-	static final int CONSTANTS_RES_ID_MAX_SIZE = 23;
+	static final int CONSTANTS_REMAIN_SIZE = 16;
+	static final int CONSTANTS_START_INDEX = IDENTIFIER.length + 2 + 1 + 4 + 4 + CONSTANTS_REMAIN_SIZE;
+	static final int CONSTANTS_RES_ID_MAX_SIZE = 31;
 	static final int CONSTANTS_RECORD_SIZE = CONSTANTS_RES_ID_MAX_SIZE + XidFactory.GLOBAL_TRANSACTION_LENGTH
 			+ XidFactory.BRANCH_QUALIFIER_LENGTH;
 
@@ -72,6 +73,34 @@ public class CleanupFile implements CompensableEndpointAware, CompensableBeanFac
 	}
 
 	public byte initialize(boolean master) {
+		try {
+			this.initializeDirectoryIfNecessary();
+			boolean created = this.initializeFileIfNecessary();
+
+			ByteBuffer byteBuffer = ByteBuffer.allocate(CONSTANTS_START_INDEX);
+			this.channel = raf.getChannel();
+			this.channel.read(byteBuffer);
+
+			this.checkIdentifier(byteBuffer);
+			this.checkVersion(byteBuffer);
+			byte masterFlag = this.checkMasterFlag(byteBuffer, created ? master : null);
+			this.checkStartIndex(byteBuffer);
+			this.endIndex = this.checkEndIndex(byteBuffer);
+
+			this.sizeOfRaf = this.endIndex; // this.sizeOfRaf = (int) this.raf.length();
+			this.raf.setLength(this.sizeOfRaf);
+			this.header = this.channel.map(MapMode.READ_WRITE, 0, CONSTANTS_START_INDEX);
+			this.header.put((ByteBuffer) byteBuffer.rewind());
+
+			return masterFlag;
+		} catch (FileNotFoundException ex) {
+			throw new RuntimeException(String.format("File not found: %s.", new File(this.directory, this.resourceName)), ex);
+		} catch (IOException ex) {
+			throw new RuntimeException(ex);
+		}
+	}
+
+	private void initializeDirectoryIfNecessary() {
 		if (this.directory == null) {
 			String address = StringUtils.trimToEmpty(this.endpoint);
 			String dirName = address.replaceAll("[^a-zA-Z0-9]", "_");
@@ -83,11 +112,13 @@ public class CleanupFile implements CompensableEndpointAware, CompensableBeanFac
 				throw new RuntimeException();
 			}
 		}
+	}
 
+	private boolean initializeFileIfNecessary() throws FileNotFoundException {
 		boolean created = false;
 		File resource = new File(this.directory, this.resourceName);
-		boolean exists = resource.exists();
-		if (exists == false) {
+		boolean existed = resource.exists();
+		if (existed == false) {
 			try {
 				created = resource.createNewFile();
 			} catch (IOException ex) {
@@ -98,81 +129,48 @@ public class CleanupFile implements CompensableEndpointAware, CompensableBeanFac
 				throw new RuntimeException();
 			}
 		}
-
-		try {
-			this.raf = new RandomAccessFile(resource, "rw");
-		} catch (FileNotFoundException ex) {
-			throw new RuntimeException(String.format("File not found: %s.", resource), ex);
-		}
-
-		if (created) {
-			try {
-				this.raf.setLength(CONSTANTS_START_INDEX);
-			} catch (IOException ex) {
-				throw new RuntimeException(ex);
-			}
-		}
-
-		try {
-			this.sizeOfRaf = (int) this.raf.length();
-		} catch (IOException ex) {
-			throw new RuntimeException(ex);
-		}
-
-		this.channel = raf.getChannel();
-		try {
-			this.header = this.channel.map(MapMode.READ_WRITE, 0, CONSTANTS_START_INDEX);
-		} catch (IOException ex) {
-			throw new RuntimeException(ex);
-		}
-
-		this.checkIdentifier();
-		this.checkVersion();
-		byte masterFlag = this.checkMasterFlag(created ? master : null);
-		this.checkStartIndex();
-		this.endIndex = this.checkEndIndex();
-
-		return masterFlag;
+		this.raf = new RandomAccessFile(resource, "rw");
+		return created;
 	}
 
-	private void checkIdentifier() {
+	private void checkIdentifier(ByteBuffer byteBuf) {
 		byte[] array = new byte[IDENTIFIER.length];
-		this.header.position(0);
-		this.header.get(array);
+		byteBuf.position(0);
+		byteBuf.get(array);
 		if (Arrays.equals(IDENTIFIER, array)) {
 			// ignore
 		} else if (Arrays.equals(new byte[IDENTIFIER.length], array)) {
-			this.header.position(0);
-			this.header.put(IDENTIFIER);
+			byteBuf.position(0);
+			byteBuf.put(IDENTIFIER);
 		} else {
 			throw new IllegalStateException();
 		}
 	}
 
-	private void checkVersion() {
-		this.header.position(IDENTIFIER.length);
-		int major = this.header.get();
-		int minor = this.header.get();
-		if (major == 0 && minor == 2) {
+	private void checkVersion(ByteBuffer byteBuf) {
+		byteBuf.position(IDENTIFIER.length);
+		int major = byteBuf.get();
+		int minor = byteBuf.get();
+		if (major == 1 && minor == 0) {
 			// ignore
 		} else if (major == 0 && minor == 0) {
-			this.header.position(IDENTIFIER.length);
-			this.header.put((byte) 0x0);
-			this.header.put((byte) 0x2);
+			byteBuf.position(IDENTIFIER.length);
+			byteBuf.put((byte) 0x1);
+			byteBuf.put((byte) 0x0);
 		} else {
 			throw new IllegalStateException();
 		}
 	}
 
-	private byte checkMasterFlag(Boolean master) {
-		this.header.position(IDENTIFIER.length + 2);
+	private byte checkMasterFlag(ByteBuffer byteBuf, Boolean master) {
+		byteBuf.position(IDENTIFIER.length + 2);
 		if (master == null) {
-			return this.header.get();
+			return byteBuf.get();
 		} else if (master) {
-			this.header.put((byte) 0x1);
+			byteBuf.put((byte) 0x1);
 			return (byte) 0x1;
 		} else {
-			this.header.put((byte) 0x0);
+			byteBuf.put((byte) 0x0);
 			return (byte) 0x0;
 		}
 
@@ -193,25 +191,25 @@ public class CleanupFile implements CompensableEndpointAware, CompensableBeanFac
 		this.header.put((byte) 0x0);
 	}
 
-	private void checkStartIndex() {
-		this.header.position(IDENTIFIER.length + 2 + 1);
-		int start = this.header.getInt();
+	private void checkStartIndex(ByteBuffer byteBuf) {
+		byteBuf.position(IDENTIFIER.length + 2 + 1);
+		int start = byteBuf.getInt();
 		if (start == IDENTIFIER.length + 2 + 1 + 8) {
 			// ignore
 		} else if (start == 0) {
-			this.header.position(IDENTIFIER.length + 2 + 1);
-			this.header.putInt(IDENTIFIER.length + 2 + 1 + 8);
+			byteBuf.position(IDENTIFIER.length + 2 + 1);
+			byteBuf.putInt(IDENTIFIER.length + 2 + 1 + 8);
 		} else {
 			throw new IllegalStateException();
 		}
 	}
 
-	private int checkEndIndex() {
-		this.header.position(IDENTIFIER.length + 2 + 1 + 4);
-		int end = this.header.getInt();
+	private int checkEndIndex(ByteBuffer byteBuf) {
+		byteBuf.position(IDENTIFIER.length + 2 + 1 + 4);
+		int end = byteBuf.getInt();
 		if (end == 0) {
-			this.header.position(IDENTIFIER.length + 2 + 1 + 4);
-			this.header.putInt(IDENTIFIER.length + 2 + 1 + 8);
+			byteBuf.position(IDENTIFIER.length + 2 + 1 + 4);
+			byteBuf.putInt(IDENTIFIER.length + 2 + 1 + 8);
 			return IDENTIFIER.length + 2 + 1 + 8;
 		} else if (end < CONSTANTS_START_INDEX) {
 			throw new IllegalStateException();
@@ -223,8 +221,6 @@ public class CleanupFile implements CompensableEndpointAware, CompensableBeanFac
 	public void startupRecover() throws RuntimeException {
 		XidFactory xidFactory = this.beanFactory.getTransactionXidFactory();
 
-		LinkedList<CleanupRecord> removedList = new LinkedList<CleanupRecord>();
-		CleanupRecord lastEnabledRecord = null;
 		for (int current = CONSTANTS_START_INDEX; current < this.endIndex; current = current + CONSTANTS_RECORD_SIZE + 1) {
 			ByteBuffer buffer = ByteBuffer.allocate(1 + CONSTANTS_RECORD_SIZE);
 
@@ -258,43 +254,10 @@ public class CleanupFile implements CompensableEndpointAware, CompensableBeanFac
 			record.setResource(resourceId);
 
 			this.recordList.add(record);
-
-			if (record.isEnabled() == false) {
-				removedList.add(record);
-				continue;
-			}
-
-			CleanupRecord removedRecord = removedList.pollFirst();
-			if (removedRecord == null) {
-				lastEnabledRecord = record;
+			if (record.isEnabled()) {
 				this.registerRecord(record);
-			} else {
-				removedRecord.setEnabled(record.isEnabled());
-				removedRecord.setRecordFlag(record.getRecordFlag());
-				removedRecord.setResource(record.getResource());
-				// removedRecord.setStartIndex(); // dont set startIndex
-				removedRecord.setXid(record.getXid());
-
-				this.forget(removedRecord);
-				this.delete(record);
-
-				removedList.add(record);
-
-				if (lastEnabledRecord != null //
-						&& lastEnabledRecord.getStartIndex() < removedRecord.getStartIndex()) {
-					lastEnabledRecord = removedRecord;
-				}
-
-			}
-
+			} // end-if (record.isEnabled())
 		}
-
-		if (lastEnabledRecord != null //
-				&& (lastEnabledRecord.getStartIndex() + CONSTANTS_RECORD_SIZE + 1) > this.endIndex) {
-			this.updateEndIndex(lastEnabledRecord.getStartIndex() + CONSTANTS_RECORD_SIZE + 1);
-		} // end-if (lastEnabledRecord != null)
-
-		this.decreaseCapacityIfNecessary();
 	}
 
 	public void timingCompress() throws RuntimeException {
@@ -310,7 +273,7 @@ public class CleanupFile implements CompensableEndpointAware, CompensableBeanFac
 			boolean forgetFlag = (memoRecordFlag & 0x2) == 0x2;
 
 			if (memoEnabled && forgetFlag) {
-				this.delete(record);
+				this.delete(record); // change status & unRegister record
 				removedList.add(record);
 				continue;
 			} else if (memoEnabled == false) {
@@ -336,19 +299,12 @@ public class CleanupFile implements CompensableEndpointAware, CompensableBeanFac
 
 			removedList.add(record);
 
-			if (lastEnabledRecord != null //
-					&& lastEnabledRecord.getStartIndex() < removedRecord.getStartIndex()) {
-				lastEnabledRecord = removedRecord;
-			}
-
+			lastEnabledRecord = removedRecord;
 		} // end-for
 
-		if (lastEnabledRecord != null //
-				&& (lastEnabledRecord.getStartIndex() + CONSTANTS_RECORD_SIZE + 1) > this.endIndex) {
-			this.updateEndIndex(lastEnabledRecord.getStartIndex() + CONSTANTS_RECORD_SIZE + 1);
-		} // end-if (lastEnabledRecord != null)
-
-		this.decreaseCapacityIfNecessary();
+		int lastRecordEndIndex = lastEnabledRecord == null ? //
+				CONSTANTS_START_INDEX : lastEnabledRecord.getStartIndex() + CONSTANTS_RECORD_SIZE + 1;
+		this.updateEndIndex(lastRecordEndIndex);
 	}
 
 	public void forget(CleanupRecord record) throws RuntimeException {
@@ -516,21 +472,6 @@ public class CleanupFile implements CompensableEndpointAware, CompensableBeanFac
 
 		} // end-for (int index = this.recordList.size() - 1; index >= startIndex; index--)
 
-	}
-
-	private void decreaseCapacityIfNecessary() {
-		int unit = (CONSTANTS_RECORD_SIZE + 1) * 1024 * 4;
-		int length = this.sizeOfRaf - this.endIndex;
-		int number = length / unit;
-		if (number >= 2) {
-			int decremental = unit * (number - 1);
-			try {
-				this.raf.setLength(this.sizeOfRaf - decremental);
-				this.sizeOfRaf = this.sizeOfRaf - decremental;
-			} catch (IOException ex) {
-				throw new IllegalStateException(ex);
-			}
-		}
 	}
 
 	private void increaseCapacityIfNecessary() {

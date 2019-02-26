@@ -7,7 +7,7 @@
 <dependency>
 	<groupId>org.bytesoft</groupId>
 	<artifactId>bytetcc-supports-springcloud</artifactId>
-	<version>0.5.0-BETA6</version>
+	<version>0.5.0-BETA7</version>
 </dependency>
 ```
 ###### 1.1.2. 使用dubbo
@@ -15,7 +15,7 @@
 <dependency>
 	<groupId>org.bytesoft</groupId>
 	<artifactId>bytetcc-supports-dubbo</artifactId>
-	<version>0.5.0-BETA6</version>
+	<version>0.5.0-BETA7</version>
 </dependency>
 ```
 
