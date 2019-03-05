@@ -60,8 +60,8 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableEndpo
 	private boolean released;
 	private String endpoint;
 
-	private final CleanupFile resourceOne = new CleanupFile("resource-1.log");
-	private final CleanupFile resourceTwo = new CleanupFile("resource-2.log");
+	private final CleanupFile resourceOne = new CleanupFile("cleanup-1.log");
+	private final CleanupFile resourceTwo = new CleanupFile("cleanup-2.log");
 
 	private CleanupFile master = null;
 	private CleanupFile slaver = null;

@@ -158,7 +158,7 @@ public class CleanupFile implements CompensableEndpointAware, CompensableBeanFac
 			byteBuf.put((byte) 0x1);
 			byteBuf.put((byte) 0x0);
 		} else {
-			throw new IllegalStateException();
+			throw new IllegalStateException(String.format("Incompatible version: %s.%s", major, minor));
 		}
 	}
 
@@ -173,7 +173,6 @@ public class CleanupFile implements CompensableEndpointAware, CompensableBeanFac
 			byteBuf.put((byte) 0x0);
 			return (byte) 0x0;
 		}
-
 	}
 
 	public void markMaster() {
@@ -194,13 +193,13 @@ public class CleanupFile implements CompensableEndpointAware, CompensableBeanFac
 	private void checkStartIndex(ByteBuffer byteBuf) {
 		byteBuf.position(IDENTIFIER.length + 2 + 1);
 		int start = byteBuf.getInt();
-		if (start == IDENTIFIER.length + 2 + 1 + 8) {
+		if (start == CONSTANTS_START_INDEX) {
 			// ignore
 		} else if (start == 0) {
 			byteBuf.position(IDENTIFIER.length + 2 + 1);
-			byteBuf.putInt(IDENTIFIER.length + 2 + 1 + 8);
+			byteBuf.putInt(CONSTANTS_START_INDEX);
 		} else {
-			throw new IllegalStateException();
+			throw new IllegalStateException(String.format("Illegal startIndex: %s", start));
 		}
 	}
 
@@ -209,10 +208,10 @@ public class CleanupFile implements CompensableEndpointAware, CompensableBeanFac
 		int end = byteBuf.getInt();
 		if (end == 0) {
 			byteBuf.position(IDENTIFIER.length + 2 + 1 + 4);
-			byteBuf.putInt(IDENTIFIER.length + 2 + 1 + 8);
-			return IDENTIFIER.length + 2 + 1 + 8;
+			byteBuf.putInt(CONSTANTS_START_INDEX);
+			return CONSTANTS_START_INDEX;
 		} else if (end < CONSTANTS_START_INDEX) {
-			throw new IllegalStateException();
+			throw new IllegalStateException(String.format("Illegal endIndex: %s", end));
 		} else {
 			return end;
 		}
