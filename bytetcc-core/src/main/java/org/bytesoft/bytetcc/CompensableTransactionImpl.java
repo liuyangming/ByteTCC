@@ -88,7 +88,6 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 	/* current compensable-archive in confirm/cancel phase. */
 	private transient CompensableArchive archive;
 
-	/* current compensable-archive list in try phase. */
 	private transient final Map<Xid, List<CompensableArchive>> xidToArchivesMap = new HashMap<Xid, List<CompensableArchive>>();
 	private transient final Map<Xid, TransactionBranch> xidToBranchMap = new HashMap<Xid, TransactionBranch>();
 
@@ -205,8 +204,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 	}
 
 	public synchronized void recoveryCommit() throws CommitRequiredException, SystemException {
-		this.recoverIfNecessary(); // Recover if transaction is recovered from
-									// tx-log.
+		this.recoverIfNecessary(); // Recover if transaction is recovered from tx-log.
 
 		this.transactionContext.setRecoveredTimes(this.transactionContext.getRecoveredTimes() + 1);
 		this.transactionContext.setCreatedTime(System.currentTimeMillis());
@@ -363,8 +361,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 							current.getDescriptor().getIdentifier(), ex);
 					break;
 				case XAException.XAER_NOTA:
-					committedExists = true; // TODO 1) tried & committed; 2)
-											// have not tried
+					committedExists = true; // TODO 1) tried & committed; 2) have not tried
 					current.setCommitted(true);
 					current.setCompleted(true);
 					break;
@@ -417,9 +414,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 		} else if (rolledbackExists) {
 			throw new HeuristicRollbackException();
 		}
-		// else if (committedExists == false) { throw new
-		// XAException(XAException.XA_RDONLY); }
-
+		// else if (committedExists == false) { throw new XAException(XAException.XA_RDONLY); }
 	}
 
 	public int participantPrepare() throws RollbackRequiredException, CommitRequiredException {
@@ -471,21 +466,11 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 				try {
 					branch.setRollbackOnly();
 				} catch (IllegalStateException ex) {
-					logger.info("The local transaction is not active.", ex); // tx
-																				// in
-																				// try-phase
-																				// has
-																				// been
-																				// completed
-																				// already.
+					logger.info("The local transaction is not active.", ex); // tx in try-phase has been completed already.
 				} catch (SystemException ex) {
-					logger.warn("The local transaction is not active.", ex); // should
-																				// never
-																				// happen
+					logger.warn("The local transaction is not active.", ex); // should never happen
 				} catch (RuntimeException ex) {
-					logger.warn("The local transaction is not active.", ex); // should
-																				// never
-																				// happen
+					logger.warn("The local transaction is not active.", ex); // should never happen
 				}
 			} // end-for (int i = 0; i < transactions.size(); i++)
 		}
@@ -543,8 +528,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 	}
 
 	public synchronized void recoveryRollback() throws RollbackRequiredException, SystemException {
-		this.recoverIfNecessary(); // Recover if transaction is recovered from
-									// tx-log.
+		this.recoverIfNecessary(); // Recover if transaction is recovered from tx-log.
 
 		this.transactionContext.setRecoveredTimes(this.transactionContext.getRecoveredTimes() + 1);
 		this.transactionContext.setCreatedTime(System.currentTimeMillis());
@@ -702,8 +686,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 		} else if (committedExists) {
 			throw new SystemException(XAException.XA_HEURCOM);
 		}
-		// else if (rolledbackExists == false) { throw new
-		// SystemException(XAException.XA_RDONLY); }
+		// else if (rolledbackExists == false) { throw new SystemException(XAException.XA_RDONLY); }
 
 	}
 
@@ -918,12 +901,10 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 
 	private void onCompletionPhaseEnlistResource(Xid actualXid, XAResourceDescriptor descriptor) {
 		Xid expectXid = this.archive == null ? null : this.archive.getCompensableXid();
-		// byte[] expectKey = expectXid == null ? null :
-		// expectXid.getBranchQualifier();
+		// byte[] expectKey = expectXid == null ? null : expectXid.getBranchQualifier();
 		// byte[] actualKey = actualXid.getGlobalTransactionId();
 		if (CommonUtils.equals(expectXid, actualXid) == false) {
-			// enlist by the try operation, and current tx is
-			// rollingback/committing.
+			// enlist by the try operation, and current tx is rollingback/committing.
 			throw new IllegalStateException("Illegal state: maybe the try phase operation has timed out.!");
 		} // end-if (CommonUtils.equals(expectXid, actualXid) == false)
 
