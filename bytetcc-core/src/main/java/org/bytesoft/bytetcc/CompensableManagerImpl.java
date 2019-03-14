@@ -35,6 +35,7 @@ import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableManager;
 import org.bytesoft.compensable.CompensableTransaction;
 import org.bytesoft.compensable.TransactionContext;
+import org.bytesoft.compensable.archive.CompensableArchive;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 import org.bytesoft.compensable.aware.CompensableEndpointAware;
 import org.bytesoft.compensable.logging.CompensableLogger;
@@ -130,16 +131,21 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 	}
 
 	public void begin() throws NotSupportedException, SystemException {
+		XidFactory transactionXidFactory = this.beanFactory.getTransactionXidFactory();
 		CompensableTransaction compensable = this.getCompensableTransactionQuietly();
 		if (compensable == null || compensable.getTransaction() != null) {
 			throw new SystemException();
 		}
 
+		CompensableArchive archive = compensable.getCompensableArchive();
+
+		// The current confirm/cancel operation has been assigned an xid.
+		TransactionXid compensableXid = archive == null ? null : (TransactionXid) archive.getCompensableXid();
+		TransactionXid transactionXid = compensableXid != null //
+				? transactionXidFactory.createGlobalXid(compensableXid.getGlobalTransactionId())
+				: transactionXidFactory.createGlobalXid();
+
 		TransactionContext compensableContext = compensable.getTransactionContext();
-
-		XidFactory transactionXidFactory = this.beanFactory.getTransactionXidFactory();
-		TransactionXid transactionXid = transactionXidFactory.createGlobalXid();
-
 		TransactionContext transactionContext = compensableContext.clone();
 		transactionContext.setXid(transactionXid);
 
@@ -269,17 +275,28 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 		if (compensable == false) {
 			throw new IllegalStateException();
 		} else if (compensating) {
-			this.invokeTransactionCommit(transaction);
+			this.invokeTransactionCommitIfNecessary(transaction);
 		} else if (coordinator) {
 			if (propagated) {
-				this.invokeTransactionCommit(transaction);
+				this.invokeTransactionCommitIfNecessary(transaction);
 			} else if (propagatedLevel > 0) {
-				this.invokeTransactionCommit(transaction);
+				this.invokeTransactionCommitIfNecessary(transaction);
 			} else {
 				throw new IllegalStateException();
 			}
 		} else {
-			this.invokeTransactionCommit(transaction);
+			this.invokeTransactionCommitIfNecessary(transaction);
+		}
+	}
+
+	protected void invokeTransactionCommitIfNecessary(CompensableTransaction compensable) throws RollbackException,
+			HeuristicMixedException, HeuristicRollbackException, SecurityException, IllegalStateException, SystemException {
+		// compensable.getTransaction().isMarkedRollbackOnly()
+		if (compensable.getTransaction().getTransactionStatus() == Status.STATUS_MARKED_ROLLBACK) {
+			this.invokeTransactionRollback(compensable);
+			throw new HeuristicRollbackException();
+		} else {
+			this.invokeTransactionCommit(compensable);
 		}
 	}
 

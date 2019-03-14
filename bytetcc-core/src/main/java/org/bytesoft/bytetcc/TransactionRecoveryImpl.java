@@ -127,12 +127,14 @@ public class TransactionRecoveryImpl
 		XidFactory xidFactory = this.beanFactory.getCompensableXidFactory();
 
 		org.bytesoft.compensable.archive.TransactionArchive archive = (org.bytesoft.compensable.archive.TransactionArchive) transactionArchive;
+		int transactionStatus = archive.getCompensableStatus();
 
 		TransactionContext transactionContext = new TransactionContext();
 		transactionContext.setCompensable(true);
 		transactionContext.setCoordinator(archive.isCoordinator());
 		transactionContext.setPropagated(archive.isPropagated());
-		transactionContext.setCompensating(archive.isPropagated() == false);
+		transactionContext.setCompensating(
+				Status.STATUS_ACTIVE != transactionStatus && Status.STATUS_MARKED_ROLLBACK != transactionStatus);
 		transactionContext.setRecoveried(true);
 		transactionContext.setXid(xidFactory.createGlobalXid(archive.getXid().getGlobalTransactionId()));
 		transactionContext.setPropagatedBy(transactionArchive.getPropagatedBy());
@@ -140,7 +142,7 @@ public class TransactionRecoveryImpl
 		CompensableTransactionImpl transaction = new CompensableTransactionImpl(transactionContext);
 		transaction.setBeanFactory(this.beanFactory);
 		transaction.setTransactionVote(archive.getVote());
-		transaction.setTransactionStatus(archive.getCompensableStatus());
+		transaction.setTransactionStatus(transactionStatus);
 		transaction.setVariables(archive.getVariables());
 
 		List<XAResourceArchive> participantList = archive.getRemoteResources();

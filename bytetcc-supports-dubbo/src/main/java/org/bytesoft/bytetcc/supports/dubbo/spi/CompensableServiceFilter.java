@@ -654,11 +654,10 @@ public class CompensableServiceFilter implements Filter {
 
 		RemotingException rpcError = null;
 		try {
-			if (request.getTransactionContext() != null) {
-				String transactionContextContent = invocation.getAttachment(TransactionContext.class.getName());
+			String transactionContextContent = invocation.getAttachment(TransactionContext.class.getName());
+			if (request.getTransactionContext() != null && StringUtils.isNotBlank(transactionContextContent)) {
 				byte[] byteArray = ByteUtils.stringToByteArray(transactionContextContent);
-				ByteArrayInputStream bais = new ByteArrayInputStream(byteArray);
-				HessianInput input = new HessianInput(bais);
+				HessianInput input = new HessianInput(new ByteArrayInputStream(byteArray));
 				TransactionContext remoteTransactionContext = (TransactionContext) input.readObject();
 				response.setTransactionContext(remoteTransactionContext);
 			}

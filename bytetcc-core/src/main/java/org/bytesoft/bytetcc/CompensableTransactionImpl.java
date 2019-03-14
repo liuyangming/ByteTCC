@@ -17,6 +17,7 @@ package org.bytesoft.bytetcc;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -83,9 +84,8 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 	/* current compense-archive in confirm/cancel phase. */
 	private transient CompensableArchive archive;
 
-	/* current compensable-archive list in try phase. */
-	private transient final List<CompensableArchive> currentArchiveList = new ArrayList<CompensableArchive>();
-	private transient final Map<Xid, List<CompensableArchive>> archiveMap = new HashMap<Xid, List<CompensableArchive>>();
+	private transient final Map<Xid, List<CompensableArchive>> xidToArchivesMap = new HashMap<Xid, List<CompensableArchive>>();
+	private transient final Map<Xid, TransactionBranch> xidToBranchMap = new HashMap<Xid, TransactionBranch>();
 
 	private boolean participantStickyRequired;
 
@@ -772,45 +772,55 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 	}
 
 	public void resume() throws SystemException {
-		Transaction transaction = this.transactionMap.get(Thread.currentThread());
-		org.bytesoft.transaction.TransactionContext transactionContext = transaction.getTransactionContext();
-		TransactionXid xid = transactionContext.getXid();
-		List<CompensableArchive> compensableList = this.archiveMap.remove(xid);
-
-		this.currentArchiveList.clear();
-		this.currentArchiveList.addAll(compensableList);
 	}
 
 	public void suspend() throws SystemException {
-		Transaction transaction = this.transactionMap.get(Thread.currentThread());
-		org.bytesoft.transaction.TransactionContext transactionContext = transaction.getTransactionContext();
-		TransactionXid xid = transactionContext.getXid();
-
-		List<CompensableArchive> compensableList = new ArrayList<CompensableArchive>();
-		compensableList.addAll(this.currentArchiveList);
-
-		this.currentArchiveList.clear();
-		this.archiveMap.put(xid, compensableList);
 	}
 
-	public void registerCompensable(CompensableInvocation invocation) {
-		XidFactory xidFactory = this.beanFactory.getTransactionXidFactory();
+	public synchronized void registerCompensable(CompensableInvocation invocation) {
+		XidFactory transactionXidFactory = this.beanFactory.getTransactionXidFactory();
+		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
+
+		Transaction transaction = (Transaction) this.getTransactionalExtra();
+		org.bytesoft.transaction.TransactionContext transactionContext = transaction.getTransactionContext();
+		TransactionXid transactionXid = transactionContext.getXid();
 
 		invocation.setEnlisted(true);
 
-		CompensableArchive archive = new CompensableArchive();
-		TransactionXid globalXid = xidFactory.createGlobalXid(this.transactionContext.getXid().getGlobalTransactionId());
-		TransactionXid branchXid = xidFactory.createBranchXid(globalXid);
-		archive.setIdentifier(branchXid);
+		CompensableArchive compensableArchive = new CompensableArchive();
+		TransactionXid globalXid = transactionXidFactory
+				.createGlobalXid(this.transactionContext.getXid().getGlobalTransactionId());
+		TransactionXid branchXid = transactionXidFactory.createBranchXid(globalXid);
+		compensableArchive.setIdentifier(branchXid);
 
-		archive.setCompensable(invocation);
+		compensableArchive.setCompensable(invocation);
 
-		this.archiveList.add(archive);
-		this.currentArchiveList.add(archive);
+		this.archiveList.add(compensableArchive);
+
+		List<CompensableArchive> archiveList = this.xidToArchivesMap.get(transactionXid);
+		if (archiveList == null) {
+			archiveList = new ArrayList<CompensableArchive>();
+			archiveList.add(compensableArchive);
+			this.xidToArchivesMap.put(transactionXid, archiveList);
+		} else {
+			archiveList.add(compensableArchive);
+		}
+
+		TransactionBranch branch = this.xidToBranchMap.get(transactionXid);
+		if (branch != null) {
+			compensableArchive.setTransactionResourceKey(branch.resourceKey);
+			compensableArchive.setTransactionXid(branch.branchXid);
+
+			TransactionXid gxid = transactionXidFactory.createGlobalXid();
+			TransactionXid bxid = transactionXidFactory.createBranchXid(gxid, branch.branchXid.getGlobalTransactionId());
+			compensableArchive.setCompensableXid(bxid);
+
+			compensableLogger.createCompensable(compensableArchive);
+		}
 
 		logger.info("{}| register compensable service: {}.",
 				ByteUtils.byteArrayToString(this.transactionContext.getXid().getGlobalTransactionId()),
-				ByteUtils.byteArrayToString(archive.getIdentifier().getGlobalTransactionId()));
+				ByteUtils.byteArrayToString(compensableArchive.getIdentifier().getGlobalTransactionId()));
 	}
 
 	public void registerSynchronization(Synchronization sync) throws RollbackException, IllegalStateException, SystemException {
@@ -822,93 +832,152 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 	public void registerTransactionResourceListener(TransactionResourceListener listener) {
 	}
 
-	public void onEnlistResource(Xid xid, XAResource xares) {
-		String resourceKey = null;
-		if (XAResourceDescriptor.class.isInstance(xares)) {
-			XAResourceDescriptor descriptor = (XAResourceDescriptor) xares;
-			resourceKey = descriptor.getIdentifier();
-		} else if (XAResourceArchive.class.isInstance(xares)) {
-			XAResourceArchive resourceArchive = (XAResourceArchive) xares;
-			XAResourceDescriptor descriptor = resourceArchive.getDescriptor();
-			resourceKey = descriptor == null ? null : descriptor.getIdentifier();
+	public synchronized void onEnlistResource(Xid xid, XAResource xares) {
+		XAResourceDescriptor descriptor = null;
+		if (XAResourceArchive.class.isInstance(xares)) {
+			descriptor = ((XAResourceArchive) xares).getDescriptor();
+		} else if (XAResourceDescriptor.class.isInstance(xares)) {
+			descriptor = (XAResourceDescriptor) xares;
 		}
 
-		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
 		if (this.transactionContext.isCompensating()) {
-			this.archive.setCompensableXid(xid);
-			this.archive.setCompensableResourceKey(resourceKey);
-			compensableLogger.updateCompensable(this.archive);
+			this.onCompletionPhaseEnlistResource(xid, descriptor);
 		} else {
-			for (int i = 0; i < this.currentArchiveList.size(); i++) {
-				CompensableArchive compensableArchive = this.currentArchiveList.get(i);
-				compensableArchive.setTransactionXid(xid);
-				compensableArchive.setTransactionResourceKey(resourceKey);
-
-				compensableLogger.createCompensable(compensableArchive);
-			}
+			this.onInvocationPhaseEnlistResource(xid, descriptor);
 		}
+	}
 
+	private void onInvocationPhaseEnlistResource(Xid xid, XAResourceDescriptor descriptor) {
+		XidFactory transactionXidFactory = this.beanFactory.getTransactionXidFactory();
+		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
+
+		TransactionXid transactionXid = transactionXidFactory.createGlobalXid(xid.getGlobalTransactionId());
+
+		String resourceKey = descriptor == null ? null : descriptor.getIdentifier();
+
+		TransactionBranch branch = new TransactionBranch();
+		branch.branchXid = (TransactionXid) xid;
+		branch.resourceKey = resourceKey;
+		this.xidToBranchMap.put(transactionXid, branch);
+
+		List<CompensableArchive> archiveList = this.xidToArchivesMap.get(transactionXid);
+
+		for (int i = 0; archiveList != null && i < archiveList.size(); i++) {
+			CompensableArchive compensableArchive = archiveList.get(i);
+			compensableArchive.setTransactionXid((TransactionXid) xid);
+			compensableArchive.setTransactionResourceKey(resourceKey);
+
+			TransactionXid globalXid = transactionXidFactory.createGlobalXid();
+			TransactionXid branchXid = transactionXidFactory.createBranchXid(globalXid, xid.getGlobalTransactionId());
+			compensableArchive.setCompensableXid(branchXid);
+
+			compensableLogger.createCompensable(compensableArchive);
+		}
+	}
+
+	private void onCompletionPhaseEnlistResource(Xid actualXid, XAResourceDescriptor descriptor) {
+		Xid expectXid = this.archive == null ? null : this.archive.getCompensableXid();
+		if (CommonUtils.equals(expectXid, actualXid) == false) {
+			// enlist by the try operation, and current tx is rollingback/committing.
+			throw new IllegalStateException("Illegal state: maybe the try phase operation has timed out.!");
+		} // end-if (CommonUtils.equals(expectXid, actualXid) == false)
+
+		String resourceKey = descriptor == null ? null : descriptor.getIdentifier();
+		// this.archive.setCompensableXid(xid); // preset the compensable-xid.
+		this.archive.setCompensableResourceKey(resourceKey);
+		this.beanFactory.getCompensableLogger().updateCompensable(this.archive);
 	}
 
 	public void onDelistResource(Xid xid, XAResource xares) {
 	}
 
 	public void onCommitSuccess(TransactionXid xid) {
-		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
-
 		if (this.transactionContext.isCompensating()) {
-			if (this.positive == null) {
-				// ignore
-			} else if (this.positive) {
-				this.archive.setConfirmed(true);
-
-				logger.info("{}| confirm: identifier= {}, resourceKey= {}, resourceXid= {}.",
-						ByteUtils.byteArrayToString(transactionContext.getXid().getGlobalTransactionId()),
-						ByteUtils.byteArrayToString(this.archive.getIdentifier().getGlobalTransactionId()),
-						this.archive.getCompensableResourceKey(), this.archive.getCompensableXid());
-			} else {
-				this.archive.setCancelled(true);
-
-				logger.info("{}| cancel: identifier= {}, resourceKey= {}, resourceXid= {}.",
-						ByteUtils.byteArrayToString(transactionContext.getXid().getGlobalTransactionId()),
-						ByteUtils.byteArrayToString(this.archive.getIdentifier().getGlobalTransactionId()),
-						this.archive.getCompensableResourceKey(), this.archive.getCompensableXid());
-			}
-			compensableLogger.updateCompensable(this.archive);
-		} else if (this.transactionContext.isCoordinator() && this.transactionContext.isPropagated() == false
-				&& this.transactionContext.getPropagationLevel() == 0) {
-			for (Iterator<CompensableArchive> itr = this.currentArchiveList.iterator(); itr.hasNext();) {
-				CompensableArchive compensableArchive = itr.next();
-				itr.remove(); // remove
-				compensableArchive.setTried(true);
-				// compensableLogger.updateCompensable(compensableArchive);
-
-				logger.info("{}| try: identifier= {}, resourceKey= {}, resourceXid= {}.",
-						ByteUtils.byteArrayToString(transactionContext.getXid().getGlobalTransactionId()),
-						ByteUtils.byteArrayToString(compensableArchive.getIdentifier().getGlobalTransactionId()),
-						compensableArchive.getTransactionResourceKey(), compensableArchive.getTransactionXid());
-			}
-
-			TransactionArchive transactionArchive = this.getTransactionArchive();
-			transactionArchive.setCompensableStatus(Status.STATUS_COMMITTING);
-			compensableLogger.updateTransaction(transactionArchive);
-
-			logger.info("{}| try completed.",
-					ByteUtils.byteArrayToString(transactionContext.getXid().getGlobalTransactionId()));
+			this.onCompletionPhaseCommitSuccess(xid);
 		} else {
-			for (Iterator<CompensableArchive> itr = this.currentArchiveList.iterator(); itr.hasNext();) {
-				CompensableArchive compensableArchive = itr.next();
-				itr.remove(); // remove
-				compensableArchive.setTried(true);
-				compensableLogger.updateCompensable(compensableArchive);
+			this.onInvocationPhaseCommitSuccess(xid);
+		}
+	}
 
-				logger.info("{}| try: identifier= {}, resourceKey= {}, resourceXid= {}.",
-						ByteUtils.byteArrayToString(transactionContext.getXid().getGlobalTransactionId()),
-						ByteUtils.byteArrayToString(compensableArchive.getIdentifier().getGlobalTransactionId()),
-						compensableArchive.getTransactionResourceKey(), compensableArchive.getTransactionXid());
-			}
+	private void onInvocationPhaseCommitSuccess(Xid xid) {
+		if (this.transactionContext.isCoordinator() && this.transactionContext.isPropagated() == false
+				&& this.transactionContext.getPropagationLevel() == 0) {
+			this.onInvocationPhaseCoordinatorCommitSuccess(xid);
+		} else {
+			this.onInvocationPhaseParticipantCommitSuccess(xid);
+		}
+	}
+
+	private void onInvocationPhaseCoordinatorCommitSuccess(Xid xid) {
+		List<CompensableArchive> archiveList = this.xidToArchivesMap.get(xid);
+		for (Iterator<CompensableArchive> itr = (archiveList == null) ? null : archiveList.iterator(); itr != null
+				&& itr.hasNext();) {
+			CompensableArchive compensableArchive = itr.next();
+			itr.remove(); // remove
+			compensableArchive.setTried(true);
+			// compensableLogger.updateCompensable(compensableArchive);
+
+			logger.info("{}| try: identifier= {}, resourceKey= {}, resourceXid= {}.",
+					ByteUtils.byteArrayToString(transactionContext.getXid().getGlobalTransactionId()),
+					ByteUtils.byteArrayToString(compensableArchive.getIdentifier().getGlobalTransactionId()),
+					compensableArchive.getTransactionResourceKey(), compensableArchive.getTransactionXid());
 		}
 
+		TransactionArchive transactionArchive = this.getTransactionArchive();
+		transactionArchive.setCompensableStatus(Status.STATUS_COMMITTING);
+		this.beanFactory.getCompensableLogger().updateTransaction(transactionArchive);
+
+		logger.info("{}| try completed.", ByteUtils.byteArrayToString(transactionContext.getXid().getGlobalTransactionId()));
+	}
+
+	private void onInvocationPhaseParticipantCommitSuccess(Xid xid) {
+		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
+		List<CompensableArchive> archiveList = this.xidToArchivesMap.get(xid);
+		for (Iterator<CompensableArchive> itr = (archiveList == null) ? null : archiveList.iterator(); itr != null
+				&& itr.hasNext();) {
+			CompensableArchive compensableArchive = itr.next();
+			itr.remove(); // remove
+			compensableArchive.setTried(true);
+			compensableLogger.updateCompensable(compensableArchive);
+
+			logger.info("{}| try: identifier= {}, resourceKey= {}, resourceXid= {}.",
+					ByteUtils.byteArrayToString(transactionContext.getXid().getGlobalTransactionId()),
+					ByteUtils.byteArrayToString(compensableArchive.getIdentifier().getGlobalTransactionId()),
+					compensableArchive.getTransactionResourceKey(), compensableArchive.getTransactionXid());
+		}
+	}
+
+	private void onCompletionPhaseCommitSuccess(Xid actualXid) {
+		Xid expectXid = this.archive == null ? null : this.archive.getCompensableXid();
+		byte[] expectKey = expectXid == null ? null : expectXid.getGlobalTransactionId();
+		byte[] actualKey = actualXid.getGlobalTransactionId();
+		if (Arrays.equals(expectKey, actualKey) == false) {
+			// this.onInvocationPhaseParticipantCommitSuccess(actualXid);
+			throw new IllegalStateException("Illegal state: maybe the try phase operation has timed out.!");
+		} // end-if (CommonUtils.equals(expectXid, actualXid) == false)
+
+		if (this.positive == null) {
+			this.beanFactory.getCompensableLogger().updateCompensable(this.archive);
+			return;
+		}
+
+		if (this.positive) {
+			logger.info("{}| confirm: identifier= {}, resourceKey= {}, resourceXid= {}.",
+					ByteUtils.byteArrayToString(transactionContext.getXid().getGlobalTransactionId()),
+					ByteUtils.byteArrayToString(this.archive.getIdentifier().getGlobalTransactionId()),
+					this.archive.getCompensableResourceKey(), this.archive.getCompensableXid());
+
+			this.archive.setConfirmed(true);
+		} else {
+			logger.info("{}| cancel: identifier= {}, resourceKey= {}, resourceXid= {}.",
+					ByteUtils.byteArrayToString(transactionContext.getXid().getGlobalTransactionId()),
+					ByteUtils.byteArrayToString(this.archive.getIdentifier().getGlobalTransactionId()),
+					this.archive.getCompensableResourceKey(), this.archive.getCompensableXid());
+
+			this.archive.setCancelled(true);
+		}
+
+		this.beanFactory.getCompensableLogger().updateCompensable(this.archive);
 	}
 
 	public void recoverIfNecessary() throws SystemException {
@@ -1292,6 +1361,11 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter imple
 
 	public void setVariables(Map<String, Serializable> variables) {
 		this.variables = variables;
+	}
+
+	private static class TransactionBranch {
+		public TransactionXid branchXid;
+		public String resourceKey;
 	}
 
 }
