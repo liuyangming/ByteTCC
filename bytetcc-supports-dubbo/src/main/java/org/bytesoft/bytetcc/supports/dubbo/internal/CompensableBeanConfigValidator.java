@@ -25,6 +25,7 @@ import org.bytesoft.compensable.Compensable;
 import org.bytesoft.compensable.RemotingException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.FatalBeanException;
 import org.springframework.beans.MutablePropertyValues;
@@ -235,25 +236,26 @@ public class CompensableBeanConfigValidator
 
 	@SuppressWarnings("rawtypes")
 	public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
-		if (org.springframework.aop.framework.Advised.class.isInstance(bean)) {
-			org.springframework.aop.framework.Advised advised = (org.springframework.aop.framework.Advised) bean;
-			Class<?> targetClass = advised.getTargetClass();
-			Compensable compensable = targetClass.getAnnotation(Compensable.class);
-			if (compensable == null) {
-				return bean;
+		Class<?> targetClass = AopUtils.getTargetClass(bean);
+		if (targetClass == null) {
+			return bean;
+		}
+
+		Compensable compensable = targetClass.getAnnotation(Compensable.class);
+		if (compensable == null) {
+			return bean;
+		}
+
+		Field[] fields = targetClass.getDeclaredFields();
+		for (int i = 0; fields != null && i < fields.length; i++) {
+			Field field = fields[i];
+			Reference reference = field.getAnnotation(Reference.class);
+			if (reference == null) {
+				continue;
 			}
 
-			Field[] fields = targetClass.getDeclaredFields();
-			for (int i = 0; fields != null && i < fields.length; i++) {
-				Field field = fields[i];
-				Reference reference = field.getAnnotation(Reference.class);
-				if (reference == null) {
-					continue;
-				}
-
-				ReferenceBean referenceConfig = new ReferenceBean(reference);
-				this.validateReferenceBean(beanName, referenceConfig);
-			}
+			ReferenceBean referenceConfig = new ReferenceBean(reference);
+			this.validateReferenceBean(beanName, referenceConfig);
 		}
 
 		return bean;

@@ -41,6 +41,7 @@ import org.bytesoft.transaction.Transaction;
 import org.bytesoft.transaction.TransactionManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.aop.support.AopUtils;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.transaction.annotation.Propagation;
@@ -202,13 +203,8 @@ public class CompensableMethodInterceptor
 		invocation.setSimplified(annotation.simplified());
 
 		invocation.setMethod(method); // class-method
-		Class<?> currentClazz = null;
-		if (org.springframework.aop.framework.Advised.class.isInstance(target)) {
-			org.springframework.aop.framework.Advised advised = (org.springframework.aop.framework.Advised) target;
-			currentClazz = advised.getTargetClass();
-		} else {
-			currentClazz = target.getClass();
-		}
+
+		Class<?> currentClazz = AopUtils.getTargetClass(target);
 
 		Method[] methodArray = currentClazz.getDeclaredMethods();
 		boolean confirmFlag = false;
@@ -256,13 +252,7 @@ public class CompensableMethodInterceptor
 						String.format("BeanId(class= %s) should not be null!", bean.getClass().getName()));
 			}
 		} else {
-			Class<?> targetClass = null;
-			if (org.springframework.aop.framework.Advised.class.isInstance(bean)) {
-				org.springframework.aop.framework.Advised advised = (org.springframework.aop.framework.Advised) bean;
-				targetClass = advised.getTargetClass();
-			} else {
-				targetClass = bean.getClass();
-			}
+			Class<?> targetClass = AopUtils.getTargetClass(bean);
 
 			String[] beanNameArray = this.applicationContext.getBeanNamesForType(targetClass);
 			if (beanNameArray.length == 1) {
