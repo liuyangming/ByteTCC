@@ -54,6 +54,7 @@ public class CompensableRequestInterceptor
 
 	static final String HEADER_TRANCACTION_KEY = "X-BYTETCC-TRANSACTION";
 	static final String HEADER_PROPAGATION_KEY = "X-BYTETCC-PROPAGATION";
+	static final String HEADER_RECURSIVELY_KEY = "X-BYTETCC-RECURSIVELY";
 	static final String PREFIX_TRANSACTION_KEY = "/org/bytesoft/bytetcc";
 
 	private String identifier;
@@ -152,6 +153,7 @@ public class CompensableRequestInterceptor
 		HttpHeaders respHeaders = httpResponse.getHeaders();
 		String respTransactionStr = respHeaders.getFirst(HEADER_TRANCACTION_KEY);
 		String respPropagationStr = respHeaders.getFirst(HEADER_PROPAGATION_KEY);
+		String respRecursivelyStr = respHeaders.getFirst(HEADER_RECURSIVELY_KEY);
 
 		String instanceId = StringUtils.trimToEmpty(respPropagationStr);
 
@@ -164,13 +166,14 @@ public class CompensableRequestInterceptor
 		String transactionText = StringUtils.trimToNull(respTransactionStr);
 		byte[] byteArray = StringUtils.isBlank(transactionText) ? null : Base64.getDecoder().decode(transactionText);
 		TransactionContext serverContext = byteArray == null || byteArray.length == 0 //
-				? null : (TransactionContext) SerializeUtils.deserializeObject(byteArray);
+				? null
+				: (TransactionContext) SerializeUtils.deserializeObject(byteArray);
 
 		TransactionResponseImpl txResp = new TransactionResponseImpl();
 		txResp.setTransactionContext(serverContext);
 		RemoteCoordinator serverCoordinator = beanRegistry.getConsumeCoordinator(instanceId);
 		txResp.setSourceTransactionCoordinator(serverCoordinator);
-		txResp.setParticipantDelistFlag(serverFlag ? false : true);
+		txResp.setParticipantDelistFlag(serverFlag ? StringUtils.equalsIgnoreCase(respRecursivelyStr, "TRUE") : true);
 
 		transactionInterceptor.afterReceiveResponse(txResp);
 	}

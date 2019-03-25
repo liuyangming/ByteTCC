@@ -34,32 +34,32 @@ public class CompensableHystrixFeignHandler implements InvocationHandler {
 	public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
 		if (Object.class.equals(method.getDeclaringClass())) {
 			return this.delegate.invoke(proxy, method, args);
-		} else {
-			final SpringCloudBeanRegistry beanRegistry = SpringCloudBeanRegistry.getInstance();
-			CompensableBeanFactory beanFactory = beanRegistry.getBeanFactory();
-			CompensableManager compensableManager = beanFactory.getCompensableManager();
-
-			CompensableTransactionImpl compensable = //
-					(CompensableTransactionImpl) compensableManager.getCompensableTransactionQuietly();
-			if (compensable == null) {
-				return this.delegate.invoke(proxy, method, args);
-			}
-
-			final TransactionContext transactionContext = compensable.getTransactionContext();
-			if (transactionContext.isCompensable() == false) {
-				return this.delegate.invoke(proxy, method, args);
-			}
-
-			Method targetMethod = CompensableHystrixInvocationHandler.class.getDeclaredMethod(
-					CompensableHystrixBeanPostProcessor.HYSTRIX_INVOKER_NAME,
-					new Class<?>[] { CompensableHystrixInvocation.class });
-			CompensableHystrixInvocation invocation = new CompensableHystrixInvocation();
-			invocation.setThread(Thread.currentThread());
-			invocation.setMethod(method);
-			invocation.setArgs(args);
-			Object[] targetArgs = new Object[] { invocation };
-			return this.delegate.invoke(proxy, targetMethod, targetArgs);
 		}
+
+		final SpringCloudBeanRegistry beanRegistry = SpringCloudBeanRegistry.getInstance();
+		CompensableBeanFactory beanFactory = beanRegistry.getBeanFactory();
+		CompensableManager compensableManager = beanFactory.getCompensableManager();
+
+		CompensableTransactionImpl compensable = //
+				(CompensableTransactionImpl) compensableManager.getCompensableTransactionQuietly();
+		if (compensable == null) {
+			return this.delegate.invoke(proxy, method, args);
+		}
+
+		final TransactionContext transactionContext = compensable.getTransactionContext();
+		if (transactionContext.isCompensable() == false) {
+			return this.delegate.invoke(proxy, method, args);
+		}
+
+		Method targetMethod = CompensableHystrixInvocationHandler.class.getDeclaredMethod(
+				CompensableHystrixBeanPostProcessor.HYSTRIX_INVOKER_NAME,
+				new Class<?>[] { CompensableHystrixInvocation.class });
+		CompensableHystrixInvocation invocation = new CompensableHystrixInvocation();
+		invocation.setThread(Thread.currentThread());
+		invocation.setMethod(method);
+		invocation.setArgs(args);
+		Object[] targetArgs = new Object[] { invocation };
+		return this.delegate.invoke(proxy, targetMethod, targetArgs);
 	}
 
 	public InvocationHandler getDelegate() {

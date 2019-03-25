@@ -227,9 +227,6 @@ public class MongoCompensableLock implements TransactionLock, CompensableInstVer
 		Document document = new Document();
 		document.append("$inc", increases);
 
-		FindOneAndUpdateOptions options = new FindOneAndUpdateOptions();
-		options.upsert(true);
-
 		Document target = instances.findOneAndUpdate(condition, document, new FindOneAndUpdateOptions().upsert(true));
 		this.instanceVersion = (target == null) ? 1 : (target.getLong("version") + 1);
 	}
@@ -243,6 +240,7 @@ public class MongoCompensableLock implements TransactionLock, CompensableInstVer
 		if (StringUtils.isBlank(instanceId)) {
 			return false;
 		} else if (StringUtils.equals(instanceId, this.endpoint)) {
+			this.relockTransactionInMongoDB(transactionXid, identifier);
 			return true;
 		}
 
@@ -271,6 +269,7 @@ public class MongoCompensableLock implements TransactionLock, CompensableInstVer
 			Document document = new Document();
 			document.append(CONSTANTS_FD_GLOBAL, instanceId);
 			document.append("identifier", identifier);
+			document.append("times", 0);
 
 			collection.insertOne(document);
 			return true;
@@ -279,6 +278,36 @@ public class MongoCompensableLock implements TransactionLock, CompensableInstVer
 			if (MONGODB_ERROR_DUPLICATE_KEY != writeError.getCode()) {
 				logger.error("Error occurred while locking transaction(gxid= {}).", instanceId, error);
 			}
+			return false;
+		} catch (RuntimeException rex) {
+			logger.error("Error occurred while locking transaction(gxid= {}).", instanceId, rex);
+			return false;
+		}
+	}
+
+	private boolean relockTransactionInMongoDB(TransactionXid transactionXid, String identifier) {
+		byte[] global = transactionXid.getGlobalTransactionId();
+		String instanceId = ByteUtils.byteArrayToString(global);
+
+		try {
+			String application = CommonUtils.getApplication(this.endpoint);
+			String databaseName = application.replaceAll("\\W", "_");
+			MongoDatabase mdb = this.mongoClient.getDatabase(databaseName);
+			MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_LOCKS);
+
+			Bson condition = Filters.eq(CONSTANTS_FD_GLOBAL, instanceId);
+
+			Document increases = new Document();
+			increases.append("times", 1);
+
+			Document document = new Document();
+			document.append("$inc", increases);
+
+			collection.findOneAndUpdate(condition, document, new FindOneAndUpdateOptions().upsert(true));
+
+			return true;
+		} catch (com.mongodb.MongoWriteException error) {
+			logger.error("Error occurred while locking transaction(gxid= {}).", instanceId, error);
 			return false;
 		} catch (RuntimeException rex) {
 			logger.error("Error occurred while locking transaction(gxid= {}).", instanceId, rex);
@@ -334,7 +363,40 @@ public class MongoCompensableLock implements TransactionLock, CompensableInstVer
 	}
 
 	public void unlockTransaction(TransactionXid transactionXid, String identifier) {
-		this.unlockTransactionInMongoDB(transactionXid, identifier);
+		if (this.reExitTransactionInMongoDB(transactionXid, identifier)) {
+			this.unlockTransactionInMongoDB(transactionXid, identifier);
+		}
+	}
+
+	public boolean reExitTransactionInMongoDB(TransactionXid transactionXid, String identifier) {
+		byte[] global = transactionXid.getGlobalTransactionId();
+		String instanceId = ByteUtils.byteArrayToString(global);
+
+		try {
+			String application = CommonUtils.getApplication(this.endpoint);
+			String databaseName = application.replaceAll("\\W", "_");
+			MongoDatabase mdb = this.mongoClient.getDatabase(databaseName);
+			MongoCollection<Document> collection = mdb.getCollection(CONSTANTS_TB_LOCKS);
+
+			Bson condition = Filters.eq(CONSTANTS_FD_GLOBAL, instanceId);
+
+			Document increases = new Document();
+			increases.append("times", -1);
+
+			Document document = new Document();
+			document.append("$inc", increases);
+
+			Document target = collection.findOneAndUpdate(condition, document, new FindOneAndUpdateOptions().upsert(true));
+			Integer times = target == null ? null : target.getInteger("times");
+
+			return times == null ? true : times <= 0;
+		} catch (com.mongodb.MongoWriteException error) {
+			logger.error("Error occurred while locking transaction(gxid= {}).", instanceId, error);
+			return true;
+		} catch (RuntimeException rex) {
+			logger.error("Error occurred while locking transaction(gxid= {}).", instanceId, rex);
+			return true;
+		}
 	}
 
 	public void unlockTransactionInMongoDB(TransactionXid transactionXid, String identifier) {

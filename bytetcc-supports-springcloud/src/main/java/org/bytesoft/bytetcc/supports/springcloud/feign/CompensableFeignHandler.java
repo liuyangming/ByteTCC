@@ -42,63 +42,84 @@ public class CompensableFeignHandler implements InvocationHandler {
 	public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
 		if (Object.class.equals(method.getDeclaringClass())) {
 			return method.invoke(this, args);
-		} else {
-			final SpringCloudBeanRegistry beanRegistry = SpringCloudBeanRegistry.getInstance();
-			CompensableBeanFactory beanFactory = beanRegistry.getBeanFactory();
-			CompensableManager compensableManager = beanFactory.getCompensableManager();
-			final TransactionInterceptor transactionInterceptor = beanFactory.getTransactionInterceptor();
+		}
 
-			final CompensableTransactionImpl compensable = //
-					(CompensableTransactionImpl) compensableManager.getCompensableTransactionQuietly();
-			if (compensable == null) {
-				return this.delegate.invoke(proxy, method, args);
+		final SpringCloudBeanRegistry beanRegistry = SpringCloudBeanRegistry.getInstance();
+		CompensableBeanFactory beanFactory = beanRegistry.getBeanFactory();
+		CompensableManager compensableManager = beanFactory.getCompensableManager();
+		final TransactionInterceptor transactionInterceptor = beanFactory.getTransactionInterceptor();
+
+		final CompensableTransactionImpl compensable = //
+				(CompensableTransactionImpl) compensableManager.getCompensableTransactionQuietly();
+		if (compensable == null) {
+			return this.delegate.invoke(proxy, method, args);
+		}
+
+		final TransactionContext transactionContext = compensable.getTransactionContext();
+		if (transactionContext.isCompensable() == false) {
+			return this.delegate.invoke(proxy, method, args);
+		}
+
+		final TransactionRequestImpl request = new TransactionRequestImpl();
+		final TransactionResponseImpl response = new TransactionResponseImpl();
+
+		beanRegistry.setLoadBalancerInterceptor(new CompensableLoadBalancerInterceptor(this.statefully) {
+			public void afterCompletion(Server server) {
+				beanRegistry.removeLoadBalancerInterceptor();
+
+				if (server == null) {
+					logger.warn(
+							"There is no suitable server, the TransactionInterceptor.beforeSendRequest() operation is not executed!");
+					return;
+				} // end-if (server == null)
+
+				// TransactionRequestImpl request = new TransactionRequestImpl();
+				request.setTransactionContext(transactionContext);
+
+				String instanceId = this.getInstanceId(server);
+
+				RemoteCoordinator coordinator = beanRegistry.getConsumeCoordinator(instanceId);
+				request.setTargetTransactionCoordinator(coordinator);
+
+				transactionInterceptor.beforeSendRequest(request);
 			}
+		});
 
-			final TransactionContext transactionContext = compensable.getTransactionContext();
-			if (transactionContext.isCompensable() == false) {
-				return this.delegate.invoke(proxy, method, args);
+		// TODO should be replaced by CompensableFeignResult.getTransactionContext()
+		response.setTransactionContext(transactionContext);
+
+		try {
+			Object result = this.delegate.invoke(proxy, method, args);
+			if (CompensableFeignResult.class.isInstance(result)) {
+				CompensableFeignResult cfresult = (CompensableFeignResult) result;
+				response.setTransactionContext(cfresult.getTransactionContext());
+				response.setParticipantDelistFlag(cfresult.isParticipantValidFlag() == false);
+				return cfresult.getResult();
+			} else {
+				return result;
 			}
+		} catch (CompensableFeignResult error) {
+			CompensableFeignResult cfresult = (CompensableFeignResult) error;
+			response.setTransactionContext(cfresult.getTransactionContext());
+			response.setParticipantDelistFlag(cfresult.isParticipantValidFlag() == false);
 
-			final TransactionRequestImpl request = new TransactionRequestImpl();
-			final TransactionResponseImpl response = new TransactionResponseImpl();
-
-			beanRegistry.setLoadBalancerInterceptor(new CompensableLoadBalancerInterceptor(this.statefully) {
-				public void afterCompletion(Server server) {
-					beanRegistry.removeLoadBalancerInterceptor();
-
-					if (server == null) {
-						logger.warn(
-								"There is no suitable server, the TransactionInterceptor.beforeSendRequest() operation is not executed!");
-						return;
-					} // end-if (server == null)
-
-					// TransactionRequestImpl request = new TransactionRequestImpl();
-					request.setTransactionContext(transactionContext);
-
-					String instanceId = this.getInstanceId(server);
-
-					RemoteCoordinator coordinator = beanRegistry.getConsumeCoordinator(instanceId);
-					request.setTargetTransactionCoordinator(coordinator);
-
-					transactionInterceptor.beforeSendRequest(request);
-				}
-			});
-
-			try {
-				return this.delegate.invoke(proxy, method, args);
-			} finally {
-				Object interceptedValue = response.getHeader(TransactionInterceptor.class.getName());
-				if (Boolean.valueOf(String.valueOf(interceptedValue)) == false) {
-					response.setTransactionContext(transactionContext);
-
-					RemoteCoordinator coordinator = request.getTargetTransactionCoordinator();
-					response.setSourceTransactionCoordinator(coordinator);
-					response.setParticipantEnlistFlag(request.isParticipantEnlistFlag());
-
-					transactionInterceptor.afterReceiveResponse(response);
-				} // end-if (response.isIntercepted() == false)
+			Object targetResult = cfresult.getResult();
+			if (RuntimeException.class.isInstance(targetResult)) {
+				throw (RuntimeException) targetResult;
+			} else {
+				throw new RuntimeException((Exception) targetResult);
 			}
+		} finally {
+			Object interceptedValue = response.getHeader(TransactionInterceptor.class.getName());
+			if (Boolean.valueOf(String.valueOf(interceptedValue)) == false) {
+				response.setParticipantEnlistFlag(request.isParticipantEnlistFlag());
 
+				RemoteCoordinator coordinator = request.getTargetTransactionCoordinator();
+				// TODO should be replaced by CompensableFeignResult.getRemoteParticipant()
+				response.setSourceTransactionCoordinator(coordinator);
+
+				transactionInterceptor.afterReceiveResponse(response);
+			} // end-if (response.isIntercepted() == false)
 		}
 	}
 

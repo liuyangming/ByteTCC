@@ -106,9 +106,9 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 			throw new XAException(XAException.XAER_PROTO);
 		} // end-if (locked == false)
 
-		if (((CompensableTransactionImpl) transaction).lock(true) == false) {
-			throw new XAException(XAException.XAER_PROTO);
-		} // end-if (available == false)
+		// if (((CompensableTransactionImpl) transaction).lock(true) == false) {
+		// throw new XAException(XAException.XAER_PROTO);
+		// } // end-if (available == false)
 
 		org.bytesoft.compensable.TransactionContext compensableContext //
 				= (org.bytesoft.compensable.TransactionContext) transaction.getTransactionContext();
@@ -133,7 +133,7 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 
 		compensableManager.desociateThread();
 
-		((CompensableTransactionImpl) transaction).release();
+		// ((CompensableTransactionImpl) transaction).release();
 
 		org.bytesoft.compensable.TransactionContext compensableContext //
 				= (org.bytesoft.compensable.TransactionContext) transaction.getTransactionContext();

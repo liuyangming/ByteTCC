@@ -21,7 +21,6 @@ import java.util.Collection;
 import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
-import org.bytesoft.bytejta.supports.rpc.TransactionResponseImpl;
 import org.bytesoft.bytetcc.supports.springcloud.SpringCloudBeanRegistry;
 import org.bytesoft.common.utils.SerializeUtils;
 import org.bytesoft.compensable.TransactionContext;
@@ -42,6 +41,7 @@ public class CompensableFeignErrorDecoder implements feign.codec.ErrorDecoder, I
 
 	static final String HEADER_TRANCACTION_KEY = "X-BYTETCC-TRANSACTION"; // org.bytesoft.bytetcc.transaction
 	static final String HEADER_PROPAGATION_KEY = "X-BYTETCC-PROPAGATION"; // org.bytesoft.bytetcc.propagation
+	static final String HEADER_RECURSIVELY_KEY = "X-BYTETCC-RECURSIVELY"; // org.bytesoft.bytetcc.recursively
 
 	private ApplicationContext applicationContext;
 	private feign.codec.ErrorDecoder delegate;
@@ -90,6 +90,7 @@ public class CompensableFeignErrorDecoder implements feign.codec.ErrorDecoder, I
 
 		String respTransactionStr = this.getHeaderValue(resp, HEADER_TRANCACTION_KEY);
 		String respPropagationStr = this.getHeaderValue(resp, HEADER_PROPAGATION_KEY);
+		String respRecursivelyStr = this.getHeaderValue(resp, HEADER_RECURSIVELY_KEY);
 
 		if (StringUtils.isBlank(reqTransactionStr)) {
 			return this.delegate.decode(methodKey, resp);
@@ -97,7 +98,7 @@ public class CompensableFeignErrorDecoder implements feign.codec.ErrorDecoder, I
 			return this.delegate.decode(methodKey, resp);
 		}
 
-		// int status = resp.status();
+		CompensableFeignResult result = new CompensableFeignResult();
 		try {
 			String transactionStr = StringUtils.isBlank(respTransactionStr) ? reqTransactionStr : respTransactionStr;
 			String propagationStr = StringUtils.isBlank(respPropagationStr) ? reqPropagationStr : respPropagationStr;
@@ -108,14 +109,21 @@ public class CompensableFeignErrorDecoder implements feign.codec.ErrorDecoder, I
 			SpringCloudBeanRegistry beanRegistry = SpringCloudBeanRegistry.getInstance();
 			RemoteCoordinator remoteCoordinator = beanRegistry.getConsumeCoordinator(propagationStr);
 
-			TransactionResponseImpl response = new TransactionResponseImpl();
-			response.setTransactionContext(transactionContext);
-			response.setSourceTransactionCoordinator(remoteCoordinator);
+//			TransactionResponseImpl response = new TransactionResponseImpl();
+//			response.setSourceTransactionCoordinator(remoteCoordinator);
+//			response.setParticipantDelistFlag(StringUtils.equalsIgnoreCase(respRecursivelyStr, "TRUE"));
+
+			result.setTransactionContext(transactionContext);
+			result.setRemoteParticipant(remoteCoordinator);
+			result.setParticipantValidFlag(StringUtils.equalsIgnoreCase(respRecursivelyStr, "TRUE") == false);
 		} catch (IOException ex) {
 			logger.error("Error occurred while decoding response: methodKey= {}, response= {}", methodKey, resp, ex);
 		}
 
-		return this.delegate.decode(methodKey, resp);
+		Object value = this.delegate.decode(methodKey, resp);
+		result.setError(true);
+		result.setResult(value);
+		return result;
 	}
 
 	private String getHeaderValue(Request req, String headerName) {

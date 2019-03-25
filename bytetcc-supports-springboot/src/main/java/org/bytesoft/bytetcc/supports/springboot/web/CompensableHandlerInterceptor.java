@@ -26,6 +26,7 @@ import org.bytesoft.bytejta.supports.rpc.TransactionRequestImpl;
 import org.bytesoft.bytejta.supports.rpc.TransactionResponseImpl;
 import org.bytesoft.bytetcc.supports.springboot.SpringBootBeanRegistry;
 import org.bytesoft.bytetcc.supports.springboot.controller.CompensableCoordinatorController;
+import org.bytesoft.common.utils.CommonUtils;
 import org.bytesoft.common.utils.SerializeUtils;
 import org.bytesoft.compensable.Compensable;
 import org.bytesoft.compensable.CompensableBeanFactory;
@@ -49,6 +50,7 @@ public class CompensableHandlerInterceptor implements HandlerInterceptor, Compen
 	static final Logger logger = LoggerFactory.getLogger(CompensableHandlerInterceptor.class);
 	static final String HEADER_TRANCACTION_KEY = "X-BYTETCC-TRANSACTION";
 	static final String HEADER_PROPAGATION_KEY = "X-BYTETCC-PROPAGATION";
+	static final String HEADER_RECURSIVELY_KEY = "X-BYTETCC-RECURSIVELY";
 
 	private String identifier;
 	private ApplicationContext applicationContext;
@@ -108,10 +110,19 @@ public class CompensableHandlerInterceptor implements HandlerInterceptor, Compen
 
 		CompensableManager compensableManager = beanFactory.getCompensableManager();
 		CompensableTransaction compensable = compensableManager.getCompensableTransactionQuietly();
+		String propagatedBy = (String) compensable.getTransactionContext().getPropagatedBy();
+
 		byte[] responseByteArray = SerializeUtils.serializeObject(compensable.getTransactionContext());
 		String compensableStr = Base64.getEncoder().encodeToString(responseByteArray);
 		response.addHeader(HEADER_TRANCACTION_KEY, compensableStr);
 		response.addHeader(HEADER_PROPAGATION_KEY, this.identifier);
+
+		String sourceApplication = CommonUtils.getApplication(propagatedBy);
+		String targetApplication = CommonUtils.getApplication(propagationText);
+		if (StringUtils.isNotBlank(sourceApplication) && StringUtils.isNotBlank(targetApplication)) {
+			response.setHeader(HEADER_RECURSIVELY_KEY,
+					String.valueOf(StringUtils.equalsIgnoreCase(sourceApplication, targetApplication) == false));
+		}
 
 		return true;
 	}

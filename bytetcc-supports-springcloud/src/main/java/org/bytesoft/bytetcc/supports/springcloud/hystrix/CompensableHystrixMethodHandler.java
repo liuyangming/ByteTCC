@@ -22,6 +22,7 @@ import org.bytesoft.bytejta.supports.rpc.TransactionRequestImpl;
 import org.bytesoft.bytejta.supports.rpc.TransactionResponseImpl;
 import org.bytesoft.bytetcc.CompensableTransactionImpl;
 import org.bytesoft.bytetcc.supports.springcloud.SpringCloudBeanRegistry;
+import org.bytesoft.bytetcc.supports.springcloud.feign.CompensableFeignResult;
 import org.bytesoft.bytetcc.supports.springcloud.loadbalancer.CompensableLoadBalancerInterceptor;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableManager;
@@ -91,26 +92,47 @@ public class CompensableHystrixMethodHandler implements MethodHandler {
 			}
 		});
 
+		// TODO should be replaced by CompensableFeignResult.getTransactionContext()
+		response.setTransactionContext(transactionContext);
+
 		try {
 			compensableManager.associateThread(compensable);
-			return this.dispatch.get(method).invoke(args);
-		} finally {
 
+			Object result = this.dispatch.get(method).invoke(args);
+			if (CompensableFeignResult.class.isInstance(result)) {
+				CompensableFeignResult cfresult = (CompensableFeignResult) result;
+				response.setTransactionContext(cfresult.getTransactionContext());
+				response.setParticipantDelistFlag(cfresult.isParticipantValidFlag() == false);
+				return cfresult.getResult();
+			} else {
+				return result;
+			}
+		} catch (CompensableFeignResult error) {
+			CompensableFeignResult cfresult = (CompensableFeignResult) error;
+			response.setTransactionContext(cfresult.getTransactionContext());
+			response.setParticipantDelistFlag(cfresult.isParticipantValidFlag() == false);
+
+			Object targetResult = cfresult.getResult();
+			if (RuntimeException.class.isInstance(targetResult)) {
+				throw (RuntimeException) targetResult;
+			} else {
+				throw new RuntimeException((Exception) targetResult);
+			}
+		} finally {
 			try {
 				Object interceptedValue = response.getHeader(TransactionInterceptor.class.getName());
 				if (Boolean.valueOf(String.valueOf(interceptedValue)) == false) {
-					response.setTransactionContext(transactionContext);
+					response.setParticipantEnlistFlag(request.isParticipantEnlistFlag());
 
 					RemoteCoordinator coordinator = request.getTargetTransactionCoordinator();
+					// TODO should be replaced by CompensableFeignResult.getRemoteParticipant()
 					response.setSourceTransactionCoordinator(coordinator);
-					response.setParticipantEnlistFlag(request.isParticipantEnlistFlag());
 
 					transactionInterceptor.afterReceiveResponse(response);
 				} // end-if (response.isIntercepted() == false)
 			} finally {
 				compensableManager.desociateThread();
 			}
-
 		}
 
 	}

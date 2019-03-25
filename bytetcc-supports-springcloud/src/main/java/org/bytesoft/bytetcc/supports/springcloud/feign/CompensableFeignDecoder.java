@@ -22,7 +22,6 @@ import java.util.Collection;
 import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
-import org.bytesoft.bytejta.supports.rpc.TransactionResponseImpl;
 import org.bytesoft.bytetcc.supports.springcloud.SpringCloudBeanRegistry;
 import org.bytesoft.common.utils.SerializeUtils;
 import org.bytesoft.compensable.TransactionContext;
@@ -48,6 +47,7 @@ public class CompensableFeignDecoder implements feign.codec.Decoder, Initializin
 
 	static final String HEADER_TRANCACTION_KEY = "X-BYTETCC-TRANSACTION"; // org.bytesoft.bytetcc.transaction
 	static final String HEADER_PROPAGATION_KEY = "X-BYTETCC-PROPAGATION"; // org.bytesoft.bytetcc.propagation
+	static final String HEADER_RECURSIVELY_KEY = "X-BYTETCC-RECURSIVELY"; // org.bytesoft.bytetcc.recursively
 
 	private ApplicationContext applicationContext;
 	private feign.codec.Decoder delegate;
@@ -98,6 +98,7 @@ public class CompensableFeignDecoder implements feign.codec.Decoder, Initializin
 
 		String respTransactionStr = this.getHeaderValue(resp, HEADER_TRANCACTION_KEY);
 		String respPropagationStr = this.getHeaderValue(resp, HEADER_PROPAGATION_KEY);
+		String respRecursivelyStr = this.getHeaderValue(resp, HEADER_RECURSIVELY_KEY);
 
 		if (StringUtils.isBlank(reqTransactionStr)) {
 			return this.delegate.decode(resp, type);
@@ -105,6 +106,7 @@ public class CompensableFeignDecoder implements feign.codec.Decoder, Initializin
 			return this.delegate.decode(resp, type);
 		}
 
+		CompensableFeignResult result = new CompensableFeignResult();
 		try {
 			String transactionStr = StringUtils.isBlank(respTransactionStr) ? reqTransactionStr : respTransactionStr;
 			String propagationStr = StringUtils.isBlank(respPropagationStr) ? reqPropagationStr : respPropagationStr;
@@ -115,14 +117,21 @@ public class CompensableFeignDecoder implements feign.codec.Decoder, Initializin
 			SpringCloudBeanRegistry beanRegistry = SpringCloudBeanRegistry.getInstance();
 			RemoteCoordinator remoteCoordinator = beanRegistry.getConsumeCoordinator(propagationStr);
 
-			TransactionResponseImpl response = new TransactionResponseImpl();
-			response.setTransactionContext(transactionContext);
-			response.setSourceTransactionCoordinator(remoteCoordinator);
+//			TransactionResponseImpl response = new TransactionResponseImpl();
+//			response.setSourceTransactionCoordinator(remoteCoordinator);
+//			response.setParticipantDelistFlag(StringUtils.equalsIgnoreCase(respRecursivelyStr, "TRUE"));
+
+			result.setTransactionContext(transactionContext);
+			result.setRemoteParticipant(remoteCoordinator);
+			result.setParticipantValidFlag(StringUtils.equalsIgnoreCase(respRecursivelyStr, "TRUE") == false);
 		} catch (IOException ex) {
 			logger.error("Error occurred while decoding response({})!", resp, ex);
 		}
 
-		return this.delegate.decode(resp, type);
+		Object value = this.delegate.decode(resp, type);
+		result.setResult(value);
+
+		return result;
 	}
 
 	private String getHeaderValue(Request req, String headerName) {
