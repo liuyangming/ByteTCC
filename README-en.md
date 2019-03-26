@@ -12,7 +12,7 @@
 <dependency>
 	<groupId>org.bytesoft</groupId>
 	<artifactId>bytetcc-supports-springcloud</artifactId>
-	<version>0.5.0</version>
+	<version>0.5.1</version>
 </dependency>
 ```
 ###### 1.1.2. dubbo
@@ -20,7 +20,7 @@
 <dependency>
 	<groupId>org.bytesoft</groupId>
 	<artifactId>bytetcc-supports-dubbo</artifactId>
-	<version>0.5.0</version>
+	<version>0.5.1</version>
 </dependency>
 ```
 
