@@ -74,6 +74,7 @@ public class CompensablePrimaryFilter implements Filter {
 	static final String KEY_XA_GET_APPLICATION = "getApplication";
 	static final String KEY_XA_GET_REMOTEADDR = "getRemoteAddr";
 	static final String KEY_XA_GET_REMOTENODE = "getRemoteNode";
+	static final String KEY_REMOTE_CIRCULARLY = "circularly";
 
 	static final Logger logger = LoggerFactory.getLogger(CompensablePrimaryFilter.class);
 
@@ -508,11 +509,13 @@ public class CompensablePrimaryFilter implements Filter {
 
 				String propagatedBy = (String) wrapped.getVariable(Propagation.class.getName());
 				String instanceId = (String) wrapped.getVariable(RemoteCoordinator.class.getName());
+//				String circularly = (String) wrapped.getVariable(KEY_REMOTE_CIRCULARLY);
 
 				participantRegistry.putInvocationDef(invocationDef, CommonUtils.getRemoteNode(instanceId));
 
 				String identifier = compensableCoordinator.getIdentifier();
-				boolean participantDelistRequired = StringUtils.equals(propagatedBy, identifier) == false;
+//				boolean circularlyFlag = StringUtils.equalsIgnoreCase(circularly, "TRUE");
+				boolean participantDelistRequired = CommonUtils.applicationEquals(propagatedBy, identifier) == false;
 				response.setParticipantDelistFlag(participantDelistRequired);
 				response.setParticipantEnlistFlag(request.isParticipantEnlistFlag());
 			}
