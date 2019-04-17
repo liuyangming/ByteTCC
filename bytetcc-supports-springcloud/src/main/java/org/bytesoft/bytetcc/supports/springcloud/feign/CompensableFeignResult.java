@@ -30,7 +30,7 @@ public class CompensableFeignResult extends RuntimeException {
 	private boolean error;
 	private boolean participantValidFlag;
 
-//	public synchronized Throwable fillInStackTrace() {}
+	// public synchronized Throwable fillInStackTrace() {}
 
 	public synchronized Throwable getCause() {
 		throw new IllegalStateException("Not supported!");
@@ -64,7 +64,7 @@ public class CompensableFeignResult extends RuntimeException {
 		throw new IllegalStateException("Not supported!");
 	}
 
-//	public void setStackTrace(StackTraceElement[] arg0) {}
+	// public void setStackTrace(StackTraceElement[] arg0) {}
 
 	public TransactionContext getTransactionContext() {
 		return transactionContext;
