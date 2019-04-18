@@ -89,25 +89,16 @@ public class CompensableFeignHandler implements InvocationHandler {
 		response.setTransactionContext(transactionContext);
 
 		try {
-			Object result = this.delegate.invoke(proxy, method, args);
-			if (CompensableFeignResult.class.isInstance(result)) {
-				CompensableFeignResult cfresult = (CompensableFeignResult) result;
-				response.setTransactionContext(cfresult.getTransactionContext());
-				response.setParticipantDelistFlag(cfresult.isParticipantValidFlag() == false);
-				return cfresult.getResult();
-			} else {
-				return result;
-			}
+			return this.delegate.invoke(proxy, method, args);
 		} catch (CompensableFeignResult error) {
 			CompensableFeignResult cfresult = (CompensableFeignResult) error;
-			response.setTransactionContext(cfresult.getTransactionContext());
-			response.setParticipantDelistFlag(cfresult.isParticipantValidFlag() == false);
+			// response.setTransactionContext(cfresult.getTransactionContext());
+			response.setParticipantDelistFlag(cfresult.isParticipantValidFlag());
 
-			Object targetResult = cfresult.getResult();
-			if (RuntimeException.class.isInstance(targetResult)) {
-				throw (RuntimeException) targetResult;
+			if (cfresult.isError()) {
+				throw (Exception) cfresult.getResult();
 			} else {
-				throw new RuntimeException((Exception) targetResult);
+				return cfresult.getResult();
 			}
 		} finally {
 			Object interceptedValue = response.getHeader(TransactionInterceptor.class.getName());

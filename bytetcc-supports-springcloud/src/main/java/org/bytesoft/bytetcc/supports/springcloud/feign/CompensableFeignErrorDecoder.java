@@ -109,13 +109,9 @@ public class CompensableFeignErrorDecoder implements feign.codec.ErrorDecoder, I
 			SpringCloudBeanRegistry beanRegistry = SpringCloudBeanRegistry.getInstance();
 			RemoteCoordinator remoteCoordinator = beanRegistry.getConsumeCoordinator(propagationStr);
 
-//			TransactionResponseImpl response = new TransactionResponseImpl();
-//			response.setSourceTransactionCoordinator(remoteCoordinator);
-//			response.setParticipantDelistFlag(StringUtils.equalsIgnoreCase(respRecursivelyStr, "TRUE"));
-
 			result.setTransactionContext(transactionContext);
 			result.setRemoteParticipant(remoteCoordinator);
-			result.setParticipantValidFlag(StringUtils.equalsIgnoreCase(respRecursivelyStr, "TRUE") == false);
+			result.setParticipantValidFlag(StringUtils.equalsIgnoreCase(respRecursivelyStr, "TRUE"));
 		} catch (IOException ex) {
 			logger.error("Error occurred while decoding response: methodKey= {}, response= {}", methodKey, resp, ex);
 		}
@@ -123,7 +119,12 @@ public class CompensableFeignErrorDecoder implements feign.codec.ErrorDecoder, I
 		Object value = this.delegate.decode(methodKey, resp);
 		result.setError(true);
 		result.setResult(value);
-		return result;
+
+		if (result.isParticipantValidFlag()) {
+			throw result;
+		} else {
+			return (Exception) value;
+		}
 	}
 
 	private String getHeaderValue(Request req, String headerName) {
