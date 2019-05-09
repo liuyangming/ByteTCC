@@ -98,8 +98,20 @@ public class CompensableHystrixMethodHandler implements MethodHandler {
 		try {
 			compensableManager.associateThread(compensable);
 			return this.dispatch.get(method).invoke(args);
-		} catch (CompensableFeignResult error) {
-			CompensableFeignResult cfresult = (CompensableFeignResult) error;
+		} catch (Throwable error) {
+			Throwable cause = error.getCause();
+
+			CompensableFeignResult cfresult = null;
+			if (CompensableFeignResult.class.isInstance(error)) {
+				cfresult = (CompensableFeignResult) error;
+			} else if (CompensableFeignResult.class.isInstance(cause)) {
+				cfresult = (CompensableFeignResult) cause;
+			}
+
+			if (cfresult == null) {
+				throw error;
+			} // end-if (cfresult == null)
+
 			// response.setTransactionContext(cfresult.getTransactionContext());
 			response.setParticipantDelistFlag(cfresult.isParticipantValidFlag());
 

@@ -15,9 +15,6 @@
  */
 package org.bytesoft.bytetcc.supports.springcloud.feign;
 
-import java.io.PrintStream;
-import java.io.PrintWriter;
-
 import org.bytesoft.compensable.TransactionContext;
 import org.bytesoft.transaction.remote.RemoteCoordinator;
 
@@ -29,42 +26,6 @@ public class CompensableFeignResult extends RuntimeException {
 	private RemoteCoordinator remoteParticipant;
 	private boolean error;
 	private boolean participantValidFlag;
-
-	// public synchronized Throwable fillInStackTrace() {}
-
-	public synchronized Throwable getCause() {
-		throw new IllegalStateException("Not supported!");
-	}
-
-	public String getLocalizedMessage() {
-		throw new IllegalStateException("Not supported!");
-	}
-
-	public String getMessage() {
-		throw new IllegalStateException("Not supported!");
-	}
-
-	public StackTraceElement[] getStackTrace() {
-		throw new IllegalStateException("Not supported!");
-	}
-
-	public synchronized Throwable initCause(Throwable arg0) {
-		throw new IllegalStateException("Not supported!");
-	}
-
-	public void printStackTrace() {
-		throw new IllegalStateException("Not supported!");
-	}
-
-	public void printStackTrace(PrintStream arg0) {
-		throw new IllegalStateException("Not supported!");
-	}
-
-	public void printStackTrace(PrintWriter arg0) {
-		throw new IllegalStateException("Not supported!");
-	}
-
-	// public void setStackTrace(StackTraceElement[] arg0) {}
 
 	public TransactionContext getTransactionContext() {
 		return transactionContext;

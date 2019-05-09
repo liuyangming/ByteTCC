@@ -98,6 +98,8 @@ public class CompensableFeignErrorDecoder implements feign.codec.ErrorDecoder, I
 			return this.delegate.decode(methodKey, resp);
 		}
 
+		boolean participantInvolved = StringUtils.isNotBlank(respTransactionStr) || StringUtils.isNotBlank(respPropagationStr);
+
 		CompensableFeignResult result = new CompensableFeignResult();
 		try {
 			String transactionStr = StringUtils.isBlank(respTransactionStr) ? reqTransactionStr : respTransactionStr;
@@ -111,7 +113,7 @@ public class CompensableFeignErrorDecoder implements feign.codec.ErrorDecoder, I
 
 			result.setTransactionContext(transactionContext);
 			result.setRemoteParticipant(remoteCoordinator);
-			result.setParticipantValidFlag(StringUtils.equalsIgnoreCase(respRecursivelyStr, "TRUE"));
+			result.setParticipantValidFlag(!participantInvolved || StringUtils.equalsIgnoreCase(respRecursivelyStr, "TRUE"));
 		} catch (IOException ex) {
 			logger.error("Error occurred while decoding response: methodKey= {}, response= {}", methodKey, resp, ex);
 		}
