@@ -106,6 +106,8 @@ public class CompensableFeignDecoder implements feign.codec.Decoder, Initializin
 			return this.delegate.decode(resp, type);
 		}
 
+		boolean participantInvolved = StringUtils.isNotBlank(respTransactionStr) || StringUtils.isNotBlank(respPropagationStr);
+
 		CompensableFeignResult result = new CompensableFeignResult();
 		try {
 			String transactionStr = StringUtils.isBlank(respTransactionStr) ? reqTransactionStr : respTransactionStr;
@@ -119,7 +121,7 @@ public class CompensableFeignDecoder implements feign.codec.Decoder, Initializin
 
 			result.setTransactionContext(transactionContext);
 			result.setRemoteParticipant(remoteCoordinator);
-			result.setParticipantValidFlag(StringUtils.equalsIgnoreCase(respRecursivelyStr, "TRUE"));
+			result.setParticipantValidFlag(!participantInvolved || StringUtils.equalsIgnoreCase(respRecursivelyStr, "TRUE"));
 		} catch (IOException ex) {
 			logger.error("Error occurred while decoding response({})!", resp, ex);
 		}

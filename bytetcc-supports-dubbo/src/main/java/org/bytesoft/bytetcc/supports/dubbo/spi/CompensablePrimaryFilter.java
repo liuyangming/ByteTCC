@@ -509,13 +509,16 @@ public class CompensablePrimaryFilter implements Filter {
 
 				String propagatedBy = (String) wrapped.getVariable(Propagation.class.getName());
 				String instanceId = (String) wrapped.getVariable(RemoteCoordinator.class.getName());
-//				String circularly = (String) wrapped.getVariable(KEY_REMOTE_CIRCULARLY);
+				// String circularly = (String) wrapped.getVariable(KEY_REMOTE_CIRCULARLY);
+
+				boolean participantInvolved = StringUtils.isNotBlank(propagatedBy) || StringUtils.isNotBlank(instanceId);
 
 				participantRegistry.putInvocationDef(invocationDef, CommonUtils.getRemoteNode(instanceId));
 
 				String identifier = compensableCoordinator.getIdentifier();
-//				boolean circularlyFlag = StringUtils.equalsIgnoreCase(circularly, "TRUE");
-				boolean participantDelistRequired = CommonUtils.applicationEquals(propagatedBy, identifier) == false;
+				// boolean circularlyFlag = StringUtils.equalsIgnoreCase(circularly, "TRUE");
+				boolean participantDelistRequired = !participantInvolved
+						|| !CommonUtils.applicationEquals(propagatedBy, identifier); // remove required
 				response.setParticipantDelistFlag(participantDelistRequired);
 				response.setParticipantEnlistFlag(request.isParticipantEnlistFlag());
 			}
