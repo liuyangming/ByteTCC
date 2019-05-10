@@ -84,6 +84,7 @@ public class AccountServiceCancel implements IAccountService {
 * 4、支持长事务；
 * 5、支持dubbo服务框架；
 * 6、支持spring cloud；
+* 7、提供框架层面的幂等性保障；
 
 ## 四、历史版本
 #### 4.1. v0.3.x

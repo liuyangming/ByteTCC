@@ -87,30 +87,17 @@ public class AccountServiceCancel implements IAccountService {
 
 
 ## 3. Features
-* 1. support declarative transaction management
-* 2. support normal transaction, TCC transaction, compensating service transaction
-* 3. support distributed transaction scenarios. e.g. multi-datasource, cross-applications and cross-servers transaction
-* 4. support long live transaction
-* 5. support Dubbo framework
-* 6. provide solutions for service idempotence  in framework layer
+* support declarative transaction management
+* support normal transaction, TCC transaction, compensating service transaction
+* support distributed transaction scenarios. e.g. multi-datasource, cross-applications and cross-servers transaction
+* support long live transaction
+* support Dubbo framework
+* support Spring Cloud
+* provide solutions for service idempotence in framework layer
 
 
-## 4. History
-
-#### v0.2.0-alpha
-* Link：[http://code.taobao.org/p/openjtcc](http://code.taobao.org/p/openjtcc)
-* Doc：[http://code.taobao.org/p/openjtcc/wiki/index/](http://code.taobao.org/p/openjtcc/wiki/index/) 
-
-#### v0.1.2
-* Link：[http://code.google.com/p/bytetcc](http://code.google.com/p/bytetcc)
-
-#### v0.1
-* Link：[http://pan.baidu.com/s/1hq3ffxU
-](http://pan.baidu.com/s/1hq3ffxU)
-
-
-## 5. Contact Me
-If you have any questions or comements regarding this project, please feel free to contact me at:
+## 4. Contact Me
+If you have any questions or comments regarding this project, please feel free to contact me at:
 
 1. send mail to _[bytefox#126.com](bytefox@126.com)_
 ~OR~
