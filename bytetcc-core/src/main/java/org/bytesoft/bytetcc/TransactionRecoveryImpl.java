@@ -207,7 +207,7 @@ public class TransactionRecoveryImpl
 					archive.setTried(true);
 					triedNumber++;
 
-					compensableLogger.updateCompensable(archive);
+					compensableLogger.updateCompensableInvocationStatus(archive); // compensableLogger.updateCompensable(archive);
 				} else {
 					unTriedNumber++;
 				}
@@ -218,7 +218,7 @@ public class TransactionRecoveryImpl
 					triedNumber++;
 
 					triedMap.put(recordKey, Boolean.TRUE);
-					compensableLogger.updateCompensable(archive);
+					compensableLogger.updateCompensableInvocationStatus(archive); // compensableLogger.updateCompensable(archive);
 				} else {
 					unTriedNumber++;
 					triedMap.put(recordKey, tried);
@@ -229,7 +229,8 @@ public class TransactionRecoveryImpl
 		if (transactionContext.isCoordinator()) {
 			if (triedNumber > 0 && unTriedNumber > 0) {
 				transaction.setTransactionStatus(Status.STATUS_PREPARING);
-				compensableLogger.updateTransaction(compensable.getTransactionArchive());
+				compensableLogger.updateTransactionStatus(compensable.getTransactionArchive());
+				// compensableLogger.updateTransaction(compensable.getTransactionArchive());
 			} else if (triedNumber > 0 && unknownNumber > 0) {
 				switch (transaction.getTransactionStatus()) {
 				case Status.STATUS_PREPARING:
@@ -241,11 +242,13 @@ public class TransactionRecoveryImpl
 					break; // ignore
 				default:
 					transaction.setTransactionStatus(Status.STATUS_PREPARING);
-					compensableLogger.updateTransaction(compensable.getTransactionArchive());
+					compensableLogger.updateTransactionStatus(compensable.getTransactionArchive());
+					// compensableLogger.updateTransaction(compensable.getTransactionArchive());
 				}
 			} else if (triedNumber > 0 && transactionContext.isPropagated() == false) {
 				transaction.setTransactionStatus(Status.STATUS_PREPARED);
-				compensableLogger.updateTransaction(compensable.getTransactionArchive());
+				compensableLogger.updateTransactionStatus(compensable.getTransactionArchive());
+				// compensableLogger.updateTransaction(compensable.getTransactionArchive());
 			}
 		} // end-if (transactionContext.isCoordinator())
 

@@ -155,7 +155,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 
 		this.transactionContext.setCompensating(true);
 		this.transactionStatus = Status.STATUS_COMMITTING;
-		compensableLogger.updateTransaction(this.getTransactionArchive());
+		compensableLogger.updateTransactionStatus(this.getTransactionArchive()); // compensableLogger.updateTransaction(this.getTransactionArchive());
 
 		SystemException systemEx = null;
 		try {
@@ -198,7 +198,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 		}
 
 		this.transactionStatus = Status.STATUS_COMMITTED;
-		compensableLogger.updateTransaction(this.getTransactionArchive());
+		compensableLogger.updateTransactionStatus(this.getTransactionArchive()); // compensableLogger.updateTransaction(this.getTransactionArchive());
 		logger.info("{}| compensable transaction committed!",
 				ByteUtils.byteArrayToString(transactionContext.getXid().getGlobalTransactionId()));
 	}
@@ -400,7 +400,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 						current.getDescriptor().getIdentifier(), rex);
 			} finally {
 				if (current.isCompleted()) {
-					transactionLogger.updateParticipant(current);
+					transactionLogger.updateParticipantStatus(current); // transactionLogger.updateParticipant(current);
 				}
 			}
 		}
@@ -484,7 +484,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 		this.markCurrentBranchTransactionRollbackIfNecessary();
 
 		this.transactionContext.setCompensating(true);
-		compensableLogger.updateTransaction(this.getTransactionArchive());
+		compensableLogger.updateTransactionStatus(this.getTransactionArchive()); // compensableLogger.updateTransaction(this.getTransactionArchive());
 
 		SystemException systemEx = null;
 		try {
@@ -520,7 +520,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 			throw systemEx;
 		} else {
 			this.transactionStatus = Status.STATUS_ROLLEDBACK;
-			compensableLogger.updateTransaction(this.getTransactionArchive());
+			compensableLogger.updateTransactionStatus(this.getTransactionArchive()); // ccompensableLogger.updateTransaction(this.getTransactionArchive());
 			logger.info("{}| compensable transaction rolled back!",
 					ByteUtils.byteArrayToString(transactionContext.getXid().getGlobalTransactionId()));
 		}
@@ -672,7 +672,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 						ByteUtils.byteArrayToString(branchXid.getGlobalTransactionId()), current, rex);
 			} finally {
 				if (current.isCompleted()) {
-					transactionLogger.updateParticipant(current);
+					transactionLogger.updateParticipantStatus(current); // transactionLogger.updateParticipant(current);
 				}
 			}
 		}
@@ -771,7 +771,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 
 				this.resourceMap.remove(remoteSvc);
 
-				compensableLogger.updateTransaction(this.getTransactionArchive());
+				compensableLogger.deleteParticipant(archive); // compensableLogger.updateTransaction(this.getTransactionArchive());
 			} // end-if (flag == XAResource.TMFAIL)
 		} // end-if (RemoteResourceDescriptor.class.isInstance(xaRes))
 
@@ -911,7 +911,8 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 		String resourceKey = descriptor == null ? null : descriptor.getIdentifier();
 		// this.archive.setCompensableXid(xid); // preset the compensable-xid.
 		this.archive.setCompensableResourceKey(resourceKey);
-		this.beanFactory.getCompensableLogger().updateCompensable(this.archive);
+		this.beanFactory.getCompensableLogger().updateCompensableCompletionResource(this.archive);
+		// this.beanFactory.getCompensableLogger().updateCompensable(this.archive);
 	}
 
 	public void onDelistResource(Xid transactionXid, XAResource xares) {
@@ -951,7 +952,8 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 
 		TransactionArchive transactionArchive = this.getTransactionArchive();
 		transactionArchive.setCompensableStatus(Status.STATUS_COMMITTING);
-		this.beanFactory.getCompensableLogger().updateTransaction(transactionArchive);
+		this.beanFactory.getCompensableLogger().updateTransactionStatus(transactionArchive);
+		// this.beanFactory.getCompensableLogger().updateTransaction(transactionArchive);
 
 		logger.info("{}| try completed.", ByteUtils.byteArrayToString(transactionContext.getXid().getGlobalTransactionId()));
 	}
@@ -964,7 +966,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 			CompensableArchive compensableArchive = itr.next();
 			itr.remove(); // remove
 			compensableArchive.setTried(true);
-			compensableLogger.updateCompensable(compensableArchive);
+			compensableLogger.updateCompensableInvocationStatus(compensableArchive); // compensableLogger.updateCompensable(compensableArchive);
 
 			logger.info("{}| try: identifier= {}, resourceKey= {}, resourceXid= {}.",
 					ByteUtils.byteArrayToString(transactionContext.getXid().getGlobalTransactionId()),
@@ -983,7 +985,8 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 		} // end-if (CommonUtils.equals(expectXid, actualXid) == false)
 
 		if (this.positive == null) {
-			this.beanFactory.getCompensableLogger().updateCompensable(this.archive);
+			this.beanFactory.getCompensableLogger().updateCompensableCompletionStatus(this.archive);
+			// this.beanFactory.getCompensableLogger().updateCompensable(this.archive);
 			return;
 		}
 
@@ -1003,7 +1006,8 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 			this.archive.setCancelled(true);
 		}
 
-		this.beanFactory.getCompensableLogger().updateCompensable(this.archive);
+		this.beanFactory.getCompensableLogger().updateCompensableCompletionStatus(this.archive);
+		// this.beanFactory.getCompensableLogger().updateCompensable(this.archive);
 	}
 
 	public void recoverIfNecessary() throws SystemException {
@@ -1057,7 +1061,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 					} else {
 						current.setCancelled(true);
 					}
-					compensableLogger.updateCompensable(current);
+					compensableLogger.updateCompensableCompletionStatus(current); // compensableLogger.updateCompensable(current);
 				} catch (XAException xaex) {
 					switch (xaex.errorCode) {
 					case XAException.XAER_NOTA:

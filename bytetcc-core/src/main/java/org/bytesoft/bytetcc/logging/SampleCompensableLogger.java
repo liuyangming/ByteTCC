@@ -64,16 +64,25 @@ public class SampleCompensableLogger extends VirtualLoggingSystemImpl
 		}
 	}
 
-	public void updateTransaction(TransactionArchive archive) {
-		ArchiveDeserializer deserializer = this.beanFactory.getArchiveDeserializer();
-
-		try {
-			byte[] byteArray = deserializer.serialize((TransactionXid) archive.getXid(), archive);
-			this.modify(archive.getXid(), byteArray);
-		} catch (RuntimeException rex) {
-			logger.error("Error occurred while modifying transaction-archive.", rex);
-		}
+	public void updateTransactionVariables(TransactionArchive archive) {
 	}
+
+	public void updateTransactionStatus(TransactionArchive archive) {
+	}
+
+	public void updateTransactionRecoveryStatus(TransactionArchive archive) {
+	}
+
+//	public void updateTransaction(TransactionArchive archive) {
+//		ArchiveDeserializer deserializer = this.beanFactory.getArchiveDeserializer();
+//
+//		try {
+//			byte[] byteArray = deserializer.serialize((TransactionXid) archive.getXid(), archive);
+//			this.modify(archive.getXid(), byteArray);
+//		} catch (RuntimeException rex) {
+//			logger.error("Error occurred while modifying transaction-archive.", rex);
+//		}
+//	}
 
 	public void deleteTransaction(TransactionArchive archive) {
 		try {
@@ -94,16 +103,19 @@ public class SampleCompensableLogger extends VirtualLoggingSystemImpl
 		}
 	}
 
-	public void updateParticipant(XAResourceArchive archive) {
-		ArchiveDeserializer deserializer = this.beanFactory.getArchiveDeserializer();
-
-		try {
-			byte[] byteArray = deserializer.serialize((TransactionXid) archive.getXid(), archive);
-			this.modify(archive.getXid(), byteArray);
-		} catch (RuntimeException rex) {
-			logger.error("Error occurred while modifying resource-archive.", rex);
-		}
+	public void updateParticipantStatus(XAResourceArchive archive) {
 	}
+
+//	public void updateParticipant(XAResourceArchive archive) {
+//		ArchiveDeserializer deserializer = this.beanFactory.getArchiveDeserializer();
+//
+//		try {
+//			byte[] byteArray = deserializer.serialize((TransactionXid) archive.getXid(), archive);
+//			this.modify(archive.getXid(), byteArray);
+//		} catch (RuntimeException rex) {
+//			logger.error("Error occurred while modifying resource-archive.", rex);
+//		}
+//	}
 
 	public void deleteParticipant(XAResourceArchive archive) {
 	}
@@ -120,17 +132,29 @@ public class SampleCompensableLogger extends VirtualLoggingSystemImpl
 		}
 	}
 
-	public void updateCompensable(CompensableArchive archive) {
-		ArchiveDeserializer deserializer = this.beanFactory.getArchiveDeserializer();
-
-		try {
-			TransactionXid xid = (TransactionXid) archive.getIdentifier();
-			byte[] byteArray = deserializer.serialize(xid, archive);
-			this.modify(xid, byteArray);
-		} catch (RuntimeException rex) {
-			logger.error("Error occurred while modifying compensable-archive.", rex);
-		}
+	public void updateCompensableInvocationResource(CompensableArchive archive) {
 	}
+
+	public void updateCompensableInvocationStatus(CompensableArchive archive) {
+	}
+
+	public void updateCompensableCompletionResource(CompensableArchive archive) {
+	}
+
+	public void updateCompensableCompletionStatus(CompensableArchive archive) {
+	}
+
+//	public void updateCompensable(CompensableArchive archive) {
+//		ArchiveDeserializer deserializer = this.beanFactory.getArchiveDeserializer();
+//
+//		try {
+//			TransactionXid xid = (TransactionXid) archive.getIdentifier();
+//			byte[] byteArray = deserializer.serialize(xid, archive);
+//			this.modify(xid, byteArray);
+//		} catch (RuntimeException rex) {
+//			logger.error("Error occurred while modifying compensable-archive.", rex);
+//		}
+//	}
 
 	public List<VirtualLoggingRecord> compressIfNecessary(List<VirtualLoggingRecord> recordList) {
 		ArchiveDeserializer deserializer = this.beanFactory.getArchiveDeserializer();
@@ -145,7 +169,8 @@ public class SampleCompensableLogger extends VirtualLoggingSystemImpl
 			byte[] keyByteArray = new byte[XidFactory.GLOBAL_TRANSACTION_LENGTH];
 			System.arraycopy(byteArray, 0, keyByteArray, 0, keyByteArray.length);
 			byte[] valueByteArray = new byte[byteArray.length - XidFactory.GLOBAL_TRANSACTION_LENGTH - 1 - 4];
-			System.arraycopy(byteArray, XidFactory.GLOBAL_TRANSACTION_LENGTH + 1 + 4, valueByteArray, 0, valueByteArray.length);
+			System.arraycopy(byteArray, XidFactory.GLOBAL_TRANSACTION_LENGTH + 1 + 4, valueByteArray, 0,
+					valueByteArray.length);
 
 			TransactionXid xid = xidFactory.createGlobalXid(keyByteArray);
 
@@ -202,7 +227,8 @@ public class SampleCompensableLogger extends VirtualLoggingSystemImpl
 			}
 		} // end-for (int index = 0; recordList != null && index < recordList.size(); index++)
 
-		for (Iterator<Map.Entry<TransactionXid, TransactionArchive>> itr = xidMap.entrySet().iterator(); itr.hasNext();) {
+		for (Iterator<Map.Entry<TransactionXid, TransactionArchive>> itr = xidMap.entrySet().iterator(); itr
+				.hasNext();) {
 			Map.Entry<TransactionXid, TransactionArchive> entry = itr.next();
 			TransactionXid xid = entry.getKey();
 			TransactionArchive value = entry.getValue();
@@ -219,8 +245,10 @@ public class SampleCompensableLogger extends VirtualLoggingSystemImpl
 
 			System.arraycopy(keyByteArray, 0, byteArray, 0, keyByteArray.length);
 			byteArray[keyByteArray.length] = OPERATOR_CREATE;
-			System.arraycopy(sizeByteArray, 0, byteArray, XidFactory.GLOBAL_TRANSACTION_LENGTH + 1, sizeByteArray.length);
-			System.arraycopy(valueByteArray, 0, byteArray, XidFactory.GLOBAL_TRANSACTION_LENGTH + 1 + 4, valueByteArray.length);
+			System.arraycopy(sizeByteArray, 0, byteArray, XidFactory.GLOBAL_TRANSACTION_LENGTH + 1,
+					sizeByteArray.length);
+			System.arraycopy(valueByteArray, 0, byteArray, XidFactory.GLOBAL_TRANSACTION_LENGTH + 1 + 4,
+					valueByteArray.length);
 
 			VirtualLoggingRecord record = new VirtualLoggingRecord();
 			record.setIdentifier(xid);

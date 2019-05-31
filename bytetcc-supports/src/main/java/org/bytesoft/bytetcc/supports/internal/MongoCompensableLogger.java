@@ -62,8 +62,8 @@ import com.mongodb.client.model.IndexOptions;
 import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
 
-public class MongoCompensableLogger
-		implements CompensableLogger, CompensableEndpointAware, CompensableBeanFactoryAware, SmartInitializingSingleton {
+public class MongoCompensableLogger implements CompensableLogger, CompensableEndpointAware, CompensableBeanFactoryAware,
+		SmartInitializingSingleton {
 	static Logger logger = LoggerFactory.getLogger(MongoCompensableLogger.class);
 	static final String CONSTANTS_TB_TRANSACTIONS = "compensables";
 	static final String CONSTANTS_FD_GLOBAL = "gxid";
@@ -134,6 +134,15 @@ public class MongoCompensableLogger
 			this.beanFactory.getCompensableManager().setRollbackOnlyQuietly();
 		}
 
+	}
+
+	public void updateTransactionVariables(TransactionArchive archive) {
+	}
+
+	public void updateTransactionStatus(TransactionArchive archive) {
+	}
+
+	public void updateTransactionRecoveryStatus(TransactionArchive archive) {
 	}
 
 	public void updateTransaction(TransactionArchive archive) {
@@ -285,6 +294,9 @@ public class MongoCompensableLogger
 		return compensables;
 	}
 
+	public void updateParticipantStatus(XAResourceArchive archive) {
+	}
+
 	public void deleteTransaction(TransactionArchive archive) {
 		try {
 			TransactionXid transactionXid = (TransactionXid) archive.getXid();
@@ -416,6 +428,18 @@ public class MongoCompensableLogger
 			logger.error("Error occurred while creating compensable.", error);
 			this.beanFactory.getCompensableManager().setRollbackOnlyQuietly();
 		}
+	}
+
+	public void updateCompensableInvocationResource(CompensableArchive archive) {
+	}
+
+	public void updateCompensableInvocationStatus(CompensableArchive archive) {
+	}
+
+	public void updateCompensableCompletionResource(CompensableArchive archive) {
+	}
+
+	public void updateCompensableCompletionStatus(CompensableArchive archive) {
 	}
 
 	public void updateCompensable(CompensableArchive archive) {

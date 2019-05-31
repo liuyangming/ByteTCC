@@ -25,21 +25,31 @@ public interface CompensableLogger {
 	/* transaction */
 	public void createTransaction(TransactionArchive archive);
 
-	public void updateTransaction(TransactionArchive archive);
+	public void updateTransactionVariables(TransactionArchive archive);
+
+	public void updateTransactionStatus(TransactionArchive archive);
+
+	public void updateTransactionRecoveryStatus(TransactionArchive archive);
 
 	public void deleteTransaction(TransactionArchive archive);
 
 	/* participant */
 	public void createParticipant(XAResourceArchive archive);
 
-	public void updateParticipant(XAResourceArchive archive);
+	public void updateParticipantStatus(XAResourceArchive archive);
 
 	public void deleteParticipant(XAResourceArchive archive);
 
 	/* compensable */
 	public void createCompensable(CompensableArchive archive);
 
-	public void updateCompensable(CompensableArchive archive);
+	public void updateCompensableInvocationResource(CompensableArchive archive);
+
+	public void updateCompensableInvocationStatus(CompensableArchive archive);
+
+	public void updateCompensableCompletionResource(CompensableArchive archive);
+
+	public void updateCompensableCompletionStatus(CompensableArchive archive);
 
 	/* recovery */
 	public void recover(TransactionRecoveryCallback callback);
