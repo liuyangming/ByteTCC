@@ -23,8 +23,12 @@ import java.util.Iterator;
 import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.aop.TargetSource;
+import org.springframework.aop.target.SingletonTargetSource;
 import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.config.BeanPostProcessor;
+import org.springframework.cloud.openfeign.FeignClient;
 
 import com.netflix.hystrix.HystrixCommand.Setter;
 import com.netflix.hystrix.HystrixCommandGroupKey;
@@ -34,7 +38,7 @@ import feign.InvocationHandlerFactory.MethodHandler;
 import feign.Target;
 import feign.hystrix.FallbackFactory;
 
-public class CompensableHystrixBeanPostProcessor implements BeanPostProcessor {
+public class CompensableHystrixBeanPostProcessor implements BeanPostProcessor, InitializingBean {
 	static final String HYSTRIX_COMMAND_NAME = "CompensableHystrixInvocationHandler#invoke(CompensableHystrixInvocation)";
 	static final String HYSTRIX_INVOKER_NAME = "invoke";
 
@@ -47,29 +51,78 @@ public class CompensableHystrixBeanPostProcessor implements BeanPostProcessor {
 	static final String HYSTRIX_SETTER_GRPKEY = "groupKey";
 	static final String HYSTRIX_CLAZZ_NAME = "feign.hystrix.HystrixInvocationHandler";
 
+	private Field singletonTargetSourceTargetField = null;
+
 	private volatile boolean statefully;
+
+	public void afterPropertiesSet() throws Exception {
+		Field field = SingletonTargetSource.class.getDeclaredField("target");
+		field.setAccessible(true);
+		this.singletonTargetSourceTargetField = field;
+	}
 
 	public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
 		return bean;
 	}
 
-	@SuppressWarnings("unchecked")
 	public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
-
 		if (Proxy.isProxyClass(bean.getClass()) == false) {
 			return bean;
 		}
 
-		InvocationHandler handler = Proxy.getInvocationHandler(bean);
+		TargetSource targetSource = null;
+		Object object = bean;
+		if (org.springframework.aop.framework.Advised.class.isInstance(bean)) {
+			org.springframework.aop.framework.Advised advised = (org.springframework.aop.framework.Advised) bean;
+			Class<?>[] interfaces = advised.getProxiedInterfaces();
+			for (int i = 0; i < interfaces.length; i++) {
+				Class<?> intf = interfaces[i];
+				if (intf.getAnnotation(FeignClient.class) != null) {
+					targetSource = advised.getTargetSource();
+					try {
+						object = targetSource.getTarget();
+						break;
+					} catch (Exception error) {
+						throw new IllegalStateException();
+					}
+				} // end-if (intf.getAnnotation(FeignClient.class) != null)
+			} // end-for (int i = 0; i < interfaces.length; i++)
+		} // end-if (org.springframework.aop.framework.Advised.class.isInstance(bean))
 
-		if (StringUtils.equals(HYSTRIX_CLAZZ_NAME, handler.getClass().getName()) == false) {
+		InvocationHandler handler = Proxy.getInvocationHandler(object);
+		if (targetSource == null //
+				&& StringUtils.equals(HYSTRIX_CLAZZ_NAME, handler.getClass().getName()) == false) {
 			return bean;
 		}
 
-		CompensableHystrixFeignHandler feignHandler = new CompensableHystrixFeignHandler();
+		Object proxied = this.createProxiedObject(object);
+		if (targetSource == null) {
+			return proxied;
+		}
+
+		if (SingletonTargetSource.class.isInstance(targetSource)) {
+			try {
+				this.singletonTargetSourceTargetField.set(targetSource, proxied);
+			} catch (IllegalArgumentException error) {
+				throw new IllegalStateException("Error occurred!");
+			} catch (IllegalAccessException error) {
+				throw new IllegalStateException("Error occurred!");
+			}
+		} else {
+			throw new IllegalStateException("Not supported yet!");
+		}
+
+		return bean;
+	}
+
+	@SuppressWarnings("unchecked")
+	private Object createProxiedObject(Object origin) {
+		InvocationHandler handler = Proxy.getInvocationHandler(origin);
+
+		final CompensableHystrixFeignHandler feignHandler = new CompensableHystrixFeignHandler();
 		feignHandler.setDelegate(handler);
 
-		Class<?> clazz = bean.getClass();
+		Class<?> clazz = origin.getClass();
 		Class<?>[] interfaces = clazz.getInterfaces();
 		ClassLoader loader = clazz.getClassLoader();
 
@@ -108,8 +161,8 @@ public class CompensableHystrixBeanPostProcessor implements BeanPostProcessor {
 				} else {
 					CompensableHystrixFallbackFactoryHandler factoryHandler = new CompensableHystrixFallbackFactoryHandler(
 							factory, target.type());
-					FallbackFactory<?> proxy = (FallbackFactory<?>) Proxy.newProxyInstance(factory.getClass().getClassLoader(),
-							new Class<?>[] { FallbackFactory.class }, factoryHandler);
+					FallbackFactory<?> proxy = (FallbackFactory<?>) Proxy.newProxyInstance(
+							factory.getClass().getClassLoader(), new Class<?>[] { FallbackFactory.class }, factoryHandler);
 					factoryField.set(handler, proxy);
 				}
 			} // end-if (factory != null)
