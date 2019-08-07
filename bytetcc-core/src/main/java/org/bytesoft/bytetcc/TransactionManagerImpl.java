@@ -22,7 +22,6 @@ import javax.transaction.NotSupportedException;
 import javax.transaction.RollbackException;
 import javax.transaction.Status;
 import javax.transaction.SystemException;
-import javax.transaction.xa.XAException;
 
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableInvocation;
@@ -164,7 +163,7 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 		Transaction transaction = transactionManager.getTransactionQuietly();
 		Transaction compensable = compensableManager.getCompensableTransactionQuietly();
 		if (transaction == null && compensable == null) {
-			throw new SystemException(XAException.XAER_NOTA);
+			return null; // throw new SystemException(XAException.XAER_NOTA);
 		} else if (compensable == null) {
 			transactionContext = transaction.getTransactionContext();
 		} else {
