@@ -54,6 +54,36 @@ public final class SpringCloudBeanRegistry implements CompensableBeanFactoryAwar
 	}
 
 	public RemoteCoordinator getConsumeCoordinator(String identifier) {
+		if (this.statefully) {
+			return this.getConsumeCoordinatorStatefully(identifier);
+		} else {
+			return this.getConsumeCoordinatorStateless(identifier);
+		}
+	}
+
+	public RemoteCoordinator getConsumeCoordinatorStatefully(String identifier) {
+		RemoteCoordinatorRegistry registry = RemoteCoordinatorRegistry.getInstance();
+		if (StringUtils.isBlank(identifier)) {
+			return null;
+		}
+
+		RemoteAddr remoteAddr = CommonUtils.getRemoteAddr(identifier);
+		RemoteNode remoteNode = CommonUtils.getRemoteNode(identifier);
+
+		SpringCloudCoordinator handler = new SpringCloudCoordinator();
+		handler.setStatefully(this.statefully);
+		handler.setIdentifier(identifier);
+		handler.setEnvironment(this.environment);
+
+		RemoteCoordinator participant = (RemoteCoordinator) Proxy.newProxyInstance(
+				SpringCloudCoordinator.class.getClassLoader(), new Class[] { RemoteCoordinator.class }, handler);
+
+		registry.putRemoteNode(remoteAddr, remoteNode);
+
+		return participant;
+	}
+
+	public RemoteCoordinator getConsumeCoordinatorStateless(String identifier) {
 		RemoteCoordinatorRegistry registry = RemoteCoordinatorRegistry.getInstance();
 		if (StringUtils.isBlank(identifier)) {
 			return null;
