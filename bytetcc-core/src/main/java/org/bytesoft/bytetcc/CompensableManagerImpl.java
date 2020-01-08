@@ -79,6 +79,14 @@ public class CompensableManagerImpl implements CompensableManager, CompensableBe
 		return transaction;
 	}
 
+	public void attachThread(Transaction transaction) {
+		this.thread2txMap.put(Thread.currentThread(), (CompensableTransaction) transaction);
+	}
+
+	public Transaction detachThread() {
+		return this.thread2txMap.remove(Thread.currentThread());
+	}
+
 	public int getStatus() throws SystemException {
 		Transaction transaction = this.getTransactionQuietly();
 		return transaction == null ? Status.STATUS_NO_TRANSACTION : transaction.getStatus();
