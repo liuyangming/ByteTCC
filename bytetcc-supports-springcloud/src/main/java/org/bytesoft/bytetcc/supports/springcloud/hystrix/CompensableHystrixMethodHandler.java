@@ -96,7 +96,7 @@ public class CompensableHystrixMethodHandler implements MethodHandler {
 		response.setTransactionContext(transactionContext);
 
 		try {
-			compensableManager.associateThread(compensable);
+			compensableManager.attachThread(compensable);
 			return this.dispatch.get(method).invoke(args);
 		} catch (Throwable error) {
 			Throwable cause = error.getCause();
@@ -136,7 +136,7 @@ public class CompensableHystrixMethodHandler implements MethodHandler {
 					transactionInterceptor.afterReceiveResponse(response);
 				} // end-if (response.isIntercepted() == false)
 			} finally {
-				compensableManager.desociateThread();
+				compensableManager.detachThread();
 			}
 		}
 

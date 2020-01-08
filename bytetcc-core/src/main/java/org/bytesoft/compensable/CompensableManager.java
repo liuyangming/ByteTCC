@@ -21,6 +21,7 @@ import javax.transaction.NotSupportedException;
 import javax.transaction.RollbackException;
 import javax.transaction.SystemException;
 
+import org.bytesoft.transaction.Transaction;
 import org.bytesoft.transaction.TransactionManager;
 
 public interface CompensableManager extends TransactionManager {
@@ -28,6 +29,10 @@ public interface CompensableManager extends TransactionManager {
 	public CompensableTransaction getCompensableTransaction(Thread thread);
 
 	public CompensableTransaction getCompensableTransactionQuietly();
+
+	public void attachThread(Transaction transaction);
+
+	public Transaction detachThread();
 
 	public void compensableBegin() throws NotSupportedException, SystemException;
 
