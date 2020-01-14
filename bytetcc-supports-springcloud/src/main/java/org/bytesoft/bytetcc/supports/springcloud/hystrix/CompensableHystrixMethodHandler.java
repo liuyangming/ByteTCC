@@ -26,6 +26,7 @@ import org.bytesoft.bytetcc.supports.springcloud.feign.CompensableFeignResult;
 import org.bytesoft.bytetcc.supports.springcloud.loadbalancer.CompensableLoadBalancerInterceptor;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableManager;
+import org.bytesoft.compensable.CompensableTransaction;
 import org.bytesoft.compensable.TransactionContext;
 import org.bytesoft.transaction.remote.RemoteCoordinator;
 import org.bytesoft.transaction.supports.rpc.TransactionInterceptor;
@@ -96,7 +97,8 @@ public class CompensableHystrixMethodHandler implements MethodHandler {
 		response.setTransactionContext(transactionContext);
 
 		try {
-			compensableManager.attachThread(compensable);
+			// compensableManager.attachThread(compensable);
+			this.attachThreadIfNecessary(thread);
 			return this.dispatch.get(method).invoke(args);
 		} catch (Throwable error) {
 			Throwable cause = error.getCause();
@@ -136,10 +138,32 @@ public class CompensableHystrixMethodHandler implements MethodHandler {
 					transactionInterceptor.afterReceiveResponse(response);
 				} // end-if (response.isIntercepted() == false)
 			} finally {
-				compensableManager.detachThread();
+				// compensableManager.detachThread();
+				this.detachThreadIfNecessary(thread);
 			}
 		}
 
+	}
+
+	private void attachThreadIfNecessary(Thread thread) {
+		final SpringCloudBeanRegistry beanRegistry = SpringCloudBeanRegistry.getInstance();
+		CompensableBeanFactory beanFactory = beanRegistry.getBeanFactory();
+		CompensableManager compensableManager = beanFactory.getCompensableManager();
+
+		CompensableTransaction compensable = compensableManager.getCompensableTransaction(thread);
+		if (Thread.currentThread().equals(thread) == false) {
+			compensableManager.attachThread(compensable);
+		} // end-if (Thread.currentThread().equals(thread) == false)
+	}
+
+	private void detachThreadIfNecessary(Thread thread) {
+		final SpringCloudBeanRegistry beanRegistry = SpringCloudBeanRegistry.getInstance();
+		CompensableBeanFactory beanFactory = beanRegistry.getBeanFactory();
+		CompensableManager compensableManager = beanFactory.getCompensableManager();
+
+		if (Thread.currentThread().equals(thread) == false) {
+			compensableManager.detachThread();
+		} // end-if (Thread.currentThread().equals(thread) == false)
 	}
 
 	public boolean isStatefully() {
