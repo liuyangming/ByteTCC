@@ -36,6 +36,7 @@ import org.bytesoft.bytetcc.supports.springcloud.loadbalancer.CompensableLoadBal
 import org.bytesoft.bytetcc.supports.springcloud.property.CompensablePropertySourceFactory;
 import org.bytesoft.bytetcc.supports.springcloud.web.CompensableHandlerInterceptor;
 import org.bytesoft.bytetcc.supports.springcloud.web.CompensableRequestInterceptor;
+import org.bytesoft.bytetcc.supports.svc.mvc.ServiceErrorResolver;
 import org.bytesoft.common.utils.CommonUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
@@ -68,6 +69,7 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.transaction.annotation.TransactionManagementConfigurer;
 import org.springframework.transaction.jta.JtaTransactionManager;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.servlet.HandlerExceptionResolver;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -78,9 +80,9 @@ import com.mongodb.client.MongoClients;
 @ImportResource({ "classpath:bytetcc-supports-springcloud.xml" })
 @EnableAspectJAutoProxy(proxyTargetClass = true)
 @EnableTransactionManagement
-public class SpringCloudConfiguration implements TransactionManagementConfigurer, WebMvcConfigurer, BeanFactoryPostProcessor,
-		InitializingBean, SmartInitializingSingleton, CompensableEndpointAware, CompensableBeanFactoryAware, EnvironmentAware,
-		ApplicationContextAware {
+public class SpringCloudConfiguration implements TransactionManagementConfigurer, WebMvcConfigurer,
+		BeanFactoryPostProcessor, InitializingBean, SmartInitializingSingleton, CompensableEndpointAware,
+		CompensableBeanFactoryAware, EnvironmentAware, ApplicationContextAware {
 	static final String CONSTANT_INCLUSIONS = "org.bytesoft.bytetcc.feign.inclusions";
 	static final String CONSTANT_EXCLUSIONS = "org.bytesoft.bytetcc.feign.exclusions";
 	static final String FEIGN_FACTORY_CLASS = "org.springframework.cloud.openfeign.FeignClientFactoryBean";
@@ -119,7 +121,8 @@ public class SpringCloudConfiguration implements TransactionManagementConfigurer
 		this.identifier = String.format("%s:%s:%s", host, name, port);
 	}
 
-	// <!-- <bean id="jtaTransactionManager" class="org.springframework.transaction.jta.JtaTransactionManager"> -->
+	// <!-- <bean id="jtaTransactionManager"
+	// class="org.springframework.transaction.jta.JtaTransactionManager"> -->
 	// <!-- <property name="userTransaction" ref="bytetccUserTransaction" /> -->
 	// <!-- <property name="transactionManager" ref="transactionManager" /> -->
 	// <!-- </bean> -->
@@ -144,7 +147,8 @@ public class SpringCloudConfiguration implements TransactionManagementConfigurer
 	@ConditionalOnMissingBean(com.mongodb.client.MongoClient.class)
 	@ConditionalOnProperty(CONSTANT_MONGODBURI)
 	@org.springframework.context.annotation.Bean
-	public com.mongodb.client.MongoClient mongoClient(@Autowired(required = false) com.mongodb.MongoClient mongoClient) {
+	public com.mongodb.client.MongoClient mongoClient(
+			@Autowired(required = false) com.mongodb.MongoClient mongoClient) {
 		if (mongoClient == null) {
 			return MongoClients.create(this.environment.getProperty(CONSTANT_MONGODBURI));
 		} else {
@@ -250,6 +254,10 @@ public class SpringCloudConfiguration implements TransactionManagementConfigurer
 		CompensableHandlerInterceptor compensableHandlerInterceptor = this.applicationContext
 				.getBean(CompensableHandlerInterceptor.class);
 		registry.addInterceptor(compensableHandlerInterceptor);
+	}
+
+	public void configureHandlerExceptionResolvers(List<HandlerExceptionResolver> resolvers) {
+		resolvers.add(new ServiceErrorResolver());
 	}
 
 	public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
