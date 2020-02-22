@@ -155,7 +155,12 @@ public class ServiceResponseWrapFilter implements Filter {
 			this.writeSuccessResponse(output, responseByteArray);
 			this.copyResponseHeaders(resp, response);
 		} else if (ServiceException.class.isInstance(error)) {
-			logger.debug("Service response failed: uri= {}", request.getRequestURI(), error);
+			Throwable cause = error.getCause();
+			if (cause == null) {
+				logger.debug("Service response failed: uri= {}", request.getRequestURI(), error);
+			} else {
+				logger.warn("Service response failed: uri= {}", request.getRequestURI(), cause);
+			}
 			this.writeFailureResponse(output, ((ServiceException) error).getErrCode(), error.getMessage());
 		} else {
 			logger.error("Service response error: uri= {}", request.getRequestURI(), error);
