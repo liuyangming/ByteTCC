@@ -101,6 +101,9 @@ public class ServiceResponseWrapFilter implements Filter {
 		if (statusCode >= HttpServletResponse.SC_MULTIPLE_CHOICES && statusCode < HttpServletResponse.SC_BAD_REQUEST) {
 			response.sendRedirect(resp.getLocation());
 			return; // response.setStatus(statusCode);
+		} else if (resp.isRdrctFlag()) {
+			response.sendRedirect(resp.getLocation());
+			return; // response.setStatus(statusCode);
 		}
 
 		if (statusCode >= HttpServletResponse.SC_BAD_REQUEST
