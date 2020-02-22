@@ -28,6 +28,7 @@ import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
@@ -136,6 +137,7 @@ public class ServiceResponseWrapFilter implements Filter {
 
 			if (error == null) {
 				this.copyResponseHeaders(resp, response);
+				this.copyResponseCookies(resp, response);
 				output.write(responseByteArray);
 				return;
 			} else if (IOException.class.isInstance(error)) {
@@ -154,6 +156,7 @@ public class ServiceResponseWrapFilter implements Filter {
 		if (error == null) {
 			this.writeSuccessResponse(output, responseByteArray);
 			this.copyResponseHeaders(resp, response);
+			this.copyResponseCookies(resp, response);
 		} else if (ServiceException.class.isInstance(error)) {
 			Throwable cause = error.getCause();
 			if (cause == null) {
@@ -252,6 +255,14 @@ public class ServiceResponseWrapFilter implements Filter {
 			} else {
 				target.addHeader(headerKey, headerVal == null ? "" : String.valueOf(headerVal));
 			}
+		}
+	}
+
+	protected void copyResponseCookies(HttpServletResponseImpl source, HttpServletResponse target) {
+		List<Cookie> cookies = source.getCookies();
+		for (int i = 0; cookies != null && i < cookies.size(); i++) {
+			Cookie cookie = cookies.get(i);
+			target.addCookie(cookie);
 		}
 	}
 

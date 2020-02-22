@@ -43,7 +43,7 @@ public class HttpServletResponseImpl extends HttpServletResponseWrapper {
 	private boolean rdrctFlag;
 	private String location;
 	private Locale locale;
-	private List<Cookie> cookies;
+	private List<Cookie> cookies = new ArrayList<Cookie>();
 
 	private final Map<String, Object> headerMap = new HashMap<String, Object>();
 
