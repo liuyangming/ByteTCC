@@ -17,6 +17,7 @@ package org.bytesoft.bytetcc.supports.svc.client;
 
 public class ServiceResponse<T> {
 	public static final String STATUS_HANDLE_SUCCESS = "000000";
+	public static final String STATUS_ACCEPT_SUCCESS = "100000";
 	public static final String STATUS_SYSTEM_FAILURE = "999999";
 
 	private String status;
@@ -24,25 +25,25 @@ public class ServiceResponse<T> {
 	private String message;
 
 	public ServiceResponse() {
-		this(STATUS_HANDLE_SUCCESS, null, null);
-	}
-
-	public ServiceResponse(T result) {
-		this(result, null);
-	}
-
-	public ServiceResponse(T result, String message) {
-		this(STATUS_HANDLE_SUCCESS, result, message);
-	}
-
-	public ServiceResponse(String status, T result, String message) {
-		this.status = status;
-		this.result = result;
-		this.message = message;
+		this(null);
 	}
 
 	public ServiceResponse(String status, String message) {
-		this(status, null, message);
+		this(null, status, message);
+	}
+
+	public ServiceResponse(T result) {
+		this(result, STATUS_HANDLE_SUCCESS);
+	}
+
+	public ServiceResponse(T result, String status) {
+		this(result, status, null);
+	}
+
+	public ServiceResponse(T result, String status, String message) {
+		this.status = status;
+		this.result = result;
+		this.message = message;
 	}
 
 	public String getStatus() {
