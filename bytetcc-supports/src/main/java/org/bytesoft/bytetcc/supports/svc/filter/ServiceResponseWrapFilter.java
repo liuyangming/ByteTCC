@@ -89,32 +89,42 @@ public class ServiceResponseWrapFilter implements Filter {
 		Throwable error = null;
 		try {
 			chain.doFilter(request, resp);
+			error = this.calculateError(resp);
 		} catch (ServletException ex) {
 			error = (Throwable) ex.getCause();
 		} catch (Exception ex) {
 			error = ex;
 		}
 
-		int statusCode = resp.getStatusCode();
-		String statusMesg = resp.getStatusMesg();
-
-		if (statusCode >= HttpServletResponse.SC_MULTIPLE_CHOICES && statusCode < HttpServletResponse.SC_BAD_REQUEST) {
-			response.sendRedirect(resp.getLocation());
-			return; // response.setStatus(statusCode);
-		} else if (resp.isRdrctFlag()) {
+		if (this.responseIsRedirected(resp)) {
 			response.sendRedirect(resp.getLocation());
 			return; // response.setStatus(statusCode);
 		}
 
+		boolean wrapRequired = this.calculateWrapRequired(resp, error);
+		if (wrapRequired) {
+			this.handleForWrapScenario(request, resp, error);
+		} else {
+			this.handleForUnWrapScenario(request, resp, error);
+		}
+	}
+
+	protected Throwable calculateError(HttpServletResponseImpl response) {
+		String statusMesg = response.getStatusMesg();
+		int statusCode = response.getStatusCode();
 		if (statusCode >= HttpServletResponse.SC_BAD_REQUEST
 				&& statusCode < HttpServletResponse.SC_INTERNAL_SERVER_ERROR) {
-			error = new IllegalStateException(
+			return new IllegalStateException(
 					String.format("Client request error: status= %s, message= %s", statusCode, statusMesg));
-		} else if (error == null && statusCode >= HttpServletResponse.SC_INTERNAL_SERVER_ERROR) {
-			error = new IllegalStateException(
+		} else if (statusCode >= HttpServletResponse.SC_INTERNAL_SERVER_ERROR) {
+			return new IllegalStateException(
 					String.format("Server response error: status= %s, message= %s", statusCode, statusMesg));
+		} else {
+			return null;
 		}
+	}
 
+	protected boolean calculateWrapRequired(HttpServletResponseImpl resp, Throwable error) {
 		String responseContentType = resp.getContentType();
 		byte[] responseByteArray = resp.getByteArray();
 
@@ -132,27 +142,42 @@ public class ServiceResponseWrapFilter implements Filter {
 		} else {
 			wrapRequired = true;
 		}
+		return wrapRequired;
+	}
 
+	protected void handleForUnWrapScenario(HttpServletRequest request, HttpServletResponseImpl resp, Throwable error)
+			throws IOException, ServletException {
+		HttpServletResponse response = (HttpServletResponse) resp.getResponse();
 		ServletOutputStream output = response.getOutputStream();
-		if (wrapRequired == false) {
-			response.setContentLength(responseByteArray.length);
-			response.setContentType(responseContentType);
 
-			if (error == null) {
-				this.copyResponseHeaders(resp, response);
-				this.copyResponseCookies(resp, response);
-				output.write(responseByteArray);
-				return;
-			} else if (IOException.class.isInstance(error)) {
-				throw (IOException) error;
-			} else if (ServletException.class.isInstance(error)) {
-				throw (ServletException) error;
-			} else if (RuntimeException.class.isInstance(error)) {
-				throw (RuntimeException) error;
-			} else {
-				throw new RuntimeException(error);
-			}
+		String responseContentType = resp.getContentType();
+		byte[] responseByteArray = resp.getByteArray();
+
+		response.setContentLength(responseByteArray.length);
+		response.setContentType(responseContentType);
+
+		if (error == null) {
+			this.copyResponseHeaders(resp, response);
+			this.copyResponseCookies(resp, response);
+			output.write(responseByteArray);
+		} else if (IOException.class.isInstance(error)) {
+			throw (IOException) error;
+		} else if (ServletException.class.isInstance(error)) {
+			throw (ServletException) error;
+		} else if (RuntimeException.class.isInstance(error)) {
+			throw (RuntimeException) error;
+		} else {
+			throw new RuntimeException(error);
 		}
+	}
+
+	protected void handleForWrapScenario(HttpServletRequest request, HttpServletResponseImpl resp, Throwable error)
+			throws IOException {
+		HttpServletResponse response = (HttpServletResponse) resp.getResponse();
+		ServletOutputStream output = response.getOutputStream();
+
+		String responseContentType = resp.getContentType();
+		byte[] responseByteArray = resp.getByteArray();
 
 		response.setContentType(StringUtils.isBlank(responseContentType) ? CONTENT_TYPE_JSON : responseContentType);
 
@@ -270,6 +295,13 @@ public class ServiceResponseWrapFilter implements Filter {
 	}
 
 	public void destroy() {
+	}
+
+	protected boolean responseIsRedirected(HttpServletResponseImpl resp) {
+		int statusCode = resp.getStatusCode();
+		boolean redirected = statusCode >= HttpServletResponse.SC_MULTIPLE_CHOICES
+				&& statusCode < HttpServletResponse.SC_BAD_REQUEST;
+		return redirected || resp.isRdrctFlag();
 	}
 
 	protected boolean requestContentTypeIsJson(HttpServletRequest request) {
