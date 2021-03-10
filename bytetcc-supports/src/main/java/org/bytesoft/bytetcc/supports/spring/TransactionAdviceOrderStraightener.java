@@ -25,23 +25,33 @@ import org.springframework.beans.factory.config.BeanPostProcessor;
 public class TransactionAdviceOrderStraightener implements BeanPostProcessor {
 
 	public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
-		this.switchAdvisorOrderIfNecessary(bean);
+		this.switchAdvisorOrderIfNecessary(bean, beanName);
 		return bean;
 	}
 
 	public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
-		this.switchAdvisorOrderIfNecessary(bean);
+		this.switchAdvisorOrderIfNecessary(bean, beanName);
 		return bean;
 	}
 
-	private void switchAdvisorOrderIfNecessary(Object bean) {
+	private void switchAdvisorOrderIfNecessary(Object bean, String beanName) {
 		if (org.springframework.aop.framework.Advised.class.isInstance(bean) == false) {
 			return;
 		}
 
 		org.springframework.aop.framework.Advised advised = (org.springframework.aop.framework.Advised) bean;
-
 		Class<?> targetClass = advised.getTargetClass();
+
+		String message = //
+				String.format("Bean '%s' may be proxied multiple times, its actual class cannot be obtained.", beanName);
+		if (org.springframework.cglib.proxy.Proxy.isProxyClass(targetClass)) {
+			throw new FatalBeanException(message);
+		} else if (net.sf.cglib.proxy.Proxy.isProxyClass(targetClass)) {
+			throw new FatalBeanException(message);
+		} else if (java.lang.reflect.Proxy.isProxyClass(targetClass)) {
+			throw new FatalBeanException(message);
+		}
+
 		if (targetClass == null || targetClass.getAnnotation(Compensable.class) == null) {
 			return;
 		} // end-if (targetClass == null || targetClass.getAnnotation(Compensable.class) == null)
