@@ -26,6 +26,8 @@ public class TransactionContext extends org.bytesoft.transaction.TransactionCont
 	private boolean compensable;
 	private boolean statefully;
 
+	private transient Object compensator;
+
 	public boolean compatibleLoggingLRO() {
 		return true;
 	}
@@ -46,6 +48,14 @@ public class TransactionContext extends org.bytesoft.transaction.TransactionCont
 
 	public void setStatefully(boolean statefully) {
 		this.statefully = statefully;
+	}
+
+	public Object getCompensator() {
+		return compensator;
+	}
+
+	public void setCompensator(Object compensator) {
+		this.compensator = compensator;
 	}
 
 	public boolean isCompensating() {
