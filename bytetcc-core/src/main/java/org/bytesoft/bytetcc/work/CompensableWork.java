@@ -52,8 +52,6 @@ public class CompensableWork implements Work, CompensableBeanFactoryAware {
 	}
 
 	public void run() {
-		TransactionRecovery compensableRecovery = this.beanFactory.getCompensableRecovery();
-
 		this.initializeIfNecessary();
 
 		long nextRecoveryTime = 0;
@@ -64,17 +62,34 @@ public class CompensableWork implements Work, CompensableBeanFactoryAware {
 			if (current >= nextRecoveryTime) {
 				nextRecoveryTime = current + this.recoveryInterval;
 
-				try {
-					compensableRecovery.timingRecover();
-				} catch (SecurityException rex) {
-					logger.debug("Only the master node can perform the recovery operation!");
-				} catch (RuntimeException rex) {
-					logger.error(rex.getMessage(), rex);
-				}
+				this.fireGlobalRecovery();
+				this.fireBranchRecovery();
 			}
 
 			this.waitForMillis(100L);
 		} // end-while (this.currentActive())
+	}
+
+	private void fireGlobalRecovery() {
+		TransactionRecovery compensableRecovery = this.beanFactory.getCompensableRecovery();
+		try {
+			compensableRecovery.timingRecover();
+		} catch (SecurityException rex) {
+			logger.debug("Only the master node can perform the global recovery operation!");
+		} catch (RuntimeException rex) {
+			logger.error(rex.getMessage(), rex);
+		}
+	}
+
+	private void fireBranchRecovery() {
+		TransactionRecovery compensableRecovery = this.beanFactory.getCompensableRecovery();
+		try {
+			compensableRecovery.branchRecover();
+		} catch (SecurityException rex) {
+			logger.debug("Only the branch node can perform the branch recovery operation!");
+		} catch (RuntimeException rex) {
+			logger.error(rex.getMessage(), rex);
+		}
 	}
 
 	private void waitForMillis(long millis) {

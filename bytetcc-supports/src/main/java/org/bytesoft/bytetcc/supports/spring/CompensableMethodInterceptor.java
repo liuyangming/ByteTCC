@@ -64,11 +64,16 @@ public class CompensableMethodInterceptor
 		CompensableTransaction compensable = compensableManager.getCompensableTransactionQuietly();
 
 		TransactionContext transactionContext = compensable.getTransactionContext();
+		boolean compensating = transactionContext.isCompensating();
+		Object compensator = transactionContext.getCompensator();
+
 		if (invocation == null) /* non-Compensable operation in CompensableService */ {
 			return;
 		} else if (invocation.isEnlisted()) {
 			return;
-		} else if (transactionContext.isCompensating()) {
+		} else if (compensating && compensator == null) {
+			throw new IllegalStateException("Illegal state: the global transaction may have been completed!");
+		} else if (compensating && compensator != null) {
 			return;
 		}
 
