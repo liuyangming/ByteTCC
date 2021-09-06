@@ -835,9 +835,12 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 			TransactionXid gxid = transactionXidFactory.createGlobalXid();
 			TransactionXid bxid = transactionXidFactory.createBranchXid(gxid, branch.branchXid.getGlobalTransactionId());
 			compensableArchive.setCompensableXid(bxid);
-
-			compensableLogger.createCompensable(compensableArchive);
+		} else {
+			TransactionXid gxid = transactionXidFactory.createGlobalXid();
+			TransactionXid bxid = transactionXidFactory.createBranchXid(gxid);
+			compensableArchive.setCompensableXid(bxid);
 		}
+		compensableLogger.createCompensable(compensableArchive);
 
 		logger.info("{}| register compensable service: {}.",
 				ByteUtils.byteArrayToString(this.transactionContext.getXid().getGlobalTransactionId()),
