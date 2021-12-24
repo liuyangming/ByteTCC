@@ -15,6 +15,7 @@
  */
 package org.bytesoft.bytetcc.supports.springboot;
 
+import org.bytesoft.bytetcc.TransactionBeanFactoryImpl;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableManager;
 import org.bytesoft.compensable.CompensableTransaction;
@@ -25,8 +26,7 @@ import org.bytesoft.transaction.supports.rpc.TransactionRequest;
 import org.bytesoft.transaction.supports.rpc.TransactionResponse;
 
 public class SpringBootCompensableInterceptor implements TransactionInterceptor, CompensableBeanFactoryAware {
-	@javax.inject.Inject
-	private CompensableBeanFactory beanFactory;
+	private CompensableBeanFactory beanFactory = TransactionBeanFactoryImpl.getInstance();
 
 	private TransactionInterceptor compensableInterceptor;
 

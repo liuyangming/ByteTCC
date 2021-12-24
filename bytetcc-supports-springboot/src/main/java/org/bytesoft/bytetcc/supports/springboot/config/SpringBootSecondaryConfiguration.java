@@ -148,7 +148,9 @@ public class SpringBootSecondaryConfiguration
 	}
 
 	public void configureHandlerExceptionResolvers(List<HandlerExceptionResolver> resolvers) {
-		resolvers.add(new ServiceErrorResolver());
+		ServiceErrorResolver resolver = new ServiceErrorResolver();
+		resolver.setEnvironment(this.environment);
+		resolvers.add(resolver);
 	}
 
 	public CompensableBeanFactory getBeanFactory() {

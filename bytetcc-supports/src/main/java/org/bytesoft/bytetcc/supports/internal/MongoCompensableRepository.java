@@ -38,6 +38,7 @@ import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.bytesoft.bytetcc.CompensableManagerImpl;
 import org.bytesoft.bytetcc.CompensableTransactionImpl;
+import org.bytesoft.bytetcc.TransactionBeanFactoryImpl;
 import org.bytesoft.bytetcc.supports.CompensableRolledbackMarker;
 import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.common.utils.CommonUtils;
@@ -80,8 +81,7 @@ public class MongoCompensableRepository implements TransactionRepository, Compen
 	private String endpoint;
 	@javax.inject.Inject
 	private CompensableInstVersionManager versionManager;
-	@javax.inject.Inject
-	private CompensableBeanFactory beanFactory;
+	private CompensableBeanFactory beanFactory = TransactionBeanFactoryImpl.getInstance();
 	@javax.inject.Inject
 	private CommandDispatcher commandDispatcher;
 

@@ -41,6 +41,7 @@ import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher.Event.EventType;
 import org.bson.Document;
 import org.bson.conversions.Bson;
+import org.bytesoft.bytetcc.TransactionBeanFactoryImpl;
 import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.common.utils.CommonUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;
@@ -80,8 +81,7 @@ public class MongoCompensableLock implements TransactionLock, CompensableInstVer
 	@javax.annotation.Resource
 	private CuratorFramework curatorFramework;
 	private String endpoint;
-	@javax.inject.Inject
-	private CompensableBeanFactory beanFactory;
+	private CompensableBeanFactory beanFactory = TransactionBeanFactoryImpl.getInstance();
 	private boolean initializeEnabled = true;
 
 	private final Map<String, Long> instances = new HashMap<String, Long>();

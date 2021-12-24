@@ -52,8 +52,7 @@ import org.slf4j.LoggerFactory;
 public class CompensableCoordinator implements RemoteCoordinator, CompensableBeanFactoryAware, CompensableEndpointAware {
 	static final Logger logger = LoggerFactory.getLogger(CompensableCoordinator.class);
 
-	@javax.inject.Inject
-	private CompensableBeanFactory beanFactory;
+	private CompensableBeanFactory beanFactory = TransactionBeanFactoryImpl.getInstance();
 	private String endpoint;
 
 	private transient boolean ready = false;

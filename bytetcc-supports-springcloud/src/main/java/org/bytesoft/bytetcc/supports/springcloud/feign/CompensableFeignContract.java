@@ -66,8 +66,8 @@ public class CompensableFeignContract implements feign.Contract, InitializingBea
 		this.delegate = feignContract;
 	}
 
-	public List<MethodMetadata> parseAndValidatateMetadata(Class<?> targetType) {
-		List<MethodMetadata> metas = this.delegate.parseAndValidatateMetadata(targetType);
+	public List<MethodMetadata> parseAndValidateMetadata(Class<?> targetType) {
+		List<MethodMetadata> metas = this.delegate.parseAndValidateMetadata(targetType);
 		for (int i = 0; metas != null && i < metas.size(); i++) {
 			MethodMetadata meta = metas.get(i);
 			if (meta.returnType() == void.class) {

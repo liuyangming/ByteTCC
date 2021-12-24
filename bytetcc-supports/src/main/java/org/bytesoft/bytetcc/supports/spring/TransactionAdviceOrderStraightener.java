@@ -25,8 +25,7 @@ import org.springframework.beans.factory.config.BeanPostProcessor;
 public class TransactionAdviceOrderStraightener implements BeanPostProcessor {
 
 	public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
-		this.switchAdvisorOrderIfNecessary(bean, beanName);
-		return bean;
+		return bean; // this.switchAdvisorOrderIfNecessary(bean, beanName);
 	}
 
 	public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
@@ -40,6 +39,7 @@ public class TransactionAdviceOrderStraightener implements BeanPostProcessor {
 		}
 
 		org.springframework.aop.framework.Advised advised = (org.springframework.aop.framework.Advised) bean;
+//		org.springframework.aop.framework.AdvisedSupport advised = (org.springframework.aop.framework.AdvisedSupport) bean;
 		Class<?> targetClass = advised.getTargetClass();
 
 		String message = //
@@ -90,11 +90,16 @@ public class TransactionAdviceOrderStraightener implements BeanPostProcessor {
 		}
 
 		if (transactionIndex != -1 && compensableIndex != -1 && transactionIndex < compensableIndex) {
-			Advisor advisor = advisors[transactionIndex];
-			advisors[transactionIndex] = advisors[compensableIndex];
-			advisors[compensableIndex] = advisor;
+//			Advisor advisor = advisors[transactionIndex];
+//			advisors[transactionIndex] = advisors[compensableIndex];
+//			advisors[compensableIndex] = advisor;
+			Advisor transactionAdvisor = advisors[transactionIndex];
+			Advisor compensableAdvisor = advisors[compensableIndex];
+			advised.removeAdvisor(transactionIndex);
+			advised.addAdvice(transactionIndex, compensableAdvisor.getAdvice());
+			advised.removeAdvisor(compensableIndex);
+			advised.addAdvice(compensableIndex, transactionAdvisor.getAdvice());
 		}
-
 	}
 
 }

@@ -22,7 +22,6 @@ import org.bytesoft.bytejta.supports.rpc.TransactionRequestImpl;
 import org.bytesoft.bytejta.supports.rpc.TransactionResponseImpl;
 import org.bytesoft.bytetcc.CompensableTransactionImpl;
 import org.bytesoft.bytetcc.supports.springcloud.SpringCloudBeanRegistry;
-import org.bytesoft.bytetcc.supports.springcloud.loadbalancer.CompensableLoadBalancerInterceptor;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableManager;
 import org.bytesoft.compensable.TransactionContext;
@@ -30,8 +29,6 @@ import org.bytesoft.transaction.remote.RemoteCoordinator;
 import org.bytesoft.transaction.supports.rpc.TransactionInterceptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.netflix.loadbalancer.Server;
 
 public class CompensableFeignHandler implements InvocationHandler {
 	static final Logger logger = LoggerFactory.getLogger(CompensableFeignHandler.class);
@@ -63,27 +60,28 @@ public class CompensableFeignHandler implements InvocationHandler {
 		final TransactionRequestImpl request = new TransactionRequestImpl();
 		final TransactionResponseImpl response = new TransactionResponseImpl();
 
-		beanRegistry.setLoadBalancerInterceptor(new CompensableLoadBalancerInterceptor(this.statefully) {
-			public void afterCompletion(Server server) {
-				beanRegistry.removeLoadBalancerInterceptor();
-
-				if (server == null) {
-					logger.warn(
-							"There is no suitable server, the TransactionInterceptor.beforeSendRequest() operation is not executed!");
-					return;
-				} // end-if (server == null)
-
-				// TransactionRequestImpl request = new TransactionRequestImpl();
-				request.setTransactionContext(transactionContext);
-
-				String instanceId = this.getInstanceId(server);
-
-				RemoteCoordinator coordinator = beanRegistry.getConsumeCoordinator(instanceId);
-				request.setTargetTransactionCoordinator(coordinator);
-
-				transactionInterceptor.beforeSendRequest(request);
-			}
-		});
+		// TODO
+//		beanRegistry.setLoadBalancerInterceptor(new CompensableLoadBalancerInterceptor(this.statefully) {
+//			public void afterCompletion(Server server) {
+//				beanRegistry.removeLoadBalancerInterceptor();
+//
+//				if (server == null) {
+//					logger.warn(
+//							"There is no suitable server, the TransactionInterceptor.beforeSendRequest() operation is not executed!");
+//					return;
+//				} // end-if (server == null)
+//
+//				// TransactionRequestImpl request = new TransactionRequestImpl();
+//				request.setTransactionContext(transactionContext);
+//
+//				String instanceId = this.getInstanceId(server);
+//
+//				RemoteCoordinator coordinator = beanRegistry.getConsumeCoordinator(instanceId);
+//				request.setTargetTransactionCoordinator(coordinator);
+//
+//				transactionInterceptor.beforeSendRequest(request);
+//			}
+//		});
 
 		// TODO should be replaced by CompensableFeignResult.getTransactionContext()
 		response.setTransactionContext(transactionContext);

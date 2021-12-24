@@ -15,6 +15,7 @@
  */
 package org.bytesoft.bytetcc.supports.dubbo;
 
+import org.bytesoft.bytetcc.TransactionBeanFactoryImpl;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 import org.slf4j.Logger;
@@ -32,8 +33,7 @@ public final class CompensableBeanRegistry implements CompensableBeanFactoryAwar
 
 	private ApplicationContext applicationContext;
 	private Environment environment;
-	@javax.inject.Inject
-	private CompensableBeanFactory beanFactory;
+	private CompensableBeanFactory beanFactory = TransactionBeanFactoryImpl.getInstance();
 
 	private CompensableBeanRegistry() {
 		if (instance != null) {

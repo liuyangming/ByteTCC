@@ -19,6 +19,7 @@ import java.util.Arrays;
 
 import javax.transaction.xa.Xid;
 
+import org.bytesoft.bytetcc.TransactionBeanFactoryImpl;
 import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.common.utils.SerializeUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;
@@ -35,8 +36,7 @@ public class CompensableArchiveDeserializer implements ArchiveDeserializer, Comp
 	static final Logger logger = LoggerFactory.getLogger(CompensableArchiveDeserializer.class);
 	static final int LENGTH_OF_XID = XidFactory.GLOBAL_TRANSACTION_LENGTH + XidFactory.BRANCH_QUALIFIER_LENGTH;
 
-	@javax.inject.Inject
-	private CompensableBeanFactory beanFactory;
+	private CompensableBeanFactory beanFactory = TransactionBeanFactoryImpl.getInstance();
 
 	public byte[] serialize(TransactionXid xid, Object obj) {
 		CompensableArchive archive = (CompensableArchive) obj;

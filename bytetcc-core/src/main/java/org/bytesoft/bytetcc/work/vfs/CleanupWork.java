@@ -33,6 +33,7 @@ import javax.transaction.xa.Xid;
 import org.apache.commons.lang3.StringUtils;
 import org.bytesoft.bytejta.supports.jdbc.RecoveredResource;
 import org.bytesoft.bytejta.supports.resource.LocalXAResourceDescriptor;
+import org.bytesoft.bytetcc.TransactionBeanFactoryImpl;
 import org.bytesoft.bytetcc.supports.resource.LocalResourceCleaner;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
@@ -48,8 +49,7 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableEndpo
 	static final long SECOND_MILLIS = 1000L;
 	static final int MAX_HANDLE_RECORDS = 200;
 
-	@javax.inject.Inject
-	private CompensableBeanFactory beanFactory;
+	private CompensableBeanFactory beanFactory = TransactionBeanFactoryImpl.getInstance();
 	private final Lock lock = new ReentrantLock();
 
 	private final Lock startLock = new ReentrantLock();

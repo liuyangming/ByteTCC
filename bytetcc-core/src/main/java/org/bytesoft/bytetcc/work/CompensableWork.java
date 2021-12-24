@@ -17,6 +17,7 @@ package org.bytesoft.bytetcc.work;
 
 import javax.resource.spi.work.Work;
 
+import org.bytesoft.bytetcc.TransactionBeanFactoryImpl;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 import org.bytesoft.transaction.TransactionRecovery;
@@ -33,8 +34,7 @@ public class CompensableWork implements Work, CompensableBeanFactoryAware {
 
 	private volatile boolean initialized = false;
 
-	@javax.inject.Inject
-	private CompensableBeanFactory beanFactory;
+	private CompensableBeanFactory beanFactory = TransactionBeanFactoryImpl.getInstance();
 
 	private void initializeIfNecessary() {
 		TransactionRecovery compensableRecovery = this.beanFactory.getCompensableRecovery();

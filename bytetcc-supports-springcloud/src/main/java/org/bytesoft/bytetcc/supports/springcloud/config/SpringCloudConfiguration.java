@@ -31,8 +31,6 @@ import org.bytesoft.bytetcc.supports.springcloud.feign.CompensableFeignContract;
 import org.bytesoft.bytetcc.supports.springcloud.feign.CompensableFeignDecoder;
 import org.bytesoft.bytetcc.supports.springcloud.feign.CompensableFeignErrorDecoder;
 import org.bytesoft.bytetcc.supports.springcloud.feign.CompensableFeignInterceptor;
-import org.bytesoft.bytetcc.supports.springcloud.hystrix.CompensableHystrixBeanPostProcessor;
-import org.bytesoft.bytetcc.supports.springcloud.loadbalancer.CompensableLoadBalancerRuleImpl;
 import org.bytesoft.bytetcc.supports.springcloud.property.CompensablePropertySourceFactory;
 import org.bytesoft.bytetcc.supports.springcloud.web.CompensableHandlerInterceptor;
 import org.bytesoft.bytetcc.supports.springcloud.web.CompensableRequestInterceptor;
@@ -45,14 +43,12 @@ import org.springframework.beans.BeansException;
 import org.springframework.beans.MutablePropertyValues;
 import org.springframework.beans.PropertyValue;
 import org.springframework.beans.factory.InitializingBean;
-import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.beans.factory.ObjectFactory;
 import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.http.HttpMessageConverters;
@@ -95,19 +91,20 @@ public class SpringCloudConfiguration implements TransactionManagementConfigurer
 	private CompensableBeanFactory beanFactory;
 	private transient final Set<String> transientClientSet = new HashSet<String>();
 
+	// TODO
 	private void checkLoadbalancerRuleCorrectly() /* Check if the rule is set correctly */ {
-		com.netflix.loadbalancer.IRule loadBalancerRule = null;
-		try {
-			loadBalancerRule = this.applicationContext.getBean(com.netflix.loadbalancer.IRule.class);
-		} catch (NoSuchBeanDefinitionException ex) {
-			return; // return quietly
-		}
-
-		if (CompensableLoadBalancerRuleImpl.class.isInstance(loadBalancerRule)) {
-			return; // return quietly
-		}
-
-		throw new IllegalStateException("CompensableLoadBalancerRuleImpl is disabled!");
+//		com.netflix.loadbalancer.IRule loadBalancerRule = null;
+//		try {
+//			loadBalancerRule = this.applicationContext.getBean(com.netflix.loadbalancer.IRule.class);
+//		} catch (NoSuchBeanDefinitionException ex) {
+//			return; // return quietly
+//		}
+//
+//		if (CompensableLoadBalancerRuleImpl.class.isInstance(loadBalancerRule)) {
+//			return; // return quietly
+//		}
+//
+//		throw new IllegalStateException("CompensableLoadBalancerRuleImpl is disabled!");
 	}
 
 	public void afterSingletonsInstantiated() {
@@ -168,18 +165,18 @@ public class SpringCloudConfiguration implements TransactionManagementConfigurer
 		}
 	}
 
-	@org.springframework.context.annotation.Bean
+	@org.springframework.context.annotation.Bean // TODO
 	@ConditionalOnProperty(name = "feign.hystrix.enabled", havingValue = "false", matchIfMissing = true)
 	public CompensableFeignBeanPostProcessor feignPostProcessor() {
 		return new CompensableFeignBeanPostProcessor();
 	}
 
-	@org.springframework.context.annotation.Bean
-	@ConditionalOnProperty(name = "feign.hystrix.enabled")
-	@ConditionalOnClass(feign.hystrix.HystrixFeign.class)
-	public CompensableHystrixBeanPostProcessor hystrixPostProcessor() {
-		return new CompensableHystrixBeanPostProcessor();
-	}
+//	@org.springframework.context.annotation.Bean
+//	@ConditionalOnProperty(name = "feign.hystrix.enabled")
+//	@ConditionalOnClass(feign.hystrix.HystrixFeign.class)
+//	public CompensableHystrixBeanPostProcessor hystrixPostProcessor() {
+//		return new CompensableHystrixBeanPostProcessor();
+//	}
 
 	@org.springframework.context.annotation.Bean
 	public CompensableFeignInterceptor compensableFeignInterceptor() {
@@ -257,7 +254,9 @@ public class SpringCloudConfiguration implements TransactionManagementConfigurer
 	}
 
 	public void configureHandlerExceptionResolvers(List<HandlerExceptionResolver> resolvers) {
-		resolvers.add(new ServiceErrorResolver());
+		ServiceErrorResolver resolver = new ServiceErrorResolver();
+		resolver.setEnvironment(this.environment);
+		resolvers.add(resolver);
 	}
 
 	public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {

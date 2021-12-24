@@ -67,8 +67,7 @@ public class TransactionRecoveryImpl
 
 	static final long SECOND_MILLIS = 1000L;
 
-	@javax.inject.Inject
-	protected CompensableBeanFactory beanFactory;
+	protected CompensableBeanFactory beanFactory = TransactionBeanFactoryImpl.getInstance();
 	protected String endpoint;
 	protected transient boolean statefully;
 	protected volatile boolean initialized;

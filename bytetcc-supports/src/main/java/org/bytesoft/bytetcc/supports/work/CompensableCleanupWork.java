@@ -17,6 +17,7 @@ import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.bytesoft.bytejta.supports.jdbc.RecoveredResource;
 import org.bytesoft.bytejta.supports.resource.LocalXAResourceDescriptor;
+import org.bytesoft.bytetcc.TransactionBeanFactoryImpl;
 import org.bytesoft.bytetcc.supports.internal.MongoCompensableLogger;
 import org.bytesoft.bytetcc.supports.resource.LocalResourceCleaner;
 import org.bytesoft.common.utils.ByteUtils;
@@ -53,8 +54,7 @@ public class CompensableCleanupWork
 	private CommandDispatcher commandDispatcher;
 	private String endpoint;
 	private boolean released;
-	@javax.inject.Inject
-	private CompensableBeanFactory beanFactory;
+	private CompensableBeanFactory beanFactory = TransactionBeanFactoryImpl.getInstance();
 
 	public void forget(Xid xid, String resourceId) throws RuntimeException {
 		try {

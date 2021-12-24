@@ -24,6 +24,7 @@ import javax.transaction.xa.XAResource;
 import org.bytesoft.bytejta.supports.resource.RemoteResourceDescriptor;
 import org.bytesoft.bytejta.supports.rpc.TransactionRequestImpl;
 import org.bytesoft.bytejta.supports.rpc.TransactionResponseImpl;
+import org.bytesoft.bytetcc.TransactionBeanFactoryImpl;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableManager;
 import org.bytesoft.compensable.CompensableTransaction;
@@ -42,8 +43,7 @@ import org.slf4j.LoggerFactory;
 public class CompensableInterceptorImpl implements TransactionInterceptor, CompensableBeanFactoryAware {
 	static final Logger logger = LoggerFactory.getLogger(CompensableInterceptorImpl.class);
 
-	@javax.inject.Inject
-	private CompensableBeanFactory beanFactory;
+	private CompensableBeanFactory beanFactory = TransactionBeanFactoryImpl.getInstance();
 
 	public void beforeSendRequest(TransactionRequest request) throws IllegalStateException {
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();

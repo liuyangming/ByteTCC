@@ -30,6 +30,7 @@ import javax.transaction.xa.Xid;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.bson.Document;
+import org.bytesoft.bytetcc.TransactionBeanFactoryImpl;
 import org.bytesoft.bytetcc.supports.CompensableInvocationImpl;
 import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.common.utils.CommonUtils;
@@ -76,8 +77,7 @@ public class MongoCompensableLogger implements CompensableLogger, CompensableEnd
 	private String endpoint;
 	@javax.inject.Inject
 	private CompensableInstVersionManager versionManager;
-	@javax.inject.Inject
-	private CompensableBeanFactory beanFactory;
+	private CompensableBeanFactory beanFactory = TransactionBeanFactoryImpl.getInstance();
 	private volatile boolean initializeEnabled = true;
 
 	public void createTransaction(TransactionArchive archive) {

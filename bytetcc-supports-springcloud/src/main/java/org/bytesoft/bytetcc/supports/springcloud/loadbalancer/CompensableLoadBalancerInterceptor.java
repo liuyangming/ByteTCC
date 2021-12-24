@@ -21,15 +21,10 @@ import java.util.List;
 import org.apache.commons.lang3.StringUtils;
 import org.bytesoft.bytetcc.CompensableTransactionImpl;
 import org.bytesoft.bytetcc.supports.springcloud.SpringCloudBeanRegistry;
-import org.bytesoft.common.utils.CommonUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableManager;
 import org.bytesoft.transaction.supports.resource.XAResourceDescriptor;
-
-import com.netflix.appinfo.InstanceInfo;
-import com.netflix.loadbalancer.Server;
-import com.netflix.loadbalancer.Server.MetaInfo;
-import com.netflix.niws.loadbalancer.DiscoveryEnabledServer;
+import org.springframework.cloud.client.ServiceInstance;
 
 public abstract class CompensableLoadBalancerInterceptor {
 	private final boolean stateful;
@@ -42,54 +37,36 @@ public abstract class CompensableLoadBalancerInterceptor {
 		this.stateful = stateful;
 	}
 
-	public List<Server> beforeCompletion(List<Server> servers) {
+	public List<ServiceInstance> beforeCompletion(List<ServiceInstance> servers) {
 		SpringCloudBeanRegistry beanRegistry = SpringCloudBeanRegistry.getInstance();
 		CompensableBeanFactory beanFactory = beanRegistry.getBeanFactory();
 		CompensableManager compensableManager = beanFactory.getCompensableManager();
 
-		final List<Server> readyServerList = new ArrayList<Server>();
-		final List<Server> unReadyServerList = new ArrayList<Server>();
+		final List<ServiceInstance> readyServerList = new ArrayList<ServiceInstance>();
+		final List<ServiceInstance> unReadyServerList = new ArrayList<ServiceInstance>();
 
 		if (this.stateful) {
 			boolean applicationEnlisted = false;
 			for (int i = 0; servers != null && i < servers.size(); i++) {
-				Server server = servers.get(i);
+				ServiceInstance server = servers.get(i);
 
-				String application = null;
-				String instanceId = null;
-				if (DiscoveryEnabledServer.class.isInstance(server)) {
-					DiscoveryEnabledServer discoveryEnabledServer = (DiscoveryEnabledServer) server;
-					InstanceInfo instanceInfo = discoveryEnabledServer.getInstanceInfo();
-					String addr = instanceInfo.getIPAddr();
-					application = instanceInfo.getAppName();
-					int port = instanceInfo.getPort();
-
-					instanceId = String.format("%s:%s:%s", addr, application, port);
-				} else {
-					MetaInfo metaInfo = server.getMetaInfo();
-
-					String host = server.getHost();
-					String addr = host.matches("\\d+(\\.\\d+){3}") ? host : CommonUtils.getInetAddress(host);
-					application = metaInfo.getAppName();
-					int port = server.getPort();
-					instanceId = String.format("%s:%s:%s", addr, application, port);
-				}
+				String instanceId = this.getInstanceId(server);
 
 				final CompensableTransactionImpl compensable = //
 						(CompensableTransactionImpl) compensableManager.getCompensableTransactionQuietly();
-				XAResourceDescriptor descriptor = compensable.getRemoteCoordinator(application);
+				XAResourceDescriptor descriptor = compensable.getRemoteCoordinator(server.getServiceId());
 				if (descriptor == null) {
-					if (server.isReadyToServe()) {
-						readyServerList.add(server);
-					} else {
-						unReadyServerList.add(server);
-					}
+//					if (server.isReadyToServe()) {
+					readyServerList.add(server);
+//					} else {
+//						unReadyServerList.add(server);
+//					}
 				} else {
 					String identifier = descriptor.getIdentifier();
 					applicationEnlisted = true;
 
 					if (StringUtils.equals(identifier, instanceId)) {
-						List<Server> serverList = new ArrayList<Server>();
+						List<ServiceInstance> serverList = new ArrayList<ServiceInstance>();
 						serverList.add(server);
 						return serverList;
 					} // end-if (StringUtils.equals(identifier, instanceId))
@@ -97,48 +74,31 @@ public abstract class CompensableLoadBalancerInterceptor {
 			}
 
 			if (applicationEnlisted) {
-				return new ArrayList<Server>();
+				return new ArrayList<ServiceInstance>();
 			} // end-if (systemMatched)
 
 		} else {
 			for (int i = 0; servers != null && i < servers.size(); i++) {
-				Server server = servers.get(i);
-
-				if (server.isReadyToServe()) {
-					readyServerList.add(server);
-				} else {
-					unReadyServerList.add(server);
-				}
+				ServiceInstance server = servers.get(i);
+//				if (server.isReadyToServe()) {
+				readyServerList.add(server);
+//				} else {
+//					unReadyServerList.add(server);
+//				}
 			}
 		}
 
 		return readyServerList.isEmpty() ? unReadyServerList : readyServerList;
 	}
 
-	public abstract void afterCompletion(Server server);
+	public abstract void afterCompletion(ServiceInstance server);
 
-	public String getInstanceId(Server server) {
-		String instanceId = null;
+	public String getInstanceId(ServiceInstance server) {
+		String addr = server.getHost();
+		String application = server.getServiceId();
+		int port = server.getPort();
 
-		if (DiscoveryEnabledServer.class.isInstance(server)) {
-			DiscoveryEnabledServer discoveryEnabledServer = (DiscoveryEnabledServer) server;
-			InstanceInfo instanceInfo = discoveryEnabledServer.getInstanceInfo();
-			String addr = instanceInfo.getIPAddr();
-			String appName = instanceInfo.getAppName();
-			int port = instanceInfo.getPort();
-
-			instanceId = String.format("%s:%s:%s", addr, appName, port);
-		} else {
-			MetaInfo metaInfo = server.getMetaInfo();
-
-			String host = server.getHost();
-			String addr = host.matches("\\d+(\\.\\d+){3}") ? host : CommonUtils.getInetAddress(host);
-			String appName = metaInfo.getAppName();
-			int port = server.getPort();
-			instanceId = String.format("%s:%s:%s", addr, appName, port);
-		}
-
-		return instanceId;
+		return String.format("%s:%s:%s", addr, application, port);
 	}
 
 }

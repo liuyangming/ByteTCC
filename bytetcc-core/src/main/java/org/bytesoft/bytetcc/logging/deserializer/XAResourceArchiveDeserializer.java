@@ -23,6 +23,7 @@ import org.bytesoft.bytejta.supports.resource.CommonResourceDescriptor;
 import org.bytesoft.bytejta.supports.resource.LocalXAResourceDescriptor;
 import org.bytesoft.bytejta.supports.resource.RemoteResourceDescriptor;
 import org.bytesoft.bytejta.supports.resource.UnidentifiedResourceDescriptor;
+import org.bytesoft.bytetcc.TransactionBeanFactoryImpl;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 import org.bytesoft.transaction.archive.XAResourceArchive;
@@ -35,8 +36,7 @@ import org.bytesoft.transaction.xa.XidFactory;
 public class XAResourceArchiveDeserializer implements ArchiveDeserializer, CompensableBeanFactoryAware {
 
 	private XAResourceDeserializer deserializer;
-	@javax.inject.Inject
-	private CompensableBeanFactory beanFactory;
+	private CompensableBeanFactory beanFactory = TransactionBeanFactoryImpl.getInstance();
 
 	public byte[] serialize(TransactionXid xid, Object obj) {
 		XAResourceArchive archive = (XAResourceArchive) obj;

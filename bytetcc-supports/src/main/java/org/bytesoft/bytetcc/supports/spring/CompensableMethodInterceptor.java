@@ -24,6 +24,7 @@ import org.aopalliance.intercept.MethodInvocation;
 import org.apache.commons.lang3.StringUtils;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.reflect.MethodSignature;
+import org.bytesoft.bytetcc.TransactionBeanFactoryImpl;
 import org.bytesoft.bytetcc.supports.CompensableInvocationImpl;
 import org.bytesoft.bytetcc.supports.CompensableSynchronization;
 import org.bytesoft.bytetcc.supports.spring.aware.CompensableBeanNameAware;
@@ -52,12 +53,11 @@ public class CompensableMethodInterceptor
 		implements MethodInterceptor, CompensableSynchronization, ApplicationContextAware, CompensableBeanFactoryAware {
 	static final Logger logger = LoggerFactory.getLogger(CompensableMethodInterceptor.class);
 
-	@javax.inject.Inject
-	private CompensableBeanFactory beanFactory;
 	private ApplicationContext applicationContext;
 
 	public void afterBegin(Transaction transaction, boolean createFlag) {
-		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
+		CompensableBeanFactory beanFactory = TransactionBeanFactoryImpl.getInstance();
+		CompensableManager compensableManager = beanFactory.getCompensableManager();
 		CompensableInvocationRegistry registry = CompensableInvocationRegistry.getInstance();
 
 		CompensableInvocation invocation = registry.getCurrent();
@@ -86,7 +86,8 @@ public class CompensableMethodInterceptor
 	// <!-- </aop:config> -->
 	@org.aspectj.lang.annotation.Around("@within(org.bytesoft.compensable.Compensable)")
 	public Object invoke(final ProceedingJoinPoint pjp) throws Throwable {
-		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
+		CompensableBeanFactory beanFactory = TransactionBeanFactoryImpl.getInstance();
+		CompensableManager compensableManager = beanFactory.getCompensableManager();
 		CompensableTransaction compensable = compensableManager.getCompensableTransactionQuietly();
 		if (compensable != null && compensable.getTransactionContext() != null
 				&& compensable.getTransactionContext().isCompensating()) {
@@ -104,7 +105,8 @@ public class CompensableMethodInterceptor
 	}
 
 	public Object invoke(MethodInvocation mi) throws Throwable {
-		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
+		CompensableBeanFactory beanFactory = TransactionBeanFactoryImpl.getInstance();
+		CompensableManager compensableManager = beanFactory.getCompensableManager();
 		CompensableTransaction compensable = compensableManager.getCompensableTransactionQuietly();
 		if (compensable != null && compensable.getTransactionContext() != null
 				&& compensable.getTransactionContext().isCompensating()) {
@@ -121,8 +123,9 @@ public class CompensableMethodInterceptor
 
 	public Object execute(String identifier, Method method, Object[] args, Joinpoint point) throws Throwable {
 		CompensableInvocationRegistry registry = CompensableInvocationRegistry.getInstance();
-		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
-		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
+		CompensableBeanFactory beanFactory = TransactionBeanFactoryImpl.getInstance();
+		TransactionManager transactionManager = beanFactory.getTransactionManager();
+		CompensableManager compensableManager = beanFactory.getCompensableManager();
 
 		Compensable annotation = method.getDeclaringClass().getAnnotation(Compensable.class);
 		Class<?> interfaceClass = annotation.interfaceClass();
@@ -274,11 +277,10 @@ public class CompensableMethodInterceptor
 	}
 
 	public void setBeanFactory(CompensableBeanFactory tbf) {
-		this.beanFactory = tbf;
 	}
 
 	public CompensableBeanFactory getBeanFactory() {
-		return beanFactory;
+		return TransactionBeanFactoryImpl.getInstance();
 	}
 
 	public ApplicationContext getApplicationContext() {

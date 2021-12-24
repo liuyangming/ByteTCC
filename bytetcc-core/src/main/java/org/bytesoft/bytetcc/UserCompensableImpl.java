@@ -51,8 +51,7 @@ public class UserCompensableImpl implements UserCompensable, Referenceable, Seri
 
 	@javax.annotation.Resource
 	private TransactionManager transactionManager;
-	@javax.inject.Inject
-	private CompensableBeanFactory beanFactory;
+	private CompensableBeanFactory beanFactory = TransactionBeanFactoryImpl.getInstance();
 	private transient boolean statefully;
 
 	public TransactionXid compensableBegin() throws NotSupportedException, SystemException {

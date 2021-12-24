@@ -34,7 +34,7 @@ public class LocalXADataSourcePostProcessor implements BeanPostProcessor, Ordere
 	private Environment environment;
 
 	public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
-		return this.createDataSourceWrapperIfNecessary(bean, beanName);
+		return bean; // return this.createDataSourceWrapperIfNecessary(bean, beanName);
 	}
 
 	public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {

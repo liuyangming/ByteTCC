@@ -23,7 +23,6 @@ import org.bytesoft.bytejta.supports.rpc.TransactionRequestImpl;
 import org.bytesoft.bytejta.supports.rpc.TransactionResponseImpl;
 import org.bytesoft.bytetcc.CompensableTransactionImpl;
 import org.bytesoft.bytetcc.supports.springcloud.SpringCloudBeanRegistry;
-import org.bytesoft.bytetcc.supports.springcloud.loadbalancer.CompensableLoadBalancerInterceptor;
 import org.bytesoft.common.utils.SerializeUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableManager;
@@ -42,8 +41,6 @@ import org.springframework.http.client.ClientHttpRequestExecution;
 import org.springframework.http.client.ClientHttpRequestInterceptor;
 import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.web.client.HttpClientErrorException;
-
-import com.netflix.loadbalancer.Server;
 
 public class CompensableRequestInterceptor
 		implements ClientHttpRequestInterceptor, CompensableEndpointAware, ApplicationContextAware {
@@ -80,24 +77,25 @@ public class CompensableRequestInterceptor
 			return execution.execute(httpRequest, body);
 		}
 
-		beanRegistry.setLoadBalancerInterceptor(new CompensableLoadBalancerInterceptor(this.statefully) {
-			public void afterCompletion(Server server) {
-				if (server == null) {
-					logger.warn(
-							"There is no suitable server, the TransactionInterceptor.beforeSendRequest() operation is not executed!");
-					return;
-				}
-
-				try {
-					String instanceId = this.getInstanceId(server);
-
-					invokeBeforeSendRequest(httpRequest, instanceId);
-				} catch (IOException ex) {
-					throw new RuntimeException(ex);
-				}
-
-			}
-		});
+		// TODO
+//		beanRegistry.setLoadBalancerInterceptor(new CompensableLoadBalancerInterceptor(this.statefully) {
+//			public void afterCompletion(Server server) {
+//				if (server == null) {
+//					logger.warn(
+//							"There is no suitable server, the TransactionInterceptor.beforeSendRequest() operation is not executed!");
+//					return;
+//				}
+//
+//				try {
+//					String instanceId = this.getInstanceId(server);
+//
+//					invokeBeforeSendRequest(httpRequest, instanceId);
+//				} catch (IOException ex) {
+//					throw new RuntimeException(ex);
+//				}
+//
+//			}
+//		});
 
 		ClientHttpResponse httpResponse = null;
 		boolean serverFlag = true;

@@ -19,6 +19,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 
+import org.bytesoft.bytetcc.TransactionBeanFactoryImpl;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableCancel;
 import org.bytesoft.compensable.CompensableConfirm;
@@ -36,8 +37,7 @@ public class SpringContainerContextImpl implements ContainerContext, Application
 	static Logger logger = LoggerFactory.getLogger(SpringContainerContextImpl.class);
 
 	private ApplicationContext applicationContext;
-	@javax.inject.Inject
-	protected CompensableBeanFactory beanFactory;
+	protected CompensableBeanFactory beanFactory = TransactionBeanFactoryImpl.getInstance();
 
 	public void confirm(CompensableInvocation invocation) throws RuntimeException {
 		String identifier = (String) invocation.getIdentifier();

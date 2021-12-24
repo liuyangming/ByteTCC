@@ -26,6 +26,7 @@ import javax.transaction.xa.Xid;
 
 import org.apache.commons.lang3.StringUtils;
 import org.bytesoft.bytejta.logging.store.VirtualLoggingSystemImpl;
+import org.bytesoft.bytetcc.TransactionBeanFactoryImpl;
 import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.archive.CompensableArchive;
@@ -49,8 +50,7 @@ public class SampleCompensableLogger extends VirtualLoggingSystemImpl
 		implements CompensableLogger, LoggingFlushable, CompensableBeanFactoryAware, CompensableEndpointAware {
 	static final Logger logger = LoggerFactory.getLogger(SampleCompensableLogger.class);
 
-	@javax.inject.Inject
-	private CompensableBeanFactory beanFactory;
+	private CompensableBeanFactory beanFactory = TransactionBeanFactoryImpl.getInstance();
 	private String endpoint;
 
 	public void createTransaction(TransactionArchive archive) {
@@ -169,8 +169,7 @@ public class SampleCompensableLogger extends VirtualLoggingSystemImpl
 			byte[] keyByteArray = new byte[XidFactory.GLOBAL_TRANSACTION_LENGTH];
 			System.arraycopy(byteArray, 0, keyByteArray, 0, keyByteArray.length);
 			byte[] valueByteArray = new byte[byteArray.length - XidFactory.GLOBAL_TRANSACTION_LENGTH - 1 - 4];
-			System.arraycopy(byteArray, XidFactory.GLOBAL_TRANSACTION_LENGTH + 1 + 4, valueByteArray, 0,
-					valueByteArray.length);
+			System.arraycopy(byteArray, XidFactory.GLOBAL_TRANSACTION_LENGTH + 1 + 4, valueByteArray, 0, valueByteArray.length);
 
 			TransactionXid xid = xidFactory.createGlobalXid(keyByteArray);
 
@@ -227,8 +226,7 @@ public class SampleCompensableLogger extends VirtualLoggingSystemImpl
 			}
 		} // end-for (int index = 0; recordList != null && index < recordList.size(); index++)
 
-		for (Iterator<Map.Entry<TransactionXid, TransactionArchive>> itr = xidMap.entrySet().iterator(); itr
-				.hasNext();) {
+		for (Iterator<Map.Entry<TransactionXid, TransactionArchive>> itr = xidMap.entrySet().iterator(); itr.hasNext();) {
 			Map.Entry<TransactionXid, TransactionArchive> entry = itr.next();
 			TransactionXid xid = entry.getKey();
 			TransactionArchive value = entry.getValue();
@@ -245,10 +243,8 @@ public class SampleCompensableLogger extends VirtualLoggingSystemImpl
 
 			System.arraycopy(keyByteArray, 0, byteArray, 0, keyByteArray.length);
 			byteArray[keyByteArray.length] = OPERATOR_CREATE;
-			System.arraycopy(sizeByteArray, 0, byteArray, XidFactory.GLOBAL_TRANSACTION_LENGTH + 1,
-					sizeByteArray.length);
-			System.arraycopy(valueByteArray, 0, byteArray, XidFactory.GLOBAL_TRANSACTION_LENGTH + 1 + 4,
-					valueByteArray.length);
+			System.arraycopy(sizeByteArray, 0, byteArray, XidFactory.GLOBAL_TRANSACTION_LENGTH + 1, sizeByteArray.length);
+			System.arraycopy(valueByteArray, 0, byteArray, XidFactory.GLOBAL_TRANSACTION_LENGTH + 1 + 4, valueByteArray.length);
 
 			VirtualLoggingRecord record = new VirtualLoggingRecord();
 			record.setIdentifier(xid);
