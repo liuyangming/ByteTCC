@@ -331,7 +331,7 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 	public Xid[] recover(int flag) throws XAException {
 		this.checkParticipantReadyIfNecessary();
 
-		TransactionRepository repository = beanFactory.getTransactionRepository();
+		TransactionRepository repository = beanFactory.getCompensableRepository();
 		List<Transaction> transactionList = repository.getActiveTransactionList();
 
 		TransactionXid[] xidArray = new TransactionXid[transactionList.size()];

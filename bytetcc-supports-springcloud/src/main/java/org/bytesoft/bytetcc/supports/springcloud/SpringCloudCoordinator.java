@@ -32,6 +32,7 @@ import org.bytesoft.transaction.TransactionParticipant;
 import org.bytesoft.transaction.remote.RemoteAddr;
 import org.bytesoft.transaction.remote.RemoteCoordinator;
 import org.bytesoft.transaction.remote.RemoteNode;
+import org.bytesoft.transaction.xa.TransactionXid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.env.Environment;
@@ -64,7 +65,8 @@ public class SpringCloudCoordinator implements InvocationHandler {
 				int firstIndex = this.identifier.indexOf(":");
 				int lastIndex = this.identifier.lastIndexOf(":");
 				return firstIndex <= 0 || lastIndex <= 0 || firstIndex > lastIndex //
-						? null : this.identifier.subSequence(firstIndex + 1, lastIndex);
+						? null
+						: this.identifier.subSequence(firstIndex + 1, lastIndex);
 			} else if ("getRemoteAddr".equals(methodName) && RemoteAddr.class.equals(returnType)) {
 				return this.identifier == null ? null : CommonUtils.getRemoteAddr(this.identifier);
 			} else if ("getRemoteNode".equals(methodName) && RemoteNode.class.equals(returnType)) {
@@ -82,7 +84,7 @@ public class SpringCloudCoordinator implements InvocationHandler {
 			} else if ("rollback".equals(methodName)) {
 				return this.invokePostCoordinator(proxy, method, args);
 			} else if ("recover".equals(methodName)) {
-				return this.invokeGetCoordinator(proxy, method, args);
+				return this.invokeCompensableRecover(proxy, method, args);
 			} else if ("forget".equals(methodName)) {
 				return this.invokePostCoordinator(proxy, method, args);
 			} else {
@@ -103,7 +105,8 @@ public class SpringCloudCoordinator implements InvocationHandler {
 			RemoteNode remoteNode = CommonUtils.getRemoteNode(this.identifier);
 			String contextPathKey = String.format("%s.%s", CONSTANT_CONTENT_PATH, remoteNode.getServiceKey());
 			String contextPath = StringUtils.isBlank(remoteNode.getServiceKey()) //
-					? null : StringUtils.trimToEmpty(this.environment.getProperty(contextPathKey));
+					? null
+					: StringUtils.trimToEmpty(this.environment.getProperty(contextPathKey));
 
 			StringBuilder ber = new StringBuilder();
 			ber.append("http://");
@@ -163,9 +166,9 @@ public class SpringCloudCoordinator implements InvocationHandler {
 
 	}
 
-	public Object invokeGetCoordinator(Object proxy, Method method, Object[] args) throws Throwable {
+	public Object invokeCompensableRecover(Object proxy, Method method, Object[] args) throws Throwable {
 
-		Class<?> returnType = method.getReturnType();
+//		Class<?> returnType = method.getReturnType();
 		try {
 			RestTemplate transactionRestTemplate = SpringCloudBeanRegistry.getInstance().getRestTemplate();
 			RestTemplate restTemplate = transactionRestTemplate == null ? new RestTemplate() : transactionRestTemplate;
@@ -173,7 +176,8 @@ public class SpringCloudCoordinator implements InvocationHandler {
 			RemoteNode remoteNode = CommonUtils.getRemoteNode(this.identifier);
 			String contextPathKey = String.format("%s.%s", CONSTANT_CONTENT_PATH, remoteNode.getServiceKey());
 			String contextPath = StringUtils.isBlank(remoteNode.getServiceKey()) //
-					? null : StringUtils.trimToEmpty(this.environment.getProperty(contextPathKey));
+					? null
+					: StringUtils.trimToEmpty(this.environment.getProperty(contextPathKey));
 
 			StringBuilder ber = new StringBuilder();
 			ber.append("http://");
@@ -195,9 +199,12 @@ public class SpringCloudCoordinator implements InvocationHandler {
 				ber.append("/").append(this.serialize(arg));
 			}
 
-			ResponseEntity<?> response = restTemplate.getForEntity(ber.toString(), returnType, new Object[0]);
+			ResponseEntity<?> response = restTemplate.getForEntity(ber.toString(), TransactionXid[].class, new Object[0]);
+			TransactionXid[] xidArray = (TransactionXid[]) response.getBody();
+			Xid[] results = new Xid[xidArray.length];
+			System.arraycopy(xidArray, 0, results, 0, xidArray.length);
 
-			return response.getBody();
+			return results;
 		} catch (HttpClientErrorException ex) {
 			XAException xaEx = new XAException(XAException.XAER_RMFAIL);
 			xaEx.initCause(ex);
