@@ -7,7 +7,7 @@
 <dependency>
 	<groupId>org.bytesoft</groupId>
 	<artifactId>bytetcc-supports-springcloud</artifactId>
-	<version>0.5.11</version>
+	<version>0.5.12</version>
 </dependency>
 ```
 ###### 1.1.2. 使用dubbo
@@ -15,14 +15,14 @@
 <dependency>
 	<groupId>org.bytesoft</groupId>
 	<artifactId>bytetcc-supports-dubbo</artifactId>
-	<version>0.5.11</version>
+	<version>0.5.12</version>
 </dependency>
 ```
 
 #### 1.2. 编写业务服务
 ```java
 @Service("accountService")
-@Compensable(
+@Compensable(T
   interfaceClass = IAccountService.class 
 , confirmableKey = "accountServiceConfirm"
 , cancellableKey = "accountServiceCancel"

@@ -33,6 +33,7 @@ import org.bytesoft.transaction.TransactionParticipant;
 import org.bytesoft.transaction.remote.RemoteAddr;
 import org.bytesoft.transaction.remote.RemoteCoordinator;
 import org.bytesoft.transaction.remote.RemoteNode;
+import org.bytesoft.transaction.xa.TransactionXid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.env.Environment;
@@ -82,7 +83,7 @@ public class SpringBootCoordinator implements InvocationHandler {
 			} else if ("rollback".equals(methodName)) {
 				return this.invokePostCoordinator(proxy, method, args);
 			} else if ("recover".equals(methodName)) {
-				return this.invokeGetCoordinator(proxy, method, args);
+				return this.invokeCompensableRecover(proxy, method, args);
 			} else if ("forget".equals(methodName)) {
 				return this.invokePostCoordinator(proxy, method, args);
 			} else {
@@ -151,9 +152,9 @@ public class SpringBootCoordinator implements InvocationHandler {
 
 	}
 
-	public Object invokeGetCoordinator(Object proxy, Method method, Object[] args) throws Throwable {
+	public Object invokeCompensableRecover(Object proxy, Method method, Object[] args) throws Throwable {
 
-		Class<?> returnType = method.getReturnType();
+//		Class<?> returnType = method.getReturnType();
 		try {
 			RestTemplate transactionRestTemplate = SpringBootBeanRegistry.getInstance().getRestTemplate();
 			RestTemplate restTemplate = transactionRestTemplate == null ? new RestTemplate() : transactionRestTemplate;
@@ -171,9 +172,12 @@ public class SpringBootCoordinator implements InvocationHandler {
 				ber.append("/").append(this.serialize(arg));
 			}
 
-			ResponseEntity<?> response = restTemplate.getForEntity(ber.toString(), returnType, new Object[0]);
+			ResponseEntity<?> response = restTemplate.getForEntity(ber.toString(), TransactionXid[].class, new Object[0]);
+			TransactionXid[] xidArray = (TransactionXid[]) response.getBody();
+			Xid[] results = new Xid[xidArray.length];
+			System.arraycopy(xidArray, 0, results, 0, xidArray.length);
 
-			return response.getBody();
+			return results;
 		} catch (HttpClientErrorException ex) {
 			XAException xaEx = new XAException(XAException.XAER_RMFAIL);
 			xaEx.initCause(ex);
