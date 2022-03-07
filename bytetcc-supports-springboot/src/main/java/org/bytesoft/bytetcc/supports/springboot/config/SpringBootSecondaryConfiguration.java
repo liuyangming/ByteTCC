@@ -15,6 +15,8 @@
  */
 package org.bytesoft.bytetcc.supports.springboot.config;
 
+import java.util.List;
+
 import org.apache.commons.lang3.StringUtils;
 import org.bytesoft.bytetcc.CompensableCoordinator;
 import org.bytesoft.bytetcc.CompensableManagerImpl;
@@ -25,6 +27,7 @@ import org.bytesoft.bytetcc.supports.spring.SpringContextRegistry;
 import org.bytesoft.bytetcc.supports.springboot.SpringBootBeanRegistry;
 import org.bytesoft.bytetcc.supports.springboot.web.CompensableHandlerInterceptor;
 import org.bytesoft.bytetcc.supports.springboot.web.CompensableRequestInterceptor;
+import org.bytesoft.bytetcc.supports.svc.mvc.ServiceErrorResolver;
 import org.bytesoft.common.utils.CommonUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
@@ -45,6 +48,7 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.transaction.annotation.TransactionManagementConfigurer;
 import org.springframework.transaction.jta.JtaTransactionManager;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.servlet.HandlerExceptionResolver;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -141,6 +145,10 @@ public class SpringBootSecondaryConfiguration
 		CompensableHandlerInterceptor compensableHandlerInterceptor = //
 				this.applicationContext.getBean(CompensableHandlerInterceptor.class);
 		interceptorRegistry.addInterceptor(compensableHandlerInterceptor);
+	}
+
+	public void configureHandlerExceptionResolvers(List<HandlerExceptionResolver> resolvers) {
+		resolvers.add(new ServiceErrorResolver());
 	}
 
 	public CompensableBeanFactory getBeanFactory() {

@@ -19,10 +19,14 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 
+import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableCancel;
 import org.bytesoft.compensable.CompensableConfirm;
 import org.bytesoft.compensable.CompensableInvocation;
+import org.bytesoft.compensable.CompensableManager;
+import org.bytesoft.compensable.CompensableTransaction;
 import org.bytesoft.compensable.ContainerContext;
+import org.bytesoft.compensable.TransactionContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
@@ -32,6 +36,8 @@ public class SpringContainerContextImpl implements ContainerContext, Application
 	static Logger logger = LoggerFactory.getLogger(SpringContainerContextImpl.class);
 
 	private ApplicationContext applicationContext;
+	@javax.inject.Inject
+	protected CompensableBeanFactory beanFactory;
 
 	public void confirm(CompensableInvocation invocation) throws RuntimeException {
 		String identifier = (String) invocation.getIdentifier();
@@ -73,7 +79,11 @@ public class SpringContainerContextImpl implements ContainerContext, Application
 			throw new RuntimeException("Not supported yet!");
 		}
 
+		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
+		CompensableTransaction transaction = compensableManager.getCompensableTransactionQuietly();
+		TransactionContext transactionContext = transaction.getTransactionContext();
 		try {
+			transactionContext.setCompensator(instance);
 			confirmable.invoke(instance, args);
 		} catch (InvocationTargetException itex) {
 			throw new RuntimeException(itex.getTargetException());
@@ -81,12 +91,17 @@ public class SpringContainerContextImpl implements ContainerContext, Application
 			throw rex;
 		} catch (Throwable throwable) {
 			throw new RuntimeException(throwable);
+		} finally {
+			transactionContext.setCompensator(null);
 		}
-
 	}
 
 	public void confirmComplicated(Method method, Object instance, Object[] args) throws RuntimeException {
+		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
+		CompensableTransaction transaction = compensableManager.getCompensableTransactionQuietly();
+		TransactionContext transactionContext = transaction.getTransactionContext();
 		try {
+			transactionContext.setCompensator(instance);
 			method.invoke(instance, args);
 		} catch (InvocationTargetException itex) {
 			throw new RuntimeException(itex.getTargetException());
@@ -94,6 +109,8 @@ public class SpringContainerContextImpl implements ContainerContext, Application
 			throw rex;
 		} catch (Throwable throwable) {
 			throw new RuntimeException(throwable);
+		} finally {
+			transactionContext.setCompensator(null);
 		}
 	}
 
@@ -111,7 +128,6 @@ public class SpringContainerContextImpl implements ContainerContext, Application
 			Object instance = this.applicationContext.getBean(cancellableKey);
 			this.cancelComplicated(method, instance, args);
 		}
-
 	}
 
 	private void cancelSimplified(Method method, Object instance, Object[] args) throws RuntimeException {
@@ -139,7 +155,11 @@ public class SpringContainerContextImpl implements ContainerContext, Application
 			throw new RuntimeException("Not supported yet!");
 		}
 
+		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
+		CompensableTransaction transaction = compensableManager.getCompensableTransactionQuietly();
+		TransactionContext transactionContext = transaction.getTransactionContext();
 		try {
+			transactionContext.setCompensator(instance);
 			cancellable.invoke(instance, args);
 		} catch (InvocationTargetException itex) {
 			throw new RuntimeException(itex.getTargetException());
@@ -147,12 +167,17 @@ public class SpringContainerContextImpl implements ContainerContext, Application
 			throw rex;
 		} catch (Throwable throwable) {
 			throw new RuntimeException(throwable);
+		} finally {
+			transactionContext.setCompensator(null);
 		}
-
 	}
 
 	public void cancelComplicated(Method method, Object instance, Object[] args) throws RuntimeException {
+		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
+		CompensableTransaction transaction = compensableManager.getCompensableTransactionQuietly();
+		TransactionContext transactionContext = transaction.getTransactionContext();
 		try {
+			transactionContext.setCompensator(instance);
 			method.invoke(instance, args);
 		} catch (InvocationTargetException itex) {
 			throw new RuntimeException(itex.getTargetException());
@@ -160,6 +185,8 @@ public class SpringContainerContextImpl implements ContainerContext, Application
 			throw rex;
 		} catch (Throwable throwable) {
 			throw new RuntimeException(throwable);
+		} finally {
+			transactionContext.setCompensator(null);
 		}
 	}
 

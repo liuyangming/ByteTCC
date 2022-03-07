@@ -476,7 +476,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 		}
 	}
 
-	private void fireRollback() throws IllegalStateException, SystemException {
+	public void fireRollback() throws IllegalStateException, SystemException {
 		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
 
 		this.transactionStatus = Status.STATUS_ROLLING_BACK;
@@ -835,9 +835,12 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 			TransactionXid gxid = transactionXidFactory.createGlobalXid();
 			TransactionXid bxid = transactionXidFactory.createBranchXid(gxid, branch.branchXid.getGlobalTransactionId());
 			compensableArchive.setCompensableXid(bxid);
-
-			compensableLogger.createCompensable(compensableArchive);
+		} else {
+			TransactionXid gxid = transactionXidFactory.createGlobalXid();
+			TransactionXid bxid = transactionXidFactory.createBranchXid(gxid);
+			compensableArchive.setCompensableXid(bxid);
 		}
+		compensableLogger.createCompensable(compensableArchive);
 
 		logger.info("{}| register compensable service: {}.",
 				ByteUtils.byteArrayToString(this.transactionContext.getXid().getGlobalTransactionId()),
@@ -905,7 +908,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 		// byte[] actualKey = actualXid.getGlobalTransactionId();
 		if (CommonUtils.equals(expectXid, actualXid) == false) {
 			// enlist by the try operation, and current tx is rollingback/committing.
-			throw new IllegalStateException("Illegal state: maybe the try phase operation has timed out.!");
+			throw new IllegalStateException("Illegal state: maybe the try phase operation has timed out!");
 		} // end-if (CommonUtils.equals(expectXid, actualXid) == false)
 
 		String resourceKey = descriptor == null ? null : descriptor.getIdentifier();
@@ -981,7 +984,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 		byte[] actualKey = actualXid.getGlobalTransactionId();
 		if (Arrays.equals(expectKey, actualKey) == false) {
 			// this.onInvocationPhaseParticipantCommitSuccess(actualXid);
-			throw new IllegalStateException("Illegal state: maybe the try phase operation has timed out.!");
+			throw new IllegalStateException("Illegal state: maybe the try phase operation has timed out!");
 		} // end-if (CommonUtils.equals(expectXid, actualXid) == false)
 
 		if (this.positive == null) {
