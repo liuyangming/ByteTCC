@@ -68,7 +68,7 @@ import com.alibaba.dubbo.rpc.RpcResult;
 import com.caucho.hessian.io.HessianInput;
 import com.caucho.hessian.io.HessianOutput;
 
-public class CompensableSecondaryFilter implements Filter {
+public class CompensableSecondaryFilter extends InvokeForTCC implements Filter {
 	static final String KEY_XA_RESOURCE_START = "start";
 	static final String KEY_XA_GET_IDENTIFIER = "getIdentifier";
 	static final String KEY_XA_GET_APPLICATION = "getApplication";
@@ -386,7 +386,7 @@ public class CompensableSecondaryFilter implements Filter {
 		} else if (StringUtils.equals(invocation.getMethodName(), KEY_XA_GET_REMOTENODE)) {
 			return this.consumerInvokeForKey(invoker, invocation);
 		} else {
-			return this.consumerInvokeForTCC(invoker, invocation);
+			return super.invokeForTCC(invoker, invocation);
 		}
 	}
 
@@ -435,29 +435,6 @@ public class CompensableSecondaryFilter implements Filter {
 
 		} // end-if (CompensableServiceFilter.InvocationResult.class.isInstance(value))
 
-		return result;
-	}
-
-	public Result consumerInvokeForTCC(Invoker<?> invoker, Invocation invocation) throws RpcException, RemotingException {
-		CompensableBeanRegistry beanRegistry = CompensableBeanRegistry.getInstance();
-		CompensableBeanFactory beanFactory = beanRegistry.getBeanFactory();
-		RemoteCoordinator compensableCoordinator = (RemoteCoordinator) beanFactory.getCompensableNativeParticipant();
-
-		Map<String, String> attachments = invocation.getAttachments();
-		attachments.put(RemoteCoordinator.class.getName(), compensableCoordinator.getIdentifier());
-		RpcResult result = (RpcResult) invoker.invoke(invocation);
-		Object value = result.getValue();
-		if (CompensableServiceFilter.InvocationResult.class.isInstance(value)) {
-			CompensableServiceFilter.InvocationResult wrapped = (CompensableServiceFilter.InvocationResult) value;
-			result.setValue(null);
-			result.setException(null);
-
-			if (wrapped.isFailure()) {
-				result.setException(wrapped.getError());
-			} else {
-				result.setValue(wrapped.getValue());
-			}
-		}
 		return result;
 	}
 
