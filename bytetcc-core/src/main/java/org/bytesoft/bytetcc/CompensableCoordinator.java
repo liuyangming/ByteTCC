@@ -66,10 +66,7 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 
 	private transient boolean statefully;
 
-	public Transaction getTransactionQuietly() {
-		CompensableManager transactionManager = this.beanFactory.getCompensableManager();
-		return transactionManager.getTransactionQuietly();
-	}
+
 
 	public Transaction start(TransactionContext transactionContext, int flags) throws XAException {
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();

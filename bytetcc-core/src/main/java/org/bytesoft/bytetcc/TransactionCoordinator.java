@@ -20,6 +20,7 @@ import javax.transaction.xa.XAResource;
 import javax.transaction.xa.Xid;
 
 import org.bytesoft.compensable.CompensableBeanFactory;
+import org.bytesoft.compensable.CompensableManager;
 import org.bytesoft.compensable.TransactionBeanFactory;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 import org.bytesoft.transaction.Transaction;
@@ -37,6 +38,11 @@ public class TransactionCoordinator implements RemoteCoordinator, CompensableBea
 
 	@javax.inject.Inject
 	private TransactionBeanFactory transactionBeanFactory;
+
+	public Transaction getTransactionQuietly() {
+		CompensableManager transactionManager = this.beanFactory.getCompensableManager();
+		return transactionManager.getTransactionQuietly();
+	}
 
 	public int prepare(Xid xid) throws XAException {
 		TransactionParticipant compensableCoordinator = this.beanFactory.getCompensableNativeParticipant();
