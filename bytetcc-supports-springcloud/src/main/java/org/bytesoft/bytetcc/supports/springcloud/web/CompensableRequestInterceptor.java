@@ -57,7 +57,7 @@ public class CompensableRequestInterceptor
 
 	private String identifier;
 	private ApplicationContext applicationContext;
-	private volatile boolean statefully;
+	private volatile boolean stateful;
 
 	public ClientHttpResponse intercept(final HttpRequest httpRequest, byte[] body, ClientHttpRequestExecution execution)
 			throws IOException {
@@ -81,7 +81,7 @@ public class CompensableRequestInterceptor
 			return execution.execute(httpRequest, body);
 		}
 
-		beanRegistry.setLoadBalancerInterceptor(new CompensableLoadBalancerInterceptor(this.statefully) {
+		beanRegistry.setLoadBalancerInterceptor(new CompensableLoadBalancerInterceptor(this.stateful) {
 			public void afterCompletion(Server server) {
 				if (server == null) {
 					logger.warn(
@@ -180,12 +180,12 @@ public class CompensableRequestInterceptor
 		this.applicationContext = applicationContext;
 	}
 
-	public boolean isStatefully() {
-		return statefully;
+	public boolean isStateful() {
+		return stateful;
 	}
 
-	public void setStatefully(boolean statefully) {
-		this.statefully = statefully;
+	public void setStateful(boolean stateful) {
+		this.stateful = stateful;
 	}
 
 	public String getEndpoint() {

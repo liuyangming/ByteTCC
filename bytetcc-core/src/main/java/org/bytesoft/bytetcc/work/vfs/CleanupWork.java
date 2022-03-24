@@ -247,7 +247,7 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableEndpo
 
 	}
 
-	public void forget(Xid xid, String resourceId) throws RuntimeException {
+	public void forget (Xid xid, String resourceId) throws RuntimeException {
 		this.waitForStartup();
 
 		try {
