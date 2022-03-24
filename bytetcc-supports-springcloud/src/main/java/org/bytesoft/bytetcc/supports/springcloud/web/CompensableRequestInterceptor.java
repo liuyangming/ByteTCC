@@ -27,6 +27,7 @@ import org.bytesoft.bytetcc.supports.springcloud.loadbalancer.CompensableLoadBal
 import org.bytesoft.common.utils.SerializeUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableManager;
+import org.bytesoft.compensable.TransactionBeanFactory;
 import org.bytesoft.compensable.TransactionContext;
 import org.bytesoft.compensable.aware.CompensableEndpointAware;
 import org.bytesoft.transaction.remote.RemoteCoordinator;
@@ -122,7 +123,8 @@ public class CompensableRequestInterceptor
 		SpringCloudBeanRegistry beanRegistry = SpringCloudBeanRegistry.getInstance();
 		CompensableBeanFactory beanFactory = beanRegistry.getBeanFactory();
 		CompensableManager compensableManager = beanFactory.getCompensableManager();
-		TransactionInterceptor transactionInterceptor = beanFactory.getTransactionInterceptor();
+		TransactionBeanFactory transactionBeanFactory = (TransactionBeanFactory) beanRegistry.getBeanFactory();
+		TransactionInterceptor transactionInterceptor = transactionBeanFactory.getTransactionInterceptor();
 
 		CompensableTransactionImpl compensable = //
 				(CompensableTransactionImpl) compensableManager.getCompensableTransactionQuietly();
@@ -147,7 +149,8 @@ public class CompensableRequestInterceptor
 	private void invokeAfterRecvResponse(ClientHttpResponse httpResponse, boolean serverFlag) throws IOException {
 		SpringCloudBeanRegistry beanRegistry = SpringCloudBeanRegistry.getInstance();
 		CompensableBeanFactory beanFactory = beanRegistry.getBeanFactory();
-		TransactionInterceptor transactionInterceptor = beanFactory.getTransactionInterceptor();
+		TransactionBeanFactory transactionBeanFactory = (TransactionBeanFactory) beanRegistry.getBeanFactory();
+		TransactionInterceptor transactionInterceptor = transactionBeanFactory.getTransactionInterceptor();
 
 		HttpHeaders respHeaders = httpResponse.getHeaders();
 		String respTransactionStr = respHeaders.getFirst(HEADER_TRANCACTION_KEY);

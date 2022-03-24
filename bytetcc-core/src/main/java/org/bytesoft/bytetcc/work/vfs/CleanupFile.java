@@ -37,6 +37,7 @@ import javax.transaction.xa.Xid;
 
 import org.apache.commons.lang3.StringUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;
+import org.bytesoft.compensable.TransactionBeanFactory;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 import org.bytesoft.compensable.aware.CompensableEndpointAware;
 import org.bytesoft.transaction.xa.TransactionXid;
@@ -57,6 +58,7 @@ public class CleanupFile implements CompensableEndpointAware, CompensableBeanFac
 	private final String resourceName;
 
 	private CompensableBeanFactory beanFactory;
+	private TransactionBeanFactory transactionBeanFactory;
 	private String endpoint;
 	private int sizeOfRaf = -1;
 	private int endIndex = CONSTANTS_START_INDEX;
@@ -218,7 +220,7 @@ public class CleanupFile implements CompensableEndpointAware, CompensableBeanFac
 	}
 
 	public void startupRecover() throws RuntimeException {
-		XidFactory xidFactory = this.beanFactory.getTransactionXidFactory();
+		XidFactory xidFactory = this.transactionBeanFactory.getTransactionXidFactory();
 
 		for (int current = CONSTANTS_START_INDEX; current < this.endIndex; current = current + CONSTANTS_RECORD_SIZE + 1) {
 			ByteBuffer buffer = ByteBuffer.allocate(1 + CONSTANTS_RECORD_SIZE);
@@ -387,7 +389,7 @@ public class CleanupFile implements CompensableEndpointAware, CompensableBeanFac
 	}
 
 	private void registerRecord(ByteBuffer buffer, int recordFlag, int position) throws RuntimeException {
-		XidFactory xidFactory = this.beanFactory.getTransactionXidFactory();
+		XidFactory xidFactory = this.transactionBeanFactory.getTransactionXidFactory();
 
 		byte[] resourceByteArray = new byte[CONSTANTS_RES_ID_MAX_SIZE];
 		byte[] globalByteArray = new byte[XidFactory.GLOBAL_TRANSACTION_LENGTH];

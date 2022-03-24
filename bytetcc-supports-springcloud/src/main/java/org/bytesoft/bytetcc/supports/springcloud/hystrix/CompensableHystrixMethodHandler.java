@@ -24,10 +24,7 @@ import org.bytesoft.bytetcc.CompensableTransactionImpl;
 import org.bytesoft.bytetcc.supports.springcloud.SpringCloudBeanRegistry;
 import org.bytesoft.bytetcc.supports.springcloud.feign.CompensableFeignResult;
 import org.bytesoft.bytetcc.supports.springcloud.loadbalancer.CompensableLoadBalancerInterceptor;
-import org.bytesoft.compensable.CompensableBeanFactory;
-import org.bytesoft.compensable.CompensableManager;
-import org.bytesoft.compensable.CompensableTransaction;
-import org.bytesoft.compensable.TransactionContext;
+import org.bytesoft.compensable.*;
 import org.bytesoft.transaction.remote.RemoteCoordinator;
 import org.bytesoft.transaction.supports.rpc.TransactionInterceptor;
 import org.slf4j.Logger;
@@ -51,7 +48,8 @@ public class CompensableHystrixMethodHandler implements MethodHandler {
 		final SpringCloudBeanRegistry beanRegistry = SpringCloudBeanRegistry.getInstance();
 		CompensableBeanFactory beanFactory = beanRegistry.getBeanFactory();
 		CompensableManager compensableManager = beanFactory.getCompensableManager();
-		final TransactionInterceptor transactionInterceptor = beanFactory.getTransactionInterceptor();
+		TransactionBeanFactory transactionBeanFactory = (TransactionBeanFactory) beanRegistry.getBeanFactory();
+		final TransactionInterceptor transactionInterceptor = transactionBeanFactory.getTransactionInterceptor();
 
 		CompensableHystrixInvocation invocation = (CompensableHystrixInvocation) argv[0];
 		Thread thread = invocation.getThread(); // (Thread) argv[0];

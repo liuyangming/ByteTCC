@@ -17,12 +17,14 @@ package org.bytesoft.bytetcc.logging.deserializer;
 
 import java.util.Arrays;
 
+import javax.inject.Inject;
 import javax.transaction.xa.Xid;
 
 import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.common.utils.SerializeUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableInvocation;
+import org.bytesoft.compensable.TransactionBeanFactory;
 import org.bytesoft.compensable.archive.CompensableArchive;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 import org.bytesoft.transaction.logging.ArchiveDeserializer;
@@ -37,6 +39,9 @@ public class CompensableArchiveDeserializer implements ArchiveDeserializer, Comp
 
 	@javax.inject.Inject
 	private CompensableBeanFactory beanFactory;
+
+	@javax.inject.Inject
+	private TransactionBeanFactory transactionBeanFactory;
 
 	public byte[] serialize(TransactionXid xid, Object obj) {
 		CompensableArchive archive = (CompensableArchive) obj;
@@ -196,7 +201,7 @@ public class CompensableArchiveDeserializer implements ArchiveDeserializer, Comp
 			logger.error("Error occurred while deserializing object: {}", byteArray, ex);
 		}
 
-		XidFactory xidFactory = this.beanFactory.getTransactionXidFactory();
+		XidFactory xidFactory = this.transactionBeanFactory.getTransactionXidFactory();
 		Xid transactionXid = null;
 		Xid compensableXid = null;
 

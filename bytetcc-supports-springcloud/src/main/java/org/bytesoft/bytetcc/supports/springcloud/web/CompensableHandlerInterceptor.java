@@ -28,11 +28,7 @@ import org.bytesoft.bytetcc.supports.springcloud.SpringCloudBeanRegistry;
 import org.bytesoft.bytetcc.supports.springcloud.controller.CompensableCoordinatorController;
 import org.bytesoft.common.utils.CommonUtils;
 import org.bytesoft.common.utils.SerializeUtils;
-import org.bytesoft.compensable.Compensable;
-import org.bytesoft.compensable.CompensableBeanFactory;
-import org.bytesoft.compensable.CompensableManager;
-import org.bytesoft.compensable.CompensableTransaction;
-import org.bytesoft.compensable.TransactionContext;
+import org.bytesoft.compensable.*;
 import org.bytesoft.compensable.aware.CompensableEndpointAware;
 import org.bytesoft.transaction.supports.rpc.TransactionInterceptor;
 import org.slf4j.Logger;
@@ -94,7 +90,8 @@ public class CompensableHandlerInterceptor implements HandlerInterceptor, Compen
 
 		SpringCloudBeanRegistry beanRegistry = SpringCloudBeanRegistry.getInstance();
 		CompensableBeanFactory beanFactory = beanRegistry.getBeanFactory();
-		TransactionInterceptor transactionInterceptor = beanFactory.getTransactionInterceptor();
+		TransactionBeanFactory transactionBeanFactory = (TransactionBeanFactory) beanRegistry.getBeanFactory();
+		TransactionInterceptor transactionInterceptor = transactionBeanFactory.getTransactionInterceptor();
 
 		byte[] byteArray = transactionText == null ? new byte[0] : Base64.getDecoder().decode(transactionText);
 
@@ -165,7 +162,8 @@ public class CompensableHandlerInterceptor implements HandlerInterceptor, Compen
 		SpringCloudBeanRegistry beanRegistry = SpringCloudBeanRegistry.getInstance();
 		CompensableBeanFactory beanFactory = beanRegistry.getBeanFactory();
 		CompensableManager compensableManager = beanFactory.getCompensableManager();
-		TransactionInterceptor transactionInterceptor = beanFactory.getTransactionInterceptor();
+		TransactionBeanFactory transactionBeanFactory = (TransactionBeanFactory) beanRegistry.getBeanFactory();
+		TransactionInterceptor transactionInterceptor = transactionBeanFactory.getTransactionInterceptor();
 
 		CompensableTransaction compensable = compensableManager.getCompensableTransactionQuietly();
 		TransactionContext transactionContext = compensable.getTransactionContext();

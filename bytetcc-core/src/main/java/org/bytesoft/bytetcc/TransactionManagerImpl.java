@@ -23,11 +23,7 @@ import javax.transaction.RollbackException;
 import javax.transaction.Status;
 import javax.transaction.SystemException;
 
-import org.bytesoft.compensable.CompensableBeanFactory;
-import org.bytesoft.compensable.CompensableInvocation;
-import org.bytesoft.compensable.CompensableInvocationRegistry;
-import org.bytesoft.compensable.CompensableManager;
-import org.bytesoft.compensable.CompensableTransaction;
+import org.bytesoft.compensable.*;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 import org.bytesoft.transaction.Transaction;
 import org.bytesoft.transaction.TransactionContext;
@@ -41,8 +37,11 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 	@javax.inject.Inject
 	private CompensableBeanFactory beanFactory;
 
+	@javax.inject.Inject
+	private TransactionBeanFactory transactionBeanFactory;
+
 	public void begin() throws NotSupportedException, SystemException {
-		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
+		TransactionManager transactionManager = this.transactionBeanFactory.getTransactionManager();
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 
 		CompensableTransaction transaction = compensableManager.getCompensableTransactionQuietly();
@@ -66,7 +65,7 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 
 	public void commit() throws RollbackException, HeuristicMixedException, HeuristicRollbackException,
 			SecurityException, IllegalStateException, SystemException {
-		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
+		TransactionManager transactionManager = this.transactionBeanFactory.getTransactionManager();
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 
 		Transaction transaction = transactionManager.getTransactionQuietly();
@@ -111,7 +110,7 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 	}
 
 	public void rollback() throws IllegalStateException, SecurityException, SystemException {
-		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
+		TransactionManager transactionManager = this.transactionBeanFactory.getTransactionManager();
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 
 		Transaction transaction = transactionManager.getTransactionQuietly();
@@ -156,7 +155,7 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 	}
 
 	public Transaction suspend() throws SystemException {
-		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
+		TransactionManager transactionManager = this.transactionBeanFactory.getTransactionManager();
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 
 		TransactionContext transactionContext = null;
@@ -182,7 +181,7 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 	public void resume(javax.transaction.Transaction tobj)
 			throws InvalidTransactionException, IllegalStateException, SystemException {
 
-		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
+		TransactionManager transactionManager = this.transactionBeanFactory.getTransactionManager();
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 
 		if (org.bytesoft.transaction.Transaction.class.isInstance(tobj) == false) {
@@ -211,7 +210,7 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 	}
 
 	public void setRollbackOnly() throws IllegalStateException, SystemException {
-		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
+		TransactionManager transactionManager = this.transactionBeanFactory.getTransactionManager();
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 
 		TransactionContext transactionContext = null;
@@ -235,7 +234,7 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 	}
 
 	public void setTransactionTimeout(int seconds) throws SystemException {
-		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
+		TransactionManager transactionManager = this.transactionBeanFactory.getTransactionManager();
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 
 		TransactionContext transactionContext = null;
@@ -259,7 +258,7 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 	}
 
 	public Transaction getTransaction(Thread thread) {
-		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
+		TransactionManager transactionManager = this.transactionBeanFactory.getTransactionManager();
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 		Transaction transaction = transactionManager.getTransaction(thread);
 		Transaction compensable = compensableManager.getTransaction(thread);
@@ -273,7 +272,7 @@ public class TransactionManagerImpl implements TransactionManager, CompensableBe
 	}
 
 	public Transaction getTransaction() throws SystemException {
-		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
+		TransactionManager transactionManager = this.transactionBeanFactory.getTransactionManager();
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 		Transaction transaction = transactionManager.getTransactionQuietly();
 		Transaction compensable = compensableManager.getCompensableTransactionQuietly();

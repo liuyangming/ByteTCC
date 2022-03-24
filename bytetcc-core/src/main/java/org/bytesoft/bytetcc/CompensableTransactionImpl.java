@@ -43,11 +43,7 @@ import org.bytesoft.bytetcc.supports.CompensableRolledbackMarker;
 import org.bytesoft.bytetcc.supports.resource.LocalResourceCleaner;
 import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.common.utils.CommonUtils;
-import org.bytesoft.compensable.CompensableBeanFactory;
-import org.bytesoft.compensable.CompensableInvocation;
-import org.bytesoft.compensable.CompensableTransaction;
-import org.bytesoft.compensable.ContainerContext;
-import org.bytesoft.compensable.TransactionContext;
+import org.bytesoft.compensable.*;
 import org.bytesoft.compensable.archive.CompensableArchive;
 import org.bytesoft.compensable.archive.TransactionArchive;
 import org.bytesoft.compensable.logging.CompensableLogger;
@@ -80,6 +76,9 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 	private final List<XAResourceArchive> resourceList = new ArrayList<XAResourceArchive>();
 	private final Map<Thread, Transaction> transactionMap = new ConcurrentHashMap<Thread, Transaction>();
 	private CompensableBeanFactory beanFactory;
+	private TransactionBeanFactory transactionBeanFactory;
+
+
 
 	private int transactionVote;
 	private int transactionStatus = Status.STATUS_ACTIVE;
@@ -799,7 +798,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 	}
 
 	public synchronized void registerCompensable(CompensableInvocation invocation) {
-		XidFactory transactionXidFactory = this.beanFactory.getTransactionXidFactory();
+		XidFactory transactionXidFactory = this.transactionBeanFactory.getTransactionXidFactory();
 		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
 
 		Transaction transaction = (Transaction) this.getTransactionalExtra();
@@ -875,7 +874,7 @@ public class CompensableTransactionImpl extends TransactionListenerAdapter
 	}
 
 	private void onInvocationPhaseEnlistResource(Xid xid, XAResourceDescriptor descriptor) {
-		XidFactory transactionXidFactory = this.beanFactory.getTransactionXidFactory();
+		XidFactory transactionXidFactory = this.transactionBeanFactory.getTransactionXidFactory();
 		CompensableLogger compensableLogger = this.beanFactory.getCompensableLogger();
 
 		TransactionXid transactionXid = transactionXidFactory.createGlobalXid(xid.getGlobalTransactionId());
