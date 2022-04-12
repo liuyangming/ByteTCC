@@ -45,7 +45,7 @@ import org.bytesoft.transaction.xa.XidFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class CleanupFile implements CompensableEndpointAware, CompensableBeanFactoryAware {
+public class CleanupFile implements CompensableEndpointAware, CompensableBeanFactoryAware, Cloneable{
 	static final Logger logger = LoggerFactory.getLogger(CleanupFile.class);
 	static final byte[] IDENTIFIER = "org.bytesoft.bytetcc.resource.cleanup".getBytes();
 
@@ -55,7 +55,7 @@ public class CleanupFile implements CompensableEndpointAware, CompensableBeanFac
 	static final int CONSTANTS_RECORD_SIZE = CONSTANTS_RES_ID_MAX_SIZE + XidFactory.GLOBAL_TRANSACTION_LENGTH
 			+ XidFactory.BRANCH_QUALIFIER_LENGTH;
 
-	private final String resourceName;
+	private String resourceName;
 
 	private CompensableBeanFactory beanFactory;
 	private TransactionBeanFactory transactionBeanFactory;
@@ -67,8 +67,8 @@ public class CleanupFile implements CompensableEndpointAware, CompensableBeanFac
 	private FileChannel channel;
 	private MappedByteBuffer header;
 
-	private final List<CleanupRecord> recordList = new ArrayList<CleanupRecord>();
-	private final Map<String, Set<CleanupRecord>> recordMap = new HashMap<String, Set<CleanupRecord>>();
+	private List<CleanupRecord> recordList = new ArrayList<CleanupRecord>();
+	private Map<String, Set<CleanupRecord>> recordMap = new HashMap<String, Set<CleanupRecord>>();
 
 	public CleanupFile(String resourceName) {
 		this.resourceName = resourceName;
@@ -549,4 +549,21 @@ public class CleanupFile implements CompensableEndpointAware, CompensableBeanFac
 		this.directory = directory;
 	}
 
+	@Override
+	public CleanupFile clone() {
+		CleanupFile cleanupFile = new CleanupFile(this.resourceName);
+		cleanupFile.transactionBeanFactory = this.transactionBeanFactory;
+		cleanupFile.beanFactory = this.beanFactory;
+		cleanupFile.channel = this.channel;
+		cleanupFile.directory = this.directory;
+		cleanupFile.endIndex = this.endIndex;
+		cleanupFile.endpoint = this.endpoint;
+		cleanupFile.header = this.header;
+		cleanupFile.raf = this.raf;
+		cleanupFile.recordList = this.recordList;
+		cleanupFile.recordMap = this.recordMap;
+		cleanupFile.resourceName = this.resourceName;
+		cleanupFile.sizeOfRaf = this.sizeOfRaf;
+		return null;
+	}
 }

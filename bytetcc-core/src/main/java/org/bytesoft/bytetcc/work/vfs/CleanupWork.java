@@ -79,35 +79,35 @@ public class CleanupWork implements Work, LocalResourceCleaner, CompensableEndpo
 		byte masterFlagTwo = this.resourceTwo.initialize(false);
 
 		if (masterFlagOne == 0x1 && masterFlagTwo == 0x0) {
-			this.master = this.resourceOne;
-			this.slaver = this.resourceTwo;
+			this.master = this.resourceOne.clone();
+			this.slaver = this.resourceTwo.clone();
 		} else if (masterFlagOne == 0x0 && masterFlagTwo == 0x1) {
-			this.master = this.resourceTwo;
-			this.slaver = this.resourceOne;
+			this.master = this.resourceTwo.clone();
+			this.slaver = this.resourceOne.clone();
 		} else if (masterFlagOne == 0x0 && masterFlagTwo == 0x0) {
 			throw new IllegalStateException("Illegal state!");
 		} else if (masterFlagOne == 0x2 && masterFlagTwo == 0x1) {
 			this.resourceTwo.markSlaver();
 			this.resourceOne.markMaster();
 
-			this.master = this.resourceOne;
-			this.slaver = this.resourceTwo;
+			this.master = this.resourceOne.clone();
+			this.slaver = this.resourceTwo.clone();
 		} else if (masterFlagOne == 0x2 && masterFlagTwo == 0x0) {
 			this.resourceOne.markMaster();
 
-			this.master = this.resourceOne;
-			this.slaver = this.resourceTwo;
+			this.master = this.resourceOne.clone();
+			this.slaver = this.resourceTwo.clone();
 		} else if (masterFlagOne == 0x1 && masterFlagTwo == 0x2) {
 			this.resourceOne.markSlaver();
 			this.resourceTwo.markMaster();
 
-			this.master = this.resourceTwo;
-			this.slaver = this.resourceOne;
+			this.master = this.resourceTwo.clone();
+			this.slaver = this.resourceOne.clone();
 		} else if (masterFlagOne == 0x0 && masterFlagTwo == 0x2) {
 			this.resourceTwo.markMaster();
 
-			this.master = this.resourceTwo;
-			this.slaver = this.resourceOne;
+			this.master = this.resourceTwo.clone();
+			this.slaver = this.resourceOne.clone();
 		} else {
 			throw new IllegalStateException("Illegal state!");
 		}
