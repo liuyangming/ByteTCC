@@ -37,6 +37,7 @@ import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.common.utils.CommonUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableManager;
+import org.bytesoft.compensable.TransactionBeanFactory;
 import org.bytesoft.compensable.TransactionContext;
 import org.bytesoft.compensable.archive.CompensableArchive;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
@@ -69,6 +70,8 @@ public class TransactionRecoveryImpl
 
 	@javax.inject.Inject
 	protected CompensableBeanFactory beanFactory;
+	@javax.inject.Inject
+	protected TransactionBeanFactory transactionBeanFactory;
 	protected String endpoint;
 	protected transient boolean statefully;
 	protected volatile boolean initialized;
@@ -94,7 +97,7 @@ public class TransactionRecoveryImpl
 	}
 
 	protected void fireTransactionStartRecovery() {
-		TransactionRecovery transactionRecovery = this.beanFactory.getTransactionRecovery();
+		TransactionRecovery transactionRecovery = this.transactionBeanFactory.getTransactionRecovery();
 		transactionRecovery.startRecovery();
 	}
 
@@ -108,7 +111,7 @@ public class TransactionRecoveryImpl
 			}
 
 			public void recover(org.bytesoft.compensable.archive.TransactionArchive archive) {
-				XidFactory transactionXidFactory = beanFactory.getTransactionXidFactory();
+				XidFactory transactionXidFactory = transactionBeanFactory.getTransactionXidFactory();
 
 				CompensableTransactionImpl transaction = reconstruct(archive);
 				TransactionContext transactionContext = transaction.getTransactionContext();

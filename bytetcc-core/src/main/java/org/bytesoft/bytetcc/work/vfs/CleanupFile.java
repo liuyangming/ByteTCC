@@ -37,6 +37,7 @@ import javax.transaction.xa.Xid;
 
 import org.apache.commons.lang3.StringUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;
+import org.bytesoft.compensable.TransactionBeanFactory;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 import org.bytesoft.compensable.aware.CompensableEndpointAware;
 import org.bytesoft.transaction.xa.TransactionXid;
@@ -44,7 +45,7 @@ import org.bytesoft.transaction.xa.XidFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class CleanupFile implements CompensableEndpointAware, CompensableBeanFactoryAware {
+public class CleanupFile implements CompensableEndpointAware, CompensableBeanFactoryAware, Cloneable{
 	static final Logger logger = LoggerFactory.getLogger(CleanupFile.class);
 	static final byte[] IDENTIFIER = "org.bytesoft.bytetcc.resource.cleanup".getBytes();
 
@@ -54,9 +55,10 @@ public class CleanupFile implements CompensableEndpointAware, CompensableBeanFac
 	static final int CONSTANTS_RECORD_SIZE = CONSTANTS_RES_ID_MAX_SIZE + XidFactory.GLOBAL_TRANSACTION_LENGTH
 			+ XidFactory.BRANCH_QUALIFIER_LENGTH;
 
-	private final String resourceName;
+	private String resourceName;
 
 	private CompensableBeanFactory beanFactory;
+	private TransactionBeanFactory transactionBeanFactory;
 	private String endpoint;
 	private int sizeOfRaf = -1;
 	private int endIndex = CONSTANTS_START_INDEX;
@@ -65,8 +67,8 @@ public class CleanupFile implements CompensableEndpointAware, CompensableBeanFac
 	private FileChannel channel;
 	private MappedByteBuffer header;
 
-	private final List<CleanupRecord> recordList = new ArrayList<CleanupRecord>();
-	private final Map<String, Set<CleanupRecord>> recordMap = new HashMap<String, Set<CleanupRecord>>();
+	private List<CleanupRecord> recordList = new ArrayList<CleanupRecord>();
+	private Map<String, Set<CleanupRecord>> recordMap = new HashMap<String, Set<CleanupRecord>>();
 
 	public CleanupFile(String resourceName) {
 		this.resourceName = resourceName;
@@ -218,7 +220,7 @@ public class CleanupFile implements CompensableEndpointAware, CompensableBeanFac
 	}
 
 	public void startupRecover() throws RuntimeException {
-		XidFactory xidFactory = this.beanFactory.getTransactionXidFactory();
+		XidFactory xidFactory = this.transactionBeanFactory.getTransactionXidFactory();
 
 		for (int current = CONSTANTS_START_INDEX; current < this.endIndex; current = current + CONSTANTS_RECORD_SIZE + 1) {
 			ByteBuffer buffer = ByteBuffer.allocate(1 + CONSTANTS_RECORD_SIZE);
@@ -387,7 +389,7 @@ public class CleanupFile implements CompensableEndpointAware, CompensableBeanFac
 	}
 
 	private void registerRecord(ByteBuffer buffer, int recordFlag, int position) throws RuntimeException {
-		XidFactory xidFactory = this.beanFactory.getTransactionXidFactory();
+		XidFactory xidFactory = this.transactionBeanFactory.getTransactionXidFactory();
 
 		byte[] resourceByteArray = new byte[CONSTANTS_RES_ID_MAX_SIZE];
 		byte[] globalByteArray = new byte[XidFactory.GLOBAL_TRANSACTION_LENGTH];
@@ -547,4 +549,21 @@ public class CleanupFile implements CompensableEndpointAware, CompensableBeanFac
 		this.directory = directory;
 	}
 
+	@Override
+	public CleanupFile clone() {
+		CleanupFile cleanupFile = new CleanupFile(this.resourceName);
+		cleanupFile.transactionBeanFactory = this.transactionBeanFactory;
+		cleanupFile.beanFactory = this.beanFactory;
+		cleanupFile.channel = this.channel;
+		cleanupFile.directory = this.directory;
+		cleanupFile.endIndex = this.endIndex;
+		cleanupFile.endpoint = this.endpoint;
+		cleanupFile.header = this.header;
+		cleanupFile.raf = this.raf;
+		cleanupFile.recordList = this.recordList;
+		cleanupFile.recordMap = this.recordMap;
+		cleanupFile.resourceName = this.resourceName;
+		cleanupFile.sizeOfRaf = this.sizeOfRaf;
+		return null;
+	}
 }

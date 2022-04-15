@@ -33,27 +33,15 @@ public interface CompensableBeanFactory {
 
 	public TransactionLock getCompensableLock();
 
-	public XidFactory getTransactionXidFactory();
-
 	public XidFactory getCompensableXidFactory();
 
-	public TransactionManager getTransactionManager();
-
 	public CompensableManager getCompensableManager();
-
-	public TransactionParticipant getTransactionNativeParticipant();
 
 	public TransactionParticipant getCompensableNativeParticipant();
 
 	public CompensableLogger getCompensableLogger();
 
 	public TransactionRepository getCompensableRepository();
-
-	public TransactionRepository getTransactionRepository();
-
-	public TransactionInterceptor getTransactionInterceptor();
-
-	public TransactionRecovery getTransactionRecovery();
 
 	public TransactionRecovery getCompensableRecovery();
 

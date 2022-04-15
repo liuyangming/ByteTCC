@@ -31,9 +31,19 @@ import org.springframework.web.servlet.ModelAndView;
 
 public class ServiceErrorResolver implements HandlerExceptionResolver, EnvironmentAware {
 	static final String KEY_RESPONSE_WRAP_ENABLED = "org.bytesoft.bytetcc.service.wrap.enabled";
-
+	private static  ServiceErrorResolver serviceErrorResolver = null;
 	private Environment environment;
 
+	private ServiceErrorResolver(){
+
+	}
+
+	public static ServiceErrorResolver getServiceErrorResolver (){
+		if(serviceErrorResolver==null){
+			serviceErrorResolver = new ServiceErrorResolver();
+		}
+		return serviceErrorResolver;
+	}
 	public ModelAndView resolveException(HttpServletRequest request, HttpServletResponse response, Object handler,
 			Exception ex) {
 		Boolean wrapEnabled = this.environment.getProperty(KEY_RESPONSE_WRAP_ENABLED, Boolean.class, false);

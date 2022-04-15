@@ -61,7 +61,7 @@
 
 	<bean id="bytetccSynchronization" class="org.bytesoft.bytetcc.supports.spring.CompensableMethodInterceptor" />
 
-	<bean id="bytetccBeanFactory" class="org.bytesoft.bytetcc.TransactionBeanFactoryImpl" factory-method="getInstance">
+	<bean id="bytetccBeanFactory" class="org.bytesoft.bytetcc.CompensableBeanFactoryImpl" factory-method="getInstance">
 		<property name="transactionManager" ref="bytejtaTransactionManager" />
 		<property name="compensableManager" ref="bytetccCompensableManager" />
 		<property name="transactionXidFactory" ref="bytejtaXidFactory" />

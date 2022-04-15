@@ -33,6 +33,7 @@ import org.bytesoft.common.utils.CommonUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableManager;
 import org.bytesoft.compensable.CompensableTransaction;
+import org.bytesoft.compensable.TransactionBeanFactory;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 import org.bytesoft.compensable.aware.CompensableEndpointAware;
 import org.bytesoft.compensable.logging.CompensableLogger;
@@ -54,6 +55,10 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 
 	@javax.inject.Inject
 	private CompensableBeanFactory beanFactory;
+
+	@javax.inject.Inject
+	private TransactionBeanFactory transactionBeanFactory;
+
 	private String endpoint;
 
 	private transient boolean ready = false;
@@ -61,10 +66,7 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 
 	private transient boolean statefully;
 
-	public Transaction getTransactionQuietly() {
-		CompensableManager transactionManager = this.beanFactory.getCompensableManager();
-		return transactionManager.getTransactionQuietly();
-	}
+
 
 	public Transaction start(TransactionContext transactionContext, int flags) throws XAException {
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
@@ -331,7 +333,7 @@ public class CompensableCoordinator implements RemoteCoordinator, CompensableBea
 	public Xid[] recover(int flag) throws XAException {
 		this.checkParticipantReadyIfNecessary();
 
-		TransactionRepository repository = beanFactory.getTransactionRepository();
+		TransactionRepository repository = transactionBeanFactory.getTransactionRepository();
 		List<Transaction> transactionList = repository.getActiveTransactionList();
 
 		TransactionXid[] xidArray = new TransactionXid[transactionList.size()];

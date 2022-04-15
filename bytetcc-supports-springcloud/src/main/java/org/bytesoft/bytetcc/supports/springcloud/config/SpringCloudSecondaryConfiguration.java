@@ -207,7 +207,7 @@ public class SpringCloudSecondaryConfiguration implements TransactionManagementC
 	@org.springframework.context.annotation.Bean
 	public CompensableRequestInterceptor compensableRequestInterceptor() {
 		CompensableRequestInterceptor interceptor = new CompensableRequestInterceptor();
-		interceptor.setStatefully(true);
+		interceptor.setStateful(true);
 		interceptor.setEndpoint(this.identifier);
 		return interceptor;
 	}
@@ -246,7 +246,7 @@ public class SpringCloudSecondaryConfiguration implements TransactionManagementC
 	}
 
 	public void configureHandlerExceptionResolvers(List<HandlerExceptionResolver> resolvers) {
-		resolvers.add(new ServiceErrorResolver());
+		resolvers.add(ServiceErrorResolver.getServiceErrorResolver());
 	}
 
 	public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {

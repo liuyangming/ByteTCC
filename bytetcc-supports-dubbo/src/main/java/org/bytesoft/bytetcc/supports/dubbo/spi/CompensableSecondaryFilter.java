@@ -34,11 +34,7 @@ import org.bytesoft.bytejta.supports.rpc.TransactionResponseImpl;
 import org.bytesoft.bytetcc.supports.dubbo.CompensableBeanRegistry;
 import org.bytesoft.common.utils.ByteUtils;
 import org.bytesoft.common.utils.CommonUtils;
-import org.bytesoft.compensable.CompensableBeanFactory;
-import org.bytesoft.compensable.CompensableManager;
-import org.bytesoft.compensable.CompensableTransaction;
-import org.bytesoft.compensable.RemotingException;
-import org.bytesoft.compensable.TransactionContext;
+import org.bytesoft.compensable.*;
 import org.bytesoft.transaction.TransactionException;
 import org.bytesoft.transaction.TransactionParticipant;
 import org.bytesoft.transaction.TransactionRepository;
@@ -68,7 +64,7 @@ import com.alibaba.dubbo.rpc.RpcResult;
 import com.caucho.hessian.io.HessianInput;
 import com.caucho.hessian.io.HessianOutput;
 
-public class CompensableSecondaryFilter implements Filter {
+public class CompensableSecondaryFilter extends InvokeForTCC implements Filter {
 	static final String KEY_XA_RESOURCE_START = "start";
 	static final String KEY_XA_GET_IDENTIFIER = "getIdentifier";
 	static final String KEY_XA_GET_APPLICATION = "getApplication";
@@ -315,7 +311,8 @@ public class CompensableSecondaryFilter implements Filter {
 			TransactionResponseImpl response) {
 		CompensableBeanRegistry beanRegistry = CompensableBeanRegistry.getInstance();
 		CompensableBeanFactory beanFactory = beanRegistry.getBeanFactory();
-		TransactionInterceptor transactionInterceptor = beanFactory.getTransactionInterceptor();
+		TransactionBeanFactory transactionBeanFactory = (TransactionBeanFactory) beanRegistry.getBeanFactory();
+		TransactionInterceptor transactionInterceptor = transactionBeanFactory.getTransactionInterceptor();
 
 		RemotingException rpcError = null;
 		String transactionContextContent = invocation.getAttachment(TransactionContext.class.getName());
@@ -351,7 +348,8 @@ public class CompensableSecondaryFilter implements Filter {
 			TransactionResponseImpl response) {
 		CompensableBeanRegistry beanRegistry = CompensableBeanRegistry.getInstance();
 		CompensableBeanFactory beanFactory = beanRegistry.getBeanFactory();
-		TransactionInterceptor transactionInterceptor = beanFactory.getTransactionInterceptor();
+		TransactionBeanFactory transactionBeanFactory = (TransactionBeanFactory) beanRegistry.getBeanFactory();
+		TransactionInterceptor transactionInterceptor = transactionBeanFactory.getTransactionInterceptor();
 		CompensableManager transactionManager = beanFactory.getCompensableManager();
 
 		CompensableTransaction transaction = transactionManager.getCompensableTransactionQuietly();
@@ -386,7 +384,7 @@ public class CompensableSecondaryFilter implements Filter {
 		} else if (StringUtils.equals(invocation.getMethodName(), KEY_XA_GET_REMOTENODE)) {
 			return this.consumerInvokeForKey(invoker, invocation);
 		} else {
-			return this.consumerInvokeForTCC(invoker, invocation);
+			return super.invokeForTCC(invoker, invocation);
 		}
 	}
 
@@ -435,29 +433,6 @@ public class CompensableSecondaryFilter implements Filter {
 
 		} // end-if (CompensableServiceFilter.InvocationResult.class.isInstance(value))
 
-		return result;
-	}
-
-	public Result consumerInvokeForTCC(Invoker<?> invoker, Invocation invocation) throws RpcException, RemotingException {
-		CompensableBeanRegistry beanRegistry = CompensableBeanRegistry.getInstance();
-		CompensableBeanFactory beanFactory = beanRegistry.getBeanFactory();
-		RemoteCoordinator compensableCoordinator = (RemoteCoordinator) beanFactory.getCompensableNativeParticipant();
-
-		Map<String, String> attachments = invocation.getAttachments();
-		attachments.put(RemoteCoordinator.class.getName(), compensableCoordinator.getIdentifier());
-		RpcResult result = (RpcResult) invoker.invoke(invocation);
-		Object value = result.getValue();
-		if (CompensableServiceFilter.InvocationResult.class.isInstance(value)) {
-			CompensableServiceFilter.InvocationResult wrapped = (CompensableServiceFilter.InvocationResult) value;
-			result.setValue(null);
-			result.setException(null);
-
-			if (wrapped.isFailure()) {
-				result.setException(wrapped.getError());
-			} else {
-				result.setValue(wrapped.getValue());
-			}
-		}
 		return result;
 	}
 
@@ -604,7 +579,8 @@ public class CompensableSecondaryFilter implements Filter {
 			TransactionResponseImpl response) {
 		CompensableBeanRegistry beanRegistry = CompensableBeanRegistry.getInstance();
 		CompensableBeanFactory beanFactory = beanRegistry.getBeanFactory();
-		TransactionInterceptor transactionInterceptor = beanFactory.getTransactionInterceptor();
+		TransactionBeanFactory transactionBeanFactory = (TransactionBeanFactory) beanRegistry.getBeanFactory();
+		TransactionInterceptor transactionInterceptor = transactionBeanFactory.getTransactionInterceptor();
 		RemoteCoordinator compensableCoordinator = (RemoteCoordinator) beanFactory.getCompensableNativeParticipant();
 
 		Map<String, String> attachments = invocation.getAttachments();
@@ -630,7 +606,8 @@ public class CompensableSecondaryFilter implements Filter {
 			TransactionResponseImpl response) {
 		CompensableBeanRegistry beanRegistry = CompensableBeanRegistry.getInstance();
 		CompensableBeanFactory beanFactory = beanRegistry.getBeanFactory();
-		TransactionInterceptor transactionInterceptor = beanFactory.getTransactionInterceptor();
+		TransactionBeanFactory transactionBeanFactory = (TransactionBeanFactory) beanRegistry.getBeanFactory();
+		TransactionInterceptor transactionInterceptor = transactionBeanFactory.getTransactionInterceptor();
 
 		RemotingException rpcError = null;
 		try {

@@ -54,60 +54,7 @@ public class CompensableAnnotationConfigValidator
 		Map<String, Compensable> compensables = new HashMap<String, Compensable>();
 		Map<String, Class<?>> otherServiceMap = new HashMap<String, Class<?>>();
 		ClassLoader cl = Thread.currentThread().getContextClassLoader();
-		for (int i = 0; beanNameArray != null && i < beanNameArray.length; i++) {
-			String beanName = beanNameArray[i];
-			BeanDefinition beanDef = registry.getBeanDefinition(beanName);
-			String className = beanDef.getBeanClassName();
-
-			if (StringUtils.isBlank(className)) {
-				continue;
-			}
-
-			Class<?> clazz = null;
-			try {
-				clazz = cl.loadClass(className);
-			} catch (Exception ex) {
-				logger.debug("Cannot load class {}, beanId= {}!", className, beanName, ex);
-				continue;
-			}
-
-			Compensable compensable = null;
-			try {
-				compensable = clazz.getAnnotation(Compensable.class);
-			} catch (RuntimeException rex) {
-				logger.warn("Error occurred while getting @Compensable annotation, class= {}!", clazz, rex);
-			}
-
-			if (compensable == null) {
-				otherServiceMap.put(beanName, clazz);
-				continue;
-			}
-
-			Class<?> interfaceClass = compensable.interfaceClass();
-			if (interfaceClass.isInterface() == false) {
-				throw new IllegalStateException("Compensable's interfaceClass must be a interface.");
-			}
-
-			Method[] methodArray = interfaceClass.getDeclaredMethods();
-			for (int j = 0; j < methodArray.length; j++) {
-				Method interfaceMethod = methodArray[j];
-				String methodName = interfaceMethod.getName();
-				Class<?>[] parameterTypes = interfaceMethod.getParameterTypes();
-				Method method = null;
-				try {
-					method = clazz.getMethod(methodName, parameterTypes);
-				} catch (NoSuchMethodException ex) {
-					throw new FatalBeanException(String.format(
-							"Compensable-service(%s) does not implement method '%s' specified by the interfaceClass.", beanName,
-							methodName));
-				}
-				this.validateSimplifiedCompensable(method, clazz);
-				this.validateDeclaredRemotingException(method, clazz);
-				this.validateTransactionalPropagation(method, clazz);
-			}
-
-			compensables.put(beanName, compensable);
-		}
+		beanNameArrayIteration(beanNameArray, registry, compensables, otherServiceMap, cl);
 
 		Iterator<Map.Entry<String, Compensable>> itr = compensables.entrySet().iterator();
 		while (itr.hasNext()) {
@@ -174,6 +121,63 @@ public class CompensableAnnotationConfigValidator
 				}
 			} // end-if (StringUtils.isNotBlank(cancellableKey))
 
+		}
+	}
+
+	private void beanNameArrayIteration(String[] beanNameArray, BeanDefinitionRegistry registry, Map<String, Compensable> compensables, Map<String, Class<?>> otherServiceMap, ClassLoader cl) {
+		for (int i = 0; beanNameArray != null && i < beanNameArray.length; i++) {
+			String beanName = beanNameArray[i];
+			BeanDefinition beanDef = registry.getBeanDefinition(beanName);
+			String className = beanDef.getBeanClassName();
+
+			if (StringUtils.isBlank(className)) {
+				continue;
+			}
+
+			Class<?> clazz = null;
+			try {
+				clazz = cl.loadClass(className);
+			} catch (Exception ex) {
+				logger.debug("Cannot load class {}, beanId= {}!", className, beanName, ex);
+				continue;
+			}
+
+			Compensable compensable = null;
+			try {
+				compensable = clazz.getAnnotation(Compensable.class);
+			} catch (RuntimeException rex) {
+				logger.warn("Error occurred while getting @Compensable annotation, class= {}!", clazz, rex);
+			}
+
+			if (compensable == null) {
+				otherServiceMap.put(beanName, clazz);
+				continue;
+			}
+
+			Class<?> interfaceClass = compensable.interfaceClass();
+			if (interfaceClass.isInterface() == false) {
+				throw new IllegalStateException("Compensable's interfaceClass must be a interface.");
+			}
+
+			Method[] methodArray = interfaceClass.getDeclaredMethods();
+			for (int j = 0; j < methodArray.length; j++) {
+				Method interfaceMethod = methodArray[j];
+				String methodName = interfaceMethod.getName();
+				Class<?>[] parameterTypes = interfaceMethod.getParameterTypes();
+				Method method = null;
+				try {
+					method = clazz.getMethod(methodName, parameterTypes);
+				} catch (NoSuchMethodException ex) {
+					throw new FatalBeanException(String.format(
+							"Compensable-service(%s) does not implement method '%s' specified by the interfaceClass.", beanName,
+							methodName));
+				}
+				this.validateSimplifiedCompensable(method, clazz);
+				this.validateDeclaredRemotingException(method, clazz);
+				this.validateTransactionalPropagation(method, clazz);
+			}
+
+			compensables.put(beanName, compensable);
 		}
 	}
 

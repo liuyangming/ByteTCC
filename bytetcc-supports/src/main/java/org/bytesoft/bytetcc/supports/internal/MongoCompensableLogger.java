@@ -36,6 +36,7 @@ import org.bytesoft.common.utils.CommonUtils;
 import org.bytesoft.common.utils.SerializeUtils;
 import org.bytesoft.compensable.CompensableBeanFactory;
 import org.bytesoft.compensable.CompensableInvocation;
+import org.bytesoft.compensable.TransactionBeanFactory;
 import org.bytesoft.compensable.archive.CompensableArchive;
 import org.bytesoft.compensable.archive.TransactionArchive;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
@@ -78,6 +79,9 @@ public class MongoCompensableLogger implements CompensableLogger, CompensableEnd
 	private CompensableInstVersionManager versionManager;
 	@javax.inject.Inject
 	private CompensableBeanFactory beanFactory;
+	@javax.inject.Inject
+	private TransactionBeanFactory transactionBeanFactory;
+
 	private volatile boolean initializeEnabled = true;
 
 	public void createTransaction(TransactionArchive archive) {
@@ -650,7 +654,7 @@ public class MongoCompensableLogger implements CompensableLogger, CompensableEnd
 	}
 
 	private List<CompensableArchive> constructCompensableList(Document document) throws Exception {
-		XidFactory transactionXidFactory = this.beanFactory.getTransactionXidFactory();
+		XidFactory transactionXidFactory = this.transactionBeanFactory.getTransactionXidFactory();
 		ClassLoader cl = Thread.currentThread().getContextClassLoader();
 
 		List<CompensableArchive> resourceList = new ArrayList<CompensableArchive>();

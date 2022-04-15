@@ -27,15 +27,7 @@ import org.aspectj.lang.reflect.MethodSignature;
 import org.bytesoft.bytetcc.supports.CompensableInvocationImpl;
 import org.bytesoft.bytetcc.supports.CompensableSynchronization;
 import org.bytesoft.bytetcc.supports.spring.aware.CompensableBeanNameAware;
-import org.bytesoft.compensable.Compensable;
-import org.bytesoft.compensable.CompensableBeanFactory;
-import org.bytesoft.compensable.CompensableCancel;
-import org.bytesoft.compensable.CompensableConfirm;
-import org.bytesoft.compensable.CompensableInvocation;
-import org.bytesoft.compensable.CompensableInvocationRegistry;
-import org.bytesoft.compensable.CompensableManager;
-import org.bytesoft.compensable.CompensableTransaction;
-import org.bytesoft.compensable.TransactionContext;
+import org.bytesoft.compensable.*;
 import org.bytesoft.compensable.aware.CompensableBeanFactoryAware;
 import org.bytesoft.transaction.Transaction;
 import org.bytesoft.transaction.TransactionManager;
@@ -54,6 +46,11 @@ public class CompensableMethodInterceptor
 
 	@javax.inject.Inject
 	private CompensableBeanFactory beanFactory;
+
+	@javax.inject.Inject
+	private TransactionBeanFactory transactionBeanFactory;
+
+
 	private ApplicationContext applicationContext;
 
 	public void afterBegin(Transaction transaction, boolean createFlag) {
@@ -121,7 +118,7 @@ public class CompensableMethodInterceptor
 
 	public Object execute(String identifier, Method method, Object[] args, Joinpoint point) throws Throwable {
 		CompensableInvocationRegistry registry = CompensableInvocationRegistry.getInstance();
-		TransactionManager transactionManager = this.beanFactory.getTransactionManager();
+		TransactionManager transactionManager = this.transactionBeanFactory.getTransactionManager();
 		CompensableManager compensableManager = this.beanFactory.getCompensableManager();
 
 		Compensable annotation = method.getDeclaringClass().getAnnotation(Compensable.class);
